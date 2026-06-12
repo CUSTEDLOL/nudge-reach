@@ -5,6 +5,53 @@ what's next.
 
 ---
 
+## Phase 1 — Platform modules (2026-06-12) ✅ code complete — ⏳ live model check awaits ANTHROPIC_API_KEY
+
+### Done
+- **`lib/model-router`** — `generate({system, prompt, image?, maxTokens})` via
+  the official `@anthropic-ai/sdk`. Default model `claude-haiku-4-5`
+  (cheapest vision-capable tier, $1/$5 per MTok — verified via the claude-api
+  skill), env-configurable. **Rule 3 enforced in code:**
+  `assertRuntimeModelAllowed` throws on opus/fable/mythos (unit-tested).
+- **`lib/consent`** — pure `canSendMarketing(contact)`; opt-out permanent.
+  Unit-tested (rule 2).
+- **`lib/messaging`** — channel-agnostic `sendMessage(channel, recipient,
+  payload)`; WhatsApp simulation + live (Cloud API) drivers behind one
+  interface; consent gate enforced at this lowest layer for MARKETING
+  payloads. `buildSendPayload` unit-tested against the docs example.
+- **`lib/billing`** — stub: `estimateCampaignCost` (recipients × INR rate,
+  labelled estimate), `formatInr`, ledger interface for live reconciliation.
+- **Contacts/Audiences** — Prisma models (Contact unique per org+phone,
+  Audience, AudienceContact), RLS enabled on all three; `/contacts` page with
+  add-one, CSV-paste import (requires explicit consent confirmation —
+  compliance checklist), opt-out / delete, audience create/delete.
+  `normalizePhoneE164` helper (+91 default) unit-tested.
+- 24 unit tests passing; build + lint green; CRUD verified end to end against
+  the live app + DB (`scripts/verify-phase1.js`).
+
+### Decisions
+- Consent gate enforced **twice**: pure function for queue/UI checks + inside
+  `lib/messaging.sendMessage` so no send path can bypass it.
+- Runtime model uses the bare alias `claude-haiku-4-5` (canonical per
+  current Anthropic docs; no date suffix).
+- CSV import never resurrects an opted-out contact (upsert updates name only).
+- Audience membership limited to opted-in contacts at the UI level; the send
+  path re-checks the gate anyway.
+
+### Acceptance criteria status
+- [x] `canSendMarketing` unit-tested
+- [x] Contacts/audiences CRUD works (verified live)
+- [ ] Model-router returns text for a test prompt — **blocked on
+      `ANTHROPIC_API_KEY` from founder**; will verify first thing in Phase 2
+      (generation uses the same path).
+
+### Next
+- **Phase 2 — Generate (the wedge):** photo upload to Supabase Storage,
+  campaign generation per PRD §7, editable fields + WhatsApp-style preview.
+- Needs from founder: `ANTHROPIC_API_KEY`.
+
+---
+
 ## Phase 0 — Scaffold (2026-06-12) ✅ COMPLETE — verified against live Supabase
 
 ### Done

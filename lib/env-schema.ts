@@ -16,7 +16,7 @@ export const envSchema = z
 
     // Runtime AI — cheap Haiku tier only; never an expensive model
     ANTHROPIC_API_KEY: z.string().optional(),
-    RUNTIME_MODEL: z.string().default("claude-haiku-4-5-20251001"),
+    RUNTIME_MODEL: z.string().default("claude-haiku-4-5"),
 
     // Messaging
     SEND_MODE: z.enum(["simulation", "live"]).default("simulation"),

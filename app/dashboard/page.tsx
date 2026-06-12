@@ -50,6 +50,18 @@ export default async function DashboardPage() {
             Next up: campaign generation from a product photo.
           </p>
         </section>
+
+        <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-medium text-neutral-500">Quick links</h2>
+          <div className="mt-3 flex gap-3">
+            <a
+              href="/contacts"
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              👥 Customers & audiences
+            </a>
+          </div>
+        </section>
       </div>
     </main>
   );

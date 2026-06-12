@@ -10,9 +10,50 @@ datasource db {
 
 // One org per user for MVP (PRD §3). ownerUserId is the Supabase Auth user id.
 model Org {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
-  ownerUserId String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  ownerUserId String     @unique
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  contacts    Contact[]
+  audiences   Audience[]
+}
+
+// Consent is data, not UI: optedIn + optedOutAt drive the consent gate
+// (lib/consent.ts). optedOutAt set means permanently excluded from marketing.
+model Contact {
+  id          String            @id @default(cuid())
+  orgId       String
+  org         Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  phoneE164   String
+  optedIn     Boolean           @default(false)
+  optInSource String            @default("manual")
+  optedOutAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  audiences   AudienceContact[]
+
+  @@unique([orgId, phoneE164])
+  @@index([orgId])
+}
+
+model Audience {
+  id        String            @id @default(cuid())
+  orgId     String
+  org       Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime          @default(now())
+  contacts  AudienceContact[]
+
+  @@index([orgId])
+}
+
+model AudienceContact {
+  audienceId String
+  audience   Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([audienceId, contactId])
 }
