@@ -5,7 +5,7 @@ what's next.
 
 ---
 
-## Phase 0 — Scaffold (2026-06-12) ✅ code complete, ⏳ awaiting Supabase keys for live verification
+## Phase 0 — Scaffold (2026-06-12) ✅ COMPLETE — verified against live Supabase
 
 ### Done
 - Git repo initialized; project docs moved from repo root into `docs/`.
@@ -47,11 +47,26 @@ what's next.
 - [x] App builds
 - [x] Env validated at boot; `.env.example` complete
 - [x] `PROGRESS.md` + `README.md` created
-- [ ] User can sign in and an Org row is created — **needs the founder's
-      Supabase project keys in `.env.local`, then `npm run db:push`**
+- [x] User can sign in and an Org row is created — verified end to end
+      against the live Supabase project (`lgojsxrljjmkwxawocdk`,
+      ap-southeast-1) with test account `visheshjain1705+nudgetest@gmail.com`
+      via `scripts/verify-phase0.js`
+
+### Post-verification decisions
+- **RLS enabled on `Org`** (and required on every future Prisma table):
+  Supabase's Data API exposes `public` tables to the publishable key by
+  default; RLS with no policies blocks that while Prisma (table owner)
+  retains access.
+- **`.env` + `.env.local` split:** Prisma CLI only reads `.env`, Next.js
+  reads both — DB URLs live in `.env`, everything in `.env.local`. Both
+  git-ignored.
+- **Supabase MCP connector abandoned** for now (their OAuth client_id is
+  broken); using direct connection strings instead.
+- **Google OAuth provider not yet enabled** in the Supabase project — the
+  login button exists but the founder must enable the provider in
+  Supabase → Authentication → Providers (optional; email works).
 
 ### Next
-- Founder: create Supabase project, fill `.env.local`.
-- Verify sign-in + Org creation end to end, then commit and start
-  **Phase 1 — Platform modules** (model-router, messaging interface,
-  contacts/opt-in with consent gate, billing stub).
+- **Phase 1 — Platform modules**: model-router, channel-agnostic messaging
+  interface, contacts/opt-in with consent gate (unit-tested), billing stub.
+- Needs from founder: `ANTHROPIC_API_KEY` for the live model-router check.
