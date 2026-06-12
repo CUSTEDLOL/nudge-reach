@@ -12,6 +12,11 @@ import {
   refreshTemplateStatus,
   submitTemplateForApproval,
 } from "@/lib/whatsapp/approval";
+import {
+  applySimulatedProgress,
+  enqueueCampaign,
+  processQueue,
+} from "@/lib/send/queue";
 
 export interface ActionResult {
   ok: boolean;
@@ -186,6 +191,56 @@ export async function refreshStatusAction(formData: FormData): Promise<void> {
   await refreshTemplateStatus(id, org.id);
   revalidatePath(`/campaigns/${id}`);
   revalidatePath("/campaigns");
+}
+
+export async function runCampaignAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const org = await requireOrg();
+  const id = String(formData.get("campaignId") ?? "");
+  const audienceId = String(formData.get("audienceId") ?? "");
+  if (!audienceId) {
+    return { ok: false, message: "Pick an audience first." };
+  }
+
+  try {
+    const { queued, skippedNoConsent } = await enqueueCampaign(
+      id,
+      audienceId,
+      org.id
+    );
+    // Kick off the first batch right away; the dashboard keeps it moving.
+    await processQueue(id);
+    revalidatePath(`/campaigns/${id}`);
+    revalidatePath("/campaigns");
+    return {
+      ok: true,
+      message: `Sending to ${queued} customer${queued === 1 ? "" : "s"}${
+        skippedNoConsent
+          ? ` (${skippedNoConsent} skipped — no opt-in)`
+          : ""
+      }.`,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't start sending.",
+    };
+  }
+}
+
+/** Dashboard tick — advances queue + simulated statuses, then re-renders. */
+export async function tickCampaignAction(formData: FormData): Promise<void> {
+  const org = await requireOrg();
+  const id = String(formData.get("campaignId") ?? "");
+  const campaign = await prisma.campaign.findFirst({
+    where: { id, orgId: org.id },
+    select: { id: true },
+  });
+  if (!campaign) return;
+  await processQueue(id);
+  await applySimulatedProgress(id);
+  revalidatePath(`/campaigns/${id}`);
 }
 
 export async function deleteCampaignAction(formData: FormData): Promise<void> {

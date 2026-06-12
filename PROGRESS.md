@@ -5,6 +5,58 @@ what's next.
 
 ---
 
+## Phase 4 — Send & track (2026-06-12) ✅ COMPLETE (simulation verified end to end; live driver code-complete, unverified — no Meta credentials)
+
+### Done
+- **Models**: `Message` (status QUEUED→SENT→DELIVERED→READ→CLICKED /
+  FAILED, metaMessageId, costMinorUnits; unique per campaign+contact),
+  `WebhookEvent` (raw payload audit/idempotency), `Campaign.audienceId`.
+  RLS enabled.
+- **Send queue** (`lib/send/queue.ts`) — Postgres-backed (decision: no
+  Inngest account dependency; swappable later). `enqueueCampaign` is
+  consent-gated fan-out (rule 2 — non-opted-in members counted + skipped);
+  `processQueue` sends batches of 30 through `lib/messaging` (which
+  re-checks consent per message), paced ~10/s in live mode; campaign
+  auto-completes to SENT when the queue drains.
+- **Simulated delivery lifecycle** (`lib/send/sim-progress.ts`, pure +
+  unit-tested): deterministic per-message timeline (~93% deliver, 75% read,
+  30% click, rest fail), forward-only transitions; cost accrued per
+  delivered message at the configured INR rate.
+- **Webhook endpoint** (`/api/webhooks/whatsapp`) — GET subscription
+  handshake; POST verifies `X-Hub-Signature-256` (timing-safe, unit-tested),
+  stores raw event, then idempotently applies: message status updates
+  (incl. pricing → actual cost), template APPROVED/REJECTED updates,
+  inbound STOP/unsubscribe/opt-out → permanent opt-out scoped to the org's
+  phone number. Proxy excludes `/api/webhooks` + `/api/cron` from auth.
+- **Queue tick** (`/api/cron/process-queue`) for Vercel Cron; the dashboard
+  also ticks server-side on every view so small sends need no cron.
+- **UI**: run panel on approved campaigns (audience picker with opted-in
+  counts, estimate = recipients × rate, simulation notice); live-updating
+  stats dashboard (progress bar, sent/delivered/read/clicked/failed cards,
+  estimated vs actual cost), auto-refresh while sending.
+- 61 unit tests passing; build + lint green.
+
+### Verified live (scripts/phase4-live.ts + curl)
+- 10-person audience (9 opted in, 1 not): consent gate queued 9, skipped 1.
+- 9 sends via the simulation driver; statuses progressed over ~30s
+  (9 delivered → 5 read → 1 clicked), cost ₹8.91, campaign → SENT;
+  dashboard page renders the results.
+- Webhook: handshake echoes challenge (bad token → 403); signed STOP
+  message permanently opted out the contact; tampered signature → 401;
+  event stored with processedAt.
+
+### Decisions
+- Postgres queue + on-view/cron ticking instead of Inngest (zero extra
+  accounts/keys; the founder can swap later — the queue API is 3 functions).
+- Dev-server OOMs on this machine → verification runs against
+  `next start` (production server).
+
+### Next
+- **Phase 5 — Polish, demo, deploy**: demo seed, Vercel deploy + cron,
+  README. Needs founder's Vercel login for the deploy itself.
+
+---
+
 ## Phase 3 — Templates & approval (2026-06-12) ✅ COMPLETE (simulation verified; live path code-complete, unverified — no Meta credentials yet)
 
 ### Done

@@ -91,12 +91,52 @@ model Campaign {
   status    CampaignStatus @default(DRAFT)
   // The editable campaign fields in the PRD §7 JSON shape (header, body,
   // footer, buttons, sampleName, …). Meta template rows come in Phase 3.
-  content   Json
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  templates Template[]
+  content    Json
+  audienceId String?
+  audience   Audience?      @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  templates  Template[]
+  messages   Message[]
 
   @@index([orgId])
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  CLICKED
+  FAILED
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  campaignId     String
+  campaign       Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId      String
+  contact        Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  status         MessageStatus @default(QUEUED)
+  metaMessageId  String?
+  errorCode      String?
+  costMinorUnits Int?
+  sentAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([campaignId, contactId]) // a contact gets a campaign at most once
+  @@index([campaignId])
+  @@index([metaMessageId])
+}
+
+// Raw webhook payloads stored before processing — idempotency + audit.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  raw         Json
+  type        String
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 // Consent is data, not UI: optedIn + optedOutAt drive the consent gate
@@ -113,6 +153,7 @@ model Contact {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   audiences   AudienceContact[]
+  messages    Message[]
 
   @@unique([orgId, phoneE164])
   @@index([orgId])
@@ -125,6 +166,7 @@ model Audience {
   name      String
   createdAt DateTime          @default(now())
   contacts  AudienceContact[]
+  campaigns Campaign[]
 
   @@index([orgId])
 }

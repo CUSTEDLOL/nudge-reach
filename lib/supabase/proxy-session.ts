@@ -1,7 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /api/webhooks: Meta calls it (signature-verified, not cookie-auth'd).
+// /api/cron: queue tick (no session; safe — it only advances queued work).
+const PUBLIC_PATHS = ["/login", "/auth", "/api/webhooks", "/api/cron"];
 
 /**
  * Refreshes the Supabase auth token on every matched request and redirects
