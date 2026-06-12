@@ -5,6 +5,45 @@ what's next.
 
 ---
 
+## Phase 5 — Polish, demo, deploy (2026-06-13) ✅ DEPLOYED
+
+### Done
+- **Live URL: https://nudge-reach.vercel.app** (project `nudge-reach`,
+  Vercel account `custedlol`; simulation mode).
+- All 12 env vars pushed to Vercel production; `vercel.json` daily cron on
+  `/api/cron/process-queue` (dashboard view-ticking covers demo-scale
+  sends); `maxDuration: 60` on the generation route segment.
+- Demo retailer seed (`scripts/seed-demo.ts`): 5 opted-in contacts,
+  "Regular customers (demo)" audience, draft "Banarasi Silk Dupatta"
+  campaign — deterministic, re-runnable, no AI call.
+- README: deploy + demo-seed docs, live URL.
+- 61 unit tests passing; verified against production with a signed-in
+  user: dashboard, campaigns list (demo + sent campaign), contacts.
+
+### Founder action still needed (1 minute)
+- Supabase → Authentication → URL Configuration: set Site URL to
+  https://nudge-reach.vercel.app and add it to Redirect URLs, so NEW
+  sign-ups from production get confirmation links that redirect correctly
+  (currently they'd bounce to localhost).
+
+### Known limitations / deferred
+- Live WhatsApp path (real WABA creds) is code-complete but unverified —
+  no Meta Business Account yet. Embedded Signup not built (manual creds
+  screen exists at /settings/whatsapp).
+- Cost estimator uses the configurable INR rate (₹0.99 default) — verify
+  against Meta's current pricing before going live.
+- Local `next dev` OOMs on this machine after long idle; use
+  `npm run build && npx next start` locally instead.
+
+### MVP definition of done — status
+- [x] Sign in → upload product photo → generated compliant campaign
+- [x] Edit campaign → WhatsApp-style preview
+- [x] Import opted-in contacts → audiences
+- [x] Run campaign (simulated) → delivery/read/click stats + estimated cost
+- [x] Deployed and reachable on a URL
+
+---
+
 ## Phase 4 — Send & track (2026-06-12) ✅ COMPLETE (simulation verified end to end; live driver code-complete, unverified — no Meta credentials)
 
 ### Done
