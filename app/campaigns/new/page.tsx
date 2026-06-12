@@ -7,8 +7,11 @@ import {
   type ActionResult,
 } from "@/app/campaigns/actions";
 
+const MAX_PHOTO_BYTES = 4.5 * 1024 * 1024;
+
 export default function NewCampaignPage() {
   const [preview, setPreview] = useState<string | null>(null);
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const [result, action, pending] = useActionState(
     async (_prev: ActionResult | null, formData: FormData) =>
       generateCampaignAction(formData),
@@ -59,6 +62,15 @@ export default function NewCampaignPage() {
                 className="text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-emerald-700 hover:file:bg-emerald-100"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
+                  if (file && file.size > MAX_PHOTO_BYTES) {
+                    setSizeError(
+                      "That photo is over 4 MB — most phones can resize it from the share menu, or pick a smaller one."
+                    );
+                    setPreview(null);
+                    e.target.value = "";
+                    return;
+                  }
+                  setSizeError(null);
                   setPreview(file ? URL.createObjectURL(file) : null);
                 }}
               />
@@ -88,6 +100,11 @@ export default function NewCampaignPage() {
             {pending ? "✨ Writing your campaign… (about 10 seconds)" : "✨ Generate my campaign"}
           </button>
 
+          {sizeError && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {sizeError}
+            </p>
+          )}
           {result && !result.ok && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {result.message}
