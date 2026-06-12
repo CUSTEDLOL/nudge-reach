@@ -5,6 +5,51 @@ what's next.
 
 ---
 
+## Phase 3 — Templates & approval (2026-06-12) ✅ COMPLETE (simulation verified; live path code-complete, unverified — no Meta credentials yet)
+
+### Done
+- **Template payload builder** (`lib/whatsapp/template.ts`) — campaign
+  content → Meta `message_templates` create payload; unit-tested against the
+  reference example in docs/WHATSAPP_CLOUD_API.md. `category` forced
+  MARKETING. Meta-safe template names via `slugifyTemplateName`.
+- **Models**: `Template` (componentsJson, metaStatus PENDING/APPROVED/
+  REJECTED, rejectionReason), `WhatsappAccount` (one per org,
+  `accessTokenEncrypted`). RLS enabled.
+- **Token encryption** (`lib/crypto.ts`) — AES-256-GCM with
+  TOKEN_ENCRYPTION_KEY; round-trip + tamper tests.
+- **Approval flow** (`lib/whatsapp/approval.ts`) — submit: simulation
+  creates the PENDING row with a mock media handle; live POSTs to
+  `/<WABA_ID>/message_templates` incl. resumable-upload of the header image.
+  Status: polling fallback (`refreshTemplateStatus`); simulation approves
+  after a 10s mock review; rejection sets campaign back to DRAFT with the
+  reason shown + edit-and-resubmit. Webhook delivery of status arrives with
+  the Phase 4 webhook endpoint.
+- **UI**: approval panel on the campaign page (submit → live-updating
+  pending banner (auto-refresh every 4s) → approved/rejected states);
+  `/settings/whatsapp` connection screen (manual WABA/phone/token entry,
+  token encrypted; simulation-mode banner). Editing an approved campaign
+  resets it to DRAFT — stale approvals can't be sent.
+- 49 unit tests passing; build + lint green.
+
+### Verified live (scripts/phase3-live.ts)
+- Real flow in simulation: submit → Template row with HEADER/BODY/FOOTER/
+  BUTTONS payload → TEMPLATE_PENDING → (11s) → APPROVED →
+  campaign TEMPLATE_APPROVED → page renders "Approved — ready to send".
+
+### Decisions
+- Meta allows one header per template: with a product photo we use an IMAGE
+  header and fold the text headline into the body as a *bold* first line;
+  TEXT header otherwise.
+- Mock review window: 10 seconds (long enough to demo the pending state).
+- One WhatsApp account per org (MVP).
+
+### Next
+- **Phase 4 — Send & track**: Message model, consent-gated rate-limited
+  send queue, webhook endpoint (signatures, idempotency, STOP → opt-out),
+  campaign dashboard with delivery stats + cost.
+
+---
+
 ## Phase 2 — Generate, the wedge (2026-06-12) ✅ COMPLETE
 
 ### Done

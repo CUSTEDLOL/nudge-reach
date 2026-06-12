@@ -19,6 +19,44 @@ model Org {
   audiences   Audience[]
   products    Product[]
   campaigns   Campaign[]
+  whatsappAccounts WhatsappAccount[]
+}
+
+model WhatsappAccount {
+  id                   String   @id @default(cuid())
+  orgId                String   @unique // one connected number per org (MVP)
+  org                  Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  wabaId               String
+  phoneNumberId        String
+  displayName          String
+  accessTokenEncrypted String
+  qualityRating        String?
+  status               String   @default("connected")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+enum TemplateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Template {
+  id              String         @id @default(cuid())
+  campaignId      String
+  campaign        Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name            String
+  language        String         @default("en")
+  category        String         @default("MARKETING")
+  componentsJson  Json
+  metaTemplateId  String?
+  metaStatus      TemplateStatus @default(PENDING)
+  rejectionReason String?
+  submittedAt     DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([campaignId])
 }
 
 model Product {
@@ -56,6 +94,7 @@ model Campaign {
   content   Json
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+  templates Template[]
 
   @@index([orgId])
 }

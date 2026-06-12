@@ -8,6 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import { generateCampaignContent } from "@/lib/campaign/generate";
 import { repairAndValidate } from "@/lib/campaign/guardrails";
 import type { CampaignContent } from "@/lib/campaign/schema";
+import {
+  refreshTemplateStatus,
+  submitTemplateForApproval,
+} from "@/lib/whatsapp/approval";
 
 export interface ActionResult {
   ok: boolean;
@@ -142,16 +146,46 @@ export async function updateCampaignAction(
     };
   }
 
+  // Any edit invalidates a pending/granted approval — back to DRAFT.
   const updated = await prisma.campaign.updateMany({
     where: { id, orgId: org.id },
-    data: { content, name: content.productName },
+    data: { content, name: content.productName, status: "DRAFT" },
   });
   if (updated.count === 0) {
     return { ok: false, message: "Campaign not found." };
   }
   revalidatePath(`/campaigns/${id}`);
   revalidatePath("/campaigns");
-  return { ok: true, message: "Saved." };
+  return {
+    ok: true,
+    message: "Saved. Re-submit for approval when you're happy with it.",
+  };
+}
+
+export async function submitForApprovalAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const org = await requireOrg();
+  const id = String(formData.get("campaignId") ?? "");
+  try {
+    await submitTemplateForApproval(id, org.id);
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Submission failed.",
+    };
+  }
+  revalidatePath(`/campaigns/${id}`);
+  revalidatePath("/campaigns");
+  return { ok: true, message: "Submitted to Meta for approval." };
+}
+
+export async function refreshStatusAction(formData: FormData): Promise<void> {
+  const org = await requireOrg();
+  const id = String(formData.get("campaignId") ?? "");
+  await refreshTemplateStatus(id, org.id);
+  revalidatePath(`/campaigns/${id}`);
+  revalidatePath("/campaigns");
 }
 
 export async function deleteCampaignAction(formData: FormData): Promise<void> {
