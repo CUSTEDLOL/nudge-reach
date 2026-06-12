@@ -17,6 +17,47 @@ model Org {
   updatedAt   DateTime   @updatedAt
   contacts    Contact[]
   audiences   Audience[]
+  products    Product[]
+  campaigns   Campaign[]
+}
+
+model Product {
+  id         String     @id @default(cuid())
+  orgId      String
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name       String
+  photoUrl   String?
+  attributes Json?
+  createdAt  DateTime   @default(now())
+  campaigns  Campaign[]
+
+  @@index([orgId])
+}
+
+enum CampaignStatus {
+  DRAFT
+  TEMPLATE_PENDING
+  TEMPLATE_APPROVED
+  SENDING
+  SENT
+  FAILED
+}
+
+model Campaign {
+  id        String         @id @default(cuid())
+  orgId     String
+  org       Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  status    CampaignStatus @default(DRAFT)
+  // The editable campaign fields in the PRD §7 JSON shape (header, body,
+  // footer, buttons, sampleName, …). Meta template rows come in Phase 3.
+  content   Json
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([orgId])
 }
 
 // Consent is data, not UI: optedIn + optedOutAt drive the consent gate

@@ -5,7 +5,54 @@ what's next.
 
 ---
 
-## Phase 1 — Platform modules (2026-06-12) ✅ code complete — ⏳ live model check awaits ANTHROPIC_API_KEY
+## Phase 2 — Generate, the wedge (2026-06-12) ✅ COMPLETE
+
+### Done
+- **Storage**: `product-photos` public bucket (public read is required —
+  Meta fetches template header images by URL); authenticated upload/update
+  policies via SQL.
+- **Models**: `Product`, `Campaign` (status enum per PRD; editable fields
+  stored as `content Json` in the §7 shape — Template rows arrive in
+  Phase 3). RLS enabled.
+- **Generation** (`lib/campaign/`): PRD §7 system prompt verbatim + explicit
+  JSON key list; vision path when a photo exists; defensive parsing
+  (`extractJson` strips fences/prose) with one strict retry; **guardrails as
+  pure unit-tested functions** — `repairPersonalization` ({{1}} exactly
+  once), `repairOptOutFooter` (opt-out mandatory, ≤60 chars),
+  `repairAndValidate` (zod, Meta length caps, ≤3 buttons).
+- **UI**: `/campaigns` list with status badges + empty state,
+  `/campaigns/new` (photo upload with thumbnail + optional description),
+  `/campaigns/[id]` editor — every field editable with a live generic
+  chat-style preview (`components/whatsapp-preview.tsx`, no WhatsApp
+  branding), AI tips panel (imageTreatment/notes). Human edits pass through
+  the same compliance repairs — the opt-out and {{1}} can't be edited away.
+- 40 unit tests passing; build + lint green.
+
+### Verified live (scripts/phase2-live.ts + fetch-as-user.js)
+- Real product photo → Haiku vision → valid compliant JSON through the real
+  `lib/campaign/generate.ts` path (model demonstrably *saw* the image — its
+  photo tip referenced the hanger in the test shot).
+- Campaign persisted; `/campaigns/[id]` renders header, body with {{1}}
+  substituted ("Hi Priya, …"), opt-out footer, and both buttons; list +
+  new pages render.
+
+### Decisions
+- Editable campaign fields live on `Campaign.content` (Json, §7 shape)
+  rather than a Template row — Template (Meta payload + approval status)
+  is a Phase 3 concern built *from* this content.
+- Image cap 4 MB before upload (Claude vision limit ~5 MB).
+- Preview is deliberately generic chat styling (no Meta/WhatsApp logo).
+- Visual (screenshot) check of the preview deferred to the Phase 5 demo
+  pass; Phase 2 verified via rendered-HTML assertions.
+
+### Next
+- **Phase 3 — Templates & approval**: Meta MARKETING template payload
+  builder (unit-tested vs docs example), submit + mock/live approval
+  tracking, WhatsApp connection screen (manual creds, token encrypted).
+
+---
+
+## Phase 1 — Platform modules (2026-06-12) ✅ COMPLETE
 
 ### Done
 - **`lib/model-router`** — `generate({system, prompt, image?, maxTokens})` via
@@ -41,14 +88,13 @@ what's next.
 ### Acceptance criteria status
 - [x] `canSendMarketing` unit-tested
 - [x] Contacts/audiences CRUD works (verified live)
-- [ ] Model-router returns text for a test prompt — **blocked on
-      `ANTHROPIC_API_KEY` from founder**; will verify first thing in Phase 2
-      (generation uses the same path).
+- [x] Model-router returns text for a test prompt — verified live with the
+      founder's key (`scripts/verify-model-router.js`, claude-haiku-4-5,
+      37 in / 33 out tokens).
 
 ### Next
 - **Phase 2 — Generate (the wedge):** photo upload to Supabase Storage,
   campaign generation per PRD §7, editable fields + WhatsApp-style preview.
-- Needs from founder: `ANTHROPIC_API_KEY`.
 
 ---
 
