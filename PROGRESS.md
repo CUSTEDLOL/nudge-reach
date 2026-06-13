@@ -20,6 +20,18 @@ what's next.
 - 61 unit tests passing; verified against production with a signed-in
   user: dashboard, campaigns list (demo + sent campaign), contacts.
 
+### Post-deploy hotfix (2026-06-13)
+- **Photo upload 500'd in production**: Next.js server actions default to a
+  1 MB body cap; product photos exceed it. Raised to 6 MB via
+  `experimental.serverActions.bodySizeLimit`, plus a friendly client-side
+  4 MB pre-check on `/campaigns/new`.
+- **White text in input boxes**: the create-next-app scaffold shipped
+  `prefers-color-scheme: dark` variables, so dark-mode browsers rendered
+  white form text on our white cards. Removed the dark block, set
+  `color-scheme: light`, and pinned explicit input/textarea/select colors.
+- Redeployed; both fixes verified live (page loads, `color-scheme:light`
+  present in shipped CSS, no new runtime errors).
+
 ### Founder action still needed (1 minute)
 - Supabase → Authentication → URL Configuration: set Site URL to
   https://nudge-reach.vercel.app and add it to Redirect URLs, so NEW
