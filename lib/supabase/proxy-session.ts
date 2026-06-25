@@ -3,7 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // /api/webhooks: Meta calls it (signature-verified, not cookie-auth'd).
 // /api/cron: queue tick (no session; safe — it only advances queued work).
-const PUBLIC_PATHS = ["/login", "/auth", "/api/webhooks", "/api/cron"];
+// /waitlist + /api/waitlist: public marketing landing page + its signup endpoint.
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth",
+  "/api/webhooks",
+  "/api/cron",
+  "/waitlist",
+  "/api/waitlist",
+];
 
 /**
  * Refreshes the Supabase auth token on every matched request and redirects

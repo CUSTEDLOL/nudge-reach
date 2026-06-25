@@ -179,3 +179,19 @@ model AudienceContact {
 
   @@id([audienceId, contactId])
 }
+
+// Public waitlist signups from the marketing landing page (/waitlist).
+// Not org-scoped — these are pre-signup leads. Inserts happen server-side via
+// Prisma (table owner); enable RLS with no policies in Supabase so the
+// publishable key can't read/write it directly (consistent with other tables).
+model WaitlistSignup {
+  id        String   @id @default(cuid())
+  shopName  String
+  city      String
+  phoneE164 String
+  vertical  String
+  source    String   @default("landing")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
