@@ -175,13 +175,22 @@ async function maybeCompleteCampaign(campaignId: string): Promise<void> {
   }
 }
 
+/** Window after the last send during which simulated statuses still evolve. */
+const SETTLE_WINDOW_MS = 25_000;
+
 export async function campaignStats(campaignId: string) {
-  const groups = await prisma.message.groupBy({
-    by: ["status"],
-    where: { campaignId },
-    _count: true,
-    _sum: { costMinorUnits: true },
-  });
+  const [groups, agg] = await Promise.all([
+    prisma.message.groupBy({
+      by: ["status"],
+      where: { campaignId },
+      _count: true,
+      _sum: { costMinorUnits: true },
+    }),
+    prisma.message.aggregate({
+      where: { campaignId },
+      _max: { sentAt: true },
+    }),
+  ]);
   const byStatus: Record<string, number> = {};
   let total = 0;
   let actualCostMinor = 0;
@@ -192,14 +201,24 @@ export async function campaignStats(campaignId: string) {
   }
   const delivered =
     (byStatus.DELIVERED ?? 0) + (byStatus.READ ?? 0) + (byStatus.CLICKED ?? 0);
+  const queued = byStatus.QUEUED ?? 0;
+  const lastSentAt = agg._max.sentAt;
+
+  // "Settled" = nothing left to send AND past the simulated-progress window,
+  // so the dashboard can stop polling instead of refreshing forever.
+  const settled =
+    queued === 0 &&
+    (!lastSentAt || Date.now() - lastSentAt.getTime() > SETTLE_WINDOW_MS);
+
   return {
     total,
-    queued: byStatus.QUEUED ?? 0,
+    queued,
     sent: (byStatus.SENT ?? 0) + delivered,
     delivered,
     read: (byStatus.READ ?? 0) + (byStatus.CLICKED ?? 0),
     clicked: byStatus.CLICKED ?? 0,
     failed: byStatus.FAILED ?? 0,
     actualCostMinor,
+    settled,
   };
 }

@@ -115,7 +115,7 @@ export default async function CampaignPage({
                 campaignId={campaign.id}
                 status={campaign.status}
                 stats={stats}
-                estimatedCostMinor={stats.total * ratePaise}
+                ratePaise={ratePaise}
                 simulation={env.SEND_MODE === "simulation"}
               />
               <WhatsappPreview

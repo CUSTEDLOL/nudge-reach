@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export interface CampaignStatsView {
   total: number;
@@ -12,6 +11,7 @@ export interface CampaignStatsView {
   clicked: number;
   failed: number;
   actualCostMinor: number;
+  settled: boolean;
 }
 
 function StatCard({
@@ -39,35 +39,63 @@ function StatCard({
 
 export function StatsDashboard({
   campaignId,
-  status,
-  stats,
-  estimatedCostMinor,
+  status: initialStatus,
+  stats: initialStats,
+  ratePaise,
   simulation,
 }: {
   campaignId: string;
   status: string;
   stats: CampaignStatsView;
-  estimatedCostMinor: number;
+  ratePaise: number;
   simulation: boolean;
 }) {
-  const router = useRouter();
-  const live = status === "SENDING" || stats.sent > stats.read + stats.failed;
+  const [status, setStatus] = useState(initialStatus);
+  const [stats, setStats] = useState(initialStats);
 
+  // Poll a lightweight JSON endpoint and update only the numbers — no
+  // full-page refresh, so the preview/header don't flicker. Stop once the
+  // campaign has settled (queue drained + delivery window elapsed).
   useEffect(() => {
-    if (!live) return;
-    const timer = setInterval(() => router.refresh(), 3000);
-    return () => clearInterval(timer);
-  }, [live, router]);
+    if (stats.settled) return;
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch(`/api/campaigns/${campaignId}/stats`, {
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          status: string;
+          stats: CampaignStatsView;
+        };
+        if (cancelled) return;
+        setStatus(data.status);
+        setStats(data.stats);
+      } catch {
+        // transient network error — try again on the next tick
+      }
+    }
+
+    const timer = setInterval(poll, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [campaignId, stats.settled]);
 
   const doneCount = stats.total - stats.queued;
   const progressPct =
     stats.total > 0 ? Math.round((doneCount / stats.total) * 100) : 0;
+  const estimatedCostMinor = stats.total * ratePaise;
+  const sending = status === "SENDING";
 
   return (
     <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-neutral-900">
-          {status === "SENDING" ? "📤 Sending…" : "📊 Results"}
+          {sending ? "📤 Sending…" : "📊 Results"}
           {simulation && (
             <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
               simulated
