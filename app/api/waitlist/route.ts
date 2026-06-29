@@ -8,19 +8,14 @@ import { normalizePhoneE164 } from "@/lib/phone";
  * No auth (allow-listed in proxy-session PUBLIC_PATHS). Validates with zod,
  * normalizes the phone to E.164, and stores a WaitlistSignup row via Prisma.
  */
-const VERTICALS = [
-  "Apparel / textiles",
-  "Jewellery / accessories",
-  "Home décor / gifting",
-  "Bakery / food",
-  "Other",
-] as const;
-
 const schema = z.object({
-  shopName: z.string().trim().min(1, "Shop name is required").max(120),
+  shopName: z.string().trim().min(1, "Business name is required").max(120),
   city: z.string().trim().min(1, "City is required").max(80),
   phone: z.string().trim().min(1, "Phone is required").max(20),
-  vertical: z.enum(VERTICALS),
+  // Free-text business category. The marketing site offers a broad set of
+  // business types and the DB column is a plain string, so we validate length
+  // only — this stays backward-compatible with the original retail verticals.
+  vertical: z.string().trim().min(1, "Please choose a category").max(60),
   source: z.string().trim().max(40).optional(),
 });
 

@@ -1,111 +1,95 @@
 import type { Metadata } from "next";
-import "./waitlist.css";
-import { WaitlistForm } from "./waitlist-form";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Container } from "@/components/marketing/section";
+import { Logo } from "@/components/marketing/logo";
+import { LeadForm } from "@/components/marketing/lead-form";
+import { WhatsAppCard } from "@/components/marketing/whatsapp-card";
+import { Reveal } from "@/components/marketing/motion-primitives";
+import { Footer } from "@/components/marketing/footer";
 
 export const metadata: Metadata = {
-  title: "Nudge Reach — WhatsApp marketing from one photo",
+  title: "Join the waitlist",
   description:
-    "Snap a product photo. Get a ready-to-send, WhatsApp-compliant marketing campaign for your shop's customers — in under a minute.",
+    "Snap a product photo. Get a ready-to-send, WhatsApp-compliant campaign for your customers — in under a minute. Join the Nudge early-access waitlist.",
 };
 
 const WHY = [
-  "No typing or design skills needed — just a photo",
-  "Stays within WhatsApp's rules, every time",
-  "Transparent ₹ cost estimate before you send",
+  "No typing or design skills — just a photo",
+  "Compliant with WhatsApp's rules, every time",
+  "Transparent ₹ cost before you ever hit send",
   "Only messages customers who opted in",
-  "Works in simulation first — try with zero risk",
-  "Built for small shops, not big marketing teams",
+  "Works in simulation first — zero risk",
+  "Built for shops, not big marketing teams",
 ];
 
 export default function WaitlistPage() {
   return (
-    <div className="nr-wl">
-      <div className="nr-wrap">
-        <header className="nr-head">
-          <div className="nr-logo">
-            Nudge<span> Reach</span>
-          </div>
-          <a className="nr-navcta" href="#join">
-            Get early access →
-          </a>
-        </header>
+    <div className="flex min-h-screen flex-col bg-cream">
+      <header className="relative z-10">
+        <Container className="flex items-center justify-between py-5">
+          <Logo />
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/60 transition-colors hover:text-ink"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to site
+          </Link>
+        </Container>
+      </header>
 
-        <section className="nr-hero" id="join">
+      <main className="bg-mesh relative flex-1 overflow-hidden">
+        <div className="bg-dotgrid pointer-events-none absolute inset-0 opacity-40" />
+        <Container className="relative z-10 grid items-center gap-12 py-12 lg:grid-cols-2 lg:py-20">
           <div>
-            <span className="nr-pill">For shop owners • Built for India 🇮🇳</span>
-            <h1>
-              One product photo. <em>A whole WhatsApp campaign.</em>
-            </h1>
-            <p className="nr-sub">
-              Snap a photo of what you sell. Nudge writes a ready-to-send,
-              WhatsApp-compliant campaign for your customers — in under a minute.
-              No typing, no designer, no tech.
-            </p>
-            <WaitlistForm />
-          </div>
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-brand-200/70 bg-white/70 px-3.5 py-1.5 text-[13px] font-semibold text-brand-700 shadow-soft backdrop-blur">
+                Early access · Built for India 🇮🇳
+              </span>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.07] tracking-tight text-ink sm:text-5xl">
+                One product photo.{" "}
+                <span className="font-display text-gradient italic">
+                  A whole WhatsApp campaign.
+                </span>
+              </h1>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink/60">
+                Snap a photo of what you sell. Nudge writes a ready-to-send,
+                WhatsApp-compliant campaign for your customers — in under a
+                minute. No typing, no designer, no tech.
+              </p>
+            </Reveal>
 
-          <div className="nr-phone" aria-hidden="true">
-            <div className="nr-bar"></div>
-            <div className="nr-chat">
-              <div className="nr-photo">Banarasi Silk Dupatta</div>
-              <div className="nr-bubble">
-                <b>✨ New arrival, Priya!</b>
-                Handwoven Banarasi silk dupattas just in — festive-ready in 6
-                colours. Visit us this week for 10% off. 🛍️
-                <div className="nr-btns">View collection&nbsp;&nbsp;•&nbsp;&nbsp;Get directions</div>
-                <div className="nr-opt">Reply STOP to opt out</div>
+            <Reveal delay={0.15}>
+              <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+                {WHY.map((w) => (
+                  <li key={w} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-500" />
+                    <span className="text-[14.5px] leading-snug text-ink/70">
+                      {w}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+
+            <Reveal delay={0.2} className="mt-9 hidden lg:block">
+              <div className="w-fit -rotate-2">
+                <WhatsAppCard className="max-w-[280px]" />
               </div>
-            </div>
+            </Reveal>
           </div>
-        </section>
-      </div>
 
-      <section className="nr-how">
-        <div className="nr-wrap">
-          <h2>How it works</h2>
-          <div className="nr-steps">
-            <div className="nr-step">
-              <div className="nr-n">1</div>
-              <h3>Snap a photo</h3>
-              <p>Take a picture of any product in your shop. That&apos;s the only input we need.</p>
-            </div>
-            <div className="nr-step">
-              <div className="nr-n">2</div>
-              <h3>Get your campaign</h3>
-              <p>
-                Nudge writes the message, headline, offer and buttons —
-                personalised with each customer&apos;s name, and kept
-                WhatsApp-compliant automatically.
-              </p>
-            </div>
-            <div className="nr-step">
-              <div className="nr-n">3</div>
-              <h3>Send &amp; see results</h3>
-              <p>
-                Send to your opted-in customers. See who got it, read it and
-                clicked — with the cost shown up front in ₹.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+          <Reveal delay={0.15}>
+            <LeadForm surface="waitlist-page" defaultIntent="waitlist" />
+          </Reveal>
+        </Container>
+      </main>
 
-      <section className="nr-why">
-        <div className="nr-wrap">
-          <ul>
-            {WHY.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <footer className="nr-foot">
-        <div className="nr-wrap">
-          Nudge Reach — the first product of the Nudge AI studio for Asian SME
-          retail. © 2026
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
