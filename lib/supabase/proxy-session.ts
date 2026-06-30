@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// "/" (exact match, handled below): the public marketing homepage. Kept out of
+//   this prefix list so a stray "/" wouldn't make every route public.
 // /api/webhooks: Meta calls it (signature-verified, not cookie-auth'd).
 // /api/cron: queue tick (no session; safe — it only advances queued work).
 // /waitlist + /api/waitlist: public marketing landing page + its signup endpoint.
@@ -47,9 +49,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
 
-  const isPublic = PUBLIC_PATHS.some((p) =>
-    request.nextUrl.pathname.startsWith(p)
-  );
+  const { pathname } = request.nextUrl;
+  const isPublic =
+    pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   if (!claims && !isPublic) {
     const url = request.nextUrl.clone();
