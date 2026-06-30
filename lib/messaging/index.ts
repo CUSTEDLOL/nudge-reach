@@ -31,7 +31,14 @@ export async function sendMessage(
   recipient: Recipient,
   payload: MessagePayload
 ): Promise<SendResult> {
-  if (payload.category === "MARKETING" && !canSendMarketing(recipient)) {
+  // Consent gate (rule 2) applies to MARKETING templates only. Free-form text
+  // replies are answers to a user-initiated conversation and don't require
+  // marketing opt-in.
+  if (
+    payload.kind === "template" &&
+    payload.category === "MARKETING" &&
+    !canSendMarketing(recipient)
+  ) {
     return {
       ok: false,
       blockedByConsent: true,

@@ -71,3 +71,41 @@ export async function generate({
     .map((block) => block.text)
     .join("");
 }
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface ChatInput {
+  system: string;
+  messages: ChatTurn[];
+  maxTokens?: number;
+}
+
+/**
+ * Multi-turn chat for the conversational agent (Phase 7). Same cheap-model
+ * guarantee as generate() — Haiku tier only, never an expensive model.
+ * Tool/function-calling is layered on in Phase 9.
+ */
+export async function chat({
+  system,
+  messages,
+  maxTokens = 400, // WhatsApp replies are short; keep cost + latency low
+}: ChatInput): Promise<string> {
+  const model = env.RUNTIME_MODEL || "claude-haiku-4-5";
+  assertRuntimeModelAllowed(model);
+
+  const response = await client().messages.create({
+    model,
+    max_tokens: maxTokens,
+    system,
+    messages: messages.map((m) => ({ role: m.role, content: m.text })),
+  });
+
+  return response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("")
+    .trim();
+}

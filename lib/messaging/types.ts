@@ -25,7 +25,18 @@ export interface TemplateSend {
   headerImageUrl?: string;
 }
 
-export type MessagePayload = TemplateSend;
+/**
+ * A free-form session/text message — only valid inside the 24-hour customer
+ * service window (i.e. replying to a user-initiated conversation). Carries no
+ * marketing category, so the consent gate does not block it (the user started
+ * the conversation).
+ */
+export interface TextSend {
+  kind: "text";
+  text: string;
+}
+
+export type MessagePayload = TemplateSend | TextSend;
 
 export interface SendResult {
   ok: boolean;

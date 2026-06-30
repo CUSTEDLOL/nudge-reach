@@ -20,6 +20,56 @@ model Org {
   products    Product[]
   campaigns   Campaign[]
   whatsappAccounts WhatsappAccount[]
+  agentProfile     AgentProfile?
+  conversations    Conversation[]
+}
+
+// Per-tenant AI auto-reply agent config (Phase 7). NOT model training — the
+// "training" is this profile (vertical template + business knowledge + tone +
+// guardrails). Scoped to one business, per Meta's 2026 AI policy.
+model AgentProfile {
+  id           String   @id @default(cuid())
+  orgId        String   @unique
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  enabled      Boolean  @default(false)
+  vertical     String   @default("restaurant")
+  businessName String
+  // Owner-provided knowledge: hours, address, menu highlights, booking policy.
+  businessInfo String   @default("")
+  tone         String   @default("Warm, friendly, and concise")
+  doNots       String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// A two-way thread with one contact. lastInboundAt drives the WhatsApp 24-hour
+// customer-service window (free-form replies allowed only within it).
+model Conversation {
+  id            String                @id @default(cuid())
+  orgId         String
+  org           Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId     String
+  contact       Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lastInboundAt DateTime?
+  status        String                @default("open") // open | handoff | closed
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  messages      ConversationMessage[]
+
+  @@unique([orgId, contactId])
+  @@index([orgId])
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      String       // "inbound" | "outbound"
+  body           String
+  metaMessageId  String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 model WhatsappAccount {
@@ -154,6 +204,7 @@ model Contact {
   updatedAt   DateTime          @updatedAt
   audiences   AudienceContact[]
   messages    Message[]
+  conversations Conversation[]
 
   @@unique([orgId, phoneE164])
   @@index([orgId])

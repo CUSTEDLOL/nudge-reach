@@ -13,6 +13,15 @@ import type {
  */
 
 export function buildSendPayload(to: string, payload: MessagePayload) {
+  if (payload.kind === "text") {
+    return {
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body: payload.text },
+    };
+  }
+
   const components: Array<Record<string, unknown>> = [];
 
   if (payload.headerImageUrl) {

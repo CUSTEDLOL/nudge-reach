@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
-import { isStopMessage, verifyWebhookSignature } from "@/lib/webhook/verify";
+import { verifyWebhookSignature } from "@/lib/webhook/verify";
+import { handleInboundMessage } from "@/lib/agent/inbound";
 import { isForwardTransition } from "@/lib/send/sim-progress";
 import type { MessageStatus } from "@prisma/client";
 
@@ -141,22 +142,18 @@ async function processInbound(
   messages: Array<{ from?: string; text?: { body?: string } }>,
   phoneNumberId?: string
 ) {
+  if (!phoneNumberId) return;
+  const account = await prisma.whatsappAccount.findFirst({
+    where: { phoneNumberId },
+  });
+  if (!account) return; // unknown number — ignore
+
   for (const inbound of messages ?? []) {
     const text = inbound.text?.body ?? "";
-    if (!inbound.from || !isStopMessage(text)) continue;
-
-    // Scope the opt-out to the org owning this phone number when known.
-    const account = phoneNumberId
-      ? await prisma.whatsappAccount.findFirst({ where: { phoneNumberId } })
-      : null;
-
-    await prisma.contact.updateMany({
-      where: {
-        phoneE164: { endsWith: inbound.from.replace(/^\+?/, "") },
-        ...(account ? { orgId: account.orgId } : {}),
-      },
-      data: { optedIn: false, optedOutAt: new Date() },
-    });
+    if (!inbound.from || !text) continue;
+    // Threads the conversation, handles STOP, and auto-replies if the agent
+    // is enabled (see lib/agent/inbound.ts).
+    await handleInboundMessage(account.orgId, inbound.from, text);
   }
 }
 
