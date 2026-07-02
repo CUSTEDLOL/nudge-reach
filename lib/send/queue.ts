@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { canSendMarketing } from "@/lib/consent";
 import { sendMessage } from "@/lib/messaging";
+import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import {
   isForwardTransition,
   simulatedStatusFor,
@@ -101,7 +102,8 @@ export async function processQueue(campaignId: string): Promise<number> {
         language: template.language,
         bodyParams: [message.contact.name.split(" ")[0]],
         headerImageUrl: campaign.product.photoUrl ?? undefined,
-      }
+      },
+      { orgId: campaign.orgId }
     );
 
     await prisma.message.update({
@@ -210,11 +212,29 @@ async function maybeCompleteCampaign(campaignId: string): Promise<void> {
   const remaining = await prisma.message.count({
     where: { campaignId, status: "QUEUED" },
   });
-  if (remaining === 0) {
-    await prisma.campaign.updateMany({
-      where: { id: campaignId, status: "SENDING" },
-      data: { status: "SENT" },
+  if (remaining !== 0) return;
+
+  const done = await prisma.campaign.updateMany({
+    where: { id: campaignId, status: "SENDING" },
+    data: { status: "SENT" },
+  });
+  // Fire the completion webhook only on the transition (updateMany count > 0),
+  // so re-processing an already-sent campaign doesn't re-notify.
+  if (done.count > 0) {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { orgId: true, name: true, audienceId: true },
     });
+    if (campaign) {
+      const sent = await prisma.message.count({
+        where: { campaignId, status: { not: "FAILED" } },
+      });
+      void dispatchWebhook(campaign.orgId, "campaign.completed", {
+        campaignId,
+        name: campaign.name,
+        recipientsSent: sent,
+      });
+    }
   }
 }
 

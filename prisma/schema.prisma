@@ -37,6 +37,13 @@ model Org {
   onboardedAt DateTime?
   // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
   settings    Json       @default("{}")
+  // Billing (spec: real usage + Razorpay when keys present). plan defaults to
+  // the free tier; the paid fields fill in after a successful subscription.
+  plan                   String    @default("free") // free | starter | growth | scale
+  subscriptionStatus     String    @default("inactive") // inactive | active | past_due | cancelled
+  razorpayCustomerId     String?
+  razorpaySubscriptionId String?
+  currentPeriodEnd       DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   contacts    Contact[]
@@ -54,6 +61,42 @@ model Org {
   automationRuns   AutomationRun[]
   apiKeys          ApiKey[]
   templates        Template[]
+  webhookEndpoints WebhookEndpoint[]
+}
+
+// An outbound webhook subscription (spec §M8 integrations): the app POSTs
+// signed JSON to `url` when subscribed events fire. Consumed by Zapier/Make/
+// n8n/custom endpoints. Secret signs the payload (HMAC-SHA256).
+model WebhookEndpoint {
+  id           String   @id @default(cuid())
+  orgId        String
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  url          String
+  secret       String
+  // Subscribed event names, e.g. ["message.received","campaign.completed"].
+  events       String[]
+  enabled      Boolean  @default(true)
+  lastStatus   Int?
+  lastDeliveryAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deliveries   WebhookDelivery[]
+
+  @@index([orgId])
+}
+
+// Delivery attempt log for a webhook endpoint (audit + debugging in the UI).
+model WebhookDelivery {
+  id         String          @id @default(cuid())
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event      String
+  status     Int?            // HTTP status, null if the request never completed
+  ok         Boolean         @default(false)
+  error      String?
+  createdAt  DateTime        @default(now())
+
+  @@index([endpointId, createdAt])
 }
 
 // A user's seat in an org. userId is the Supabase Auth user id (fictional

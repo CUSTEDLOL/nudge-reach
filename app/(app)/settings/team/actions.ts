@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/lib/auth";
+import { appOrigin, isEmailConfigured, sendEmail } from "@/lib/email";
 
 export interface ActionResult {
   ok: boolean;
@@ -14,6 +15,15 @@ const ROLES: OrgRole[] = ["OWNER", "ADMIN", "AGENT"];
 
 function isOrgRole(value: string): value is OrgRole {
   return (ROLES as string[]).includes(value);
+}
+
+/** Minimal HTML-entity escape for values interpolated into invite emails. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 export async function updateMemberRoleAction(
@@ -119,11 +129,47 @@ export async function inviteMemberAction(
       update: { role, status: "pending" },
     });
 
+    // Real invite email when Resend is configured; auto-join on signup works
+    // either way, so a failed/skipped email never fails the invite itself.
+    let emailNote = " They'll join automatically when they sign up with this email.";
+    if (isEmailConfigured()) {
+      const signupUrl = `${appOrigin()}/login`;
+      const inviterName =
+        ctx.membership.displayName || ctx.email || "A teammate";
+      const result = await sendEmail({
+        to: email,
+        subject: `${inviterName} invited you to ${ctx.org.name} on Nudge`,
+        text: [
+          `${inviterName} invited you to join ${ctx.org.name} on Nudge`,
+          `— the WhatsApp CRM they use for customer chats and campaigns.`,
+          ``,
+          `Accept by signing up with this email address: ${signupUrl}`,
+        ].join("\n"),
+        html: `
+          <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+            <h2 style="color:#0b3d2e;margin:0 0 12px">You're invited to ${escapeHtml(ctx.org.name)}</h2>
+            <p style="color:#374151;line-height:1.6;margin:0 0 20px">
+              ${escapeHtml(inviterName)} invited you to join
+              <strong>${escapeHtml(ctx.org.name)}</strong> on Nudge — the WhatsApp
+              CRM they use for customer chats and campaigns. You'll join as
+              <strong>${role.toLowerCase()}</strong>.
+            </p>
+            <a href="${signupUrl}" style="display:inline-block;background:#02a258;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600">
+              Accept invite
+            </a>
+            <p style="color:#9ca3af;font-size:12px;margin:20px 0 0">
+              Sign up with this email address (${escapeHtml(email)}) and you'll
+              land in the workspace automatically.
+            </p>
+          </div>`,
+      });
+      emailNote = result.ok
+        ? " An invite email is on its way."
+        : " (The invite email couldn't be sent, but they'll still join automatically when they sign up with this email.)";
+    }
+
     revalidatePath("/settings/team");
-    return {
-      ok: true,
-      message: `Invited ${email} — they'll join automatically when they sign up with this email.`,
-    };
+    return { ok: true, message: `Invited ${email}.${emailNote}` };
   } catch (err) {
     return {
       ok: false,

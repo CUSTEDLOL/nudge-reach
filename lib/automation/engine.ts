@@ -365,7 +365,8 @@ async function sendMessageStep(
       optedIn: contact.optedIn,
       optedOutAt: contact.optedOutAt,
     },
-    { kind: "text", text }
+    { kind: "text", text },
+    { orgId: contact.orgId }
   );
   if (!sent.ok) return { ok: false, detail: sent.error ?? "Send failed." };
 
@@ -412,7 +413,8 @@ async function sendTemplateStep(
       templateName: template.name,
       language: template.language,
       bodyParams: [firstName],
-    }
+    },
+    { orgId: contact.orgId }
   );
   if (!sent.ok) {
     return {

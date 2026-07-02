@@ -1,24 +1,12 @@
 import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/auth";
 import { canSendMarketing } from "@/lib/consent";
+import { csvField } from "@/lib/csv";
 
 /**
  * Real data export (spec §M8): streams the org's contacts as a CSV download.
  * Auth + org scoping via requireOrg() — same guarantee as every page.
  */
-
-/**
- * RFC-4180 escaping + formula-injection defense (CWE-1236): a leading
- * = + - @ tab or CR would execute as a formula in Excel/Sheets, so it gets a
- * neutralizing apostrophe before the usual quoting.
- */
-function csvField(value: string): string {
-  const neutralized = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  if (/[",\n\r]/.test(neutralized)) {
-    return `"${neutralized.replace(/"/g, '""')}"`;
-  }
-  return neutralized;
-}
 
 export async function GET() {
   const org = await requireOrg();

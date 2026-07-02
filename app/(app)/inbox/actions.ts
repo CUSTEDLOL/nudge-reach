@@ -73,7 +73,8 @@ export async function sendTextAction(
         optedIn: conversation.contact.optedIn,
         optedOutAt: conversation.contact.optedOutAt,
       },
-      { kind: "text", text }
+      { kind: "text", text },
+      { orgId: org.id }
     );
     if (!result.ok) {
       return { ok: false, message: result.error ?? "The message didn't send — try again." };
@@ -158,7 +159,8 @@ export async function sendTemplateAction(
         templateName: template.name,
         language: template.language,
         bodyParams: [name],
-      }
+      },
+      { orgId: org.id }
     );
 
     if (result.blockedByConsent) {

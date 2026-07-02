@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import {
-  MessageCircle,
-  ShieldAlert,
-  ShoppingBag,
-  Webhook,
-  Workflow,
-  Zap,
-} from "lucide-react";
+import { MessageCircle, ShieldAlert, ShoppingBag } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/lib/auth";
 import { env } from "@/lib/env";
@@ -19,33 +12,11 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { ApiKeysCard, type SerializedApiKey } from "./api-keys-card";
+import { WebhooksCard, type SerializedWebhook } from "./webhooks-card";
 import { CopyButton } from "./copy-button";
 import { TestConnectionButton } from "./test-connection-button";
 
 export const metadata: Metadata = { title: "Integrations" };
-
-const PLACEHOLDER_INTEGRATIONS = [
-  {
-    name: "Zapier",
-    icon: Zap,
-    blurb: "Trigger zaps from new contacts and replies across 6,000+ apps.",
-  },
-  {
-    name: "Make",
-    icon: Workflow,
-    blurb: "Build multi-step scenarios on campaign and inbox events.",
-  },
-  {
-    name: "Webhooks",
-    icon: Webhook,
-    blurb: "Receive real-time events on your own endpoints.",
-  },
-  {
-    name: "Shopify",
-    icon: ShoppingBag,
-    blurb: "Sync customers and order events straight from your store.",
-  },
-];
 
 export default async function IntegrationsPage() {
   const ctx = await requireOrgContext();
@@ -66,9 +37,13 @@ export default async function IntegrationsPage() {
     );
   }
 
-  const [account, apiKeys, headerList] = await Promise.all([
+  const [account, apiKeys, endpoints, headerList] = await Promise.all([
     getWhatsappAccount(ctx.org.id),
     prisma.apiKey.findMany({
+      where: { orgId: ctx.org.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.webhookEndpoint.findMany({
       where: { orgId: ctx.org.id },
       orderBy: { createdAt: "desc" },
     }),
@@ -93,6 +68,15 @@ export default async function IntegrationsPage() {
     createdAt: key.createdAt.toISOString(),
     lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
     revoked: key.revokedAt !== null,
+  }));
+
+  const serializedWebhooks: SerializedWebhook[] = endpoints.map((w) => ({
+    id: w.id,
+    url: w.url,
+    events: w.events,
+    enabled: w.enabled,
+    lastStatus: w.lastStatus,
+    lastDeliveryAt: w.lastDeliveryAt?.toISOString() ?? null,
   }));
 
   return (
@@ -169,32 +153,34 @@ export default async function IntegrationsPage() {
           </div>
         </Card>
 
+        {/* Outbound webhooks (real — Zapier/Make/n8n/custom) */}
+        <WebhooksCard webhooks={serializedWebhooks} canManage={canManage} />
+
         {/* API keys */}
         <ApiKeysCard keys={serializedKeys} canManage={canManage} />
 
-        {/* Coming soon */}
+        {/* Native e-commerce connector — genuinely not built yet */}
         <div>
           <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-            More integrations
+            On the roadmap
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {PLACEHOLDER_INTEGRATIONS.map(({ name, icon: Icon, blurb }) => (
-              <Card key={name} className="flex items-start gap-3.5 p-5">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-500">
-                  <Icon className="h-5 w-5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-neutral-900">
-                      {name}
-                    </p>
-                    <Badge tone="neutral">Coming soon</Badge>
-                  </div>
-                  <p className="mt-0.5 text-sm text-neutral-500">{blurb}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <Card className="flex items-start gap-3.5 p-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-500">
+              <ShoppingBag className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-neutral-900">
+                  Shopify &amp; WooCommerce
+                </p>
+                <Badge tone="neutral">Coming soon</Badge>
+              </div>
+              <p className="mt-0.5 text-sm text-neutral-500">
+                Native order &amp; customer sync. In the meantime, wire your store
+                to Nudge today with a webhook above or the REST API keys.
+              </p>
+            </div>
+          </Card>
         </div>
       </div>
     </>

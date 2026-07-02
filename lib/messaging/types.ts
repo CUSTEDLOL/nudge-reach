@@ -47,6 +47,22 @@ export interface SendResult {
   blockedByConsent?: boolean;
 }
 
+/**
+ * Per-tenant sender credentials for the live driver. When present, the send
+ * uses this org's own WhatsApp number (true multi-tenancy). When absent, the
+ * live driver falls back to the single-number env credentials (self-host /
+ * agency model). Resolved from the encrypted WhatsappAccount row.
+ */
+export interface SenderCredentials {
+  phoneNumberId: string;
+  accessToken: string;
+  apiVersion?: string;
+}
+
 export interface ChannelDriver {
-  send(recipient: Recipient, payload: MessagePayload): Promise<SendResult>;
+  send(
+    recipient: Recipient,
+    payload: MessagePayload,
+    credentials?: SenderCredentials
+  ): Promise<SendResult>;
 }

@@ -34,6 +34,19 @@ export const envSchema = z
 
     // Pricing config (estimate shown to retailers; verify against Meta)
     WHATSAPP_MARKETING_RATE_INR: z.coerce.number().positive().default(0.99),
+
+    // Payments — Razorpay (optional; billing runs in free mode without them)
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+    // Transactional email — Resend (optional; invites auto-join without it)
+    RESEND_API_KEY: z.string().optional(),
+    EMAIL_FROM: z.string().optional(),
+
+    // Public app origin (invite/email links, absolute URLs). Falls back to the
+    // request host when unset.
+    NEXT_PUBLIC_APP_URL: z.string().optional(),
   })
   .superRefine((vars, ctx) => {
     if (vars.SEND_MODE === "live") {

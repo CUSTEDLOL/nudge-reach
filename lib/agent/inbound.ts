@@ -5,6 +5,7 @@ import { sendMessage } from "@/lib/messaging";
 import { buildHistory, generateAgentReply } from "@/lib/agent/reply";
 import { runInboundAutomations } from "@/lib/automation/engine";
 import { toPreview } from "@/lib/inbox/format";
+import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 
 export interface InboundResult {
   optedOut?: boolean;
@@ -77,6 +78,14 @@ export async function handleInboundMessage(
     data: { conversationId: conversation.id, direction: "inbound", body: text },
   });
 
+  // Notify any integrations subscribed to inbound messages (fire-and-forget).
+  void dispatchWebhook(orgId, "message.received", {
+    conversationId: conversation.id,
+    contactId: contact.id,
+    from: phoneE164,
+    text,
+  });
+
   // Automations run BEFORE the AI agent (spec §M6). Loop-safe: automation
   // sends go OUT through sendMessage and never re-enter this function — only
   // genuine inbound webhooks / the simulation tester reach here.
@@ -124,7 +133,8 @@ export async function handleInboundMessage(
       optedIn: contact.optedIn,
       optedOutAt: contact.optedOutAt,
     },
-    { kind: "text", text: replyText }
+    { kind: "text", text: replyText },
+    { orgId }
   );
 
   await prisma.conversationMessage.create({

@@ -3,11 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { requireOrgContext, requireRole } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { prisma } from "@/lib/db";
 import {
   getWhatsappAccount,
   getWhatsappCredentials,
 } from "@/lib/whatsapp/accounts";
 import { createApiKey, revokeApiKey } from "@/lib/api-keys";
+import {
+  deliver,
+  generateWebhookSecret,
+  isWebhookEvent,
+} from "@/lib/webhooks/dispatch";
 
 export interface ActionResult {
   ok: boolean;
@@ -134,6 +140,132 @@ export async function revokeApiKeyAction(
       ok: false,
       message:
         err instanceof Error ? err.message : "Couldn't revoke the API key.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Outbound webhooks (Zapier / Make / n8n / custom)
+// ---------------------------------------------------------------------------
+
+export interface CreateWebhookResult extends ActionResult {
+  /** The signing secret — shown once on create so the integrator can store it. */
+  secret?: string;
+}
+
+export async function createWebhookEndpointAction(
+  formData: FormData
+): Promise<CreateWebhookResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+
+    const url = String(formData.get("url") ?? "").trim();
+    const events = formData.getAll("events").map(String).filter(isWebhookEvent);
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return { ok: false, message: "Enter a valid URL (https://…)." };
+    }
+    if (parsed.protocol !== "https:") {
+      return { ok: false, message: "Webhook URLs must use https://." };
+    }
+    if (events.length === 0) {
+      return { ok: false, message: "Pick at least one event to send." };
+    }
+
+    const secret = generateWebhookSecret();
+    await prisma.webhookEndpoint.create({
+      data: { orgId: ctx.org.id, url, secret, events },
+    });
+    revalidatePath("/integrations");
+    return {
+      ok: true,
+      message: "Webhook added — copy the signing secret now, it won't be shown again.",
+      secret,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't add the webhook.",
+    };
+  }
+}
+
+export async function toggleWebhookEndpointAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const id = String(formData.get("id") ?? "");
+    const enabled = formData.get("enabled") === "true";
+    await prisma.webhookEndpoint.updateMany({
+      where: { id, orgId: ctx.org.id },
+      data: { enabled },
+    });
+    revalidatePath("/integrations");
+    return { ok: true, message: enabled ? "Webhook enabled." : "Webhook paused." };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't update the webhook.",
+    };
+  }
+}
+
+export async function deleteWebhookEndpointAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const id = String(formData.get("id") ?? "");
+    await prisma.webhookEndpoint.deleteMany({
+      where: { id, orgId: ctx.org.id },
+    });
+    revalidatePath("/integrations");
+    return { ok: true, message: "Webhook removed." };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't remove the webhook.",
+    };
+  }
+}
+
+/** Send a signed test event so an integrator can confirm wiring end to end. */
+export async function testWebhookEndpointAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const id = String(formData.get("id") ?? "");
+    const endpoint = await prisma.webhookEndpoint.findFirst({
+      where: { id, orgId: ctx.org.id },
+    });
+    if (!endpoint) return { ok: false, message: "That webhook no longer exists." };
+
+    const result = await deliver(endpoint, "test.ping", {
+      message: "This is a test event from Nudge.",
+      orgId: ctx.org.id,
+    });
+    revalidatePath("/integrations");
+    return result.ok
+      ? { ok: true, message: `Test delivered — endpoint returned HTTP ${result.status}.` }
+      : {
+          ok: false,
+          message: `Test failed${
+            result.status ? ` (HTTP ${result.status})` : ""
+          } — check the URL is reachable.`,
+        };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't send the test event.",
     };
   }
 }

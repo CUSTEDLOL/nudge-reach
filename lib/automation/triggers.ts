@@ -14,6 +14,7 @@ import {
   MAX_AUTOMATIONS_PER_EVENT,
   type AutomationWithSteps,
 } from "@/lib/automation/engine";
+import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 
 export interface TriggerContext {
   contactId: string;
@@ -28,6 +29,8 @@ export async function fireContactCreated(
   orgId: string,
   contactId: string
 ): Promise<void> {
+  // Notify integrations subscribed to new contacts (fire-and-forget).
+  void dispatchWebhook(orgId, "contact.created", { contactId });
   try {
     const matched = await matchAutomations("contact_created", { orgId });
     await runMatched(matched, orgId, contactId, "contact_created");

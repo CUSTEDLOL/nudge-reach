@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Download, FileDown, MessageSquare } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/lib/auth";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionHeader } from "../section-header";
@@ -11,9 +10,15 @@ export const metadata: Metadata = { title: "Data settings" };
 
 export default async function DataSettingsPage() {
   const { org } = await requireOrgContext();
-  const contactCount = await prisma.contact.count({
-    where: { orgId: org.id },
-  });
+  const [contactCount, conversationMessages, campaignMessages] =
+    await Promise.all([
+      prisma.contact.count({ where: { orgId: org.id } }),
+      prisma.conversationMessage.count({
+        where: { conversation: { orgId: org.id } },
+      }),
+      prisma.message.count({ where: { campaign: { orgId: org.id } } }),
+    ]);
+  const messageCount = conversationMessages + campaignMessages;
 
   return (
     <section>
@@ -50,7 +55,7 @@ export default async function DataSettingsPage() {
 
         <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="flex items-start gap-3.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-500">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
               <MessageSquare className="h-5 w-5" aria-hidden />
             </span>
             <div>
@@ -58,11 +63,21 @@ export default async function DataSettingsPage() {
                 Export message history
               </p>
               <p className="mt-0.5 text-sm text-neutral-500">
-                Full conversation and campaign message logs as CSV.
+                All {messageCount.toLocaleString("en-IN")} conversation and
+                campaign message
+                {messageCount === 1 ? "" : "s"} as CSV — direction, contact,
+                body, campaign, delivery status and timestamps.
               </p>
             </div>
           </div>
-          <Badge tone="neutral">Coming soon</Badge>
+          <a
+            href="/settings/data/export/messages"
+            className={buttonVariants({ variant: "secondary" })}
+            download
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Download CSV
+          </a>
         </Card>
       </div>
     </section>

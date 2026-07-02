@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { canSendMarketing } from "@/lib/consent";
+import { getWhatsappCredentials } from "@/lib/whatsapp/accounts";
 import { WhatsappLiveDriver } from "@/lib/messaging/drivers/whatsapp-live";
 import { WhatsappSimulationDriver } from "@/lib/messaging/drivers/whatsapp-simulation";
 import type {
@@ -8,6 +9,7 @@ import type {
   MessagePayload,
   Recipient,
   SendResult,
+  SenderCredentials,
 } from "@/lib/messaging/types";
 
 export type { Channel, MessagePayload, Recipient, SendResult };
@@ -21,6 +23,12 @@ function resolveDriver(channel: Channel): ChannelDriver {
   }
 }
 
+/** Options for a send: which org's number to send from (multi-tenant). */
+export interface SendOptions {
+  /** Org whose connected WhatsApp number should send this (live mode). */
+  orgId?: string;
+}
+
 /**
  * The single send entry point. The consent gate lives HERE, at the lowest
  * layer (rule 2) — a MARKETING payload to a non-consenting recipient is
@@ -29,7 +37,8 @@ function resolveDriver(channel: Channel): ChannelDriver {
 export async function sendMessage(
   channel: Channel,
   recipient: Recipient,
-  payload: MessagePayload
+  payload: MessagePayload,
+  options: SendOptions = {}
 ): Promise<SendResult> {
   // Consent gate (rule 2) applies to MARKETING templates only. Free-form text
   // replies are answers to a user-initiated conversation and don't require
@@ -45,5 +54,20 @@ export async function sendMessage(
       error: "Recipient has not opted in to marketing (or has opted out).",
     };
   }
-  return resolveDriver(channel).send(recipient, payload);
+
+  // Resolve this org's own WhatsApp credentials (multi-tenant). Falls back to
+  // the env single-number credentials inside the driver when none are stored.
+  let credentials: SenderCredentials | undefined;
+  if (channel === "whatsapp" && env.SEND_MODE === "live" && options.orgId) {
+    const creds = await getWhatsappCredentials(options.orgId);
+    if (creds) {
+      credentials = {
+        phoneNumberId: creds.phoneNumberId,
+        accessToken: creds.accessToken,
+        apiVersion: env.WHATSAPP_API_VERSION,
+      };
+    }
+  }
+
+  return resolveDriver(channel).send(recipient, payload, credentials);
 }

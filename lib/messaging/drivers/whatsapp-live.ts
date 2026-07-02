@@ -4,6 +4,7 @@ import type {
   MessagePayload,
   Recipient,
   SendResult,
+  SenderCredentials,
 } from "@/lib/messaging/types";
 
 /**
@@ -55,21 +56,29 @@ export function buildSendPayload(to: string, payload: MessagePayload) {
 export class WhatsappLiveDriver implements ChannelDriver {
   async send(
     recipient: Recipient,
-    payload: MessagePayload
+    payload: MessagePayload,
+    credentials?: SenderCredentials
   ): Promise<SendResult> {
-    if (!env.PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN) {
+    // Per-org credentials (multi-tenant) take precedence; fall back to the
+    // single-number env credentials (self-host / agency model).
+    const phoneNumberId = credentials?.phoneNumberId ?? env.PHONE_NUMBER_ID;
+    const accessToken = credentials?.accessToken ?? env.WHATSAPP_ACCESS_TOKEN;
+    const apiVersion =
+      credentials?.apiVersion ?? env.WHATSAPP_API_VERSION;
+
+    if (!phoneNumberId || !accessToken) {
       return {
         ok: false,
         error:
-          "Live mode is not configured: PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN missing.",
+          "No WhatsApp sender configured: connect a number in Settings → WhatsApp, or set PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN.",
       };
     }
 
-    const url = `https://graph.facebook.com/${env.WHATSAPP_API_VERSION}/${env.PHONE_NUMBER_ID}/messages`;
+    const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(buildSendPayload(recipient.address, payload)),
