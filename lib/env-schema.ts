@@ -44,6 +44,10 @@ export const envSchema = z
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
 
+    // Cron protection (optional): when set, /api/cron/* requires
+    // "Authorization: Bearer <CRON_SECRET>" (Vercel Cron sends it natively).
+    CRON_SECRET: z.string().optional(),
+
     // Public app origin (invite/email links, absolute URLs). Falls back to the
     // request host when unset.
     NEXT_PUBLIC_APP_URL: z.string().optional(),

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import {
   applySimulatedProgress,
   processQueue,
@@ -12,8 +13,19 @@ import { tickAutomationRuns } from "@/lib/automation/engine";
  * runs, then processes a batch for every SENDING campaign. Wire to Vercel
  * Cron in production; the campaign dashboard also ticks on every view, so
  * small sends complete without any cron at all.
+ *
+ * Every operation here is idempotent and safe to trigger publicly (atomic
+ * status claims, unique Message rows), but with CRON_SECRET set the route
+ * additionally requires Vercel Cron's bearer header — defense in depth.
  */
-export async function GET() {
+export async function GET(request: Request) {
+  if (
+    env.CRON_SECRET &&
+    request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`
+  ) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   // 1. Scheduled broadcasts whose time has come → SENDING (spec §M4).
   const released = await releaseDueCampaigns();
 
