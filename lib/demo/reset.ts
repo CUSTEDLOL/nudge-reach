@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
-import { seedDemoWorkspace, type SeedCounts } from "@/lib/demo/seed";
+// Relative (not "@/") so esbuild-bundled scripts can resolve it too.
+import { seedDemoWorkspace, type SeedCounts } from "./seed";
 
 /**
  * "Reset demo data" (simulation mode only, OWNER only — enforced by the
