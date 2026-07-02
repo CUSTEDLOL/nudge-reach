@@ -5,6 +5,50 @@ what's next.
 
 ---
 
+## Phase 9 — Demo-ready + production hardening + mobile (2026-07-03) ✅
+
+Eight commits (070d62a…c445c9b) taking the MVP to client-demo-ready.
+
+### Done
+- **Plan limits enforced server-side** (contacts, team seats, automations,
+  campaign messages/month — single choke point in enqueueCampaign) with
+  friendly upgrade prompts; tiers renamed Free/Starter/Growth/Pro with
+  message quotas (legacy "scale" id maps forward).
+- **Rate limiting** (in-process sliding window, honest best-effort scope):
+  public waitlist per IP, AI suggest per org, webhook/Meta test pings per
+  org. **Optional CRON_SECRET** bearer auth on /api/cron.
+- **Audit log**: append-only AuditLog + admin viewer (Settings → Audit log),
+  wired into role changes, invites, opt-outs, contact deletes, campaign
+  sends, WhatsApp connection, API keys, webhooks, plan changes, demo resets.
+- **Demo reset** (Settings → Data; simulation + OWNER only): seed extracted
+  to lib/demo/seed.ts (CLI wrapper kept), wipes CRM data, keeps
+  team/keys/webhooks/billing, re-seeds; verified end to end.
+- **Go-live checklist** on Settings → WhatsApp: six real-state checks.
+- **Retry failed campaign sends** (fresh Message rows so the deterministic
+  sim timeline can't re-fail them; consent re-checked).
+- **Landing sellability**: real pricing tiers, ROI calculator with disclosed
+  assumptions, six industry use cases, Start free / Book a demo CTA flow,
+  login restyle. Fixed a real production bug: reduced-motion users saw
+  NOTHING animated (SSR opacity-0 hydration mismatch in Reveal/Stagger).
+- **Mobile version**: bottom nav (<lg), Modal→bottom sheet + full-width
+  Drawer <sm, DataTable card mode <sm, inbox as a true mobile chat,
+  grid-cols-1 base fix across ~17 files. 22 routes × {375,390,430,768} —
+  zero page-level horizontal overflow (automated sweep). docs/MOBILE_QA.md.
+- **Docs pack**: README rewrite + DEPLOYMENT.md + SECURITY.md +
+  DEMO_SCRIPT.md (5-minute sales flow) + GO_LIVE aligned to per-org creds.
+- Composite indexes (Conversation [orgId,lastMessageAt], Contact
+  [orgId,createdAt]); WhatsApp connect ADMIN-gated.
+- **264 unit tests** (28 files; +31: CSV/CWE-1236, rate limit, plan limits,
+  Razorpay HMAC), tsc/lint/build green.
+
+### Known gaps
+- Rate limiting is per-instance (serverless) — documented in SECURITY.md.
+- Plan limits are read-then-write (tiny race overshoot acceptable).
+- Automation builder is functional-but-dense at 375px.
+- Live WhatsApp path still awaits real Meta credentials (runbook ready).
+
+---
+
 ## Phase 8 — Full CRM MVP (2026-07-02) ✅ BUILT (AiSensy/WATI-class product)
 
 ### Done
