@@ -76,7 +76,7 @@ export function CampaignEditor({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
       <Card className="p-6">
         <form action={save} className="flex flex-col gap-4">
           <input type="hidden" name="campaignId" value={campaignId} />

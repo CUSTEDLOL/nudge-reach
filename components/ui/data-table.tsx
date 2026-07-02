@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -38,6 +39,11 @@ function compare(a: unknown, b: unknown): number {
  * Client table with search, sort and pagination. Because columns contain
  * functions, DataTable must be rendered FROM a client component (module
  * pages wrap it in a small "use client" list component).
+ *
+ * Below the `sm` breakpoint rows render as stacked cards: the first
+ * string-headed column becomes the card title, remaining string-headed
+ * columns become label/value pairs, and unlabeled columns (checkboxes,
+ * action menus) sit in the card's header row. Call sites need no changes.
  */
 export function DataTable<T>({
   columns,
@@ -100,9 +106,26 @@ export function DataTable<T>({
     );
   }
 
+  // Mobile card layout: partition the columns once per render.
+  const firstLabeled = columns.findIndex((c) => typeof c.header === "string");
+  const leadIndex = firstLabeled >= 0 ? firstLabeled : 0;
+  const lead = columns[leadIndex];
+  const chromeBefore = columns.filter(
+    (c, i) => i < leadIndex && typeof c.header !== "string"
+  );
+  const chromeAfter = columns.filter(
+    (c, i) => i > leadIndex && typeof c.header !== "string"
+  );
+  const detailCols = columns.filter(
+    (c, i) => i !== leadIndex && typeof c.header === "string"
+  );
+  const sortableCols = columns.filter(
+    (c) => c.sortValue && typeof c.header === "string"
+  );
+
   return (
     <div className={className}>
-      {(searchValue || toolbar) && (
+      {(searchValue || toolbar || sortableCols.length > 0) && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {searchValue && (
             <div className="relative w-full max-w-xs">
@@ -123,10 +146,93 @@ export function DataTable<T>({
             </div>
           )}
           {toolbar}
+          {sortableCols.length > 0 && (
+            <Select
+              aria-label="Sort by"
+              value={sort ? `${sort.key}:${sort.dir}` : ""}
+              onChange={(e) => {
+                const [key, dir] = e.target.value.split(":");
+                setSort(key ? { key, dir: dir as "asc" | "desc" } : null);
+              }}
+              className="w-[calc(50%-0.25rem)] sm:hidden"
+            >
+              <option value="">Sort…</option>
+              {sortableCols.flatMap((col) => [
+                <option key={`${col.key}:asc`} value={`${col.key}:asc`}>
+                  {String(col.header)} ↑
+                </option>,
+                <option key={`${col.key}:desc`} value={`${col.key}:desc`}>
+                  {String(col.header)} ↓
+                </option>,
+              ])}
+            </Select>
+          )}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-black/5 bg-white shadow-soft">
+      {/* Mobile: stacked cards */}
+      <div className="sm:hidden">
+        {paged.length === 0 ? (
+          <div className="rounded-2xl border border-black/5 bg-white px-6 py-10 text-center text-sm text-neutral-500 shadow-soft">
+            {emptyMessage}
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-2.5">
+            {paged.map((row) => (
+              <li key={rowKey(row)}>
+                <div
+                  role={onRowClick ? "button" : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          if (e.key === "Enter") onRowClick(row);
+                        }
+                      : undefined
+                  }
+                  className={cn(
+                    "rounded-2xl border border-black/5 bg-white p-4 shadow-soft outline-none",
+                    onRowClick &&
+                      "cursor-pointer transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50 active:bg-neutral-50"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    {chromeBefore.map((col) => (
+                      <div key={col.key} className="shrink-0 pt-0.5">
+                        {col.cell(row)}
+                      </div>
+                    ))}
+                    <div className="min-w-0 flex-1 text-sm">{lead.cell(row)}</div>
+                    {chromeAfter.map((col) => (
+                      <div key={col.key} className="shrink-0">
+                        {col.cell(row)}
+                      </div>
+                    ))}
+                  </div>
+                  {detailCols.length > 0 && (
+                    <dl className="mt-3 grid grid-cols-[minmax(5rem,max-content)_1fr] items-baseline gap-x-4 gap-y-1.5 border-t border-neutral-100 pt-3 text-sm">
+                      {detailCols.map((col) => (
+                        <Fragment key={col.key}>
+                          <dt className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                            {col.header}
+                          </dt>
+                          <dd className="min-w-0 break-words text-neutral-700">
+                            {col.cell(row)}
+                          </dd>
+                        </Fragment>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Desktop / tablet: classic table */}
+      <div className="hidden overflow-x-auto rounded-2xl border border-black/5 bg-white shadow-soft sm:block">
         <Table>
           <TableHeader>
             <TableRow className="border-t-0 hover:bg-transparent">
@@ -209,7 +315,7 @@ export function DataTable<T>({
               onClick={() => setPage(Math.max(0, safePage - 1))}
               disabled={safePage === 0}
               aria-label="Previous page"
-              className="rounded-lg border border-neutral-200 bg-white p-1.5 outline-none transition-colors duration-150 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:pointer-events-none disabled:opacity-50"
+              className="rounded-lg border border-neutral-200 bg-white p-2.5 outline-none transition-colors duration-150 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:pointer-events-none disabled:opacity-50 sm:p-1.5"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
@@ -221,7 +327,7 @@ export function DataTable<T>({
               onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))}
               disabled={safePage >= pageCount - 1}
               aria-label="Next page"
-              className="rounded-lg border border-neutral-200 bg-white p-1.5 outline-none transition-colors duration-150 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:pointer-events-none disabled:opacity-50"
+              className="rounded-lg border border-neutral-200 bg-white p-2.5 outline-none transition-colors duration-150 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:pointer-events-none disabled:opacity-50 sm:p-1.5"
             >
               <ChevronRight className="h-4 w-4" aria-hidden />
             </button>

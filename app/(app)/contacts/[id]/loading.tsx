@@ -11,7 +11,7 @@ export default function ContactProfileLoading() {
         <Skeleton className="h-9 w-28" />
       </div>
       <Skeleton className="h-32 w-full rounded-2xl" />
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6">
           <Skeleton className="h-72 w-full rounded-2xl" />
           <Skeleton className="h-36 w-full rounded-2xl" />

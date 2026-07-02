@@ -54,7 +54,11 @@ export function Tabs({
       role="tablist"
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      className={cn("flex gap-5 border-b border-neutral-200", className)}
+      className={cn(
+        // Scrolls horizontally instead of wrapping when tabs outgrow the row.
+        "no-scrollbar flex gap-4 overflow-x-auto border-b border-neutral-200 sm:gap-5",
+        className
+      )}
     >
       {items.map((tab) => {
         const isActive = tab.value === active;
@@ -68,7 +72,7 @@ export function Tabs({
             tabIndex={isActive ? 0 : -1}
             onClick={() => select(tab.value)}
             className={cn(
-              "-mb-px inline-flex items-center gap-1.5 border-b-2 px-1 pb-2.5 text-sm font-medium outline-none transition-colors duration-150",
+              "-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 pb-2.5 text-sm font-medium outline-none transition-colors duration-150",
               "focus-visible:ring-2 focus-visible:ring-brand-400/50",
               isActive
                 ? "border-brand-600 text-brand-700"

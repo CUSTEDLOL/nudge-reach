@@ -26,7 +26,13 @@ export function PageHeader({
           <div className="mt-1 text-sm text-neutral-500">{description}</div>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && (
+        // min-w-0 + wrap so multiple action buttons never push past the
+        // viewport on narrow screens.
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">
+          {actions}
+        </div>
+      )}
     </header>
   );
 }

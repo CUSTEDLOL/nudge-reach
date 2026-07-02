@@ -147,7 +147,7 @@ export default async function CampaignPage({
 
       <div className="flex flex-col gap-6">
         {isScheduled && (
-          <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
             <SchedulePanel
               campaignId={campaign.id}
               scheduledAt={campaign.scheduledAt?.toISOString() ?? null}
@@ -183,7 +183,7 @@ export default async function CampaignPage({
 
         {isSendingOrSent && stats && (
           <>
-            <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
               <StatsDashboard
                 campaignId={campaign.id}
                 status={campaign.status}

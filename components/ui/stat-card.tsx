@@ -23,22 +23,22 @@ export function StatCard({
 }) {
   const direction = delta?.direction ?? "neutral";
   return (
-    <Card className={cn("p-5", className)}>
+    <Card className={cn("p-4 sm:p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
           {label}
         </p>
         {icon && (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+          <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 sm:flex">
             {icon}
           </span>
         )}
       </div>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900">
+      <p className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
         {value}
       </p>
       {(delta || hint) && (
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           {delta && (
             <span
               className={cn(

@@ -83,7 +83,7 @@ export default async function DashboardPage() {
 
       <section
         aria-label="Key metrics"
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
       >
         <StatCard
           label="Contacts"
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
         />
       </section>
 
-      <section className="grid items-start gap-6 lg:grid-cols-3">
+      <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <RecentConversationsCard
           conversations={data.recentConversations}
           className="lg:col-span-2"
@@ -198,7 +198,7 @@ function ChecklistCard({
         </div>
       </div>
 
-      <ol className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <ol className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {checklist.items.map((item, index) => (
           <li key={item.key}>
             <Link

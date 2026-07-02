@@ -6,10 +6,11 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMounted, useOverlay } from "@/components/ui/overlay";
 
+// Widths only apply from sm up — below sm the drawer takes the full screen width.
 const widths = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-xl",
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-xl",
 } as const;
 
 type DrawerProps = {
@@ -86,14 +87,16 @@ function DrawerPanel({
             type="button"
             onClick={onClose}
             aria-label="Close panel"
-            className="rounded-lg p-1.5 text-neutral-400 outline-none transition-colors duration-150 hover:bg-black/5 hover:text-neutral-600 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+            className="-m-2 rounded-lg p-2.5 text-neutral-400 outline-none transition-colors duration-150 hover:bg-black/5 hover:text-neutral-600 focus-visible:ring-2 focus-visible:ring-brand-400/50 sm:-m-1 sm:p-1.5"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5">
+          {children}
+        </div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-neutral-100 p-5">
+          <div className="flex items-center justify-end gap-2 border-t border-neutral-100 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5">
             {footer}
           </div>
         )}

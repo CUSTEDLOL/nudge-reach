@@ -60,7 +60,7 @@ export default async function TeamSettingsPage() {
               <TableRow className="border-t-0 hover:bg-transparent">
                 <TableHead>Member</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
+                <TableHead className="hidden sm:table-cell">Joined</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -77,8 +77,8 @@ export default async function TeamSettingsPage() {
                   <TableRow key={member.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar name={name} size="md" />
-                        <div className="min-w-0">
+                        <Avatar name={name} size="md" className="hidden sm:inline-flex" />
+                        <div className="min-w-0 max-w-36 sm:max-w-none">
                           <p className="truncate text-sm font-medium text-neutral-900">
                             {name}
                             {isSelf && (
@@ -108,7 +108,7 @@ export default async function TeamSettingsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs text-neutral-500">
+                    <TableCell className="hidden whitespace-nowrap text-xs text-neutral-500 sm:table-cell">
                       {dateFmt.format(member.createdAt)}
                     </TableCell>
                   </TableRow>
@@ -151,7 +151,7 @@ export default async function TeamSettingsPage() {
                 <TableRow className="border-t-0 hover:bg-transparent">
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Invited</TableHead>
+                  <TableHead className="hidden sm:table-cell">Invited</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -167,7 +167,7 @@ export default async function TeamSettingsPage() {
                           invite.role.slice(1).toLowerCase()}
                       </Badge>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs text-neutral-500">
+                    <TableCell className="hidden whitespace-nowrap text-xs text-neutral-500 sm:table-cell">
                       {dateFmt.format(invite.createdAt)}
                     </TableCell>
                     <TableCell className="text-right">

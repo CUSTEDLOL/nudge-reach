@@ -129,7 +129,7 @@ export default async function AnalyticsPage({
       />
 
       {/* Stat row */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <StatCard
           label="Messages sent"
           value={messagesSent.toLocaleString("en-IN")}
@@ -215,7 +215,7 @@ export default async function AnalyticsPage({
       </Card>
 
       {/* Campaign performance + lead funnel */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Campaign performance</CardTitle>
@@ -314,7 +314,7 @@ export default async function AnalyticsPage({
       </div>
 
       {/* Agent performance + top tags */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Agent performance</CardTitle>

@@ -143,12 +143,12 @@ export function TemplateForm({
     !template || template.status === "DRAFT" || template.status === "REJECTED";
 
   return (
-    <form action={formAction} className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
+    <form action={formAction} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_360px]">
       {template && <input type="hidden" name="id" value={template.id} />}
 
       <Card className="p-6">
         <div className="flex flex-col gap-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field
               label="Template name"
               htmlFor="tpl-name"
@@ -206,7 +206,7 @@ export function TemplateForm({
             {CATEGORY_HINT[category]}
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[10rem_1fr]">
             <Field label="Header" htmlFor="tpl-header-type">
               <Select
                 id="tpl-header-type"
@@ -311,7 +311,7 @@ export function TemplateForm({
             )}
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field
               label="Sample name"
               htmlFor="tpl-sample"

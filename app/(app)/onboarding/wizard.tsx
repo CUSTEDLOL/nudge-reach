@@ -102,6 +102,7 @@ export function OnboardingWizard(props: WizardProps) {
             variant="ghost"
             size="sm"
             loading={skipPending}
+            className="whitespace-nowrap"
           >
             Skip for now
           </Button>

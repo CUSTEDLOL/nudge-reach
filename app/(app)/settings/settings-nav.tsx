@@ -29,20 +29,22 @@ export function SettingsNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Settings sections" className="shrink-0 lg:w-52">
-      <ul className="flex flex-wrap gap-1 lg:flex-col">
+    <nav aria-label="Settings sections" className="min-w-0 shrink-0 lg:w-52">
+      {/* Below lg: one horizontally-scrollable chip row (bleeds to the screen
+          edge); at lg+: the classic vertical list. */}
+      <ul className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
-            <li key={href}>
+            <li key={href} className="shrink-0 lg:shrink">
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50",
+                  "flex items-center gap-2.5 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50 lg:rounded-lg lg:border-0 lg:px-3",
                   active
-                    ? "bg-brand-50 font-medium text-brand-700"
-                    : "text-neutral-600 hover:bg-black/5 hover:text-neutral-900"
+                    ? "border-brand-200 bg-brand-50 font-medium text-brand-700"
+                    : "border-neutral-200 text-neutral-600 hover:bg-black/5 hover:text-neutral-900 lg:border-transparent"
                 )}
               >
                 <Icon

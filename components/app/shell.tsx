@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/cn";
 import { Sidebar, type SidebarUser } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
+import { BottomNav, isThreadRoute } from "@/components/app/bottom-nav";
 import type { AppRole } from "@/components/app/nav";
 
 /**
- * Client wrapper coordinating the mobile sidebar state between the topbar
- * hamburger and the sidebar drawer. Rendered by app/(app)/layout.tsx.
+ * App chrome: dark sidebar on desktop (lg+), fixed bottom navigation on
+ * mobile. The inbox thread route hides the bottom bar so the chat composer
+ * owns the bottom edge. Rendered by app/(app)/layout.tsx.
  */
 export function AppShell({
   orgName,
@@ -22,27 +26,26 @@ export function AppShell({
   simulation?: boolean;
   children: ReactNode;
 }) {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const pathname = usePathname();
+  // Reserve space for the bottom bar wherever it is shown (< lg, non-thread).
+  const hasBottomNav = !isThreadRoute(pathname);
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <Sidebar
-        role={role}
-        simulation={simulation}
-        user={user}
-        mobileOpen={mobileNavOpen}
-        onMobileClose={() => setMobileNavOpen(false)}
-      />
+      <Sidebar role={role} simulation={simulation} user={user} />
       <div className="flex min-h-screen flex-col lg:pl-64">
-        <Topbar
-          orgName={orgName}
-          user={user}
-          onMenuToggle={() => setMobileNavOpen(true)}
-        />
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <Topbar orgName={orgName} user={user} />
+        <main
+          className={cn(
+            "mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 lg:px-8",
+            hasBottomNav &&
+              "pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6"
+          )}
+        >
           {children}
         </main>
       </div>
+      <BottomNav role={role} user={user} simulation={simulation} />
     </div>
   );
 }

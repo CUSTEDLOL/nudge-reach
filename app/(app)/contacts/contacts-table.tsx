@@ -353,7 +353,8 @@ export function ContactsTable({
       />
 
       {selected.size > 0 && (
-        <div className="sticky bottom-4 z-30 mt-4 flex justify-center">
+        // Sits above the mobile bottom nav; back to bottom-4 on desktop.
+        <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 mt-4 flex justify-center lg:bottom-4">
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-black/5 bg-white px-4 py-2.5 shadow-lift">
             <span className="text-sm font-medium text-neutral-800">
               {selected.size} selected

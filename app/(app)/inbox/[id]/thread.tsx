@@ -110,10 +110,22 @@ export function ThreadPane({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {status === "handoff" && <Badge tone="warning">Needs human</Badge>}
-          {status === "pending" && <Badge tone="info">Pending</Badge>}
+          {/* Status badges hide below sm so the contact name keeps room —
+              the same status lives in the details drawer and the list. */}
+          {status === "handoff" && (
+            <Badge tone="warning" className="max-sm:hidden">
+              Needs human
+            </Badge>
+          )}
+          {status === "pending" && (
+            <Badge tone="info" className="max-sm:hidden">
+              Pending
+            </Badge>
+          )}
           {(status === "resolved" || status === "closed") && (
-            <Badge tone="neutral">Resolved</Badge>
+            <Badge tone="neutral" className="max-sm:hidden">
+              Resolved
+            </Badge>
           )}
           {win.open ? (
             <Badge tone="brand">
@@ -121,9 +133,10 @@ export function ThreadPane({
               <span suppressHydrationWarning>{win.label}</span>
             </Badge>
           ) : (
-            <Badge tone="neutral">
+            <Badge tone="neutral" aria-label="Service window closed">
               <Clock className="h-3 w-3" aria-hidden />
-              Window closed
+              <span className="hidden sm:inline">Window closed</span>
+              <span className="sm:hidden">Closed</span>
             </Badge>
           )}
           <button

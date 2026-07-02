@@ -11,7 +11,7 @@ export default function CampaignDetailLoading() {
         <Skeleton className="h-9 w-32" />
       </div>
       <Skeleton className="h-20 w-full rounded-2xl" />
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
         <Skeleton className="h-96 rounded-2xl" />
         <Skeleton className="h-96 max-w-[340px] rounded-[2rem]" />
       </div>

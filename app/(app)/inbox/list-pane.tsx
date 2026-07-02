@@ -75,7 +75,7 @@ export function ListPane({
         <div
           role="tablist"
           aria-label="Conversation filters"
-          className="mt-2.5 flex flex-wrap gap-1"
+          className="no-scrollbar -mx-3 mt-2.5 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0"
         >
           {INBOX_FILTERS.map((f) => (
             <Link
@@ -84,7 +84,7 @@ export function ListPane({
               aria-selected={f === filter}
               href={inboxHref("/inbox", f, q)}
               className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50",
+                "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50 sm:px-2.5 sm:py-1",
                 f === filter
                   ? "bg-brand-600 text-white"
                   : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"

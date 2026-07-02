@@ -128,7 +128,7 @@ export function AddContactForm({
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Name" htmlFor="add-name" required>
           <Input id="add-name" name="name" required placeholder="Priya Sharma" />
         </Field>

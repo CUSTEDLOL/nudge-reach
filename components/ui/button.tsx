@@ -16,10 +16,11 @@ const variants: Record<ButtonVariant, string> = {
   ghost: "text-neutral-600 hover:bg-black/5 hover:text-neutral-900",
 };
 
+// Mobile-first: comfortable touch heights below sm, compact from sm up.
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs",
-  md: "h-9 px-4",
-  lg: "h-10 px-5",
+  sm: "h-9 px-3 text-xs sm:h-8",
+  md: "h-10 px-4 sm:h-9",
+  lg: "h-11 px-5 sm:h-10",
 };
 
 /** Class recipe for link-shaped buttons: `<Link className={buttonVariants()}>` */

@@ -103,12 +103,15 @@ const STEPS = [
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <ol className="mb-6 flex items-center gap-3" aria-label="Wizard progress">
+    <ol
+      className="mb-6 flex items-center gap-2 sm:gap-3"
+      aria-label="Wizard progress"
+    >
       {STEPS.map((step, i) => {
         const done = current > step.n;
         const active = current === step.n;
         return (
-          <li key={step.n} className="flex items-center gap-3">
+          <li key={step.n} className="flex items-center gap-2 sm:gap-3">
             <span
               className={cn(
                 "flex items-center gap-2 text-sm font-medium",
@@ -117,7 +120,7 @@ function StepIndicator({ current }: { current: number }) {
             >
               <span
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                   active && "bg-brand-600 text-white",
                   done && "bg-brand-100 text-brand-700",
                   !active && !done && "bg-neutral-100 text-neutral-500"
@@ -125,10 +128,13 @@ function StepIndicator({ current }: { current: number }) {
               >
                 {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : step.n}
               </span>
-              {step.label}
+              {/* Inactive labels hide below sm so three steps fit at 375px. */}
+              <span className={cn("whitespace-nowrap", !active && "hidden sm:inline")}>
+                {step.label}
+              </span>
             </span>
             {i < STEPS.length - 1 && (
-              <span className="h-px w-10 bg-neutral-200" aria-hidden />
+              <span className="h-px w-5 bg-neutral-200 sm:w-10" aria-hidden />
             )}
           </li>
         );
@@ -296,7 +302,7 @@ function FromPhotoForm({
               name="photo"
               accept="image/jpeg,image/png,image/webp"
               aria-label="Product photo"
-              className="text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+              className="w-full min-w-0 flex-1 text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file && file.size > MAX_PHOTO_BYTES) {
@@ -333,7 +339,12 @@ function FromPhotoForm({
           />
         </Field>
 
-        <Button type="submit" loading={pending} size="lg" className="self-start">
+        <Button
+          type="submit"
+          loading={pending}
+          size="lg"
+          className="w-full sm:w-auto sm:self-start"
+        >
           {pending
             ? "Writing your campaign… (about 10 seconds)"
             : "Generate my campaign"}
@@ -550,7 +561,7 @@ function StepAudience({
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-4 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Audience type">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Audience type">
         {(
           [
             {
@@ -622,7 +633,7 @@ function StepAudience({
             )
           ) : (
             <>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Field label="Lead stage" htmlFor="wizard-stage">
                   <Select
                     id="wizard-stage"
@@ -669,7 +680,7 @@ function StepAudience({
                   </Select>
                 </Field>
               </div>
-              <div className="flex items-center gap-2 rounded-xl bg-neutral-50 px-3 py-2.5 text-sm">
+              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-neutral-50 px-3 py-2.5 text-sm">
                 <Users className="h-4 w-4 text-brand-600" aria-hidden />
                 {counting || segmentCount === null ? (
                   <span className="text-neutral-500">Counting…</span>
@@ -688,7 +699,7 @@ function StepAudience({
             </>
           )}
 
-          <div className="flex items-center justify-between border-t border-neutral-100 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-4">
             <p className="text-xs text-neutral-400">
               Only opted-in customers are ever counted or messaged.
             </p>
@@ -782,7 +793,7 @@ function StepReview({
   const result = when === "later" ? scheduleResult : sendResult;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
       <form
         action={when === "later" ? scheduleAction : sendAction}
         className="flex flex-col gap-4"
@@ -801,7 +812,7 @@ function StepReview({
               <Badge tone="warning">Needs Meta approval</Badge>
             )}
           </div>
-          <dl className="mt-4 grid grid-cols-3 gap-4 text-sm">
+          <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 sm:gap-4">
             <div>
               <dt className="text-xs font-medium uppercase tracking-wide text-neutral-400">
                 Audience

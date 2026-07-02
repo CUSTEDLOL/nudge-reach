@@ -53,39 +53,42 @@ export function AutomationsList({
   canManage: boolean;
 }) {
   return (
-    <Card>
-      <Table>
-        <TableHeader>
-          <TableRow className="border-t-0 hover:bg-transparent">
-            <TableHead className="pl-5">Automation</TableHead>
-            <TableHead>Trigger</TableHead>
-            <TableHead>Steps</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last run</TableHead>
-            <TableHead className="pr-5 text-right">Runs</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <AutomationListRow key={row.id} row={row} canManage={canManage} />
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+    <>
+      {/* Mobile: stacked cards */}
+      <ul className="flex flex-col gap-2.5 sm:hidden">
+        {rows.map((row) => (
+          <AutomationCard key={row.id} row={row} canManage={canManage} />
+        ))}
+      </ul>
+
+      {/* Tablet / desktop: classic table */}
+      <Card className="hidden overflow-x-auto sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-t-0 hover:bg-transparent">
+              <TableHead className="pl-5">Automation</TableHead>
+              <TableHead>Trigger</TableHead>
+              <TableHead>Steps</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last run</TableHead>
+              <TableHead className="pr-5 text-right">Runs</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <AutomationListRow key={row.id} row={row} canManage={canManage} />
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+    </>
   );
 }
 
-function AutomationListRow({
-  row,
-  canManage,
-}: {
-  row: AutomationRow;
-  canManage: boolean;
-}) {
+/** Shared enable/pause toggle behavior for the row and the card. */
+function useAutomationToggle(row: AutomationRow) {
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
-  const meta = triggerMeta(row.trigger);
-  const TriggerIcon = meta.icon;
 
   function onToggle(next: boolean) {
     startTransition(async () => {
@@ -99,6 +102,110 @@ function AutomationListRow({
       });
     });
   }
+
+  return { pending, onToggle };
+}
+
+function AutomationCard({
+  row,
+  canManage,
+}: {
+  row: AutomationRow;
+  canManage: boolean;
+}) {
+  const { pending, onToggle } = useAutomationToggle(row);
+  const meta = triggerMeta(row.trigger);
+  const TriggerIcon = meta.icon;
+
+  return (
+    <li>
+      <Card className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <Link
+              href={`/automations/${row.id}`}
+              className="font-medium text-neutral-900 outline-none transition-colors duration-150 hover:text-brand-700 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+            >
+              {row.name}
+            </Link>
+            {row.description && (
+              <p className="mt-0.5 line-clamp-2 text-xs text-neutral-500">
+                {row.description}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2 pt-0.5">
+            <span className="text-xs text-neutral-500">
+              {row.enabled ? "On" : "Paused"}
+            </span>
+            <Switch
+              checked={row.enabled}
+              onCheckedChange={onToggle}
+              disabled={!canManage || pending}
+              aria-label={`${row.enabled ? "Pause" : "Enable"} ${row.name}`}
+            />
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <Badge tone={meta.tone}>
+            <TriggerIcon className="h-3 w-3" aria-hidden />
+            {meta.label}
+          </Badge>
+          {row.keywords.slice(0, 2).map((keyword) => (
+            <span
+              key={keyword}
+              className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-[11px] text-neutral-600"
+            >
+              {keyword}
+            </span>
+          ))}
+          {row.keywords.length > 2 && (
+            <span className="text-xs text-neutral-400">
+              +{row.keywords.length - 2}
+            </span>
+          )}
+          <span className="text-xs text-neutral-500">
+            · {row.stepsCount} step{row.stepsCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 pt-2.5">
+          <span className="flex items-center gap-1.5 text-xs text-neutral-500">
+            {row.lastRunAt ? (
+              <>
+                Last run {dateFormat.format(new Date(row.lastRunAt))}
+                {row.lastRunStatus && (
+                  <Badge tone={RUN_TONES[row.lastRunStatus] ?? "neutral"}>
+                    {row.lastRunStatus.toLowerCase()}
+                  </Badge>
+                )}
+              </>
+            ) : (
+              "Never run"
+            )}
+          </span>
+          <Link
+            href={`/automations/${row.id}/runs`}
+            className="inline-flex min-h-10 items-center gap-1.5 text-sm font-medium text-brand-700 outline-none transition-colors duration-150 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+          >
+            <History className="h-3.5 w-3.5" aria-hidden />
+            {row.runsCount} run{row.runsCount === 1 ? "" : "s"}
+          </Link>
+        </div>
+      </Card>
+    </li>
+  );
+}
+
+function AutomationListRow({
+  row,
+  canManage,
+}: {
+  row: AutomationRow;
+  canManage: boolean;
+}) {
+  const { pending, onToggle } = useAutomationToggle(row);
+  const meta = triggerMeta(row.trigger);
+  const TriggerIcon = meta.icon;
 
   return (
     <TableRow>

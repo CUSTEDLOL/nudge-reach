@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Menu as MenuIcon, Search } from "lucide-react";
+import { ChevronDown, LogOut, Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/dropdown";
 import type { SidebarUser } from "@/components/app/sidebar";
@@ -10,12 +11,9 @@ import type { SidebarUser } from "@/components/app/sidebar";
 export function Topbar({
   orgName,
   user,
-  onMenuToggle,
 }: {
   orgName: string;
   user: SidebarUser;
-  /** Opens the mobile sidebar drawer. */
-  onMenuToggle?: () => void;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -28,14 +26,23 @@ export function Topbar({
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-black/5 bg-white px-4 sm:px-6">
-      <button
-        type="button"
-        onClick={onMenuToggle}
-        aria-label="Open navigation"
-        className="rounded-lg p-2 text-neutral-500 outline-none transition-colors duration-150 hover:bg-black/5 hover:text-neutral-800 focus-visible:ring-2 focus-visible:ring-brand-400/50 lg:hidden"
+      {/* Mobile brand mark — the sidebar (and its logo) only exists at lg+. */}
+      <Link
+        href="/dashboard"
+        aria-label="Nudge dashboard"
+        className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 lg:hidden"
       >
-        <MenuIcon className="h-5 w-5" aria-hidden />
-      </button>
+        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 text-white" fill="none" aria-hidden>
+          <path
+            d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9.5L6 21v-3H5A1.5 1.5 0 0 1 3.5 16.5V7A1.5 1.5 0 0 1 5 5.5Z"
+            fill="currentColor"
+            opacity="0.95"
+          />
+          <circle cx="9" cy="11.5" r="1.1" fill="#0b3d2e" />
+          <circle cx="12.5" cy="11.5" r="1.1" fill="#0b3d2e" />
+          <circle cx="16" cy="11.5" r="1.1" fill="#0b3d2e" />
+        </svg>
+      </Link>
 
       <form
         onSubmit={onSearchSubmit}

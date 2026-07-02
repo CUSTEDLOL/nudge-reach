@@ -217,7 +217,7 @@ export function AutomationBuilder({
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <input type="hidden" name="payload" value={payload} />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
           {/* Details */}
           <Card>
@@ -262,7 +262,7 @@ export function AutomationBuilder({
               <div
                 role="radiogroup"
                 aria-label="Trigger"
-                className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+                className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
               >
                 {TRIGGER_META.map((option) => {
                   const Icon = option.icon;

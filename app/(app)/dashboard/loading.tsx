@@ -17,13 +17,13 @@ export default function DashboardLoading() {
 
       <Skeleton className="h-44 w-full rounded-2xl" />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-28 rounded-2xl" />
         ))}
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <Skeleton className="h-96 rounded-2xl lg:col-span-2" />
         <div className="flex flex-col gap-6">
           <Skeleton className="h-52 rounded-2xl" />

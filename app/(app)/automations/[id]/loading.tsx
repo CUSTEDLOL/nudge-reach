@@ -13,7 +13,7 @@ export default function EditAutomationLoading() {
           <Skeleton className="h-9 w-28" />
         </div>
       </div>
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex flex-col gap-6">
           <Skeleton className="h-48 w-full rounded-2xl" />
           <Skeleton className="h-64 w-full rounded-2xl" />

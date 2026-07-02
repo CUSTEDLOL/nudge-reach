@@ -29,7 +29,7 @@ export default function AnalyticsLoading() {
       </div>
 
       {/* Stat row */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <Card key={i} className="p-5">
             <Skeleton className="h-3 w-20" />
@@ -51,7 +51,7 @@ export default function AnalyticsLoading() {
       </Card>
 
       {/* Campaigns + funnel */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <Skeleton className="h-4 w-44" />
@@ -75,7 +75,7 @@ export default function AnalyticsLoading() {
       </div>
 
       {/* Agents + tags */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <Skeleton className="h-4 w-40" />

@@ -69,7 +69,7 @@ export default async function BillingSettingsPage() {
           title={`Usage — ${monthLabel}`}
           description="Campaign messages sent this month and their billable Meta cost."
         />
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <StatCard
             label="Messages this month"
             value={usage.messagesSent.toLocaleString("en-IN")}
@@ -104,7 +104,7 @@ export default async function BillingSettingsPage() {
               : "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to turn on checkout."
           }
         />
-        <div className="grid gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => {
             const isCurrent = plan.id === currentPlan.id;
             return (

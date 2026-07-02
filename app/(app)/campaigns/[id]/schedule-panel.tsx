@@ -71,7 +71,7 @@ export function SchedulePanel({
         </div>
       </div>
 
-      <dl className="mt-5 grid gap-4 sm:grid-cols-3">
+      <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <dt className="text-xs font-medium uppercase tracking-wide text-neutral-400">
             When

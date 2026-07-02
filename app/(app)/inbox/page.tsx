@@ -33,7 +33,8 @@ export default async function InboxPage({
         title="Inbox"
         description="Every WhatsApp conversation in one shared team inbox."
       />
-      <div className="grid h-[calc(100dvh-12.5rem)] min-h-[26rem] grid-cols-1 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft lg:grid-cols-[minmax(300px,22rem)_1fr]">
+      {/* Mobile subtracts extra chrome for the fixed bottom nav. */}
+      <div className="grid h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] min-h-[24rem] grid-cols-1 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft lg:h-[calc(100dvh-12.5rem)] lg:min-h-[26rem] lg:grid-cols-[minmax(300px,22rem)_1fr]">
         <ListPane
           initial={conversations}
           filter={filter}

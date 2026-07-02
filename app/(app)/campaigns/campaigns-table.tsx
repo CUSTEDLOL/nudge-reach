@@ -41,7 +41,7 @@ const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
 function StatusCell({ row }: { row: CampaignRow }) {
   const meta = STATUS_META[row.status] ?? STATUS_META.DRAFT;
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col items-start gap-0.5">
       <Badge tone={meta.tone}>{meta.label}</Badge>
       {row.status === "SCHEDULED" && row.scheduledAt && (
         <span className="text-xs text-neutral-500">
