@@ -96,8 +96,11 @@ After the first deploy:
 
 ## Demo data
 
-`scripts/seed-demo.ts` creates a demo retailer setup (5 opted-in contacts,
-an audience, and a draft campaign) so the app demos instantly:
+`scripts/seed-demo.ts` creates a full demo workspace (40 contacts with tags
+and lead stages, 10 conversations, library templates, campaigns incl. a sent
+one with stats, automations with run logs, teammate memberships) so every
+module demos instantly. After any `npm run db:push`, also run `npm run db:rls`
+to enable row-level security on new tables. Seed:
 
 ```bash
 npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \

@@ -5,6 +5,60 @@ what's next.
 
 ---
 
+## Phase 8 — Full CRM MVP (2026-07-02) ✅ BUILT (AiSensy/WATI-class product)
+
+### Done
+Two commits (`aea838c` foundation, `0635833` modules), built per
+`docs/MVP_BUILD_SPEC.md` (the build contract — read it first).
+
+- **Foundation**: additive Prisma schema (Membership + OWNER/ADMIN/AGENT
+  roles, Invite w/ auto-join on signup, Tag/ContactTag/ConversationTag, Note,
+  lead stages, conversation assignment/unread/preview, org-scoped library
+  Templates (campaignId now optional), Automation/Step/Run, ApiKey, Org
+  settings Json); `requireOrgContext()`/`requireRole()` alongside unchanged
+  `requireOrg()`; `npm run db:rls` (idempotent RLS enabler, run after every
+  db:push); 21-piece UI kit in `components/ui/`; dark-sidebar app shell
+  `app/(app)/` — existing URLs unchanged; rich idempotent demo seed.
+- **Modules**: dashboard w/ onboarding wizard + checklist + stat cards;
+  shared inbox `/inbox` (3-pane, filters, 24h-window-gated composer,
+  template sender, AI suggest-reply w/ tones — drafts only, never auto-sent,
+  canned samples without API key; tags/notes/assignee/stage; 3s polling that
+  pauses on hidden tab; sim tester); contacts CRM (filterable table, profile
+  w/ merged activity timeline, bulk actions, tags manager, dynamic segments);
+  campaign wizard (photo/template/blank → audience or segment → compliance
+  interstitial → send now or schedule); template library w/ mock Meta review
+  (name containing "reject" → rejection path, for demos); automations engine
+  (5 triggers, 8 step kinds, wait/resume via cron, run logs, wired into the
+  inbound path BEFORE the AI agent — automation reply suppresses AI reply);
+  analytics (volume/rates/campaign/agent/funnel/tags, recharts); settings
+  (general/team+invites/notifications/billing placeholder/CSV export) +
+  integrations (webhook info, test connection, hashed API keys).
+- `/conversations` now redirects to `/inbox`. Cron tick = release scheduled
+  campaigns + resume waiting automation runs + advance send queues.
+- **226 unit tests** (was 72), tsc/lint/build green on Node 20.
+
+### Decisions
+- Consent gate untouched at the core (`sendMessage`); automations/template
+  sends inherit it — blockedByConsent fails the step, logged.
+- Roles UI-hidden AND server-enforced (`requireRole`); last-OWNER demotion
+  blocked server-side.
+- Live Meta template submission for library templates is a documented stub
+  ("ships with WABA onboarding"); campaign-template live path unchanged.
+- `.env.local` on this machine now points at local Postgres
+  (`dhairyakakkar@localhost`) with the seeded demo org; real creds live in
+  Vercel. Supabase auth keys locally are placeholders — signed-in flows need
+  real keys or the production URL.
+
+### Known gaps / next
+- Local runtime verification limited to public pages + auth redirects
+  (placeholder Supabase keys); full click-through needs real creds.
+- Invite emails not sent (auto-join on signup by email match instead).
+- Payments, Zapier/Make, message-history export: placeholder cards.
+- Production deploy of this build not yet run (`npx vercel --prod`), and
+  `npm run db:push` + `db:rls` + seed must be run against Supabase first.
+
+---
+
 ## Phase 5 — Polish, demo, deploy (2026-06-13) ✅ DEPLOYED
 
 ### Done
