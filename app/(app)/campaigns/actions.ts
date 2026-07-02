@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { canSendMarketing } from "@/lib/consent";
 import { buildContactWhere, type SegmentFilter } from "@/lib/segments";
 import { estimateCampaignCost, formatInr } from "@/lib/billing";
+import { recordAudit } from "@/lib/audit";
 import { generateCampaignContent } from "@/lib/campaign/generate";
 import { repairAndValidate } from "@/lib/campaign/guardrails";
 import {
@@ -23,6 +24,7 @@ import {
   applySimulatedProgress,
   enqueueCampaign,
   processQueue,
+  retryFailedMessages,
 } from "@/lib/send/queue";
 import {
   blankCampaignContent,
@@ -733,6 +735,7 @@ export async function runCampaignAction(
       audienceId,
       ctx.org.id
     );
+    recordAudit(ctx, "campaign.sent", id, `${queued} recipients`);
     // Kick off the first batch right away; the dashboard keeps it moving.
     await processQueue(id);
     revalidatePath(`/campaigns/${id}`);
@@ -749,6 +752,42 @@ export async function runCampaignAction(
     return {
       ok: false,
       message: err instanceof Error ? err.message : "Couldn't start sending.",
+    };
+  }
+}
+
+/** Retry a sent campaign's failed messages (fresh rows, consent re-checked). */
+export async function retryFailedAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  const id = String(formData.get("campaignId") ?? "");
+  try {
+    requireRole(ctx, "ADMIN");
+    const { retried, skippedNoConsent } = await retryFailedMessages(
+      id,
+      ctx.org.id
+    );
+    if (retried === 0) {
+      return {
+        ok: false,
+        message: skippedNoConsent
+          ? "Nothing to retry — the failed contacts have opted out since."
+          : "Nothing to retry.",
+      };
+    }
+    await processQueue(id);
+    revalidatePath(`/campaigns/${id}`);
+    return {
+      ok: true,
+      message: `Retrying ${retried} failed message${retried === 1 ? "" : "s"}${
+        skippedNoConsent ? ` (${skippedNoConsent} skipped — opted out)` : ""
+      }.`,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't retry.",
     };
   }
 }

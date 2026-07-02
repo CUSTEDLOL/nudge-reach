@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import type { OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/lib/auth";
+import { checkTeamLimit } from "@/lib/billing/limits";
+import { recordAudit } from "@/lib/audit";
 import { appOrigin, isEmailConfigured, sendEmail } from "@/lib/email";
 
 export interface ActionResult {
@@ -75,6 +77,12 @@ export async function updateMemberRoleAction(
       where: { id: target.id },
       data: { role },
     });
+    recordAudit(
+      ctx,
+      "member.role_changed",
+      target.displayName || target.email,
+      `${target.role} → ${role}`
+    );
 
     revalidatePath("/settings/team");
     return {
@@ -123,6 +131,10 @@ export async function inviteMemberAction(
       return { ok: false, message: `${email} already has a pending invite.` };
     }
 
+    // Plan limit: team seats (members + pending invites both hold a seat).
+    const limit = await checkTeamLimit(ctx.org.id);
+    if (!limit.allowed) return { ok: false, message: limit.message };
+
     await prisma.invite.upsert({
       where: { orgId_email: { orgId: ctx.org.id, email } },
       create: { orgId: ctx.org.id, email, role },
@@ -168,6 +180,7 @@ export async function inviteMemberAction(
         : " (The invite email couldn't be sent, but they'll still join automatically when they sign up with this email.)";
     }
 
+    recordAudit(ctx, "member.invited", email, `as ${role.toLowerCase()}`);
     revalidatePath("/settings/team");
     return { ok: true, message: `Invited ${email}.${emailNote}` };
   } catch (err) {
@@ -187,12 +200,17 @@ export async function revokeInviteAction(
     requireRole(ctx, "ADMIN");
 
     const inviteId = String(formData.get("inviteId") ?? "");
+    const invite = await prisma.invite.findFirst({
+      where: { id: inviteId, orgId: ctx.org.id },
+      select: { email: true },
+    });
     const result = await prisma.invite.deleteMany({
       where: { id: inviteId, orgId: ctx.org.id, status: "pending" },
     });
     if (result.count === 0) {
       return { ok: false, message: "That invite was already gone." };
     }
+    recordAudit(ctx, "member.invite_revoked", invite?.email);
 
     revalidatePath("/settings/team");
     return { ok: true, message: "Invite revoked." };

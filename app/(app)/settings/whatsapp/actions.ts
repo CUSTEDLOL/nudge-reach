@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireOrg } from "@/lib/auth";
+import { requireOrgContext, requireRole } from "@/lib/auth";
+import { recordAudit } from "@/lib/audit";
 import { saveWhatsappAccount } from "@/lib/whatsapp/accounts";
 
 export interface ActionResult {
@@ -12,7 +13,7 @@ export interface ActionResult {
 export async function connectWhatsappAction(
   formData: FormData
 ): Promise<ActionResult> {
-  const org = await requireOrg();
+  const ctx = await requireOrgContext();
   const wabaId = String(formData.get("wabaId") ?? "").trim();
   const phoneNumberId = String(formData.get("phoneNumberId") ?? "").trim();
   const displayName = String(formData.get("displayName") ?? "").trim();
@@ -23,8 +24,9 @@ export async function connectWhatsappAction(
   }
 
   try {
+    requireRole(ctx, "ADMIN");
     await saveWhatsappAccount({
-      orgId: org.id,
+      orgId: ctx.org.id,
       wabaId,
       phoneNumberId,
       displayName,
@@ -37,6 +39,7 @@ export async function connectWhatsappAction(
         err instanceof Error ? err.message : "Couldn't save the connection.",
     };
   }
+  recordAudit(ctx, "whatsapp.connected", displayName, `phone ${phoneNumberId}`);
   revalidatePath("/settings/whatsapp");
   return { ok: true, message: "WhatsApp connected. Token stored encrypted." };
 }

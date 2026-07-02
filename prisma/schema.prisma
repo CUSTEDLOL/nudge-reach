@@ -62,6 +62,7 @@ model Org {
   apiKeys          ApiKey[]
   templates        Template[]
   webhookEndpoints WebhookEndpoint[]
+  auditLogs        AuditLog[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -97,6 +98,24 @@ model WebhookDelivery {
   createdAt  DateTime        @default(now())
 
   @@index([endpointId, createdAt])
+}
+
+// Audit trail for sensitive actions (role changes, opt-outs, key/webhook
+// management, campaign runs, connection changes). Append-only; viewer at
+// Settings → Audit log (admin+). actorName denormalized so rows survive
+// member removal.
+model AuditLog {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actorUserId String
+  actorName   String
+  action      String // e.g. "member.role_changed", "contact.opted_out"
+  target      String? // human-readable subject, e.g. "Priya Sharma (+91…)"
+  detail      String? // short free-text context
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
 }
 
 // A user's seat in an org. userId is the Supabase Auth user id (fictional
@@ -312,6 +331,8 @@ model Conversation {
 
   @@unique([orgId, contactId])
   @@index([orgId])
+  // Inbox list: newest-first within an org.
+  @@index([orgId, lastMessageAt])
 }
 
 model ConversationMessage {
@@ -488,6 +509,8 @@ model Contact {
 
   @@unique([orgId, phoneE164])
   @@index([orgId])
+  // Contacts list: newest-first within an org.
+  @@index([orgId, createdAt])
 }
 
 model Audience {

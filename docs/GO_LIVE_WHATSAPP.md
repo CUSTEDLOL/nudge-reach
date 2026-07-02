@@ -1,6 +1,8 @@
 # Going live on real WhatsApp — step by step
 
-The app's live WhatsApp Cloud API code is complete and verified. What's left is
+The app's live WhatsApp Cloud API code is complete (the full flow is verified
+end to end in simulation; the live driver itself is code-complete and awaits
+real credentials for its first verified send). What's left is
 **Meta account setup + credentials**, which only the business owner can do. This
 is the exact runbook. Two stages: (A) prove it works with Meta's free test
 number in ~1 hour, then (B) the production path to actually sell.
@@ -44,6 +46,13 @@ WHATSAPP_API_VERSION=v23.0
 ```
 > The app refuses to boot in `live` mode if any of these are missing — that's a
 > deliberate guard, not a bug.
+>
+> Note the split: the **webhook** credentials (`WHATSAPP_WEBHOOK_VERIFY_TOKEN`,
+> `META_APP_SECRET`) are deployment-level — Meta calls one URL. The **sender**
+> credentials (`PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`) are primarily
+> per-workspace via **Settings → WhatsApp** (stored AES-256-GCM encrypted);
+> the env values act as the single-tenant fallback sender. Vercel-side steps
+> are in [DEPLOYMENT.md](DEPLOYMENT.md) §7.
 
 ### 5. Point Meta's webhook at the app
 The app must be reachable at a public URL (deploy to Vercel, or use `ngrok
@@ -65,6 +74,10 @@ http 3000` for local testing).
   on) it auto-replies. Delivery/read ticks update from Meta's webhook.
 
 At this point the product is **provably working on real WhatsApp.**
+
+> An in-app go-live checklist that walks through these same steps is landing
+> as part of the current hardening work stream — this document stays the
+> canonical runbook.
 
 ---
 
@@ -94,25 +107,26 @@ After Stage B you can send to any opted-in customer and charge for it.
 
 ---
 
-## Known limitation for multi-tenant self-serve (important for the SaaS model)
+## Multi-tenant status (important for the SaaS model)
 
-Right now the **send driver reads one set of WhatsApp credentials from env** —
-i.e. the whole deployment sends from **one** business's number. That's perfect
-for:
-- **You running it for your own shop**, or
-- **A done-for-you / agency model** where you operate one number per client
-  deployment.
+**Per-org credentials are now the primary send path.** Each workspace connects
+its own number under **Settings → WhatsApp**; the token is encrypted at rest
+(AES-256-GCM) and both the send driver and template submission resolve that
+workspace's credentials first, falling back to the env `PHONE_NUMBER_ID` /
+`WHATSAPP_ACCESS_TOKEN` only when no account is connected (the single-tenant /
+agency fallback). So today the deployment supports:
+- **Many businesses, each on their own number**, connected manually via
+  Settings → WhatsApp (someone pastes credentials from the Meta console), and
+- **A done-for-you / agency model** on the env fallback number.
 
-To let **many businesses each connect their own number self-serve** (the true
-AiSensy/WATI model), two things are needed on top of the above:
-- **Meta Embedded Signup** — an in-app OAuth flow so a shop owner connects their
-  WABA without touching the developer console. This also requires becoming a
-  Meta **Tech Provider** and passing App Review.
-- Switch the send path to read **per-org credentials** from the
-  `WhatsappAccount` table (already stored + encrypted) instead of env.
-
-The per-org storage, encryption, and connection screen are already built; the
-send driver and Embedded Signup are the remaining work for full multi-tenancy.
+What's still missing for true **self-serve** onboarding (the full
+AiSensy/WATI model):
+- **Meta Embedded Signup** — an in-app OAuth flow so a shop owner connects
+  their WABA without ever seeing the developer console. This also requires
+  becoming a Meta **Tech Provider** and passing App Review.
+- Live Meta submission for **library** templates is a documented stub that
+  ships with WABA onboarding (the campaign-template live path is
+  code-complete).
 
 ---
 
@@ -122,7 +136,8 @@ send driver and Embedded Signup are the remaining work for full multi-tenancy.
 |---|---|
 | Write/verify the live code | ✅ Done |
 | Wire env vars, deploy to Vercel, test the live send with you | ✅ I can |
-| Build Embedded Signup + per-org send driver for multi-tenancy | ✅ I can |
+| Per-org send driver (each workspace on its own number) | ✅ Done |
+| Build Embedded Signup for self-serve onboarding | ✅ I can |
 | Create the Meta Business/Developer account | 🔴 You — I can't create accounts |
 | Enter your access token / secrets | 🔴 You — I can't handle your credentials |
 | Business verification | 🔴 You — tied to your identity |

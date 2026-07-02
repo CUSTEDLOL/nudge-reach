@@ -14,6 +14,8 @@ import {
   generateWebhookSecret,
   isWebhookEvent,
 } from "@/lib/webhooks/dispatch";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { recordAudit } from "@/lib/audit";
 
 export interface ActionResult {
   ok: boolean;
@@ -33,6 +35,13 @@ export interface CreateApiKeyResult extends ActionResult {
 export async function testWhatsappConnectionAction(): Promise<ActionResult> {
   const { org } = await requireOrgContext();
   try {
+    const rate = checkRateLimit(`meta-test:${org.id}`, RATE_LIMITS.outboundTest);
+    if (!rate.allowed) {
+      return {
+        ok: false,
+        message: `Give Meta a breather — try again in ${rate.retryAfterSeconds}s.`,
+      };
+    }
     if (env.SEND_MODE === "simulation") {
       const account = await getWhatsappAccount(org.id);
       return {
@@ -105,6 +114,7 @@ export async function createApiKeyAction(
     }
 
     const { key } = await createApiKey(ctx.org.id, name);
+    recordAudit(ctx, "api_key.created", name);
     revalidatePath("/integrations");
     return {
       ok: true,
@@ -132,6 +142,7 @@ export async function revokeApiKeyAction(
     if (!revoked) {
       return { ok: false, message: "That key was already revoked or gone." };
     }
+    recordAudit(ctx, "api_key.revoked", id);
 
     revalidatePath("/integrations");
     return { ok: true, message: "API key revoked — it stops working immediately." };
@@ -180,6 +191,7 @@ export async function createWebhookEndpointAction(
     await prisma.webhookEndpoint.create({
       data: { orgId: ctx.org.id, url, secret, events },
     });
+    recordAudit(ctx, "webhook.created", url, events.join(", "));
     revalidatePath("/integrations");
     return {
       ok: true,
@@ -223,9 +235,14 @@ export async function deleteWebhookEndpointAction(
   try {
     requireRole(ctx, "ADMIN");
     const id = String(formData.get("id") ?? "");
+    const endpoint = await prisma.webhookEndpoint.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { url: true },
+    });
     await prisma.webhookEndpoint.deleteMany({
       where: { id, orgId: ctx.org.id },
     });
+    if (endpoint) recordAudit(ctx, "webhook.deleted", endpoint.url);
     revalidatePath("/integrations");
     return { ok: true, message: "Webhook removed." };
   } catch (err) {
@@ -243,6 +260,16 @@ export async function testWebhookEndpointAction(
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    const rate = checkRateLimit(
+      `webhook-test:${ctx.org.id}`,
+      RATE_LIMITS.outboundTest
+    );
+    if (!rate.allowed) {
+      return {
+        ok: false,
+        message: `Too many test pings — try again in ${rate.retryAfterSeconds}s.`,
+      };
+    }
     const id = String(formData.get("id") ?? "");
     const endpoint = await prisma.webhookEndpoint.findFirst({
       where: { id, orgId: ctx.org.id },

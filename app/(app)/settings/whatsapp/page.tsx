@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { SectionHeader } from "../section-header";
 import { ConnectForm } from "./connect-form";
+import { GoLiveChecklist } from "./go-live-checklist";
 
 export const metadata: Metadata = { title: "WhatsApp settings" };
 
@@ -82,6 +83,8 @@ export default async function WhatsappSettingsPage() {
           <ConnectForm />
         </CardContent>
       </Card>
+
+      <GoLiveChecklist orgId={org.id} />
     </section>
   );
 }

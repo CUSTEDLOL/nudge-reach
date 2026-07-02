@@ -72,15 +72,19 @@ export async function createRazorpayOrder(
 /**
  * Verify the checkout signature Razorpay returns to the browser after payment:
  * HMAC-SHA256(order_id | payment_id, key_secret) === signature.
+ * `secret` is injectable for tests; defaults to the env key.
  */
-export function verifyPaymentSignature(input: {
-  orderId: string;
-  paymentId: string;
-  signature: string;
-}): boolean {
-  if (!env.RAZORPAY_KEY_SECRET) return false;
+export function verifyPaymentSignature(
+  input: {
+    orderId: string;
+    paymentId: string;
+    signature: string;
+  },
+  secret: string | undefined = env.RAZORPAY_KEY_SECRET
+): boolean {
+  if (!secret) return false;
   const expected = crypto
-    .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
+    .createHmac("sha256", secret)
     .update(`${input.orderId}|${input.paymentId}`)
     .digest("hex");
   return timingSafeEqualHex(expected, input.signature);
@@ -89,11 +93,12 @@ export function verifyPaymentSignature(input: {
 /** Verify a Razorpay webhook body against X-Razorpay-Signature. */
 export function verifyWebhookSignature(
   rawBody: string,
-  signature: string | null
+  signature: string | null,
+  secret: string | undefined = env.RAZORPAY_WEBHOOK_SECRET
 ): boolean {
-  if (!env.RAZORPAY_WEBHOOK_SECRET || !signature) return false;
+  if (!secret || !signature) return false;
   const expected = crypto
-    .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET)
+    .createHmac("sha256", secret)
     .update(rawBody)
     .digest("hex");
   return timingSafeEqualHex(expected, signature);

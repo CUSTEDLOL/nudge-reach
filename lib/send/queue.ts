@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { canSendMarketing } from "@/lib/consent";
 import { sendMessage } from "@/lib/messaging";
+import { checkMessageLimit } from "@/lib/billing/limits";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import {
   isForwardTransition,
@@ -49,6 +50,11 @@ export async function enqueueCampaign(
   if (eligible.length === 0) {
     throw new Error("No one in that audience has opted in.");
   }
+
+  // Plan limit: campaign messages per month (single choke point for manual
+  // runs, wizard sends and scheduled releases alike).
+  const limit = await checkMessageLimit(orgId, eligible.length);
+  if (!limit.allowed) throw new Error(limit.message);
 
   await prisma.$transaction([
     prisma.message.createMany({
@@ -130,6 +136,59 @@ export async function processQueue(campaignId: string): Promise<number> {
 
   await maybeCompleteCampaign(campaignId);
   return processed;
+}
+
+/**
+ * Retry failed sends: replace FAILED Message rows with fresh QUEUED ones for
+ * the same contacts and flip the campaign back to SENDING. Fresh rows (new
+ * ids) matter — the simulated delivery timeline is deterministic per message
+ * id, so re-queueing the same row would just fail the same way again; and in
+ * live mode a clean row keeps the audit trail of the failed attempt separate
+ * from the retry. Consent is re-checked per contact — someone who opted out
+ * since the first attempt is skipped.
+ */
+export async function retryFailedMessages(
+  campaignId: string,
+  orgId: string
+): Promise<{ retried: number; skippedNoConsent: number }> {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, orgId },
+    select: { id: true, status: true },
+  });
+  if (!campaign) throw new Error("Campaign not found.");
+  if (campaign.status !== "SENT" && campaign.status !== "SENDING") {
+    throw new Error("Only a sent campaign's failures can be retried.");
+  }
+
+  const failed = await prisma.message.findMany({
+    where: { campaignId, status: "FAILED" },
+    include: { contact: true },
+  });
+  if (failed.length === 0) {
+    return { retried: 0, skippedNoConsent: 0 };
+  }
+
+  const eligible = failed.filter((m) => canSendMarketing(m.contact));
+  const skippedNoConsent = failed.length - eligible.length;
+  if (eligible.length === 0) {
+    return { retried: 0, skippedNoConsent };
+  }
+
+  await prisma.$transaction([
+    prisma.message.deleteMany({
+      where: { id: { in: eligible.map((m) => m.id) } },
+    }),
+    prisma.message.createMany({
+      data: eligible.map((m) => ({ campaignId, contactId: m.contactId })),
+      skipDuplicates: true,
+    }),
+    prisma.campaign.update({
+      where: { id: campaignId },
+      data: { status: "SENDING" },
+    }),
+  ]);
+
+  return { retried: eligible.length, skippedNoConsent };
 }
 
 /**

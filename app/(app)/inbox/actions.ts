@@ -11,6 +11,7 @@ import { handleInboundMessage } from "@/lib/agent/inbound";
 import { fireTagAdded } from "@/lib/automation/triggers";
 import { campaignContentSchema } from "@/lib/campaign/schema";
 import { firstName, toPreview } from "@/lib/inbox/format";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/lib/ai/suggest-reply";
 
 /**
@@ -220,6 +221,15 @@ export async function suggestReplyAction(
     const tone = String(formData.get("tone") ?? "friendly");
     if (!isSuggestTone(tone)) {
       return { ok: false, message: "Unknown tone." };
+    }
+
+    // AI cost protection: cap drafts per org per minute.
+    const rate = checkRateLimit(`suggest:${org.id}`, RATE_LIMITS.aiSuggest);
+    if (!rate.allowed) {
+      return {
+        ok: false,
+        message: `Drafting a lot right now — try again in ${rate.retryAfterSeconds}s.`,
+      };
     }
 
     const result = await suggestReply(org.id, conversationId, tone);

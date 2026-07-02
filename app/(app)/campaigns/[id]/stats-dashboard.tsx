@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, Send } from "lucide-react";
+import { BarChart3, RotateCcw, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/components/ui/toast";
+import { retryFailedAction } from "../actions";
 
 export interface CampaignStatsView {
   total: number;
@@ -56,8 +59,31 @@ export function StatsDashboard({
   ratePaise: number;
   simulation: boolean;
 }) {
+  const { toast } = useToast();
   const [status, setStatus] = useState(initialStatus);
   const [stats, setStats] = useState(initialStats);
+  const [retrying, setRetrying] = useState(false);
+
+  async function handleRetry() {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      const fd = new FormData();
+      fd.set("campaignId", campaignId);
+      const result = await retryFailedAction(fd);
+      toast({
+        tone: result.ok ? "success" : "error",
+        description: result.message,
+      });
+      if (result.ok) {
+        // Restart polling: mark unsettled; the next tick brings real numbers.
+        setStatus("SENDING");
+        setStats((s) => ({ ...s, settled: false }));
+      }
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   // Poll a lightweight JSON endpoint and update only the numbers — no
   // full-page refresh, so the preview/header don't flicker. Stop once the
@@ -112,9 +138,23 @@ export function StatsDashboard({
           )}
           {simulation && <Badge tone="info">simulated</Badge>}
         </h2>
-        <p className="text-sm text-neutral-500">
-          {doneCount}/{stats.total} processed
-        </p>
+        <div className="flex items-center gap-3">
+          {!sending && stats.failed > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRetry}
+              loading={retrying}
+              title="Requeue the failed messages (consent re-checked)"
+            >
+              {!retrying && <RotateCcw className="h-3.5 w-3.5" aria-hidden />}
+              Retry {stats.failed} failed
+            </Button>
+          )}
+          <p className="text-sm text-neutral-500">
+            {doneCount}/{stats.total} processed
+          </p>
+        </div>
       </div>
 
       <Progress

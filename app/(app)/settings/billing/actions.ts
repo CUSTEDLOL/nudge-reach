@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireOrgContext, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { recordAudit } from "@/lib/audit";
 import { getPlan } from "@/lib/billing/plans";
 import {
   createRazorpayOrder,
@@ -111,6 +112,7 @@ export async function confirmCheckoutAction(
         currentPeriodEnd: periodEnd,
       },
     });
+    recordAudit(ctx, "billing.plan_changed", plan.name, `₹${plan.priceInr}/mo`);
     revalidatePath("/settings/billing");
     return { ok: true, message: `You're on ${plan.name} now — thank you!` };
   } catch (err) {

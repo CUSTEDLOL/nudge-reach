@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { normalizePhoneE164 } from "@/lib/phone";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * Public waitlist signup endpoint for the /waitlist landing page.
@@ -20,6 +21,17 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Public endpoint → rate-limit by client IP (best-effort, per instance).
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rate = checkRateLimit(`waitlist:${ip}`, RATE_LIMITS.publicForm);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests — please try again in a minute." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

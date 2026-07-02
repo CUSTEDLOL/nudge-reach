@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-import { Download, FileDown, MessageSquare } from "lucide-react";
+import { Download, FileDown, FlaskConical, MessageSquare } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { requireOrgContext } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionHeader } from "../section-header";
+import { ResetDemoButton } from "./reset-demo-button";
 
 export const metadata: Metadata = { title: "Data settings" };
 
 export default async function DataSettingsPage() {
-  const { org } = await requireOrgContext();
+  const { org, role } = await requireOrgContext();
   const [contactCount, conversationMessages, campaignMessages] =
     await Promise.all([
       prisma.contact.count({ where: { orgId: org.id } }),
@@ -19,6 +21,7 @@ export default async function DataSettingsPage() {
       prisma.message.count({ where: { campaign: { orgId: org.id } } }),
     ]);
   const messageCount = conversationMessages + campaignMessages;
+  const showDemoReset = env.SEND_MODE === "simulation" && role === "OWNER";
 
   return (
     <section>
@@ -79,6 +82,28 @@ export default async function DataSettingsPage() {
             Download CSV
           </a>
         </Card>
+
+        {showDemoReset && (
+          <Card className="flex flex-wrap items-center justify-between gap-4 border-amber-200/70 bg-amber-50/40 p-5">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <FlaskConical className="h-5 w-5" aria-hidden />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-neutral-900">
+                  Reset demo data
+                </p>
+                <p className="mt-0.5 max-w-xl text-sm text-neutral-600">
+                  Simulation mode only: wipe this workspace&apos;s contacts,
+                  conversations, campaigns and automations, and re-seed the
+                  fresh demo workspace. Team, WhatsApp connection, keys and
+                  webhooks are kept.
+                </p>
+              </div>
+            </div>
+            <ResetDemoButton />
+          </Card>
+        )}
       </div>
     </section>
   );

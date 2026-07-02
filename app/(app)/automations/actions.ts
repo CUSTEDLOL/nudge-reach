@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/lib/auth";
+import { checkAutomationLimit } from "@/lib/billing/limits";
 import { runAutomation, type RunLogEntry } from "@/lib/automation/engine";
 import { parseAutomationDraft, type AutomationDraft } from "@/lib/automation/draft";
 
@@ -86,6 +87,10 @@ export async function saveAutomation(
       revalidatePath(`/automations/${id}`);
       return { ok: true, message: "Automation saved.", id };
     }
+
+    // Plan limit: automations (creates only — edits are always allowed).
+    const limit = await checkAutomationLimit(orgId);
+    if (!limit.allowed) return { ok: false, message: limit.message };
 
     const created = await prisma.automation.create({
       data: {

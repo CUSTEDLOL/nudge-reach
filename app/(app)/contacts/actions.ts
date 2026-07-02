@@ -5,6 +5,8 @@ import type { LeadStage, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrg, requireOrgContext, requireRole } from "@/lib/auth";
 import { normalizePhoneE164 } from "@/lib/phone";
+import { checkContactLimit } from "@/lib/billing/limits";
+import { recordAudit } from "@/lib/audit";
 import { fireContactCreated, fireTagAdded } from "@/lib/automation/triggers";
 
 export interface ActionResult {
@@ -56,6 +58,10 @@ export async function addContact(formData: FormData): Promise<ActionResult> {
     return { ok: false, message: "That phone number doesn't look right." };
   if (rawEmail.trim() && email === undefined)
     return { ok: false, message: "That email doesn't look right." };
+
+  // Plan limit: contacts.
+  const limit = await checkContactLimit(org.id, 1);
+  if (!limit.allowed) return { ok: false, message: limit.message };
 
   // Only this org's tags can be attached (scoped lookup, not trusted input).
   const tags =
@@ -126,6 +132,17 @@ export async function importContactsCsv(
       })
     ).map((c) => c.phoneE164)
   );
+
+  // Plan limit: contacts — count only genuinely NEW phones (updates to
+  // existing contacts never count against the cap).
+  const newPhones = new Set<string>();
+  for (const row of rows) {
+    const [name, rawPhone] = row.split(",").map((s) => s?.trim() ?? "");
+    const phone = rawPhone ? normalizePhoneE164(rawPhone) : null;
+    if (name && phone && !existingPhones.has(phone)) newPhones.add(phone);
+  }
+  const limit = await checkContactLimit(org.id, newPhones.size);
+  if (!limit.allowed) return { ok: false, message: limit.message };
 
   let imported = 0;
   let skipped = 0;
@@ -252,12 +269,19 @@ export async function updateContact(
 export async function optOutContact(
   formData: FormData
 ): Promise<ActionResult> {
-  const org = await requireOrg();
+  const ctx = await requireOrgContext();
   const id = String(formData.get("contactId") ?? "");
+  const contact = await prisma.contact.findFirst({
+    where: { id, orgId: ctx.org.id },
+    select: { name: true, phoneE164: true },
+  });
   const res = await prisma.contact.updateMany({
-    where: { id, orgId: org.id },
+    where: { id, orgId: ctx.org.id },
     data: { optedOutAt: new Date(), optedIn: false },
   });
+  if (res.count > 0 && contact) {
+    recordAudit(ctx, "contact.opted_out", `${contact.name} (${contact.phoneE164})`);
+  }
   revalidateContact(id);
   return res.count > 0
     ? { ok: true, message: "Opted out — permanently excluded from campaigns." }
@@ -265,9 +289,18 @@ export async function optOutContact(
 }
 
 export async function deleteContact(formData: FormData): Promise<ActionResult> {
-  const org = await requireOrg();
+  const ctx = await requireOrgContext();
   const id = String(formData.get("contactId") ?? "");
-  const res = await prisma.contact.deleteMany({ where: { id, orgId: org.id } });
+  const contact = await prisma.contact.findFirst({
+    where: { id, orgId: ctx.org.id },
+    select: { name: true, phoneE164: true },
+  });
+  const res = await prisma.contact.deleteMany({
+    where: { id, orgId: ctx.org.id },
+  });
+  if (res.count > 0 && contact) {
+    recordAudit(ctx, "contact.deleted", `${contact.name} (${contact.phoneE164})`);
+  }
   revalidatePath("/contacts");
   return res.count > 0
     ? { ok: true, message: "Contact deleted." }

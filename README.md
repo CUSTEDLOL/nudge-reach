@@ -1,23 +1,77 @@
-# Nudge Reach (WhatsApp)
+# Nudge — WhatsApp CRM
 
 **Live:** https://nudge-reach.vercel.app (simulation mode)
 
-Turn one retail product photo into a complete, Meta-policy-compliant WhatsApp
-marketing campaign and send it to an opted-in contact list over the official
-WhatsApp Cloud API. First product of the **Nudge** B2B AI studio for Asian SME
-retail.
+Nudge is a WhatsApp CRM for Indian SME retail: a shared team inbox, contacts
+CRM, AI-generated broadcast campaigns, and automations — all on the **official
+WhatsApp Cloud API**, with Meta-policy compliance (opt-in, opt-out, the
+24-hour window) enforced in code. Built for non-technical shop owners; the
+entire product runs end to end in simulation mode with zero Meta setup.
 
-Built for non-technical shop owners in India. The bar is "stupidly simple."
+## Features
+
+**Inbox & AI**
+- Three-pane shared inbox: filters (Open / Mine / Unassigned / Resolved /
+  Unread), unread counts, assignment, tags, internal notes, lead stage
+- 24-hour service-window countdown; outside the window the composer switches
+  to an approved-template picker
+- AI suggest-reply with tone chips (Professional / Friendly / Short /
+  Persuasive) — drafts into the composer, **never auto-sends**
+- Optional per-org AI auto-reply agent, scoped to the business's own info,
+  with human handoff; simulation tester to play the customer
+
+**CRM**
+- Contacts table with search, filters, bulk actions, CSV import (with an
+  explicit consent confirmation step), and per-contact profiles with a merged
+  activity timeline
+- Lead stages (New → Contacted → Qualified → Won → Lost), tags, static
+  audiences, and dynamic segments
+- Consent is data: opt-in badges everywhere, permanent opt-outs
+
+**Campaigns**
+- Broadcast wizard: product photo → AI-generated compliant campaign (or a
+  library template, or blank) → audience/segment → compliance interstitial →
+  send now or schedule
+- Template library with Meta review states (approved / pending / rejected +
+  reason, edit-and-resubmit)
+- Live delivery dashboard: sent / delivered / read / clicked / failed, plus
+  estimated and actual cost
+
+**Automations**
+- 5 triggers (message received, keyword, contact created, tag added,
+  campaign reply) × 8 step kinds (send message/template, tag, assign, stage,
+  wait, resolve, handoff)
+- Wait/resume via cron, per-step run logs, one-click test runs
+
+**Analytics**
+- Message volume, delivery/read/reply rates, campaign performance, agent
+  performance (incl. first-response time), lead funnel, top tags — 7/30/90
+  day ranges, computed from real data
+
+**Platform**
+- Teams: OWNER / ADMIN / AGENT roles (server-enforced), email invites with
+  auto-join on signup (real invite emails when Resend is configured)
+- Billing: 4 plans (Free / ₹999 / ₹2,499 / ₹5,999 per month), Razorpay
+  checkout env-gated — free mode without keys
+- Outbound signed webhooks (6 events) for Zapier/Make/n8n/custom backends
+- Hashed API keys (shown once, revocable), CSV data export
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind CSS
+- Next.js 16 (App Router) + TypeScript + Tailwind CSS v4
 - Supabase — Postgres, Auth, Storage
-- Prisma ORM
-- Anthropic API at runtime via `lib/model-router` (cheap Haiku tier only)
-- Deploy: Vercel + Supabase
+- Prisma 6 (RLS enabled on every table — `npm run db:rls`)
+- Anthropic API at runtime via `lib/model-router` (cheap Haiku tier only,
+  enforced in code)
+- recharts, Vercel (app) + Supabase (data)
 
 ## Local setup
+
+Requires **Node 20** (Node 18 fails). On this machine:
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
+```
 
 1. **Install dependencies**
 
@@ -29,6 +83,8 @@ Built for non-technical shop owners in India. The bar is "stupidly simple."
    (free tier is fine). You need:
    - Project URL + publishable key — *Project Settings → API*
    - Database connection strings (pooled + direct) — *Project Settings → Database*
+   - A public Storage bucket named `product-photos` (see
+     [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) §2)
 
 3. **Configure environment**
 
@@ -37,79 +93,71 @@ Built for non-technical shop owners in India. The bar is "stupidly simple."
    # fill in the Supabase values; leave SEND_MODE=simulation
    ```
 
-4. **Create the database tables**
+   Note: the Prisma CLI only reads `.env`, while Next.js reads both — put
+   `DATABASE_URL` and `DIRECT_URL` in `.env` too (both files are git-ignored).
+
+4. **Create the database tables, then enable RLS** (always run both,
+   in this order — new tables start with RLS disabled):
 
    ```bash
    npm run db:push
+   npm run db:rls
    ```
 
-5. **Run it**
+5. **Seed demo data** (optional but recommended — idempotent, no AI calls):
+
+   ```bash
+   npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \
+     --outfile=.next/seed-demo.cjs --external:@prisma/client && node .next/seed-demo.cjs
+   ```
+
+6. **Run it**
 
    ```bash
    npm run dev
    ```
 
-   Open http://localhost:3000, create an account, and you should land on the
-   dashboard with your org created.
+   > Machine quirk: `next dev` can OOM after long idle on this machine. If it
+   > does, use the production server instead:
+   >
+   > ```bash
+   > npm run build && npx next start
+   > ```
 
-   > Email confirmation: if sign-up says "check your email", the project has
-   > *Confirm email* enabled (Supabase default). Either click the link in the
-   > email, or turn it off for local dev under
-   > *Authentication → Sign In / Up → Email*.
-   > Google sign-in requires configuring the Google provider under
-   > *Authentication → Providers* — optional for local dev.
+   Open http://localhost:3000, create an account, and you land on the
+   dashboard with your workspace created.
 
 ## Modes
 
-- `SEND_MODE=simulation` (default) — the entire flow works end to end with
-  mocked Meta responses. No WhatsApp Business Account needed.
-- `SEND_MODE=live` — real sends over the WhatsApp Cloud API. Requires all
-  `WHATSAPP_*` env vars; the app refuses to boot without them.
+- `SEND_MODE=simulation` (default) — the entire product works end to end
+  with mocked Meta responses. No WhatsApp Business Account needed.
+- `SEND_MODE=live` — real sends over the WhatsApp Cloud API. The app refuses
+  to boot without the required `WHATSAPP_*` vars. See
+  [docs/GO_LIVE_WHATSAPP.md](docs/GO_LIVE_WHATSAPP.md).
 
 ## Tests
 
 ```bash
-npm test
+npm test   # vitest — 233 unit tests
 ```
 
-## Deployment (Vercel + Supabase)
+## Deployment
 
-The app deploys to Vercel; data/auth/storage stay on Supabase.
-
-```bash
-npx vercel link --yes --project nudge-reach
-# push every var from .env.local to production, then:
-npx vercel --prod --yes
-```
-
-After the first deploy:
-
-1. **Supabase → Authentication → URL Configuration**: set *Site URL* to the
-   production URL and add it to *Redirect URLs* — otherwise sign-up
-   confirmation emails redirect to localhost.
-2. `vercel.json` registers a daily cron on `/api/cron/process-queue`; the
-   campaign dashboard also advances the queue on every view, so demo-scale
-   sends complete without waiting for cron.
-3. Going live later: set `SEND_MODE=live` + the `WHATSAPP_*` credentials in
-   Vercel env vars, and point the Meta app's webhook at
-   `https://<your-url>/api/webhooks/whatsapp` with the same verify token.
-
-## Demo data
-
-`scripts/seed-demo.ts` creates a full demo workspace (40 contacts with tags
-and lead stages, 10 conversations, library templates, campaigns incl. a sent
-one with stats, automations with run logs, teammate memberships) so every
-module demos instantly. After any `npm run db:push`, also run `npm run db:rls`
-to enable row-level security on new tables. Seed:
-
-```bash
-npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \
-  --outfile=.next/seed-demo.cjs --external:@prisma/client && node .next/seed-demo.cjs
-```
+Full production runbook (Supabase setup, env checklist, cron, go-live flip,
+rollback): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ## Project docs
 
-- [docs/PRD.md](docs/PRD.md) — scope, data model, flows
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production deploy runbook (Vercel + Supabase)
+- [docs/SECURITY.md](docs/SECURITY.md) — security posture, tenant isolation, compliance guarantees
+- [docs/GO_LIVE_WHATSAPP.md](docs/GO_LIVE_WHATSAPP.md) — switching from simulation to real WhatsApp
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — 5-minute sales demo flow
+- [docs/MVP_BUILD_SPEC.md](docs/MVP_BUILD_SPEC.md) — the build contract for the CRM MVP
+- [docs/PRD.md](docs/PRD.md) — original scope, data model, flows
 - [docs/WHATSAPP_CLOUD_API.md](docs/WHATSAPP_CLOUD_API.md) — integration + compliance reference
 - [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) — phased build plan
 - [PROGRESS.md](PROGRESS.md) — build log and decisions
+
+---
+
+Private repository — proprietary, no open-source license.

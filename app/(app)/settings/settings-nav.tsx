@@ -9,6 +9,7 @@ import {
   CreditCard,
   Database,
   Phone,
+  ScrollText,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -21,6 +22,7 @@ const items = [
   { href: "/settings/notifications", label: "Notifications", icon: Bell },
   { href: "/settings/billing", label: "Billing", icon: CreditCard },
   { href: "/settings/data", label: "Data", icon: Database },
+  { href: "/settings/audit", label: "Audit log", icon: ScrollText },
 ];
 
 export function SettingsNav() {

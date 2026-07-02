@@ -2,21 +2,24 @@
  * Subscription plans (spec §M8 billing). Pure config — no server imports — so
  * both server and client can render the pricing grid. Prices are the product's
  * own tiers (₹, monthly); the WhatsApp per-message cost is separate and passed
- * through from Meta.
+ * through from Meta. Limits are enforced server-side in lib/billing/limits.ts.
  */
 
+export interface PlanLimits {
+  contacts: number | null; // null = unlimited
+  teamMembers: number | null;
+  automations: number | null;
+  /** Campaign messages per calendar month. */
+  messagesPerMonth: number | null;
+}
+
 export interface Plan {
-  id: "free" | "starter" | "growth" | "scale";
+  id: "free" | "starter" | "growth" | "pro";
   name: string;
   priceInr: number; // monthly, ₹ (0 = free)
   tagline: string;
   features: string[];
-  /** Soft limits surfaced in the UI (enforcement is post-MVP). */
-  limits: {
-    contacts: number | null; // null = unlimited
-    teamMembers: number | null;
-    automations: number | null;
-  };
+  limits: PlanLimits;
   highlighted?: boolean;
 }
 
@@ -29,10 +32,16 @@ export const PLANS: Plan[] = [
     features: [
       "1 WhatsApp number",
       "Up to 250 contacts",
+      "500 campaign messages / month",
       "Shared inbox + AI drafts",
-      "2 automations",
+      "2 automations · 2 team seats",
     ],
-    limits: { contacts: 250, teamMembers: 2, automations: 2 },
+    limits: {
+      contacts: 250,
+      teamMembers: 2,
+      automations: 2,
+      messagesPerMonth: 500,
+    },
   },
   {
     id: "starter",
@@ -42,11 +51,17 @@ export const PLANS: Plan[] = [
     features: [
       "Everything in Free",
       "Up to 2,500 contacts",
-      "5 team members",
+      "3,000 campaign messages / month",
+      "5 team seats",
       "Unlimited automations",
-      "Broadcast campaigns",
+      "Broadcasts + scheduling",
     ],
-    limits: { contacts: 2500, teamMembers: 5, automations: null },
+    limits: {
+      contacts: 2500,
+      teamMembers: 5,
+      automations: null,
+      messagesPerMonth: 3000,
+    },
   },
   {
     id: "growth",
@@ -56,28 +71,42 @@ export const PLANS: Plan[] = [
     features: [
       "Everything in Starter",
       "Up to 25,000 contacts",
-      "15 team members",
+      "30,000 campaign messages / month",
+      "15 team seats",
       "Webhooks + API access",
       "Analytics & agent performance",
     ],
-    limits: { contacts: 25000, teamMembers: 15, automations: null },
+    limits: {
+      contacts: 25000,
+      teamMembers: 15,
+      automations: null,
+      messagesPerMonth: 30000,
+    },
     highlighted: true,
   },
   {
-    id: "scale",
-    name: "Scale",
+    id: "pro",
+    name: "Pro",
     priceInr: 5999,
-    tagline: "High volume, multiple numbers, priority support.",
+    tagline: "High volume, multiple teams, priority support.",
     features: [
       "Everything in Growth",
       "Unlimited contacts",
       "Unlimited team members",
+      "Unlimited campaign messages",
       "Priority support",
     ],
-    limits: { contacts: null, teamMembers: null, automations: null },
+    limits: {
+      contacts: null,
+      teamMembers: null,
+      automations: null,
+      messagesPerMonth: null,
+    },
   },
 ];
 
 export function getPlan(id: string): Plan {
+  // "scale" was Pro's pre-launch id; map it forward for any stored value.
+  if (id === "scale") id = "pro";
   return PLANS.find((p) => p.id === id) ?? PLANS[0];
 }
