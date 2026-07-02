@@ -3,6 +3,12 @@ import { env } from "@/lib/env";
 import { chat } from "@/lib/model-router";
 import { buildHistory } from "@/lib/agent/reply";
 import { firstName } from "@/lib/inbox/format";
+import { SUGGEST_TONES, type SuggestTone, isSuggestTone } from "@/lib/ai/tones";
+
+// Re-export the client-safe tone constants so existing importers of this
+// module keep working; client components should import from "@/lib/ai/tones".
+export { SUGGEST_TONES, isSuggestTone };
+export type { SuggestTone };
 
 /**
  * AI-assisted reply drafts for the shared inbox (spec §M2). Drafts go into
@@ -11,15 +17,6 @@ import { firstName } from "@/lib/inbox/format";
  * ANTHROPIC_API_KEY the module returns deterministic canned drafts labeled
  * "(sample)" so the feature stays demoable in any environment.
  */
-
-export const SUGGEST_TONES = [
-  { value: "professional", label: "Professional" },
-  { value: "friendly", label: "Friendly" },
-  { value: "short", label: "Short" },
-  { value: "persuasive", label: "Persuasive" },
-] as const;
-
-export type SuggestTone = (typeof SUGGEST_TONES)[number]["value"];
 
 const TONE_INSTRUCTIONS: Record<SuggestTone, string> = {
   professional:
@@ -31,10 +28,6 @@ const TONE_INSTRUCTIONS: Record<SuggestTone, string> = {
   persuasive:
     "Be gently persuasive: highlight the benefit and end with a soft call to action. Never pushy.",
 };
-
-export function isSuggestTone(value: string): value is SuggestTone {
-  return SUGGEST_TONES.some((t) => t.value === value);
-}
 
 export interface SuggestGrounding {
   businessName: string;

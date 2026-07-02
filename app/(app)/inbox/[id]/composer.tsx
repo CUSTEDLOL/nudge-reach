@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { WhatsappPreview } from "@/components/whatsapp-preview";
 import type { LibraryTemplate } from "@/lib/whatsapp/library";
-import { SUGGEST_TONES, type SuggestTone } from "@/lib/ai/suggest-reply";
+import { SUGGEST_TONES, type SuggestTone } from "@/lib/ai/tones";
 import {
   sendTemplateAction,
   sendTextAction,
