@@ -14,12 +14,34 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import { cn } from "@/lib/cn";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+/* ------------------------------------------------------------------ *
+ * useReducedMotionSafe — stays `false` during SSR and the first client
+ * render so hydration matches the server HTML, then reflects the real
+ * preference after mount. Diverging *during* hydration would leave the
+ * server's initial styles (opacity: 0, blur) permanently in the DOM for
+ * reduced-motion users, hiding the content.
+ * ------------------------------------------------------------------ */
+const emptySubscribe = () => () => {};
+
+function useReducedMotionSafe() {
+  const reduce = useReducedMotion();
+  // false on the server and during hydration, true after — so the first
+  // client render always matches the SSR output.
+  const hydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+  return hydrated && !!reduce;
+}
 
 /* ------------------------------------------------------------------ *
  * Reveal — fades + lifts content into view on scroll.
@@ -39,7 +61,7 @@ export function Reveal({
   blur?: boolean;
   once?: boolean;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSafe();
 
   if (reduce) {
     return <div className={className}>{children}</div>;
@@ -84,7 +106,7 @@ export function Stagger({
   className?: string;
   once?: boolean;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSafe();
   if (reduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
@@ -106,7 +128,7 @@ export function StaggerItem({
   children: ReactNode;
   className?: string;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSafe();
   if (reduce) return <div className={className}>{children}</div>;
   return (
     <motion.div className={className} variants={itemVariants}>
@@ -269,7 +291,7 @@ export function Tilt({
   className?: string;
   max?: number;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSafe();
   const ref = useRef<HTMLDivElement>(null);
   const rx = useSpring(useMotionValue(0), { stiffness: 150, damping: 18 });
   const ry = useSpring(useMotionValue(0), { stiffness: 150, damping: 18 });
@@ -316,7 +338,7 @@ export function Magnetic({
   className?: string;
   strength?: number;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSafe();
   const ref = useRef<HTMLDivElement>(null);
   const x = useSpring(useMotionValue(0), { stiffness: 220, damping: 16 });
   const y = useSpring(useMotionValue(0), { stiffness: 220, damping: 16 });
@@ -364,7 +386,7 @@ export function Float({
   amount?: number;
   duration?: number;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionSafe();
   if (reduce) return <div className={className}>{children}</div>;
   return (
     <motion.div

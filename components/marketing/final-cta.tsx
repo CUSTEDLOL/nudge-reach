@@ -1,13 +1,14 @@
-import { CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Container } from "./section";
+import { ButtonLink } from "./button";
 import { LeadForm } from "./lead-form";
 import { Reveal } from "./motion-primitives";
 
 const POINTS = [
-  "Live the same day — most shops onboard in minutes",
-  "Works in simulation first, with zero risk",
-  "Your first campaign is on us",
-  "No credit card, cancel anytime",
+  "Free plan — no credit card, no expiry",
+  "Official WhatsApp Cloud API, opt-in enforced",
+  "Most teams are live the same day",
+  "Cancel anytime — your data stays yours",
 ];
 
 export function FinalCTA() {
@@ -37,13 +38,26 @@ export function FinalCTA() {
             </Reveal>
             <Reveal delay={0.1}>
               <p className="mt-5 max-w-lg text-lg leading-relaxed text-brand-100/70">
-                Book a 20-minute demo and we&apos;ll set up your first campaign
-                live — or join the waitlist and we&apos;ll reach out on WhatsApp.
+                Start free and send your first campaign today — or book a
+                20-minute demo and we&apos;ll set everything up with you, live
+                on the call.
               </p>
             </Reveal>
 
             <Reveal delay={0.15}>
-              <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <ButtonLink href="/login" variant="primary-dark" size="lg">
+                  Start free
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+                </ButtonLink>
+                <ButtonLink href="/waitlist" variant="secondary-dark" size="lg">
+                  Book a demo
+                </ButtonLink>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.2}>
+              <ul className="mt-9 grid gap-3 sm:grid-cols-2">
                 {POINTS.map((p) => (
                   <li key={p} className="flex items-start gap-2.5">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />

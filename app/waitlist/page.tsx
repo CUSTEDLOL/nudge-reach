@@ -9,18 +9,18 @@ import { Reveal } from "@/components/marketing/motion-primitives";
 import { Footer } from "@/components/marketing/footer";
 
 export const metadata: Metadata = {
-  title: "Join the waitlist",
+  title: "Book a demo",
   description:
-    "Snap a product photo. Get a ready-to-send, WhatsApp-compliant campaign for your customers — in under a minute. Join the Nudge early-access waitlist.",
+    "Book a 20-minute demo of Nudge — the WhatsApp CRM for Indian SMBs. We'll walk through the shared inbox, automations and campaigns, then set up your account live on the call.",
 };
 
 const WHY = [
-  "No typing or design skills — just a photo",
-  "Compliant with WhatsApp's rules, every time",
-  "Transparent ₹ cost before you ever hit send",
-  "Only messages customers who opted in",
-  "Works in simulation first — zero risk",
-  "Built for shops, not big marketing teams",
+  "Live walkthrough of the inbox, automations and campaigns",
+  "Setup done with you — number, templates, first broadcast",
+  "Examples from your industry, not a generic pitch",
+  "Plain-₹ answers on plans and Meta message costs",
+  "A straight answer if Nudge isn't the right fit",
+  "Follow-up on WhatsApp — no cold calls, no spam",
 ];
 
 export default function WaitlistPage() {
@@ -44,22 +44,30 @@ export default function WaitlistPage() {
           <div>
             <Reveal>
               <span className="inline-flex items-center gap-2 rounded-full border border-brand-200/70 bg-white/70 px-3.5 py-1.5 text-[13px] font-semibold text-brand-700 shadow-soft backdrop-blur">
-                Early access · Built for India 🇮🇳
+                Book a demo · Built for India 🇮🇳
               </span>
             </Reveal>
             <Reveal delay={0.05}>
               <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.07] tracking-tight text-ink sm:text-5xl">
-                One product photo.{" "}
+                Twenty minutes with us.{" "}
                 <span className="font-display text-gradient italic">
-                  A whole WhatsApp campaign.
+                  Leave with it running.
                 </span>
               </h1>
             </Reveal>
             <Reveal delay={0.1}>
               <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink/60">
-                Snap a photo of what you sell. Nudge writes a ready-to-send,
-                WhatsApp-compliant campaign for your customers — in under a
-                minute. No typing, no designer, no tech.
+                Tell us a little about your business and we&apos;ll WhatsApp you
+                to fix a time. On the call, we walk through Nudge on examples
+                from your industry — then set up your account while you watch.
+                Prefer to explore on your own?{" "}
+                <Link
+                  href="/login"
+                  className="font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 transition-colors hover:text-brand-600"
+                >
+                  Start free
+                </Link>{" "}
+                — no card needed.
               </p>
             </Reveal>
 
@@ -84,7 +92,7 @@ export default function WaitlistPage() {
           </div>
 
           <Reveal delay={0.15}>
-            <LeadForm surface="waitlist-page" defaultIntent="waitlist" />
+            <LeadForm surface="waitlist-page" defaultIntent="demo" />
           </Reveal>
         </Container>
       </main>

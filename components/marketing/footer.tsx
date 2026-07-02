@@ -9,7 +9,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: "Features", href: "#features" },
       { label: "Platform tour", href: "#showcase" },
-      { label: "Workflow", href: "#workflow" },
+      { label: "Industries", href: "#industries" },
       { label: "Pricing", href: "#pricing" },
       { label: "Photo → campaign", href: "#photo" },
     ],
@@ -26,8 +26,8 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Resources",
     links: [
       { label: "FAQ", href: "#faq" },
-      { label: "Sign in", href: "/login" },
-      { label: "Join the waitlist", href: "/waitlist" },
+      { label: "Start free", href: "/login" },
+      { label: "Book a demo", href: "/waitlist" },
     ],
   },
 ];

@@ -37,8 +37,8 @@ const FAQS = [
     a: "Your conversations and customer data stay yours and are isolated per organisation. We never sell or share your data, full stop.",
   },
   {
-    q: "What does “early access” mean?",
-    a: "We're onboarding businesses one at a time to keep quality high. Join the waitlist or book a demo and we'll get you set up — your first campaign is on us.",
+    q: "Can I really start free?",
+    a: "Yes — the Free plan gives you a WhatsApp number, 250 contacts, 500 campaign messages a month, the shared inbox with AI drafts, 2 automations and 2 seats. No card, no expiry. Upgrade inside the app only when you hit a limit.",
   },
 ];
 

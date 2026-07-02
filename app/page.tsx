@@ -8,6 +8,7 @@ import { DashboardShowcase } from "@/components/marketing/dashboard-showcase";
 import { PhotoToCampaign } from "@/components/marketing/photo-to-campaign";
 import { WorkflowFlow } from "@/components/marketing/workflow-flow";
 import { TeamBenefits } from "@/components/marketing/team-benefits";
+import { Industries } from "@/components/marketing/industries";
 import { Testimonials } from "@/components/marketing/testimonials";
 import { Pricing } from "@/components/marketing/pricing";
 import { FAQ } from "@/components/marketing/faq";
@@ -40,6 +41,7 @@ export default function Home() {
         <PhotoToCampaign />
         <WorkflowFlow />
         <TeamBenefits />
+        <Industries />
         <Testimonials />
         <Pricing />
         <FAQ />

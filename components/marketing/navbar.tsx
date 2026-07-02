@@ -11,7 +11,7 @@ import { Magnetic } from "./motion-primitives";
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "Platform", href: "#showcase" },
-  { label: "Workflow", href: "#workflow" },
+  { label: "Industries", href: "#industries" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ];
@@ -64,12 +64,24 @@ export function Navbar() {
         </ul>
 
         <div className="hidden items-center gap-2 md:flex">
-          <ButtonLink href="/login" variant="ghost" size="sm">
-            Sign in
-          </ButtonLink>
-          <Magnetic>
-            <ButtonLink href="#get-started" variant="primary" size="sm">
+          <span className="hidden lg:block">
+            <ButtonLink
+              href="/waitlist"
+              variant="ghost"
+              size="sm"
+              className="whitespace-nowrap"
+            >
               Book a demo
+            </ButtonLink>
+          </span>
+          <Magnetic>
+            <ButtonLink
+              href="/login"
+              variant="primary"
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              Start free
             </ButtonLink>
           </Magnetic>
         </div>
@@ -120,16 +132,21 @@ export function Navbar() {
                 ))}
               </ul>
               <div className="mt-2 flex flex-col gap-2 border-t border-black/5 p-2 pt-3">
-                <ButtonLink href="/login" variant="secondary" className="w-full">
-                  Sign in
-                </ButtonLink>
                 <ButtonLink
-                  href="#get-started"
-                  variant="primary"
+                  href="/waitlist"
+                  variant="secondary"
                   className="w-full"
                   onClick={() => setOpen(false)}
                 >
                   Book a demo
+                </ButtonLink>
+                <ButtonLink
+                  href="/login"
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => setOpen(false)}
+                >
+                  Start free
                 </ButtonLink>
               </div>
             </motion.div>

@@ -45,7 +45,7 @@ export function Hero() {
         {/* ---------------- Copy ---------------- */}
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
           <motion.a
-            href="#get-started"
+            href="/waitlist"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: EASE }}
@@ -92,9 +92,9 @@ export function Hero() {
             transition={{ duration: 0.75, delay: 0.16, ease: EASE }}
             className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-ink/60 sm:text-xl"
           >
-            Unify every conversation, lead, and campaign in one shared inbox.
-            Nudge adds AI replies, automated follow-ups, and revenue analytics —
-            and keeps you Meta-compliant on every single send.
+            One shared inbox for every conversation, lead and campaign. AI
+            drafts the replies, automations handle the follow-ups — and every
+            send stays inside Meta&apos;s rules.
           </motion.p>
 
           <motion.div
@@ -104,13 +104,13 @@ export function Hero() {
             className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:items-start"
           >
             <Magnetic>
-              <ButtonLink href="#get-started" variant="primary" size="lg">
-                Book a demo
+              <ButtonLink href="/login" variant="primary" size="lg">
+                Start free
                 <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
               </ButtonLink>
             </Magnetic>
-            <ButtonLink href="#showcase" variant="secondary" size="lg">
-              See it in action
+            <ButtonLink href="/waitlist" variant="secondary" size="lg">
+              Book a demo
             </ButtonLink>
           </motion.div>
 
@@ -146,9 +146,9 @@ export function Hero() {
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] font-medium text-ink/55 lg:justify-start">
             {[
-              { icon: CheckCircle2, label: "No credit card" },
-              { icon: ShieldCheck, label: "Meta-compliant" },
-              { icon: Zap, label: "Works in simulation first" },
+              { icon: CheckCircle2, label: "Free plan — no card needed" },
+              { icon: ShieldCheck, label: "Official WhatsApp Cloud API" },
+              { icon: Zap, label: "Live in minutes" },
             ].map(({ icon: Icon, label }) => (
               <span key={label} className="inline-flex items-center gap-1.5">
                 <Icon className="h-4 w-4 text-brand-500" />
