@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/auth";
-import { PageHeader } from "@/components/ui/page-header";
+import { Card } from "@/components/ui/card";
+import { SectionHeader } from "../section-header";
 import { AgentForm, type AgentFormValues } from "./agent-form";
+
+export const metadata: Metadata = { title: "AI Agent settings" };
 
 export default async function AgentSettingsPage() {
   const org = await requireOrg();
@@ -20,23 +24,24 @@ export default async function AgentSettingsPage() {
   };
 
   return (
-    <div className="max-w-xl">
-      <PageHeader
-        title="WhatsApp assistant"
-        description="Set up how your AI assistant replies to customers who message you. It only answers questions about your business — never anything else."
+    <section>
+      <SectionHeader
+        title="AI Agent"
+        description="How the assistant replies to customers who message you on WhatsApp. It only answers questions about your business — never anything else."
       />
-
-      <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-soft">
+      <Card className="p-6">
         <AgentForm initial={initial} />
-      </div>
-
-      <p className="mt-4 text-center text-sm text-neutral-500">
-        Test it on the{" "}
-        <Link href="/conversations" className="text-brand-700 underline">
-          Conversations
+      </Card>
+      <p className="mt-4 text-sm text-neutral-500">
+        Test it from the{" "}
+        <Link
+          href="/inbox"
+          className="font-medium text-brand-700 underline-offset-2 hover:underline"
+        >
+          Inbox
         </Link>{" "}
-        page.
+        — in simulation mode you can send an inbound message as the customer.
       </p>
-    </div>
+    </section>
   );
 }

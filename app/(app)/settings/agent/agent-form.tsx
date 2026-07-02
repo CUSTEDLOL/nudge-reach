@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
-import {
-  saveAgentProfileAction,
-  type ActionResult,
-} from "./actions";
-
-const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-emerald-500";
+import { useActionState, useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { saveAgentProfileAction, type ActionResult } from "./actions";
 
 export interface AgentFormValues {
   enabled: boolean;
@@ -19,84 +20,109 @@ export interface AgentFormValues {
 }
 
 export function AgentForm({ initial }: { initial: AgentFormValues }) {
-  const [result, action, pending] = useActionState(
-    async (_p: ActionResult | null, fd: FormData) => saveAgentProfileAction(fd),
+  const { toast } = useToast();
+  const enabledLabelId = useId();
+  const [enabled, setEnabled] = useState(initial.enabled);
+  const [, formAction, pending] = useActionState(
+    async (_prev: ActionResult | null, formData: FormData) => {
+      const result = await saveAgentProfileAction(formData);
+      toast({
+        description: result.message,
+        tone: result.ok ? "success" : "error",
+      });
+      return result;
+    },
     null
   );
 
   return (
-    <form action={action} className="flex flex-col gap-4">
-      <label className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
-        <input
-          type="checkbox"
+    <form action={formAction} className="flex flex-col gap-5">
+      <div className="flex items-start justify-between gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <div>
+          <p
+            id={enabledLabelId}
+            className="text-sm font-medium text-neutral-900"
+          >
+            Auto-reply {enabled ? "is on" : "is off"}
+          </p>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            When on, the assistant answers new customer messages instantly
+            using the info below. Turn off to handle messages yourself.
+          </p>
+        </div>
+        <Switch
           name="enabled"
-          defaultChecked={initial.enabled}
-          className="mt-0.5"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          aria-labelledby={enabledLabelId}
         />
-        <span>
-          <strong>Auto-reply is on.</strong> When a customer messages your
-          WhatsApp, the assistant answers instantly using the info below. Turn
-          off to handle messages yourself.
-        </span>
-      </label>
+      </div>
 
-      <label className="text-sm font-medium text-neutral-700">
-        Business type
-        <select name="vertical" defaultValue={initial.vertical} className={inputCls}>
+      <Field label="Business type" htmlFor="agent-vertical">
+        <Select
+          id="agent-vertical"
+          name="vertical"
+          defaultValue={initial.vertical}
+        >
           <option value="restaurant">Restaurant</option>
           <option value="retail">Shop / Retail</option>
           <option value="clinic">Clinic / Salon</option>
           <option value="real_estate">Real estate</option>
-        </select>
-      </label>
+        </Select>
+      </Field>
 
-      <label className="text-sm font-medium text-neutral-700">
-        Business name
-        <input name="businessName" defaultValue={initial.businessName} className={inputCls} placeholder="Spice Garden" />
-      </label>
+      <Field label="Business name" htmlFor="agent-business-name" required>
+        <Input
+          id="agent-business-name"
+          name="businessName"
+          defaultValue={initial.businessName}
+          placeholder="Spice Garden"
+        />
+      </Field>
 
-      <label className="text-sm font-medium text-neutral-700">
-        What should the assistant know?{" "}
-        <span className="font-normal text-neutral-400">
-          (hours, address, menu/prices, booking policy — the more, the better)
-        </span>
-        <textarea
+      <Field
+        label="What should the assistant know?"
+        htmlFor="agent-business-info"
+        hint="Hours, address, menu/prices, booking policy — the more, the better."
+      >
+        <Textarea
+          id="agent-business-info"
           name="businessInfo"
           rows={8}
           defaultValue={initial.businessInfo}
-          className={inputCls}
-          placeholder={"Open Tue–Sun, 12pm–11pm. Closed Mondays.\nAddress: 14 MG Road, Bengaluru.\nVeg & non-veg North Indian. Popular: Paneer Tikka ₹280, Butter Chicken ₹360.\nReservations for 6+ only; we'll confirm by call.\nWe do takeaway and Swiggy/Zomato delivery."}
+          placeholder={
+            "Open Tue–Sun, 12pm–11pm. Closed Mondays.\nAddress: 14 MG Road, Bengaluru.\nVeg & non-veg North Indian. Popular: Paneer Tikka ₹280, Butter Chicken ₹360.\nReservations for 6+ only; we'll confirm by call.\nWe do takeaway and Swiggy/Zomato delivery."
+          }
         />
-      </label>
+      </Field>
 
-      <label className="text-sm font-medium text-neutral-700">
-        Tone
-        <input name="tone" defaultValue={initial.tone} className={inputCls} placeholder="Warm, friendly, and concise" />
-      </label>
+      <Field label="Tone" htmlFor="agent-tone">
+        <Input
+          id="agent-tone"
+          name="tone"
+          defaultValue={initial.tone}
+          placeholder="Warm, friendly, and concise"
+        />
+      </Field>
 
-      <label className="text-sm font-medium text-neutral-700">
-        Anything to avoid?{" "}
-        <span className="font-normal text-neutral-400">(optional)</span>
-        <input name="doNots" defaultValue={initial.doNots} className={inputCls} placeholder="Don't quote delivery times; don't discuss competitors" />
-      </label>
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+      <Field
+        label="Anything to avoid?"
+        htmlFor="agent-do-nots"
+        hint="Optional guardrails for the assistant."
       >
-        {pending ? "Saving…" : "Save assistant"}
-      </button>
+        <Input
+          id="agent-do-nots"
+          name="doNots"
+          defaultValue={initial.doNots}
+          placeholder="Don't quote delivery times; don't discuss competitors"
+        />
+      </Field>
 
-      {result && (
-        <p
-          className={`rounded-lg px-3 py-2 text-sm ${
-            result.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
-          }`}
-        >
-          {result.message}
-        </p>
-      )}
+      <div>
+        <Button type="submit" loading={pending}>
+          Save assistant
+        </Button>
+      </div>
     </form>
   );
 }

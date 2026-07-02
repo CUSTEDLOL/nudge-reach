@@ -1,55 +1,189 @@
 "use client";
 
-import { useActionState } from "react";
-import {
-  addContact,
-  createAudience,
-  importContactsCsv,
-  type ActionResult,
-} from "./actions";
+import { useActionState, useCallback, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Tags, Upload, UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { TagPill } from "@/components/ui/tag-pill";
+import { useToast } from "@/components/ui/toast";
+import { addContact, importContactsCsv, type ActionResult } from "./actions";
+import { STAGES, type TagInfo } from "./types";
+import { TagsDrawer } from "./tags-drawer";
 
 const initial: ActionResult | null = null;
 
-function Feedback({ result }: { result: ActionResult | null }) {
-  if (!result) return null;
+export function Feedback({ result }: { result: ActionResult | null }) {
+  if (!result || result.ok) return null;
   return (
-    <p
-      className={`mt-2 rounded-lg px-3 py-2 text-sm ${
-        result.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
-      }`}
-    >
+    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
       {result.message}
     </p>
   );
 }
 
-const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-emerald-500";
-const buttonCls =
-  "rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50";
+/** Toast on success + run the follow-up (usually: close the modal). */
+function useOnSuccess(result: ActionResult | null, onSuccess: () => void) {
+  const { toast } = useToast();
+  useEffect(() => {
+    if (result?.ok) {
+      toast({ description: result.message, tone: "success" });
+      onSuccess();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
+}
 
-export function AddContactForm() {
+/**
+ * Page-header actions: Manage tags / Import CSV / Add contact. The add-contact
+ * modal is URL-driven (?new=1) so the topbar, empty states and deep links can
+ * all open it.
+ */
+export function ContactsToolbar({
+  tags,
+  canManageTags,
+}: {
+  tags: TagInfo[];
+  canManageTags: boolean;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const openNew = searchParams.get("new") === "1";
+  const openImport = searchParams.get("import") === "1";
+  const openTags = searchParams.get("tags") === "1";
+
+  const setParam = useCallback(
+    (key: string, on: boolean) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (on) params.set(key, "1");
+      else params.delete(key);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams]
+  );
+
+  return (
+    <>
+      <Button variant="ghost" onClick={() => setParam("tags", true)}>
+        <Tags className="h-4 w-4" aria-hidden />
+        Manage tags
+      </Button>
+      <Button variant="secondary" onClick={() => setParam("import", true)}>
+        <Upload className="h-4 w-4" aria-hidden />
+        Import CSV
+      </Button>
+      <Button onClick={() => setParam("new", true)}>
+        <UserPlus className="h-4 w-4" aria-hidden />
+        Add contact
+      </Button>
+
+      <Modal
+        open={openNew}
+        onClose={() => setParam("new", false)}
+        title="Add a customer"
+        description="One person, added by hand."
+      >
+        <AddContactForm tags={tags} onDone={() => setParam("new", false)} />
+      </Modal>
+
+      <Modal
+        open={openImport}
+        onClose={() => setParam("import", false)}
+        title="Import a list"
+        description="Paste from a spreadsheet — every row becomes a contact."
+      >
+        <CsvImportForm onDone={() => setParam("import", false)} />
+      </Modal>
+
+      <TagsDrawer
+        open={openTags}
+        onClose={() => setParam("tags", false)}
+        tags={tags}
+        canManage={canManageTags}
+      />
+    </>
+  );
+}
+
+export function AddContactForm({
+  tags,
+  onDone,
+}: {
+  tags: TagInfo[];
+  onDone: () => void;
+}) {
   const [result, action, pending] = useActionState(
     async (_prev: ActionResult | null, formData: FormData) =>
       addContact(formData),
     initial
   );
+  useOnSuccess(result, onDone);
 
   return (
-    <form action={action} className="flex flex-col gap-3">
-      <label className="text-sm font-medium text-neutral-700">
-        Name
-        <input name="name" required className={inputCls} placeholder="Priya Sharma" />
-      </label>
-      <label className="text-sm font-medium text-neutral-700">
-        WhatsApp number
-        <input
-          name="phone"
+    <form action={action} className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Name" htmlFor="add-name" required>
+          <Input id="add-name" name="name" required placeholder="Priya Sharma" />
+        </Field>
+        <Field
+          label="WhatsApp number"
+          htmlFor="add-phone"
           required
-          className={inputCls}
-          placeholder="98765 43210"
-        />
-      </label>
+          hint="10-digit numbers are treated as +91."
+        >
+          <Input id="add-phone" name="phone" required placeholder="98765 43210" />
+        </Field>
+        <Field label="Email (optional)" htmlFor="add-email">
+          <Input
+            id="add-email"
+            name="email"
+            type="email"
+            placeholder="priya@gmail.com"
+          />
+        </Field>
+        <Field label="Stage" htmlFor="add-stage">
+          <Select id="add-stage" name="leadStage" defaultValue="NEW">
+            {STAGES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+
+      {tags.length > 0 && (
+        <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium text-neutral-700">
+            Tags
+          </legend>
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map((t) => (
+              <label key={t.id} className="cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="tagIds"
+                  value={t.id}
+                  className="peer sr-only"
+                />
+                <TagPill
+                  label={t.name}
+                  color={t.color}
+                  className="opacity-50 ring-1 ring-transparent transition peer-checked:opacity-100 peer-checked:ring-brand-400 peer-focus-visible:ring-brand-400"
+                />
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       <label className="flex items-start gap-2 text-sm text-neutral-700">
         <input type="checkbox" name="optedIn" className="mt-0.5" />
         <span>
@@ -57,105 +191,80 @@ export function AddContactForm() {
           from my shop
         </span>
       </label>
-      <label className="text-sm font-medium text-neutral-700">
-        How did they say yes?
-        <select name="optInSource" className={inputCls} defaultValue="in_store">
+      <Field label="How did they say yes?" htmlFor="add-source">
+        <Select id="add-source" name="optInSource" defaultValue="in_store">
           <option value="in_store">In my shop</option>
           <option value="whatsapp">They messaged me on WhatsApp</option>
           <option value="website">On my website</option>
           <option value="manual">Other</option>
-        </select>
-      </label>
-      <button type="submit" disabled={pending} className={buttonCls}>
-        {pending ? "Adding…" : "Add contact"}
-      </button>
+        </Select>
+      </Field>
+
       <Feedback result={result} />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" loading={pending}>
+          {pending ? "Adding…" : "Add contact"}
+        </Button>
+      </div>
     </form>
   );
 }
 
-export function CsvImportForm() {
+export function CsvImportForm({ onDone }: { onDone: () => void }) {
   const [result, action, pending] = useActionState(
     async (_prev: ActionResult | null, formData: FormData) =>
       importContactsCsv(formData),
     initial
   );
+  useOnSuccess(result, onDone);
 
   return (
-    <form action={action} className="flex flex-col gap-3">
-      <label className="text-sm font-medium text-neutral-700">
-        Paste your list — one customer per line, like:{" "}
-        <span className="font-mono text-xs text-neutral-500">
-          Priya, 9876543210
-        </span>
-        <textarea
+    <form action={action} className="flex flex-col gap-4">
+      <Field
+        label="Paste your list — one customer per line"
+        htmlFor="csv-body"
+        hint={
+          <>
+            <span className="font-mono">Name, phone, email</span> — email is
+            optional. Example:{" "}
+            <span className="font-mono">Priya, 9876543210, priya@gmail.com</span>
+          </>
+        }
+      >
+        <Textarea
+          id="csv-body"
           name="csv"
           required
-          rows={5}
-          className={inputCls + " font-mono text-xs"}
-          placeholder={"Priya, 9876543210\nRahul, 9123456780"}
+          rows={6}
+          className="font-mono text-xs"
+          placeholder={"Priya, 9876543210, priya@gmail.com\nRahul, 9123456780"}
         />
-      </label>
+      </Field>
       <label className="flex items-start gap-2 text-sm text-neutral-700">
-        <input type="checkbox" name="consentConfirmed" required className="mt-0.5" />
+        <input
+          type="checkbox"
+          name="consentConfirmed"
+          required
+          className="mt-0.5"
+        />
         <span>
           I confirm <strong>every person on this list said yes</strong> to
           WhatsApp messages from my shop. (Bought lists get your number banned.)
         </span>
       </label>
-      <button type="submit" disabled={pending} className={buttonCls}>
-        {pending ? "Importing…" : "Import contacts"}
-      </button>
-      <Feedback result={result} />
-    </form>
-  );
-}
 
-export function CreateAudienceForm({
-  contacts,
-}: {
-  contacts: { id: string; name: string; phoneE164: string }[];
-}) {
-  const [result, action, pending] = useActionState(
-    async (_prev: ActionResult | null, formData: FormData) =>
-      createAudience(formData),
-    initial
-  );
-
-  return (
-    <form action={action} className="flex flex-col gap-3">
-      <label className="text-sm font-medium text-neutral-700">
-        Audience name
-        <input
-          name="name"
-          required
-          className={inputCls}
-          placeholder="Regular customers"
-        />
-      </label>
-      <fieldset className="max-h-44 overflow-y-auto rounded-lg border border-neutral-200 p-3">
-        <legend className="px-1 text-sm font-medium text-neutral-700">
-          Who&apos;s in it? (opted-in contacts only)
-        </legend>
-        {contacts.length === 0 && (
-          <p className="text-sm text-neutral-500">
-            No opted-in contacts yet — add some first.
-          </p>
-        )}
-        {contacts.map((c) => (
-          <label key={c.id} className="flex items-center gap-2 py-1 text-sm">
-            <input type="checkbox" name="contactIds" value={c.id} />
-            {c.name}{" "}
-            <span className="font-mono text-xs text-neutral-400">
-              {c.phoneE164}
-            </span>
-          </label>
-        ))}
-      </fieldset>
-      <button type="submit" disabled={pending} className={buttonCls}>
-        {pending ? "Creating…" : "Create audience"}
-      </button>
       <Feedback result={result} />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" loading={pending}>
+          {pending ? "Importing…" : "Import contacts"}
+        </Button>
+      </div>
     </form>
   );
 }

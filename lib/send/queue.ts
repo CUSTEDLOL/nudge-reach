@@ -2,7 +2,6 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { canSendMarketing } from "@/lib/consent";
 import { sendMessage } from "@/lib/messaging";
-import { campaignContentSchema } from "@/lib/campaign/schema";
 import {
   isForwardTransition,
   simulatedStatusFor,
@@ -15,6 +14,7 @@ import {
  * - enqueueCampaign: consent-gated fan-out to Message rows (QUEUED)
  * - processQueue: rate-limited batch sender (called on dashboard views and
  *   by /api/cron/process-queue)
+ * - releaseDueCampaigns: SCHEDULED → SENDING once scheduledAt is due (cron)
  * - applySimulatedProgress: simulation-mode status lifecycle
  */
 
@@ -78,7 +78,6 @@ export async function processQueue(campaignId: string): Promise<number> {
   const template = campaign.templates[0];
   if (!template || template.metaStatus !== "APPROVED") return 0;
 
-  const content = campaignContentSchema.parse(campaign.content);
   const queued = await prisma.message.findMany({
     where: { campaignId, status: "QUEUED" },
     include: { contact: true },
@@ -129,6 +128,50 @@ export async function processQueue(campaignId: string): Promise<number> {
 
   await maybeCompleteCampaign(campaignId);
   return processed;
+}
+
+/**
+ * Cron tick for scheduled broadcasts (spec §M4): every SCHEDULED campaign
+ * whose scheduledAt is due and which has an audience picked gets enqueued.
+ *
+ * A campaign can only reach SCHEDULED from TEMPLATE_APPROVED (the wizard and
+ * the run panel enforce this), so its latest template is already approved —
+ * we flip the status back before calling enqueueCampaign, which re-validates.
+ * The updateMany claim is atomic, so concurrent cron ticks can't
+ * double-release the same campaign.
+ */
+export async function releaseDueCampaigns(): Promise<number> {
+  const due = await prisma.campaign.findMany({
+    where: {
+      status: "SCHEDULED",
+      scheduledAt: { lte: new Date() },
+      audienceId: { not: null },
+    },
+    select: { id: true, orgId: true, audienceId: true },
+  });
+
+  let released = 0;
+  for (const campaign of due) {
+    const claimed = await prisma.campaign.updateMany({
+      where: { id: campaign.id, status: "SCHEDULED" },
+      data: { status: "TEMPLATE_APPROVED" },
+    });
+    if (claimed.count === 0) continue; // another tick claimed it first
+
+    try {
+      await enqueueCampaign(campaign.id, campaign.audienceId!, campaign.orgId);
+      released++;
+    } catch {
+      // Audience emptied or everyone opted out since scheduling. The campaign
+      // stays TEMPLATE_APPROVED so the owner can re-run it manually; we don't
+      // retry a broken schedule forever.
+      await prisma.campaign.updateMany({
+        where: { id: campaign.id },
+        data: { scheduledAt: null },
+      });
+    }
+  }
+  return released;
 }
 
 /** Simulation only: advance message statuses on the deterministic timeline. */

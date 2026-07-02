@@ -1,16 +1,32 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Lightbulb, Plus, X } from "lucide-react";
+import type { CampaignButton, CampaignContent } from "@/lib/campaign/schema";
+import { WhatsappPreview } from "@/components/whatsapp-preview";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/modal";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import {
   deleteCampaignAction,
   updateCampaignAction,
   type ActionResult,
 } from "../actions";
-import type { CampaignButton, CampaignContent } from "@/lib/campaign/schema";
-import { WhatsappPreview } from "@/components/whatsapp-preview";
 
-const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-emerald-500";
+/** Friendly chip for the canonical {{1}} personalization variable. */
+function NameChip() {
+  return (
+    <span className="inline-flex items-center rounded-md bg-brand-50 px-1.5 py-0.5 font-mono text-[11px] font-medium text-brand-700">
+      {"{{name}}"}
+    </span>
+  );
+}
 
 export function CampaignEditor({
   campaignId,
@@ -21,7 +37,10 @@ export function CampaignEditor({
   initialContent: CampaignContent;
   photoUrl: string | null;
 }) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [content, setContent] = useState<CampaignContent>(initialContent);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [result, save, saving] = useActionState(
     async (_prev: ActionResult | null, formData: FormData) =>
       updateCampaignAction(formData),
@@ -44,78 +63,104 @@ export function CampaignEditor({
     });
   }
 
-  return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      <form
-        action={save}
-        className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
-      >
-        <input type="hidden" name="campaignId" value={campaignId} />
-        <input type="hidden" name="campaignAngle" value={content.campaignAngle} />
-        <input type="hidden" name="imageTreatment" value={content.imageTreatment} />
-        <input type="hidden" name="notes" value={content.notes} />
+  async function handleDelete() {
+    const formData = new FormData();
+    formData.set("campaignId", campaignId);
+    const res = await deleteCampaignAction(formData);
+    if (res.ok) {
+      toast({ description: res.message, tone: "success" });
+      router.push("/campaigns");
+    } else {
+      toast({ description: res.message, tone: "error" });
+    }
+  }
 
-        <div className="flex flex-col gap-4">
-          <label className="text-sm font-medium text-neutral-700">
-            Product name
-            <input
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <Card className="p-6">
+        <form action={save} className="flex flex-col gap-4">
+          <input type="hidden" name="campaignId" value={campaignId} />
+          <input type="hidden" name="campaignAngle" value={content.campaignAngle} />
+          <input type="hidden" name="imageTreatment" value={content.imageTreatment} />
+          <input type="hidden" name="notes" value={content.notes} />
+
+          <Field label="Product name" htmlFor="edit-productName">
+            <Input
+              id="edit-productName"
               name="productName"
               value={content.productName}
               onChange={(e) => set("productName", e.target.value)}
-              className={inputCls}
             />
-          </label>
+          </Field>
 
-          <label className="text-sm font-medium text-neutral-700">
-            Headline <span className="font-normal text-neutral-400">(bold, max 60)</span>
-            <input
+          <Field
+            label={
+              <>
+                Headline{" "}
+                <span className="font-normal text-neutral-400">
+                  (bold, max 60)
+                </span>
+              </>
+            }
+            htmlFor="edit-header"
+          >
+            <Input
+              id="edit-header"
               name="header"
               maxLength={60}
               value={content.header}
               onChange={(e) => set("header", e.target.value)}
-              className={inputCls}
             />
-          </label>
+          </Field>
 
-          <label className="text-sm font-medium text-neutral-700">
-            Message{" "}
-            <span className="font-normal text-neutral-400">
-              ({"{{1}}"} becomes the customer&apos;s name)
-            </span>
-            <textarea
+          <Field
+            label="Message"
+            htmlFor="edit-body"
+            hint={
+              <>
+                <NameChip /> is each customer&apos;s first name — WhatsApp
+                stores it as <span className="font-mono">{"{{1}}"}</span>, and
+                it can&apos;t be removed.
+              </>
+            }
+          >
+            <Textarea
+              id="edit-body"
               name="body"
               rows={5}
               maxLength={1024}
               value={content.body}
               onChange={(e) => set("body", e.target.value)}
-              className={inputCls}
             />
-          </label>
+          </Field>
 
-          <label className="text-sm font-medium text-neutral-700">
-            Footer{" "}
-            <span className="font-normal text-neutral-400">
-              (the opt-out line stays in — Meta requires it)
-            </span>
-            <input
+          <Field
+            label="Footer"
+            htmlFor="edit-footer"
+            hint="The opt-out line stays in — Meta requires it."
+          >
+            <Input
+              id="edit-footer"
               name="footer"
               maxLength={60}
               value={content.footer}
               onChange={(e) => set("footer", e.target.value)}
-              className={inputCls}
             />
-          </label>
+          </Field>
 
           <fieldset>
             <legend className="text-sm font-medium text-neutral-700">
-              Buttons <span className="font-normal text-neutral-400">(up to 3)</span>
+              Buttons{" "}
+              <span className="font-normal text-neutral-400">(up to 3)</span>
             </legend>
             <div className="mt-2 flex flex-col gap-2">
               {content.buttons.map((button, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <select
+                  <Select
                     name={`button${i}Type`}
                     value={button.type}
+                    aria-label={`Button ${i + 1} type`}
+                    className="w-32 shrink-0"
                     onChange={(e) =>
                       setButton(
                         i,
@@ -124,88 +169,89 @@ export function CampaignEditor({
                           : { type: "QUICK_REPLY", text: button.text }
                       )
                     }
-                    className="rounded-lg border border-neutral-300 px-2 py-2 text-xs"
                   >
                     <option value="URL">Link</option>
                     <option value="QUICK_REPLY">Quick reply</option>
-                  </select>
-                  <input
+                  </Select>
+                  <Input
                     name={`button${i}Text`}
                     value={button.text}
                     maxLength={25}
                     placeholder="Button text"
+                    aria-label={`Button ${i + 1} text`}
                     onChange={(e) =>
                       setButton(i, { ...button, text: e.target.value })
                     }
-                    className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
                   />
                   {button.type === "URL" && (
-                    <input
+                    <Input
                       name={`button${i}Url`}
                       value={button.url}
                       placeholder="https://…"
+                      aria-label={`Button ${i + 1} URL`}
+                      className="font-mono text-xs"
                       onChange={(e) =>
                         setButton(i, { ...button, url: e.target.value })
                       }
-                      className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-mono text-xs"
                     />
                   )}
                   <button
                     type="button"
                     onClick={() => setButton(i, null)}
-                    className="text-neutral-400 hover:text-red-600"
-                    aria-label="Remove button"
+                    className="rounded-lg p-1.5 text-neutral-400 outline-none transition-colors duration-150 hover:bg-black/5 hover:text-red-600 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+                    aria-label={`Remove button ${i + 1}`}
                   >
-                    ✕
+                    <X className="h-4 w-4" aria-hidden />
                   </button>
                 </div>
               ))}
               {content.buttons.length < 3 && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="self-start"
                   onClick={() =>
                     setButton(content.buttons.length, {
                       type: "QUICK_REPLY",
                       text: "",
                     })
                   }
-                  className="self-start text-sm text-emerald-700 hover:underline"
                 >
-                  + Add button
-                </button>
+                  <Plus className="h-3.5 w-3.5" aria-hidden />
+                  Add button
+                </Button>
               )}
             </div>
           </fieldset>
 
-          <label className="text-sm font-medium text-neutral-700">
-            Preview name{" "}
-            <span className="font-normal text-neutral-400">
-              (sample customer name shown in the preview)
-            </span>
-            <input
+          <Field
+            label="Preview name"
+            htmlFor="edit-sampleName"
+            hint="Sample customer name shown in the preview."
+          >
+            <Input
+              id="edit-sampleName"
               name="sampleName"
               maxLength={40}
               value={content.sampleName}
               onChange={(e) => set("sampleName", e.target.value)}
-              className={inputCls}
             />
-          </label>
+          </Field>
 
-          <div className="mt-2 flex items-center justify-between">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-            >
+          <div className="mt-2 flex items-center justify-between border-t border-neutral-100 pt-4">
+            <Button type="submit" loading={saving}>
               {saving ? "Saving…" : "Save changes"}
-            </button>
-            <button
-              type="submit"
-              formAction={deleteCampaignAction}
-              className="text-sm text-neutral-400 hover:text-red-600 hover:underline"
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-neutral-400 hover:text-red-600"
+              onClick={() => setConfirmDelete(true)}
             >
               Delete campaign
-            </button>
+            </Button>
           </div>
 
           {result && (
@@ -219,21 +265,34 @@ export function CampaignEditor({
               {result.message}
             </p>
           )}
-        </div>
-      </form>
+        </form>
+      </Card>
 
       <div>
         <WhatsappPreview content={content} photoUrl={photoUrl} />
         {(content.imageTreatment || content.notes) && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <p className="font-semibold">💡 Tips from your AI marketer</p>
+          <Card className="mt-4 border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-none">
+            <p className="flex items-center gap-1.5 font-semibold">
+              <Lightbulb className="h-4 w-4" aria-hidden />
+              Tips from your AI marketer
+            </p>
             {content.imageTreatment && (
-              <p className="mt-1">📷 {content.imageTreatment}</p>
+              <p className="mt-1.5">{content.imageTreatment}</p>
             )}
-            {content.notes && <p className="mt-1">📝 {content.notes}</p>}
-          </div>
+            {content.notes && <p className="mt-1.5">{content.notes}</p>}
+          </Card>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        title="Delete this campaign?"
+        description="The draft, its template submissions and its send history are removed. This can't be undone."
+        confirmLabel="Delete campaign"
+        tone="danger"
+      />
     </div>
   );
 }

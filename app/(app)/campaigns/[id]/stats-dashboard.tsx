@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BarChart3, Send } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 export interface CampaignStatsView {
   total: number;
@@ -14,7 +18,7 @@ export interface CampaignStatsView {
   settled: boolean;
 }
 
-function StatCard({
+function MetricTile({
   label,
   value,
   total,
@@ -27,11 +31,13 @@ function StatCard({
 }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-xl border border-black/5 bg-white p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
         {label}
       </p>
-      <p className={`mt-1 text-2xl font-semibold ${accent}`}>{value}</p>
+      <p className={`mt-1 text-2xl font-semibold tracking-tight ${accent}`}>
+        {value}
+      </p>
       <p className="text-xs text-neutral-400">{pct}%</p>
     </div>
   );
@@ -86,40 +92,44 @@ export function StatsDashboard({
   }, [campaignId, stats.settled]);
 
   const doneCount = stats.total - stats.queued;
-  const progressPct =
-    stats.total > 0 ? Math.round((doneCount / stats.total) * 100) : 0;
   const estimatedCostMinor = stats.total * ratePaise;
   const sending = status === "SENDING";
 
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-neutral-900">
-          {sending ? "📤 Sending…" : "📊 Results"}
-          {simulation && (
-            <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-              simulated
-            </span>
+    <Card className="p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+          {sending ? (
+            <>
+              <Send className="h-4 w-4 text-brand-600" aria-hidden />
+              Sending…
+            </>
+          ) : (
+            <>
+              <BarChart3 className="h-4 w-4 text-brand-600" aria-hidden />
+              Results
+            </>
           )}
+          {simulation && <Badge tone="info">simulated</Badge>}
         </h2>
         <p className="text-sm text-neutral-500">
           {doneCount}/{stats.total} processed
         </p>
       </div>
 
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-100">
-        <div
-          className="h-full rounded-full bg-emerald-500 transition-all duration-700"
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
+      <Progress
+        value={doneCount}
+        max={stats.total}
+        label="Send progress"
+        className="mt-3"
+      />
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <StatCard label="Sent" value={stats.sent} total={stats.total} accent="text-neutral-900" />
-        <StatCard label="Delivered" value={stats.delivered} total={stats.total} accent="text-emerald-600" />
-        <StatCard label="Read" value={stats.read} total={stats.total} accent="text-blue-600" />
-        <StatCard label="Clicked" value={stats.clicked} total={stats.total} accent="text-violet-600" />
-        <StatCard label="Failed" value={stats.failed} total={stats.total} accent="text-red-500" />
+        <MetricTile label="Sent" value={stats.sent} total={stats.total} accent="text-neutral-900" />
+        <MetricTile label="Delivered" value={stats.delivered} total={stats.total} accent="text-emerald-600" />
+        <MetricTile label="Read" value={stats.read} total={stats.total} accent="text-sky-600" />
+        <MetricTile label="Clicked" value={stats.clicked} total={stats.total} accent="text-violet-600" />
+        <MetricTile label="Failed" value={stats.failed} total={stats.total} accent="text-red-500" />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-6 rounded-xl bg-neutral-50 p-4 text-sm">
@@ -143,6 +153,6 @@ export function StatsDashboard({
           </p>
         </div>
       </div>
-    </section>
+    </Card>
   );
 }

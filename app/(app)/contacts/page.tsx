@@ -1,172 +1,133 @@
+import Link from "next/link";
+import { UserPlus, Users } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { requireOrg } from "@/lib/auth";
-import { canSendMarketing } from "@/lib/consent";
+import { hasRole, requireOrgContext } from "@/lib/auth";
+import { buildContactWhere, parseSegmentFilter } from "@/lib/segments";
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { AddContactForm, CreateAudienceForm, CsvImportForm } from "./forms";
-import { deleteAudience, deleteContact, optOutContact } from "./actions";
+import { ContactsToolbar } from "./forms";
+import { ContactsTable } from "./contacts-table";
+import { AudiencesSection } from "./audiences-section";
+import type { AudienceRow, ContactRow, MemberOption, TagInfo } from "./types";
 
-export default async function ContactsPage() {
-  const org = await requireOrg();
+export default async function ContactsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [sp, ctx] = await Promise.all([searchParams, requireOrgContext()]);
+  const { org, role } = ctx;
+  const canManage = hasRole(role, "ADMIN");
 
-  const [contacts, audiences] = await Promise.all([
-    prisma.contact.findMany({
-      where: { orgId: org.id },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.audience.findMany({
-      where: { orgId: org.id },
-      include: { _count: { select: { contacts: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  const filter = parseSegmentFilter(sp);
+  const where = buildContactWhere(org.id, filter);
 
-  const optedIn = contacts.filter(canSendMarketing);
+  const [contacts, totalCount, optedInCount, tags, audiences, memberships, optedInContacts] =
+    await Promise.all([
+      prisma.contact.findMany({
+        where,
+        include: { tags: { include: { tag: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 500,
+      }),
+      prisma.contact.count({ where: { orgId: org.id } }),
+      prisma.contact.count({
+        where: { orgId: org.id, optedIn: true, optedOutAt: null },
+      }),
+      prisma.tag.findMany({
+        where: { orgId: org.id },
+        include: { _count: { select: { contacts: true } } },
+        orderBy: { name: "asc" },
+      }),
+      prisma.audience.findMany({
+        where: { orgId: org.id },
+        include: { _count: { select: { contacts: true } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.membership.findMany({
+        where: { orgId: org.id },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.contact.findMany({
+        where: { orgId: org.id, optedIn: true, optedOutAt: null },
+        select: { id: true, name: true, phoneE164: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+
+  const rows: ContactRow[] = contacts.map((c) => ({
+    id: c.id,
+    name: c.name,
+    phoneE164: c.phoneE164,
+    email: c.email,
+    optedIn: c.optedIn,
+    optedOutAt: c.optedOutAt?.toISOString() ?? null,
+    optInSource: c.optInSource,
+    leadStage: c.leadStage,
+    assignedToUserId: c.assignedToUserId,
+    lastContactedAt: c.lastContactedAt?.toISOString() ?? null,
+    createdAt: c.createdAt.toISOString(),
+    tags: c.tags.map((ct) => ({
+      id: ct.tag.id,
+      name: ct.tag.name,
+      color: ct.tag.color,
+    })),
+  }));
+
+  const tagInfos: TagInfo[] = tags.map((t) => ({
+    id: t.id,
+    name: t.name,
+    color: t.color,
+    contactCount: t._count.contacts,
+  }));
+
+  const audienceRows: AudienceRow[] = audiences.map((a) => ({
+    id: a.id,
+    name: a.name,
+    memberCount: a._count.contacts,
+  }));
+
+  const members: MemberOption[] = memberships.map((m) => ({
+    userId: m.userId,
+    name: m.displayName || m.email,
+  }));
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <PageHeader
-        title="Customers"
-        description={`${contacts.length} total · ${optedIn.length} can receive campaigns`}
+        title="Contacts"
+        description={`${totalCount} contact${totalCount === 1 ? "" : "s"} · ${optedInCount} can receive campaigns`}
+        actions={<ContactsToolbar tags={tagInfos} canManageTags={canManage} />}
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded-2xl border border-black/5 bg-white p-6 shadow-soft">
-          <h2 className="text-base font-semibold text-neutral-900">
-            Add one customer
-          </h2>
-          <div className="mt-4">
-            <AddContactForm />
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-black/5 bg-white p-6 shadow-soft">
-          <h2 className="text-base font-semibold text-neutral-900">
-            Import a list
-          </h2>
-          <div className="mt-4">
-            <CsvImportForm />
-          </div>
-        </section>
-      </div>
-
-      <section className="mt-6 rounded-2xl border border-black/5 bg-white p-6 shadow-soft">
-        <h2 className="text-base font-semibold text-neutral-900">
-          Your customers
-        </h2>
-        {contacts.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-500">
-            No customers yet. Add one on the left, or paste a list.
-          </p>
-        ) : (
-          <table className="mt-4 w-full text-left text-sm">
-            <thead className="text-xs uppercase text-neutral-400">
-              <tr>
-                <th className="py-2">Name</th>
-                <th className="py-2">Number</th>
-                <th className="py-2">Campaigns?</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {contacts.map((c) => (
-                <tr key={c.id} className="border-t border-neutral-100">
-                  <td className="py-2 font-medium text-neutral-800">
-                    {c.name}
-                  </td>
-                  <td className="py-2 font-mono text-xs text-neutral-500">
-                    {c.phoneE164}
-                  </td>
-                  <td className="py-2">
-                    {canSendMarketing(c) ? (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                        Yes — opted in
-                      </span>
-                    ) : c.optedOutAt ? (
-                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
-                        Opted out
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500">
-                        No consent
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      {canSendMarketing(c) && (
-                        <form action={optOutContact}>
-                          <input type="hidden" name="contactId" value={c.id} />
-                          <button className="text-xs text-neutral-500 hover:text-red-600 hover:underline">
-                            Opt out
-                          </button>
-                        </form>
-                      )}
-                      <form action={deleteContact}>
-                        <input type="hidden" name="contactId" value={c.id} />
-                        <button className="text-xs text-neutral-400 hover:text-red-600 hover:underline">
-                          Delete
-                        </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <section className="rounded-2xl border border-black/5 bg-white p-6 shadow-soft">
-          <h2 className="text-base font-semibold text-neutral-900">
-            New audience
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            A group of customers to send a campaign to.
-          </p>
-          <div className="mt-4">
-            <CreateAudienceForm
-              contacts={optedIn.map((c) => ({
-                id: c.id,
-                name: c.name,
-                phoneE164: c.phoneE164,
-              }))}
-            />
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-black/5 bg-white p-6 shadow-soft">
-          <h2 className="text-base font-semibold text-neutral-900">
-            Your audiences
-          </h2>
-          {audiences.length === 0 ? (
-            <p className="mt-3 text-sm text-neutral-500">No audiences yet.</p>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {audiences.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2 text-sm"
-                >
-                  <span className="font-medium text-neutral-800">
-                    {a.name}
-                    <span className="ml-2 text-xs font-normal text-neutral-400">
-                      {a._count.contacts} customer
-                      {a._count.contacts === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                  <form action={deleteAudience}>
-                    <input type="hidden" name="audienceId" value={a.id} />
-                    <button className="text-xs text-neutral-400 hover:text-red-600 hover:underline">
-                      Delete
-                    </button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      {totalCount === 0 ? (
+        <EmptyState
+          icon={<Users className="h-5 w-5" aria-hidden />}
+          title="No contacts yet"
+          description="Add your first customer by hand, or paste a list from a spreadsheet with the Import CSV button above."
+          action={
+            <Link href="/contacts?new=1" className={buttonVariants()}>
+              <UserPlus className="h-4 w-4" aria-hidden />
+              Add your first contact
+            </Link>
+          }
+        />
+      ) : (
+        <>
+          <ContactsTable
+            rows={rows}
+            tags={tagInfos}
+            members={members}
+            audiences={audienceRows}
+          />
+          <AudiencesSection
+            audiences={audienceRows}
+            optedInContacts={optedInContacts}
+            canManage={canManage}
+          />
+        </>
+      )}
     </div>
   );
 }

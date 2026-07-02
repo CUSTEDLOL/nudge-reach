@@ -1,97 +1,85 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
+import { CampaignsTable, type CampaignRow } from "./campaigns-table";
 
-const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
-  DRAFT: { text: "Draft", cls: "bg-neutral-100 text-neutral-600" },
-  TEMPLATE_PENDING: { text: "Waiting for approval", cls: "bg-amber-50 text-amber-700" },
-  TEMPLATE_APPROVED: { text: "Approved — ready to send", cls: "bg-emerald-50 text-emerald-700" },
-  SENDING: { text: "Sending…", cls: "bg-blue-50 text-blue-700" },
-  SENT: { text: "Sent", cls: "bg-emerald-50 text-emerald-700" },
-  FAILED: { text: "Failed", cls: "bg-red-50 text-red-700" },
-};
+/** Statuses that count toward the "sent" number (left the queue, not failed). */
+const SENT_STATUSES = new Set(["SENT", "DELIVERED", "READ", "CLICKED"]);
+const DELIVERED_STATUSES = new Set(["DELIVERED", "READ", "CLICKED"]);
+const READ_STATUSES = new Set(["READ", "CLICKED"]);
 
 export default async function CampaignsPage() {
   const org = await requireOrg();
-  const campaigns = await prisma.campaign.findMany({
-    where: { orgId: org.id },
-    include: { product: { select: { photoUrl: true } } },
-    orderBy: { createdAt: "desc" },
+
+  // One groupBy covers the message aggregates for every row (no N+1).
+  const [campaigns, grouped] = await Promise.all([
+    prisma.campaign.findMany({
+      where: { orgId: org.id },
+      include: {
+        product: { select: { photoUrl: true } },
+        audience: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.message.groupBy({
+      by: ["campaignId", "status"],
+      where: { campaign: { orgId: org.id } },
+      _count: true,
+      _sum: { costMinorUnits: true },
+    }),
+  ]);
+
+  const aggregates = new Map<
+    string,
+    { sent: number; delivered: number; read: number; costMinor: number }
+  >();
+  for (const g of grouped) {
+    const agg = aggregates.get(g.campaignId) ?? {
+      sent: 0,
+      delivered: 0,
+      read: 0,
+      costMinor: 0,
+    };
+    if (SENT_STATUSES.has(g.status)) agg.sent += g._count;
+    if (DELIVERED_STATUSES.has(g.status)) agg.delivered += g._count;
+    if (READ_STATUSES.has(g.status)) agg.read += g._count;
+    agg.costMinor += g._sum.costMinorUnits ?? 0;
+    aggregates.set(g.campaignId, agg);
+  }
+
+  const rows: CampaignRow[] = campaigns.map((c) => {
+    const agg = aggregates.get(c.id);
+    return {
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      photoUrl: c.product.photoUrl,
+      audienceName: c.audience?.name ?? null,
+      scheduledAt: c.scheduledAt?.toISOString() ?? null,
+      createdAt: c.createdAt.toISOString(),
+      sent: agg?.sent ?? 0,
+      delivered: agg?.delivered ?? 0,
+      read: agg?.read ?? 0,
+      costMinor: agg?.costMinor ?? 0,
+    };
   });
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <PageHeader
         title="Campaigns"
-        description="One product photo becomes a ready-to-send WhatsApp broadcast."
+        description="Broadcasts to your opted-in customers — from a photo, a template, or scratch."
         actions={
           <Link href="/campaigns/new" className={buttonVariants()}>
-            New campaign
+            <Plus className="h-4 w-4" aria-hidden />
+            New broadcast
           </Link>
         }
       />
-
-      {campaigns.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
-          <p className="text-3xl">📸</p>
-          <h2 className="mt-2 text-lg font-semibold text-neutral-900">
-            Your first campaign is one photo away
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Upload a product photo and we&apos;ll write the whole WhatsApp
-            message for you.
-          </p>
-          <Link
-            href="/campaigns/new"
-            className={buttonVariants({ className: "mt-4" })}
-          >
-            Create a campaign
-          </Link>
-        </section>
-      ) : (
-        <ul className="space-y-3">
-          {campaigns.map((c) => {
-            const status = STATUS_LABEL[c.status] ?? STATUS_LABEL.DRAFT;
-            return (
-              <li key={c.id}>
-                <Link
-                  href={`/campaigns/${c.id}`}
-                  className="flex items-center gap-4 rounded-2xl border border-black/5 bg-white p-4 shadow-soft transition-colors duration-150 hover:border-brand-300"
-                >
-                  {c.product.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.product.photoUrl}
-                      alt=""
-                      className="h-14 w-14 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-neutral-100 text-xl">
-                      🛍️
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium text-neutral-900">{c.name}</p>
-                    <p className="text-xs text-neutral-400">
-                      Created{" "}
-                      {new Intl.DateTimeFormat("en-IN", {
-                        dateStyle: "medium",
-                      }).format(c.createdAt)}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${status.cls}`}
-                  >
-                    {status.text}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <CampaignsTable rows={rows} />
     </div>
   );
 }

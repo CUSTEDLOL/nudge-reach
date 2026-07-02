@@ -2,6 +2,9 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { BadgeCheck, Hourglass } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   refreshStatusAction,
   submitForApprovalAction,
@@ -37,38 +40,48 @@ export function ApprovalPanel({
 
   if (status === "TEMPLATE_PENDING") {
     return (
-      <div className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <div className="text-sm text-amber-800">
-          <p className="font-semibold">⏳ Waiting for Meta&apos;s approval</p>
-          <p className="mt-0.5">
-            Usually minutes, sometimes hours. This page checks automatically.
-          </p>
+      <Card className="flex items-center justify-between gap-4 border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3 text-sm text-amber-800">
+          <Hourglass className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <div>
+            <p className="font-semibold">Waiting for Meta&apos;s approval</p>
+            <p className="mt-0.5">
+              Usually minutes, sometimes hours. This page checks automatically.
+            </p>
+          </div>
         </div>
         <form action={refreshStatusAction}>
           <input type="hidden" name="campaignId" value={campaignId} />
-          <button className="rounded-lg border border-amber-300 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="border-amber-300 text-amber-800 hover:bg-amber-100"
+          >
             Check now
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
     );
   }
 
   if (status === "TEMPLATE_APPROVED") {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-        <p className="font-semibold">✅ Approved — ready to send</p>
-        <p className="mt-0.5">
-          Picking an audience and sending arrives in the next build step.
-          (Editing the campaign will need a fresh approval.)
+      <Card className="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+        <p className="flex items-center gap-1.5 font-semibold">
+          <BadgeCheck className="h-4 w-4" aria-hidden />
+          Approved — ready to send
         </p>
-      </div>
+        <p className="mt-0.5">
+          Pick an audience below to send now or schedule it. (Editing the
+          message needs a fresh approval.)
+        </p>
+      </Card>
     );
   }
 
   // DRAFT (possibly after a rejection)
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <Card className="p-4">
       {rejectionReason && (
         <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           <p className="font-semibold">Meta rejected the last submission:</p>
@@ -79,19 +92,16 @@ export function ApprovalPanel({
           </p>
         </div>
       )}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-neutral-600">
           Happy with the message? Send it to Meta for approval — required
           before any marketing send.
         </p>
         <form action={submit}>
           <input type="hidden" name="campaignId" value={campaignId} />
-          <button
-            disabled={submitting}
-            className="whitespace-nowrap rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-          >
+          <Button loading={submitting} className="whitespace-nowrap">
             {submitting ? "Submitting…" : "Submit for approval"}
-          </button>
+          </Button>
         </form>
       </div>
       {result && !result.ok && (
@@ -99,6 +109,6 @@ export function ApprovalPanel({
           {result.message}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

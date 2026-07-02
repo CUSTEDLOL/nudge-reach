@@ -1,63 +1,78 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  connectWhatsappAction,
-  type ActionResult,
-} from "./actions";
-
-const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-emerald-500";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
+import { connectWhatsappAction, type ActionResult } from "./actions";
 
 export function ConnectForm() {
-  const [result, action, pending] = useActionState(
-    async (_prev: ActionResult | null, formData: FormData) =>
-      connectWhatsappAction(formData),
+  const { toast } = useToast();
+  const [, formAction, pending] = useActionState(
+    async (_prev: ActionResult | null, formData: FormData) => {
+      const result = await connectWhatsappAction(formData);
+      toast({
+        description: result.message,
+        tone: result.ok ? "success" : "error",
+      });
+      return result;
+    },
     null
   );
 
   return (
-    <form action={action} className="flex flex-col gap-3">
-      <label className="text-sm font-medium text-neutral-700">
-        Display name
-        <input name="displayName" required className={inputCls} placeholder="Sharma Boutique" />
-      </label>
-      <label className="text-sm font-medium text-neutral-700">
-        WABA ID
-        <input name="wabaId" required className={inputCls + " font-mono"} placeholder="102290129340398" />
-      </label>
-      <label className="text-sm font-medium text-neutral-700">
-        Phone number ID
-        <input name="phoneNumberId" required className={inputCls + " font-mono"} placeholder="106540352242922" />
-      </label>
-      <label className="text-sm font-medium text-neutral-700">
-        Access token
-        <input
+    <form action={formAction} className="flex flex-col gap-4">
+      <Field label="Display name" htmlFor="wa-display-name" required>
+        <Input
+          id="wa-display-name"
+          name="displayName"
+          required
+          placeholder="Sharma Boutique"
+        />
+      </Field>
+
+      <Field label="WABA ID" htmlFor="wa-waba-id" required>
+        <Input
+          id="wa-waba-id"
+          name="wabaId"
+          required
+          className="font-mono"
+          placeholder="102290129340398"
+        />
+      </Field>
+
+      <Field label="Phone number ID" htmlFor="wa-phone-number-id" required>
+        <Input
+          id="wa-phone-number-id"
+          name="phoneNumberId"
+          required
+          className="font-mono"
+          placeholder="106540352242922"
+        />
+      </Field>
+
+      <Field
+        label="Access token"
+        htmlFor="wa-access-token"
+        required
+        hint="Stored encrypted at rest (AES-256-GCM) — never shown again."
+      >
+        <Input
+          id="wa-access-token"
           name="accessToken"
           type="password"
           required
-          className={inputCls + " font-mono"}
+          className="font-mono"
           placeholder="EAAG…"
         />
-      </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-      >
-        {pending ? "Saving…" : "Save connection"}
-      </button>
-      {result && (
-        <p
-          className={`rounded-lg px-3 py-2 text-sm ${
-            result.ok
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-red-50 text-red-700"
-          }`}
-        >
-          {result.message}
-        </p>
-      )}
+      </Field>
+
+      <div>
+        <Button type="submit" loading={pending}>
+          Save connection
+        </Button>
+      </div>
     </form>
   );
 }
