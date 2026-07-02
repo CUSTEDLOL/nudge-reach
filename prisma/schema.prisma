@@ -8,11 +8,35 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Team roles (spec §3.1): OWNER = everything, ADMIN = everything but
+// billing/org-delete, AGENT = inbox + contacts read/write only.
+enum OrgRole {
+  OWNER
+  ADMIN
+  AGENT
+}
+
+// Simple CRM pipeline stage for a contact (spec §3.2).
+enum LeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+}
+
 // One org per user for MVP (PRD §3). ownerUserId is the Supabase Auth user id.
+// Teams arrive via Membership rows; ownerUserId stays the canonical owner.
 model Org {
   id          String     @id @default(cuid())
   name        String
   ownerUserId String     @unique
+  // Business vertical picked during onboarding (e.g. "boutique", "restaurant").
+  vertical    String?
+  // Set when the onboarding wizard completes (or is skipped).
+  onboardedAt DateTime?
+  // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
+  settings    Json       @default("{}")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   contacts    Contact[]
@@ -22,6 +46,182 @@ model Org {
   whatsappAccounts WhatsappAccount[]
   agentProfile     AgentProfile?
   conversations    Conversation[]
+  memberships      Membership[]
+  invites          Invite[]
+  tags             Tag[]
+  notes            Note[]
+  automations      Automation[]
+  automationRuns   AutomationRun[]
+  apiKeys          ApiKey[]
+  templates        Template[]
+}
+
+// A user's seat in an org. userId is the Supabase Auth user id (fictional
+// "demo-agent-*" ids are allowed for seeded teammates used in assignment
+// dropdowns). The org owner gets an OWNER membership backfilled lazily.
+model Membership {
+  id                String   @id @default(cuid())
+  orgId             String
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId            String
+  email             String
+  displayName       String?
+  role              OrgRole  @default(AGENT)
+  // Per-member notification toggles (Settings → Notifications).
+  notificationPrefs Json     @default("{}")
+  createdAt         DateTime @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+// Email invite to join an org. status: "pending" | "accepted". No invite
+// emails in the MVP — a matching signup auto-accepts (lib/org.ts).
+model Invite {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email     String
+  role      OrgRole  @default(AGENT)
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, email])
+}
+
+// Org-scoped label applied to contacts and conversations. color is a badge
+// tone name (emerald, amber, sky, …), not a hex value.
+model Tag {
+  id            String            @id @default(cuid())
+  orgId         String
+  org           Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String
+  color         String            @default("emerald")
+  createdAt     DateTime          @default(now())
+  contacts      ContactTag[]
+  conversations ConversationTag[]
+
+  @@unique([orgId, name])
+}
+
+model ContactTag {
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@index([tagId])
+}
+
+model ConversationTag {
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tagId          String
+  tag            Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, tagId])
+  @@index([tagId])
+}
+
+// Internal note left by a teammate on a contact and/or a conversation.
+// Never sent to the customer. authorName is denormalized for display.
+model Note {
+  id             String        @id @default(cuid())
+  orgId          String
+  org            Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId      String?
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  authorUserId   String
+  authorName     String
+  body           String
+  createdAt      DateTime      @default(now())
+
+  @@index([orgId])
+  @@index([contactId])
+  @@index([conversationId])
+}
+
+// A trigger + ordered steps workflow (spec §3.2). trigger is one of:
+// message_received | keyword | contact_created | tag_added | campaign_reply.
+// triggerConfig holds trigger-specific settings (e.g. { keywords, match }).
+model Automation {
+  id            String           @id @default(cuid())
+  orgId         String
+  org           Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String
+  description   String           @default("")
+  enabled       Boolean          @default(false)
+  trigger       String
+  triggerConfig Json             @default("{}")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  steps         AutomationStep[]
+  runs          AutomationRun[]
+
+  @@index([orgId])
+}
+
+// One step in an automation. kind is one of: send_message | send_template |
+// add_tag | assign_agent | update_lead_stage | wait | resolve_conversation |
+// handoff_to_human. config holds kind-specific settings.
+model AutomationStep {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  order        Int
+  kind         String
+  config       Json       @default("{}")
+
+  @@unique([automationId, order])
+}
+
+enum AutomationRunStatus {
+  RUNNING
+  WAITING
+  COMPLETED
+  FAILED
+}
+
+// One execution of an automation against a contact/conversation. `wait`
+// steps park the run (status WAITING + resumeAt) until the cron tick resumes
+// it. log is an append-only array of per-step result entries.
+model AutomationRun {
+  id             String              @id @default(cuid())
+  automationId   String
+  automation     Automation          @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  orgId          String
+  org            Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId      String?
+  conversationId String?
+  status         AutomationRunStatus @default(RUNNING)
+  currentStep    Int                 @default(0)
+  resumeAt       DateTime?
+  log            Json                @default("[]")
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([orgId])
+  @@index([automationId])
+  @@index([status, resumeAt])
+}
+
+// Programmatic API access. Only the sha256 hash is stored; the full key is
+// shown once at creation. prefix (e.g. "nk_live") is kept for display.
+model ApiKey {
+  id         String    @id @default(cuid())
+  orgId      String
+  org        Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name       String
+  prefix     String
+  keyHash    String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([orgId])
 }
 
 // Per-tenant AI auto-reply agent config (Phase 7). NOT model training — the
@@ -44,17 +244,28 @@ model AgentProfile {
 
 // A two-way thread with one contact. lastInboundAt drives the WhatsApp 24-hour
 // customer-service window (free-form replies allowed only within it).
+// status ∈ open | pending | resolved | handoff (legacy "closed" rows are
+// treated as "resolved" in queries; "handoff" shows under Open w/ a badge).
 model Conversation {
-  id            String                @id @default(cuid())
-  orgId         String
-  org           Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  contactId     String
-  contact       Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  lastInboundAt DateTime?
-  status        String                @default("open") // open | handoff | closed
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  messages      ConversationMessage[]
+  id                 String                @id @default(cuid())
+  orgId              String
+  org                Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId          String
+  contact            Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lastInboundAt      DateTime?
+  status             String                @default("open") // open | pending | resolved | handoff (legacy: closed)
+  // Membership.userId of the assigned agent (null = unassigned).
+  assignedToUserId   String?
+  // Unread inbound messages; zeroed when the thread is opened in the inbox.
+  unreadCount        Int                   @default(0)
+  // Denormalized for the inbox list — updated on every send/receive.
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  messages           ConversationMessage[]
+  tags               ConversationTag[]
+  notes              Note[]
 
   @@unique([orgId, contactId])
   @@index([orgId])
@@ -87,18 +298,28 @@ model WhatsappAccount {
 }
 
 enum TemplateStatus {
+  DRAFT
   PENDING
   APPROVED
   REJECTED
 }
 
+// A WhatsApp message template. Two flavors share this table:
+// - campaign templates (campaignId set) — generated per campaign, as before;
+// - library templates (orgId set, campaignId null) — reusable, managed at
+//   /templates. content holds the editable §7-shape source; componentsJson
+//   stays the Meta create payload.
 model Template {
   id              String         @id @default(cuid())
-  campaignId      String
-  campaign        Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId      String?
+  campaign        Campaign?      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  orgId           String?
+  org             Org?           @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name            String
   language        String         @default("en")
   category        String         @default("MARKETING")
+  // Editable source in the PRD §7 campaign-content shape (library templates).
+  content         Json?
   componentsJson  Json
   metaTemplateId  String?
   metaStatus      TemplateStatus @default(PENDING)
@@ -107,6 +328,7 @@ model Template {
   updatedAt       DateTime       @updatedAt
 
   @@index([campaignId])
+  @@index([orgId])
 }
 
 model Product {
@@ -124,6 +346,7 @@ model Product {
 
 enum CampaignStatus {
   DRAFT
+  SCHEDULED
   TEMPLATE_PENDING
   TEMPLATE_APPROVED
   SENDING
@@ -144,6 +367,11 @@ model Campaign {
   content    Json
   audienceId String?
   audience   Audience?      @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  // When status is SCHEDULED, the cron tick enqueues the campaign once
+  // scheduledAt is due (spec §M4).
+  scheduledAt DateTime?
+  // Library Template id this campaign was created from, if any (display only).
+  sourceTemplateId String?
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   templates  Template[]
@@ -197,14 +425,23 @@ model Contact {
   org         Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name        String
   phoneE164   String
+  email       String?
   optedIn     Boolean           @default(false)
   optInSource String            @default("manual")
   optedOutAt  DateTime?
+  // CRM pipeline stage (spec §3.2).
+  leadStage   LeadStage         @default(NEW)
+  // Membership.userId of the assigned agent (null = unassigned).
+  assignedToUserId String?
+  // Last time the org messaged this contact (any channel/path).
+  lastContactedAt  DateTime?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   audiences   AudienceContact[]
   messages    Message[]
   conversations Conversation[]
+  tags        ContactTag[]
+  notes       Note[]
 
   @@unique([orgId, phoneE164])
   @@index([orgId])

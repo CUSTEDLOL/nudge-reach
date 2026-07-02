@@ -170,6 +170,9 @@ async function processTemplateUpdate(
     orderBy: { submittedAt: "desc" },
   });
   if (!template) return;
+  // Library templates (no campaign) still track status; only linked campaigns
+  // transition with the review outcome.
+  const campaignId = template.campaignId;
 
   if (value.event === "APPROVED") {
     await prisma.$transaction([
@@ -177,10 +180,14 @@ async function processTemplateUpdate(
         where: { id: template.id },
         data: { metaStatus: "APPROVED", rejectionReason: null },
       }),
-      prisma.campaign.update({
-        where: { id: template.campaignId },
-        data: { status: "TEMPLATE_APPROVED" },
-      }),
+      ...(campaignId
+        ? [
+            prisma.campaign.update({
+              where: { id: campaignId },
+              data: { status: "TEMPLATE_APPROVED" as const },
+            }),
+          ]
+        : []),
     ]);
   } else if (value.event === "REJECTED") {
     await prisma.$transaction([
@@ -191,10 +198,14 @@ async function processTemplateUpdate(
           rejectionReason: value.reason ?? "Rejected by Meta",
         },
       }),
-      prisma.campaign.update({
-        where: { id: template.campaignId },
-        data: { status: "DRAFT" },
-      }),
+      ...(campaignId
+        ? [
+            prisma.campaign.update({
+              where: { id: campaignId },
+              data: { status: "DRAFT" as const },
+            }),
+          ]
+        : []),
     ]);
   }
 }

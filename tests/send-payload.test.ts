@@ -57,7 +57,8 @@ describe("buildSendPayload (Cloud API send shape)", () => {
       language: "en",
       bodyParams: ["Asha"],
     });
-    expect(payload.template.components).toHaveLength(1);
-    expect(payload.template.components?.[0].type).toBe("body");
+    expect(payload.template).toBeDefined();
+    expect(payload.template!.components).toHaveLength(1);
+    expect(payload.template!.components?.[0].type).toBe("body");
   });
 });

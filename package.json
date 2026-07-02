@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "prisma db push",
+    "db:rls": "npx esbuild scripts/enable-rls.ts --bundle --platform=node --format=cjs --outfile=.next/enable-rls.cjs --external:@prisma/client && node .next/enable-rls.cjs",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
@@ -23,6 +24,7 @@
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "recharts": "^3.9.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
