@@ -135,6 +135,10 @@ Notes baked into the repo:
   resumes waiting automation runs, and advances every sending campaign's
   queue. The campaign stats dashboard *also* ticks the queue on every view,
   so demo-scale sends complete without waiting for cron.
+- **Recommended:** set `CRON_SECRET` (any random string) in Vercel env —
+  the cron route then requires `Authorization: Bearer <CRON_SECRET>`, which
+  Vercel Cron sends automatically when the env var exists. Every cron
+  operation is idempotent either way; this is defense in depth.
 - **`next.config.ts`** raises the server-action body limit to **6 MB**
   (product photo uploads; the client additionally pre-checks 4 MB).
 - `app/(app)/campaigns/new/layout.tsx` sets `maxDuration = 60` for the AI
