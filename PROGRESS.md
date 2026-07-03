@@ -5,6 +5,42 @@ what's next.
 
 ---
 
+## Phase 10 — Global markets (2026-07-04) ✅
+
+Two commits: multi-currency core + landing currency toggle. Verified in both
+currencies against the running app (screenshots, 280 tests, tsc/lint/build).
+
+### Done
+- **Org globalization columns**: `currency` (INR|USD), `dialCode`, `timezone`
+  — one country pick at onboarding (or Settings → General) sets all three.
+  India defaults preserved for all existing rows/call sites.
+- **Dual-gateway billing**: USD orgs → hosted Stripe Checkout (REST,
+  env-gated `STRIPE_SECRET_KEY`; signed webhook `/api/webhooks/stripe` with
+  replay tolerance is source of truth); INR stays Razorpay. Plans: $0/$29/
+  $69/$159 alongside ₹0/999/2,499/5,999 (single source in lib/billing/plans).
+- **Per-market money everywhere**: message-rate defaults per currency
+  (₹0.99 / $0.03, live Meta prices still override per message), estimates,
+  simulated cost accrual, monthly usage, campaign stats/recipients/tables,
+  analytics spend, dashboard revenue — all in org currency.
+- **Country-aware phones**: bare local numbers get the org dial code;
+  Meta-webhook numbers treated as cc-included; sim tester pre-normalizes.
+- **Market AI voice**: `+91` keeps the Hinglish-friendly campaign voice;
+  everyone else gets clear international English. Org-timezone greeting.
+- **Landing**: ₹ India / $ International toggle over the pricing grid + ROI
+  calculator (prices imported from lib/billing/plans — no drift).
+- Tests: +16 (country-aware phones, currency formatting, USD plan ladder,
+  Stripe webhook HMAC + replay defense) → **280 total**.
+
+### Known limitations
+- Switching country after accruing message costs re-labels historical minor
+  units under the new symbol (no FX conversion) — country is meant to be a
+  set-once onboarding choice.
+- USD message-rate default ($0.03) is a placeholder average; Meta rates vary
+  by destination country. Live-mode webhook pricing overrides per message.
+- Landing toggle defaults to ₹; no geo-IP detection yet.
+
+---
+
 ## Phase 9 — Demo-ready + production hardening + mobile (2026-07-03) ✅
 
 Eight commits (070d62a…c445c9b) taking the MVP to client-demo-ready.

@@ -2,13 +2,21 @@
 
 import { useState } from "react";
 import { Calculator, TrendingUp } from "lucide-react";
+import { getPlan, planPrice } from "@/lib/billing/plans";
 
 /**
  * Conservative, fully-disclosed assumption set. One lever only:
  * a fixed share of monthly leads recovered by instant replies + follow-ups.
+ * Currency follows the pricing section's toggle (global outreach).
  */
 const RECOVERY_RATE = 0.12;
-const GROWTH_PRICE = 2499;
+
+const CURRENCY_DEFAULTS = {
+  INR: { symbol: "\u20b9", locale: "en-IN", defaultAov: "1499" },
+  USD: { symbol: "$", locale: "en-US", defaultAov: "49" },
+} as const;
+
+export type RoiCurrency = keyof typeof CURRENCY_DEFAULTS;
 
 /** Round the estimate so it never pretends to be precise. */
 function roundEstimate(v: number) {
@@ -17,15 +25,32 @@ function roundEstimate(v: number) {
   return Math.round(v / 100) * 100;
 }
 
-export function RoiCalculator() {
+export function RoiCalculator({
+  currency = "INR",
+}: {
+  currency?: RoiCurrency;
+}) {
   const [leads, setLeads] = useState(500);
-  const [aovText, setAovText] = useState("1499");
+  const [aovText, setAovText] = useState<string>(
+    CURRENCY_DEFAULTS.INR.defaultAov
+  );
+
+  const { symbol, locale, defaultAov } = CURRENCY_DEFAULTS[currency];
+  const growthPrice = planPrice(getPlan("growth"), currency);
+
+  // Currency switch resets the order-value default (a sensible anchor per
+  // market) — React's adjust-state-during-render pattern, no effect needed.
+  const [prevCurrency, setPrevCurrency] = useState<RoiCurrency>(currency);
+  if (prevCurrency !== currency) {
+    setPrevCurrency(currency);
+    setAovText(defaultAov);
+  }
 
   const aov = Math.min(100_000, Math.max(0, Number(aovText) || 0));
   const recoveredLeads = Math.round(leads * RECOVERY_RATE);
   const revenue = recoveredLeads * aov;
   const estimate = roundEstimate(revenue);
-  const multiple = revenue / GROWTH_PRICE;
+  const multiple = revenue / growthPrice;
   const multipleLabel =
     multiple >= 10 ? `${Math.round(multiple)}×` : `${multiple.toFixed(1)}×`;
 
@@ -52,7 +77,7 @@ export function RoiCalculator() {
                   Monthly leads / enquiries
                 </span>
                 <span className="text-lg font-bold tracking-tight text-ink">
-                  {leads.toLocaleString("en-IN")}
+                  {leads.toLocaleString(locale)}
                 </span>
               </div>
               <input
@@ -77,7 +102,7 @@ export function RoiCalculator() {
               </span>
               <div className="mt-2 flex max-w-[14rem] items-center rounded-xl border border-black/10 bg-white shadow-sm transition-colors focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-100">
                 <span className="pl-3.5 text-[15px] font-semibold text-ink/40">
-                  ₹
+                  {symbol}
                 </span>
                 <input
                   type="number"
@@ -86,7 +111,7 @@ export function RoiCalculator() {
                   max={100000}
                   value={aovText}
                   onChange={(e) => setAovText(e.target.value)}
-                  aria-label="Average order value in rupees"
+                  aria-label="Average order value"
                   className="w-full rounded-xl border-0 bg-transparent px-2 py-3 text-[15px] font-semibold text-ink outline-none"
                 />
               </div>
@@ -124,7 +149,7 @@ export function RoiCalculator() {
               Estimated recovered revenue
             </p>
             <p className="mt-3 text-4xl font-bold leading-none tracking-tight sm:text-5xl">
-              ~₹{estimate.toLocaleString("en-IN")}
+              ~{symbol}{estimate.toLocaleString(locale)}
               <span className="ml-1.5 text-lg font-semibold text-brand-100/60">
                 /month
               </span>
@@ -132,16 +157,16 @@ export function RoiCalculator() {
             <p className="mt-3 text-[14.5px] leading-relaxed text-brand-100/70">
               That&apos;s roughly{" "}
               <span className="font-semibold text-white">
-                {recoveredLeads.toLocaleString("en-IN")} extra orders
+                {recoveredLeads.toLocaleString(locale)} extra orders
               </span>{" "}
-              a month at ₹{aov.toLocaleString("en-IN")} each.
+              a month at {symbol}{aov.toLocaleString(locale)} each.
             </p>
 
             <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-white/10 pt-6">
               <div>
                 <p className="text-[12px] text-brand-100/55">Growth plan</p>
                 <p className="text-lg font-bold">
-                  ₹{GROWTH_PRICE.toLocaleString("en-IN")}
+                  {symbol}{growthPrice.toLocaleString(locale)}
                   <span className="text-[13px] font-medium text-brand-100/55">
                     /mo
                   </span>
