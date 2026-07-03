@@ -2,10 +2,10 @@ import crypto from "crypto";
 import { env } from "@/lib/env";
 
 /**
- * Stripe integration for USD-billed orgs (global markets) via the REST API —
+ * Stripe integration for all non-INR orgs (global markets) via the REST API —
  * no SDK dependency, mirroring lib/billing/razorpay.ts for INR. Entirely
  * env-gated: without STRIPE_SECRET_KEY the billing page shows an "add keys"
- * state for USD orgs. One-time monthly payments through Stripe Checkout
+ * state for non-INR orgs. One-time monthly payments through Stripe Checkout
  * (mode: payment), consistent with the Razorpay flow; the webhook at
  * /api/webhooks/stripe is the source of truth.
  */
@@ -20,12 +20,14 @@ export interface StripeCheckoutSession {
 }
 
 /**
- * Create a hosted Checkout session for a plan payment (amount in cents).
+ * Create a hosted Checkout session for a plan payment (amount in minor units).
  * Returns the redirect URL. Throws when unconfigured — callers gate on
  * isStripeConfigured() first.
  */
 export async function createStripeCheckout(input: {
-  amountCents: number;
+  /** ISO currency code (any Stripe-supported currency, e.g. "aed", "brl"). */
+  currency: string;
+  amountMinor: number;
   planId: string;
   planName: string;
   orgId: string;
@@ -42,8 +44,8 @@ export async function createStripeCheckout(input: {
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
     "line_items[0][quantity]": "1",
-    "line_items[0][price_data][currency]": "usd",
-    "line_items[0][price_data][unit_amount]": String(input.amountCents),
+    "line_items[0][price_data][currency]": input.currency.toLowerCase(),
+    "line_items[0][price_data][unit_amount]": String(input.amountMinor),
     "line_items[0][price_data][product_data][name]": `Nudge ${input.planName} plan — 1 month (${input.orgName})`,
     "metadata[orgId]": input.orgId,
     "metadata[planId]": input.planId,

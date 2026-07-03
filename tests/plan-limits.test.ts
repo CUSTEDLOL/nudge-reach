@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { evaluateLimit } from "@/lib/billing/limits";
-import { getPlan, PLANS } from "@/lib/billing/plans";
+import { getPlan, PLANS, planPrice } from "@/lib/billing/plans";
 
 describe("evaluateLimit", () => {
   it("allows when under the cap", () => {
@@ -35,7 +35,7 @@ describe("evaluateLimit", () => {
 describe("plans", () => {
   it("has the four sellable tiers in order", () => {
     expect(PLANS.map((p) => p.id)).toEqual(["free", "starter", "growth", "pro"]);
-    expect(PLANS.map((p) => p.priceInr)).toEqual([0, 999, 2499, 5999]);
+    expect(PLANS.map((p) => planPrice(p, "INR"))).toEqual([0, 999, 2499, 5999]);
   });
 
   it("maps the legacy 'scale' id to Pro", () => {

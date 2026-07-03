@@ -4,7 +4,7 @@ import { verifyStripeWebhook } from "@/lib/billing/stripe";
 import { getPlan } from "@/lib/billing/plans";
 
 /**
- * Stripe webhook: source of truth for USD subscriptions (mirrors the
+ * Stripe webhook: source of truth for all non-INR subscriptions (mirrors the
  * Razorpay webhook for INR). Public route (under /api/webhooks, excluded
  * from the auth proxy); trust comes from the signature.
  */

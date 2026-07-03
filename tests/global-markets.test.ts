@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { verifyStripeWebhook } from "@/lib/billing/stripe";
 import {
+  CURRENCIES,
   CURRENCY_INFO,
   formatMoney,
   formatPlanPrice,
@@ -65,13 +66,36 @@ describe("money", () => {
     for (let i = 1; i < usd.length; i++) expect(usd[i]).toBeGreaterThan(usd[i - 1]);
   });
 
-  it("both currencies carry a positive default message rate", () => {
-    expect(CURRENCY_INFO.INR.defaultMessageRateMinor).toBeGreaterThan(0);
-    expect(CURRENCY_INFO.USD.defaultMessageRateMinor).toBeGreaterThan(0);
+  it("every currency carries a positive default message rate + gateway", () => {
+    for (const c of CURRENCIES) {
+      expect(CURRENCY_INFO[c].defaultMessageRateMinor).toBeGreaterThan(0);
+      expect(["razorpay", "stripe"]).toContain(CURRENCY_INFO[c].gateway);
+    }
+    // Razorpay is INR-only; every other market bills through Stripe.
+    expect(CURRENCY_INFO.INR.gateway).toBe("razorpay");
+    expect(CURRENCIES.filter((c) => CURRENCY_INFO[c].gateway === "stripe")).toHaveLength(CURRENCIES.length - 1);
+  });
+
+  it("every currency has a strictly increasing plan-price ladder", () => {
+    for (const c of CURRENCIES) {
+      const ladder = PLANS.map((p) => planPrice(p, c));
+      expect(ladder[0]).toBe(0);
+      for (let i = 1; i < ladder.length; i++) {
+        expect(ladder[i]).toBeGreaterThan(ladder[i - 1]);
+      }
+    }
+  });
+
+  it("formats local currencies sensibly", () => {
+    expect(formatPlanPrice(249, "AED")).toBe("AED 249");
+    expect(formatPlanPrice(349, "BRL")).toBe("R$349");
+    expect(formatMoney(55_000, "IDR")).toContain("550");
   });
 
   it("country presets resolve by dial code", () => {
-    expect(presetForDialCode("+971")?.currency).toBe("USD");
+    expect(presetForDialCode("+971")?.currency).toBe("AED");
+    expect(presetForDialCode("+55")?.currency).toBe("BRL");
+    expect(presetForDialCode("+62")?.currency).toBe("IDR");
     expect(presetForDialCode("+91")?.currency).toBe("INR");
     expect(presetForDialCode("+999")).toBeNull();
   });

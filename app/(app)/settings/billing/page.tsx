@@ -27,9 +27,9 @@ export default async function BillingSettingsPage() {
   const currentPlan = getPlan(org.plan);
   const simulation = env.SEND_MODE === "simulation";
   const currency = orgCurrency(org);
-  const gatewayName = currency === "USD" ? "Stripe" : "Razorpay";
+  const gatewayName = currency === "INR" ? "Razorpay" : "Stripe";
   const paymentsOn =
-    currency === "USD" ? isStripeConfigured() : isRazorpayConfigured();
+    currency === "INR" ? isRazorpayConfigured() : isStripeConfigured();
   const canManage = role === "OWNER" || role === "ADMIN";
 
   return (
@@ -106,9 +106,9 @@ export default async function BillingSettingsPage() {
           description={
             paymentsOn
               ? `Upgrade any time — you're charged securely via ${gatewayName}.`
-              : currency === "USD"
-                ? "Set STRIPE_SECRET_KEY to turn on checkout."
-                : "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to turn on checkout."
+              : currency === "INR"
+                ? "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to turn on checkout."
+                : "Set STRIPE_SECRET_KEY to turn on checkout."
           }
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,8 +1,11 @@
+import type { Currency } from "./money";
+
 /**
  * Subscription plans (spec §M8 billing). Pure config — no server imports — so
- * both server and client can render the pricing grid. Prices are the product's
- * own tiers (₹, monthly); the WhatsApp per-message cost is separate and passed
- * through from Meta. Limits are enforced server-side in lib/billing/limits.ts.
+ * both server and client can render the pricing grid. Each market pays in its
+ * LOCAL currency (PLAN_PRICES below — rounded market prices, founder-tunable,
+ * not live FX); the WhatsApp per-message cost is separate and passed through
+ * from Meta. Limits are enforced server-side in lib/billing/limits.ts.
  */
 
 export interface PlanLimits {
@@ -13,28 +16,47 @@ export interface PlanLimits {
   messagesPerMonth: number | null;
 }
 
+export type PlanId = "free" | "starter" | "growth" | "pro";
+
 export interface Plan {
-  id: "free" | "starter" | "growth" | "pro";
+  id: PlanId;
   name: string;
-  priceInr: number; // monthly, ₹ (0 = free)
-  priceUsd: number; // monthly, $ (global markets bill via Stripe)
   tagline: string;
   features: string[];
   limits: PlanLimits;
   highlighted?: boolean;
 }
 
+/**
+ * Monthly price per plan per currency, in MAJOR units (0 = free). Rounded
+ * market prices per region — deliberately not live FX, so a Dubai salon sees
+ * "AED 249", not "AED 247.63".
+ */
+export const PLAN_PRICES: Record<PlanId, Record<Currency, number>> = {
+  free: { INR: 0, USD: 0, AED: 0, SAR: 0, SGD: 0, IDR: 0, BRL: 0, MXN: 0, GBP: 0 },
+  starter: {
+    INR: 999, USD: 29, AED: 99, SAR: 109, SGD: 39,
+    IDR: 449_000, BRL: 149, MXN: 549, GBP: 25,
+  },
+  growth: {
+    INR: 2499, USD: 69, AED: 249, SAR: 259, SGD: 95,
+    IDR: 1_099_000, BRL: 349, MXN: 1299, GBP: 59,
+  },
+  pro: {
+    INR: 5999, USD: 159, AED: 579, SAR: 599, SGD: 219,
+    IDR: 2_499_000, BRL: 799, MXN: 2999, GBP: 135,
+  },
+};
+
 /** Major-unit monthly price in the given currency. */
-export function planPrice(plan: Plan, currency: "INR" | "USD"): number {
-  return currency === "USD" ? plan.priceUsd : plan.priceInr;
+export function planPrice(plan: Plan, currency: Currency): number {
+  return PLAN_PRICES[plan.id][currency];
 }
 
 export const PLANS: Plan[] = [
   {
     id: "free",
     name: "Free",
-    priceInr: 0,
-    priceUsd: 0,
     tagline: "Try the whole product in simulation.",
     features: [
       "1 WhatsApp number",
@@ -53,8 +75,6 @@ export const PLANS: Plan[] = [
   {
     id: "starter",
     name: "Starter",
-    priceInr: 999,
-    priceUsd: 29,
     tagline: "For a shop going live on WhatsApp.",
     features: [
       "Everything in Free",
@@ -74,8 +94,6 @@ export const PLANS: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    priceInr: 2499,
-    priceUsd: 69,
     tagline: "For a growing team running real campaigns.",
     features: [
       "Everything in Starter",
@@ -96,8 +114,6 @@ export const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    priceInr: 5999,
-    priceUsd: 159,
     tagline: "High volume, multiple teams, priority support.",
     features: [
       "Everything in Growth",

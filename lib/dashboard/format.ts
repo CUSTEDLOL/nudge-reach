@@ -1,3 +1,5 @@
+import { CURRENCY_INFO, isCurrency } from "@/lib/billing/money";
+
 /**
  * Display formatting for the dashboard — pure and unit-testable.
  * Dates render en-IN per the repo convention (spec §1).
@@ -16,7 +18,7 @@ export function formatCount(value: number): string {
 
 /** Whole-major-unit amount in the workspace currency: "₹1,49,900" / "$1,499". */
 export function formatMajorAmount(value: number, currency: string): string {
-  const locale = currency === "USD" ? "en-US" : "en-IN";
+  const locale = isCurrency(currency) ? CURRENCY_INFO[currency].locale : "en-IN";
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",

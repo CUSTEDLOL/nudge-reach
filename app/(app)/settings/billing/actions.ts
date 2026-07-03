@@ -5,7 +5,7 @@ import { requireOrgContext, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { recordAudit } from "@/lib/audit";
 import { getPlan, planPrice } from "@/lib/billing/plans";
-import { orgCurrency } from "@/lib/billing/money";
+import { formatPlanPrice, orgCurrency } from "@/lib/billing/money";
 import {
   createRazorpayOrder,
   isRazorpayConfigured,
@@ -30,13 +30,13 @@ export interface StartCheckoutResult extends ActionResult {
     planId: string;
     planName: string;
   };
-  /** USD path — hosted Stripe Checkout; the browser redirects here. */
+  /** Non-INR path — hosted Stripe Checkout; the browser redirects here. */
   redirectUrl?: string;
 }
 
 /**
  * Start a plan upgrade in the org's billing currency: INR → Razorpay widget,
- * USD → hosted Stripe Checkout redirect. Each path is gated on its own keys;
+ * anything else → hosted Stripe Checkout redirect in that local currency. Each path is gated on its own keys;
  * the UI shows an "add keys" state when the relevant gateway is off.
  */
 export async function startCheckoutAction(
@@ -54,17 +54,18 @@ export async function startCheckoutAction(
 
     const currency = orgCurrency(ctx.org);
 
-    if (currency === "USD") {
+    if (currency !== "INR") {
       if (!isStripeConfigured()) {
         return {
           ok: false,
           message:
-            "Payments aren't switched on yet — add your Stripe keys to enable USD checkout.",
+            "Payments aren't switched on yet — add your Stripe keys to enable checkout.",
         };
       }
       const base = appOrigin();
       const session = await createStripeCheckout({
-        amountCents: planPrice(plan, "USD") * 100,
+        currency,
+        amountMinor: planPrice(plan, currency) * 100,
         planId: plan.id,
         planName: plan.name,
         orgId: ctx.org.id,
@@ -141,7 +142,12 @@ export async function confirmCheckoutAction(
         currentPeriodEnd: periodEnd,
       },
     });
-    recordAudit(ctx, "billing.plan_changed", plan.name, `₹${plan.priceInr}/mo`);
+    recordAudit(
+      ctx,
+      "billing.plan_changed",
+      plan.name,
+      `${formatPlanPrice(planPrice(plan, orgCurrency(ctx.org)), orgCurrency(ctx.org))}/mo`
+    );
     revalidatePath("/settings/billing");
     return { ok: true, message: `You're on ${plan.name} now — thank you!` };
   } catch (err) {

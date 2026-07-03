@@ -11,13 +11,18 @@ Two commits: multi-currency core + landing currency toggle. Verified in both
 currencies against the running app (screenshots, 280 tests, tsc/lint/build).
 
 ### Done
-- **Org globalization columns**: `currency` (INR|USD), `dialCode`, `timezone`
+- **Org globalization columns**: `currency` (INR/USD/AED/SAR/SGD/IDR/BRL/
+  MXN/GBP — every market bills in its LOCAL currency), `dialCode`, `timezone`
   — one country pick at onboarding (or Settings → General) sets all three.
   India defaults preserved for all existing rows/call sites.
-- **Dual-gateway billing**: USD orgs → hosted Stripe Checkout (REST,
-  env-gated `STRIPE_SECRET_KEY`; signed webhook `/api/webhooks/stripe` with
-  replay tolerance is source of truth); INR stays Razorpay. Plans: $0/$29/
-  $69/$159 alongside ₹0/999/2,499/5,999 (single source in lib/billing/plans).
+- **Dual-gateway billing**: every non-INR org → hosted Stripe Checkout in
+  its local currency (REST, env-gated `STRIPE_SECRET_KEY`; signed webhook
+  `/api/webhooks/stripe` with replay tolerance is source of truth); INR stays
+  Razorpay. PLAN_PRICES carries rounded market prices per plan per currency
+  (e.g. Growth: ₹2,499 / $69 / AED 249 / SAR 259 / S$95 / Rp 1.099.000 /
+  R$349 / MX$1,299 / £59) — founder-tunable, deliberately not live FX.
+  Per-currency message-rate estimates likewise (live Meta pricing overrides).
+  Verified visually: AED, BRL, IDR and ₹ billing pages all render correctly.
 - **Per-market money everywhere**: message-rate defaults per currency
   (₹0.99 / $0.03, live Meta prices still override per message), estimates,
   simulated cost accrual, monthly usage, campaign stats/recipients/tables,
