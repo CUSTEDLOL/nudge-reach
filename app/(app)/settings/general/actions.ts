@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/lib/auth";
+import { COUNTRY_PRESETS } from "@/lib/billing/money";
 
 export interface ActionResult {
   ok: boolean;
@@ -43,11 +44,25 @@ export async function saveGeneralSettingsAction(
         ? (ctx.org.settings as Record<string, unknown>)
         : {};
 
+    // Optional country change (global outreach): a known preset updates the
+    // dial code, billing currency and timezone together.
+    const countryCode = String(formData.get("country") ?? "").trim();
+    const preset = countryCode
+      ? COUNTRY_PRESETS.find((p) => p.code === countryCode)
+      : undefined;
+
     await prisma.org.update({
       where: { id: ctx.org.id },
       data: {
         name,
         vertical: vertical || null,
+        ...(preset && preset.code !== "OTHER"
+          ? {
+              dialCode: preset.dialCode,
+              currency: preset.currency,
+              timezone: preset.timezone,
+            }
+          : {}),
         settings: {
           ...current,
           avgOrderValueInr: Math.round(avgOrderValueInr),

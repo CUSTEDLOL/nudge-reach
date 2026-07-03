@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireOrgContext } from "@/lib/auth";
+import { presetForDialCode } from "@/lib/billing/money";
 import { getOnboardingSnapshot } from "@/lib/dashboard/queries";
 import { OnboardingWizard } from "./wizard";
 
@@ -23,6 +24,7 @@ export default async function OnboardingPage() {
       <OnboardingWizard
         orgName={org.name}
         vertical={org.vertical}
+        country={presetForDialCode(org.dialCode)?.code ?? ""}
         whatsappConnected={snapshot.whatsappConnected}
         whatsappDisplayName={snapshot.whatsappDisplayName}
         simulationMode={snapshot.simulationMode}

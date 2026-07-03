@@ -37,6 +37,11 @@ model Org {
   onboardedAt DateTime?
   // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
   settings    Json       @default("{}")
+  // Globalization (spec: global outreach). Defaults preserve the original
+  // India-first behavior for existing rows.
+  currency    String     @default("INR") // "INR" | "USD"
+  dialCode    String     @default("+91") // default country code for bare phone numbers
+  timezone    String     @default("Asia/Kolkata")
   // Billing (spec: real usage + Razorpay when keys present). plan defaults to
   // the free tier; the paid fields fill in after a successful subscription.
   plan                   String    @default("free") // free | starter | growth | scale

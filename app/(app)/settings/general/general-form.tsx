@@ -6,6 +6,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { COUNTRY_PRESETS } from "@/lib/billing/money";
 import { saveGeneralSettingsAction, type ActionResult } from "./actions";
 
 const VERTICALS: { value: string; label: string }[] = [
@@ -23,6 +24,9 @@ export interface GeneralFormValues {
   name: string;
   vertical: string;
   avgOrderValueInr: number;
+  /** COUNTRY_PRESETS code derived from the org's dial code ("" if custom). */
+  country: string;
+  currencySymbol: string;
 }
 
 export function GeneralForm({ initial }: { initial: GeneralFormValues }) {
@@ -81,6 +85,21 @@ export function GeneralForm({ initial }: { initial: GeneralFormValues }) {
       </Field>
 
       <Field
+        label="Country"
+        htmlFor="org-country"
+        hint="Sets your default phone country code, billing currency and timezone."
+      >
+        <Select id="org-country" name="country" defaultValue={initial.country}>
+          {!initial.country && <option value="">Not set</option>}
+          {COUNTRY_PRESETS.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.label} ({c.dialCode} · {c.currency})
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field
         label="Average order value"
         htmlFor="org-aov"
         hint="Used for the estimated “revenue influenced” metric on your dashboard."
@@ -90,7 +109,7 @@ export function GeneralForm({ initial }: { initial: GeneralFormValues }) {
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400"
             aria-hidden
           >
-            ₹
+            {initial.currencySymbol}
           </span>
           <Input
             id="org-aov"

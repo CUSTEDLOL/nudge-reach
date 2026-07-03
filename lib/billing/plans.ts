@@ -17,10 +17,16 @@ export interface Plan {
   id: "free" | "starter" | "growth" | "pro";
   name: string;
   priceInr: number; // monthly, ₹ (0 = free)
+  priceUsd: number; // monthly, $ (global markets bill via Stripe)
   tagline: string;
   features: string[];
   limits: PlanLimits;
   highlighted?: boolean;
+}
+
+/** Major-unit monthly price in the given currency. */
+export function planPrice(plan: Plan, currency: "INR" | "USD"): number {
+  return currency === "USD" ? plan.priceUsd : plan.priceInr;
 }
 
 export const PLANS: Plan[] = [
@@ -28,6 +34,7 @@ export const PLANS: Plan[] = [
     id: "free",
     name: "Free",
     priceInr: 0,
+    priceUsd: 0,
     tagline: "Try the whole product in simulation.",
     features: [
       "1 WhatsApp number",
@@ -47,6 +54,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     priceInr: 999,
+    priceUsd: 29,
     tagline: "For a shop going live on WhatsApp.",
     features: [
       "Everything in Free",
@@ -67,6 +75,7 @@ export const PLANS: Plan[] = [
     id: "growth",
     name: "Growth",
     priceInr: 2499,
+    priceUsd: 69,
     tagline: "For a growing team running real campaigns.",
     features: [
       "Everything in Starter",
@@ -88,6 +97,7 @@ export const PLANS: Plan[] = [
     id: "pro",
     name: "Pro",
     priceInr: 5999,
+    priceUsd: 159,
     tagline: "High volume, multiple teams, priority support.",
     features: [
       "Everything in Growth",

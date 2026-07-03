@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
+import { CURRENCY_INFO, orgCurrency } from "@/lib/billing/money";
 import { CampaignsTable, type CampaignRow } from "./campaigns-table";
 
 /** Statuses that count toward the "sent" number (left the queue, not failed). */
@@ -79,7 +80,10 @@ export default async function CampaignsPage() {
           </Link>
         }
       />
-      <CampaignsTable rows={rows} />
+      <CampaignsTable
+        rows={rows}
+        currencySymbol={CURRENCY_INFO[orgCurrency(org)].symbol}
+      />
     </div>
   );
 }

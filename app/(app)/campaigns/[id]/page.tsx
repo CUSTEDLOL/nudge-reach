@@ -11,6 +11,8 @@ import {
   campaignStats,
   processQueue,
 } from "@/lib/send/queue";
+import { getMessageRateMinor } from "@/lib/billing";
+import { CURRENCY_INFO, orgCurrency } from "@/lib/billing/money";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -74,7 +76,9 @@ export default async function CampaignPage({
   const isSendingOrSent =
     campaign.status === "SENDING" || campaign.status === "SENT";
   const isScheduled = campaign.status === "SCHEDULED";
-  const ratePaise = Math.round((env.WHATSAPP_MARKETING_RATE_INR ?? 0.99) * 100);
+  const currency = orgCurrency(org);
+  const ratePaise = getMessageRateMinor(currency);
+  const currencySymbol = CURRENCY_INFO[currency].symbol;
   const simulation = env.SEND_MODE === "simulation";
 
   let audiences: { id: string; name: string; optedInCount: number }[] = [];
@@ -154,6 +158,7 @@ export default async function CampaignPage({
               audienceName={campaign.audience?.name ?? "—"}
               optedInCount={scheduledAudience?.optedInCount ?? 0}
               ratePaise={ratePaise}
+              currencySymbol={currencySymbol}
               simulation={simulation}
             />
             <WhatsappPreview
@@ -177,6 +182,7 @@ export default async function CampaignPage({
             audiences={audiences}
             defaultAudienceId={campaign.audienceId}
             ratePaise={ratePaise}
+              currencySymbol={currencySymbol}
             simulation={simulation}
           />
         )}
@@ -189,6 +195,7 @@ export default async function CampaignPage({
                 status={campaign.status}
                 stats={stats}
                 ratePaise={ratePaise}
+              currencySymbol={currencySymbol}
                 simulation={simulation}
               />
               <WhatsappPreview
@@ -196,7 +203,7 @@ export default async function CampaignPage({
                 photoUrl={campaign.product.photoUrl}
               />
             </div>
-            <RecipientsTable rows={recipients} />
+            <RecipientsTable rows={recipients} currencySymbol={currencySymbol} />
           </>
         )}
 

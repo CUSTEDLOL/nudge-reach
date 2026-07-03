@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/lib/auth";
+import { COUNTRY_PRESETS } from "@/lib/billing/money";
 import { isVertical } from "@/lib/dashboard/verticals";
 
 export interface ActionResult {
@@ -37,10 +38,28 @@ export async function saveBusinessProfileAction(
     return { ok: false, message: "Pick the option closest to your business." };
   }
 
+  // Country sets phone dial code, billing currency and timezone in one step
+  // (global outreach); adjustable later in Settings → General.
+  const countryCode = String(formData.get("country") ?? "").trim();
+  const preset = COUNTRY_PRESETS.find((p) => p.code === countryCode);
+  if (!preset) {
+    return { ok: false, message: "Pick your country." };
+  }
+
   try {
     await prisma.org.update({
       where: { id: ctx.org.id },
-      data: { name, vertical },
+      data: {
+        name,
+        vertical,
+        ...(preset.code !== "OTHER"
+          ? {
+              dialCode: preset.dialCode,
+              currency: preset.currency,
+              timezone: preset.timezone,
+            }
+          : {}),
+      },
     });
   } catch {
     return { ok: false, message: "Couldn't save — please try again." };

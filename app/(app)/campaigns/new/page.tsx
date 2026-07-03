@@ -3,7 +3,8 @@ import { env } from "@/lib/env";
 import { requireOrg } from "@/lib/auth";
 import { canSendMarketing } from "@/lib/consent";
 import { getApprovedTemplates } from "@/lib/whatsapp/library";
-import { getMarketingRateInr } from "@/lib/billing";
+import { getMessageRateMinor } from "@/lib/billing";
+import { CURRENCY_INFO, orgCurrency } from "@/lib/billing/money";
 import { PageHeader } from "@/components/ui/page-header";
 import { CampaignWizard, type WizardTemplate } from "./wizard";
 
@@ -54,7 +55,8 @@ export default async function NewBroadcastPage() {
         audiences={audiences}
         tags={tags}
         sources={sourceRows.map((s) => s.optInSource)}
-        ratePaise={Math.round(getMarketingRateInr() * 100)}
+        ratePaise={getMessageRateMinor(orgCurrency(org))}
+        currencySymbol={CURRENCY_INFO[orgCurrency(org)].symbol}
         simulation={env.SEND_MODE === "simulation"}
       />
     </div>

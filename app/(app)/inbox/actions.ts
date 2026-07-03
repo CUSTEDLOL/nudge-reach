@@ -11,6 +11,7 @@ import { handleInboundMessage } from "@/lib/agent/inbound";
 import { fireTagAdded } from "@/lib/automation/triggers";
 import { campaignContentSchema } from "@/lib/campaign/schema";
 import { firstName, toPreview } from "@/lib/inbox/format";
+import { normalizePhoneE164 } from "@/lib/phone";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/lib/ai/suggest-reply";
 
@@ -446,10 +447,16 @@ export async function simulateInboundAction(
       return { ok: false, message: "The tester only works in simulation mode." };
     }
     const { org } = await requireOrgContext();
-    const phone = String(formData.get("phone") ?? "").trim();
+    const rawPhone = String(formData.get("phone") ?? "").trim();
     const text = String(formData.get("text") ?? "").trim();
-    if (!phone || !text) {
+    if (!rawPhone || !text) {
       return { ok: false, message: "Enter a phone number and a message." };
+    }
+    // Users type local numbers; the inbound handler expects webhook-shaped
+    // (country-code-included) input — normalize with the org's dial code.
+    const phone = normalizePhoneE164(rawPhone, org.dialCode);
+    if (!phone) {
+      return { ok: false, message: "That phone number doesn't look right." };
     }
 
     // handleInboundMessage maintains the denormalized inbox-list fields

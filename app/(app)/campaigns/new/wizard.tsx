@@ -153,6 +153,7 @@ export function CampaignWizard({
   tags,
   sources,
   ratePaise,
+  currencySymbol = "₹",
   simulation,
 }: {
   templates: WizardTemplate[];
@@ -160,6 +161,7 @@ export function CampaignWizard({
   tags: { id: string; name: string }[];
   sources: string[];
   ratePaise: number;
+  currencySymbol?: string;
   simulation: boolean;
 }) {
   const [step, setStep] = useState(1);
@@ -218,6 +220,7 @@ export function CampaignWizard({
           campaign={campaign}
           audience={audience}
           ratePaise={ratePaise}
+          currencySymbol={currencySymbol}
           simulation={simulation}
           onBack={() => setStep(2)}
         />
@@ -735,12 +738,14 @@ function StepReview({
   campaign,
   audience,
   ratePaise,
+  currencySymbol = "₹",
   simulation,
   onBack,
 }: {
   campaign: WizardCampaign;
   audience: WizardAudiencePick;
   ratePaise: number;
+  currencySymbol?: string;
   simulation: boolean;
   onBack: () => void;
 }) {
@@ -836,7 +841,7 @@ function StepReview({
               <dd className="mt-1 font-medium text-neutral-900">
                 {audience.costLabel}{" "}
                 <span className="text-xs font-normal text-neutral-400">
-                  ({audience.optedInCount} × ₹{(ratePaise / 100).toFixed(2)},
+                  ({audience.optedInCount} × {currencySymbol}{(ratePaise / 100).toFixed(2)},
                   estimate)
                 </span>
               </dd>

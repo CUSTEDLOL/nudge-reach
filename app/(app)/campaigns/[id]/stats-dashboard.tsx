@@ -51,12 +51,14 @@ export function StatsDashboard({
   status: initialStatus,
   stats: initialStats,
   ratePaise,
+  currencySymbol = "₹",
   simulation,
 }: {
   campaignId: string;
   status: string;
   stats: CampaignStatsView;
   ratePaise: number;
+  currencySymbol?: string;
   simulation: boolean;
 }) {
   const { toast } = useToast();
@@ -178,7 +180,7 @@ export function StatsDashboard({
             Estimated cost
           </p>
           <p className="mt-0.5 font-semibold text-neutral-900">
-            ₹{(estimatedCostMinor / 100).toFixed(2)}
+            {currencySymbol}{(estimatedCostMinor / 100).toFixed(2)}
           </p>
         </div>
         <div>
@@ -186,7 +188,7 @@ export function StatsDashboard({
             {simulation ? "Cost so far (simulated)" : "Actual cost so far"}
           </p>
           <p className="mt-0.5 font-semibold text-neutral-900">
-            ₹{(stats.actualCostMinor / 100).toFixed(2)}
+            {currencySymbol}{(stats.actualCostMinor / 100).toFixed(2)}
           </p>
           <p className="text-xs text-neutral-400">
             billed per delivered message

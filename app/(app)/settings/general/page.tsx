@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { requireOrgContext } from "@/lib/auth";
+import {
+  CURRENCY_INFO,
+  orgCurrency,
+  presetForDialCode,
+} from "@/lib/billing/money";
 import { Card } from "@/components/ui/card";
 import { SectionHeader } from "../section-header";
 import { GeneralForm } from "./general-form";
@@ -33,6 +38,8 @@ export default async function GeneralSettingsPage() {
             name: org.name,
             vertical: org.vertical ?? "",
             avgOrderValueInr,
+            country: presetForDialCode(org.dialCode)?.code ?? "",
+            currencySymbol: CURRENCY_INFO[orgCurrency(org)].symbol,
           }}
         />
       </Card>

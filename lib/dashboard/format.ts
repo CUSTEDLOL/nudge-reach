@@ -14,6 +14,20 @@ export function formatCount(value: number): string {
   return new Intl.NumberFormat("en-IN").format(value);
 }
 
+/** Whole-major-unit amount in the workspace currency: "₹1,49,900" / "$1,499". */
+export function formatMajorAmount(value: number, currency: string): string {
+  const locale = currency === "USD" ? "en-US" : "en-IN";
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${currency} ${new Intl.NumberFormat(locale).format(value)}`;
+  }
+}
+
 /** Whole-rupee INR: 149900 → "₹1,49,900". */
 export function formatInrRupees(rupees: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -52,11 +66,21 @@ export function greetingForHour(hour: number): string {
 
 /** Current hour in India (the audience's timezone), 0–23. */
 export function istHour(now: Date = new Date()): number {
-  return Number(
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "numeric",
-      hour12: false,
-      timeZone: "Asia/Kolkata",
-    }).format(now)
-  );
+  return hourInTimezone("Asia/Kolkata", now);
+}
+
+/** Hour of day (0-23) in the workspace's timezone (global outreach). */
+export function hourInTimezone(timezone: string, now: Date = new Date()): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-GB", {
+        hour: "numeric",
+        hour12: false,
+        timeZone: timezone,
+      }).format(now)
+    );
+  } catch {
+    // Unknown/garbled timezone string — fall back to server time.
+    return now.getHours();
+  }
 }

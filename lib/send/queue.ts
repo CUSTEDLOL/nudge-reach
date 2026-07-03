@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { canSendMarketing } from "@/lib/consent";
 import { sendMessage } from "@/lib/messaging";
 import { checkMessageLimit } from "@/lib/billing/limits";
+import { getMessageRateMinor } from "@/lib/billing";
+import { isCurrency } from "@/lib/billing/money";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import {
   isForwardTransition,
@@ -238,7 +240,16 @@ export async function releaseDueCampaigns(): Promise<number> {
 /** Simulation only: advance message statuses on the deterministic timeline. */
 export async function applySimulatedProgress(campaignId: string): Promise<void> {
   if (env.SEND_MODE !== "simulation") return;
-  const rate = Math.round((env.WHATSAPP_MARKETING_RATE_INR ?? 0.99) * 100);
+  // Accrue simulated cost in the org's billing currency (global outreach).
+  const campaignOrg = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { org: { select: { currency: true } } },
+  });
+  const rate = getMessageRateMinor(
+    campaignOrg && isCurrency(campaignOrg.org.currency)
+      ? campaignOrg.org.currency
+      : "INR"
+  );
 
   const messages = await prisma.message.findMany({
     where: {

@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { Check, MessageSquare, Wallet, Users } from "lucide-react";
 import { requireOrgContext } from "@/lib/auth";
 import { env } from "@/lib/env";
-import { formatInr, getMonthlyUsage } from "@/lib/billing";
-import { PLANS, getPlan } from "@/lib/billing/plans";
+import { formatMoney, getMonthlyUsage } from "@/lib/billing";
+import { PLANS, getPlan, planPrice } from "@/lib/billing/plans";
+import { formatPlanPrice, orgCurrency } from "@/lib/billing/money";
 import { isRazorpayConfigured } from "@/lib/billing/razorpay";
+import { isStripeConfigured } from "@/lib/billing/stripe";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
@@ -24,7 +26,10 @@ export default async function BillingSettingsPage() {
   const usage = await getMonthlyUsage(org.id);
   const currentPlan = getPlan(org.plan);
   const simulation = env.SEND_MODE === "simulation";
-  const paymentsOn = isRazorpayConfigured();
+  const currency = orgCurrency(org);
+  const gatewayName = currency === "USD" ? "Stripe" : "Razorpay";
+  const paymentsOn =
+    currency === "USD" ? isStripeConfigured() : isRazorpayConfigured();
   const canManage = role === "OWNER" || role === "ADMIN";
 
   return (
@@ -59,7 +64,7 @@ export default async function BillingSettingsPage() {
             </p>
           </div>
           {!paymentsOn && (
-            <Badge tone="neutral">Add Razorpay keys to enable payments</Badge>
+            <Badge tone="neutral">Add {gatewayName} keys to enable payments</Badge>
           )}
         </Card>
       </div>
@@ -78,7 +83,7 @@ export default async function BillingSettingsPage() {
           />
           <StatCard
             label="Message cost"
-            value={formatInr(usage.costMinorUnits)}
+            value={formatMoney(usage.costMinorUnits, usage.currency)}
             icon={<Wallet className="h-4 w-4" aria-hidden />}
             hint={simulation ? "estimated (simulation)" : "billed by Meta"}
           />
@@ -100,8 +105,10 @@ export default async function BillingSettingsPage() {
           title="Plans"
           description={
             paymentsOn
-              ? "Upgrade any time — you're charged securely via Razorpay."
-              : "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to turn on checkout."
+              ? `Upgrade any time — you're charged securely via ${gatewayName}.`
+              : currency === "USD"
+                ? "Set STRIPE_SECRET_KEY to turn on checkout."
+                : "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to turn on checkout."
           }
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -127,8 +134,10 @@ export default async function BillingSettingsPage() {
                   )}
                 </div>
                 <p className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900">
-                  {plan.priceInr === 0 ? "Free" : `₹${plan.priceInr.toLocaleString("en-IN")}`}
-                  {plan.priceInr > 0 && (
+                  {planPrice(plan, currency) === 0
+                    ? "Free"
+                    : formatPlanPrice(planPrice(plan, currency), currency)}
+                  {planPrice(plan, currency) > 0 && (
                     <span className="text-sm font-normal text-neutral-400">
                       {" "}
                       / month

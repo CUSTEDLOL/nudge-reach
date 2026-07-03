@@ -18,6 +18,7 @@ export function SchedulePanel({
   audienceName,
   optedInCount,
   ratePaise,
+  currencySymbol = "₹",
   simulation,
 }: {
   campaignId: string;
@@ -25,6 +26,7 @@ export function SchedulePanel({
   audienceName: string;
   optedInCount: number;
   ratePaise: number;
+  currencySymbol?: string;
   simulation: boolean;
 }) {
   const { toast } = useToast();
@@ -96,7 +98,7 @@ export function SchedulePanel({
             Est. cost
           </dt>
           <dd className="mt-1 text-sm font-medium text-neutral-900">
-            ₹{(estimate / 100).toFixed(2)}{" "}
+            {currencySymbol}{(estimate / 100).toFixed(2)}{" "}
             <span className="text-xs font-normal text-neutral-400">
               (estimate)
             </span>

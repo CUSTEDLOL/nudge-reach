@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { VERTICALS } from "@/lib/dashboard/verticals";
+import { COUNTRY_PRESETS } from "@/lib/billing/money";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,8 @@ const STEPS = [
 export interface WizardProps {
   orgName: string;
   vertical: string | null;
+  /** COUNTRY_PRESETS code derived from the org's dial code ("" if custom). */
+  country: string;
   whatsappConnected: boolean;
   whatsappDisplayName: string | null;
   simulationMode: boolean;
@@ -150,6 +153,26 @@ export function OnboardingWizard(props: WizardProps) {
                   </option>
                 ))}
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="country">Where is your business?</Label>
+              <Select
+                id="country"
+                name="country"
+                defaultValue={props.country || "IN"}
+                required
+                className="mt-1.5"
+              >
+                {COUNTRY_PRESETS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label} ({c.dialCode} · bills in {c.currency})
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1.5 text-xs text-neutral-400">
+                Sets your phone country code, currency and timezone — you can
+                change it later in Settings.
+              </p>
             </div>
             <div className="mt-1 flex justify-end">
               <Button type="submit" loading={profilePending}>

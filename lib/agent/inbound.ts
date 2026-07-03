@@ -29,7 +29,13 @@ export async function handleInboundMessage(
   fromPhone: string,
   text: string
 ): Promise<InboundResult> {
-  const phoneE164 = normalizePhoneE164(fromPhone) ?? fromPhone;
+  // Meta's webhook always sends `from` with the country code but no "+"
+  // (e.g. "919876543210", "971501234567") — so a bare digit string is an
+  // international number as-is, never a local number to prefix.
+  const digits = fromPhone.replace(/[\s\-().]/g, "");
+  const phoneE164 = /^\d{8,15}$/.test(digits)
+    ? `+${digits}`
+    : (normalizePhoneE164(fromPhone) ?? fromPhone);
 
   // Find or create the contact (an inbound message is not marketing opt-in,
   // but it does open a service conversation).

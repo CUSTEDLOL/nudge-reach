@@ -45,7 +45,10 @@ function revalidateContact(id?: string) {
 export async function addContact(formData: FormData): Promise<ActionResult> {
   const org = await requireOrg();
   const name = String(formData.get("name") ?? "").trim();
-  const phone = normalizePhoneE164(String(formData.get("phone") ?? ""));
+  const phone = normalizePhoneE164(
+    String(formData.get("phone") ?? ""),
+    org.dialCode
+  );
   const optedIn = formData.get("optedIn") === "on";
   const optInSource = String(formData.get("optInSource") ?? "manual");
   const rawEmail = String(formData.get("email") ?? "");
@@ -138,7 +141,7 @@ export async function importContactsCsv(
   const newPhones = new Set<string>();
   for (const row of rows) {
     const [name, rawPhone] = row.split(",").map((s) => s?.trim() ?? "");
-    const phone = rawPhone ? normalizePhoneE164(rawPhone) : null;
+    const phone = rawPhone ? normalizePhoneE164(rawPhone, org.dialCode) : null;
     if (name && phone && !existingPhones.has(phone)) newPhones.add(phone);
   }
   const limit = await checkContactLimit(org.id, newPhones.size);
@@ -151,7 +154,7 @@ export async function importContactsCsv(
     const [name, rawPhone, rawEmail] = row
       .split(",")
       .map((s) => s?.trim() ?? "");
-    const phone = rawPhone ? normalizePhoneE164(rawPhone) : null;
+    const phone = rawPhone ? normalizePhoneE164(rawPhone, org.dialCode) : null;
     if (!name || !phone) {
       skipped++;
       continue;
@@ -219,7 +222,10 @@ export async function updateContact(
     data.name = name;
   }
   if (formData.has("phone")) {
-    const phone = normalizePhoneE164(String(formData.get("phone") ?? ""));
+    const phone = normalizePhoneE164(
+      String(formData.get("phone") ?? ""),
+      org.dialCode
+    );
     if (!phone)
       return { ok: false, message: "That phone number doesn't look right." };
     data.phoneE164 = phone;

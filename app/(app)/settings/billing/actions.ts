@@ -4,13 +4,16 @@ import { revalidatePath } from "next/cache";
 import { requireOrgContext, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { recordAudit } from "@/lib/audit";
-import { getPlan } from "@/lib/billing/plans";
+import { getPlan, planPrice } from "@/lib/billing/plans";
+import { orgCurrency } from "@/lib/billing/money";
 import {
   createRazorpayOrder,
   isRazorpayConfigured,
   razorpayKeyId,
   verifyPaymentSignature,
 } from "@/lib/billing/razorpay";
+import { createStripeCheckout, isStripeConfigured } from "@/lib/billing/stripe";
+import { appOrigin } from "@/lib/email";
 
 export interface ActionResult {
   ok: boolean;
@@ -18,7 +21,7 @@ export interface ActionResult {
 }
 
 export interface StartCheckoutResult extends ActionResult {
-  /** Present on success — hands the browser what Razorpay Checkout needs. */
+  /** INR path — hands the browser what the Razorpay widget needs. */
   checkout?: {
     keyId: string;
     orderId: string;
@@ -27,12 +30,14 @@ export interface StartCheckoutResult extends ActionResult {
     planId: string;
     planName: string;
   };
+  /** USD path — hosted Stripe Checkout; the browser redirects here. */
+  redirectUrl?: string;
 }
 
 /**
- * Start a plan upgrade: creates a Razorpay order server-side and returns what
- * the browser checkout widget needs. Gated on Razorpay keys — with none, the
- * UI never calls this (shows an "add keys" state instead).
+ * Start a plan upgrade in the org's billing currency: INR → Razorpay widget,
+ * USD → hosted Stripe Checkout redirect. Each path is gated on its own keys;
+ * the UI shows an "add keys" state when the relevant gateway is off.
  */
 export async function startCheckoutAction(
   formData: FormData
@@ -40,6 +45,36 @@ export async function startCheckoutAction(
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+
+    const planId = String(formData.get("planId") ?? "");
+    const plan = getPlan(planId);
+    if (plan.id === "free") {
+      return { ok: false, message: "Pick a paid plan to upgrade." };
+    }
+
+    const currency = orgCurrency(ctx.org);
+
+    if (currency === "USD") {
+      if (!isStripeConfigured()) {
+        return {
+          ok: false,
+          message:
+            "Payments aren't switched on yet — add your Stripe keys to enable USD checkout.",
+        };
+      }
+      const base = appOrigin();
+      const session = await createStripeCheckout({
+        amountCents: planPrice(plan, "USD") * 100,
+        planId: plan.id,
+        planName: plan.name,
+        orgId: ctx.org.id,
+        orgName: ctx.org.name,
+        successUrl: `${base}/settings/billing?upgraded=1`,
+        cancelUrl: `${base}/settings/billing`,
+      });
+      return { ok: true, message: "Redirecting to Stripe…", redirectUrl: session.url };
+    }
+
     if (!isRazorpayConfigured()) {
       return {
         ok: false,
@@ -48,14 +83,8 @@ export async function startCheckoutAction(
       };
     }
 
-    const planId = String(formData.get("planId") ?? "");
-    const plan = getPlan(planId);
-    if (plan.id === "free") {
-      return { ok: false, message: "Pick a paid plan to upgrade." };
-    }
-
     const order = await createRazorpayOrder(
-      plan.priceInr * 100,
+      planPrice(plan, "INR") * 100,
       `plan_${plan.id}_${ctx.org.id}`.slice(0, 40),
       { orgId: ctx.org.id, planId: plan.id }
     );

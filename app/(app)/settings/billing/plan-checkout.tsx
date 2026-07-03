@@ -56,7 +56,16 @@ export function PlanCheckout({
       const fd = new FormData();
       fd.set("planId", planId);
       const res = await startCheckoutAction(fd);
-      if (!res.ok || !res.checkout) {
+      if (!res.ok) {
+        toast({ tone: "error", description: res.message });
+        return;
+      }
+      // USD orgs: hosted Stripe Checkout — leave the app.
+      if (res.redirectUrl) {
+        window.location.assign(res.redirectUrl);
+        return;
+      }
+      if (!res.checkout) {
         toast({ tone: "error", description: res.message });
         return;
       }

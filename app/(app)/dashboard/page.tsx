@@ -26,11 +26,11 @@ import {
 } from "@/lib/dashboard/stats";
 import {
   formatCount,
-  formatInrRupees,
+  formatMajorAmount,
   formatPercent,
   formatRelativeTime,
   greetingForHour,
-  istHour,
+  hourInTimezone,
 } from "@/lib/dashboard/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/ui/page-header";
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         className="mb-0"
-        title={`${greetingForHour(istHour())}, ${firstName}`}
+        title={`${greetingForHour(hourInTimezone(org.timezone))}, ${firstName}`}
         description={`${today} · Here's how ${org.name} is doing.`}
         actions={
           <Link href="/campaigns/new" className={buttonVariants()}>
@@ -113,9 +113,9 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Revenue influenced"
-          value={formatInrRupees(revenueInr)}
+          value={formatMajorAmount(revenueInr, org.currency)}
           icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-          hint={`Estimate · ${formatCount(data.wonContactCount)} won × ${formatInrRupees(avgOrderValueInr)}`}
+          hint={`Estimate · ${formatCount(data.wonContactCount)} won × ${formatMajorAmount(avgOrderValueInr, org.currency)}`}
         />
         <StatCard
           label="Messages sent"

@@ -26,7 +26,10 @@ const timeFmt = new Intl.DateTimeFormat("en-IN", {
   timeStyle: "short",
 });
 
-const columns: DataTableColumn<RecipientRow>[] = [
+// Columns depend on the workspace's currency symbol (global outreach).
+const buildColumns = (
+  currencySymbol: string
+): DataTableColumn<RecipientRow>[] => [
   {
     key: "name",
     header: "Contact",
@@ -56,7 +59,7 @@ const columns: DataTableColumn<RecipientRow>[] = [
     sortValue: (r) => r.costMinor ?? 0,
     cell: (r) => (
       <span className="tabular-nums">
-        {r.costMinor != null ? `₹${(r.costMinor / 100).toFixed(2)}` : "—"}
+        {r.costMinor != null ? `${currencySymbol}${(r.costMinor / 100).toFixed(2)}` : "—"}
       </span>
     ),
   },
@@ -73,7 +76,13 @@ const columns: DataTableColumn<RecipientRow>[] = [
 ];
 
 /** Per-recipient delivery table shown under the stats (SENDING/SENT). */
-export function RecipientsTable({ rows }: { rows: RecipientRow[] }) {
+export function RecipientsTable({
+  rows,
+  currencySymbol = "₹",
+}: {
+  rows: RecipientRow[];
+  currencySymbol?: string;
+}) {
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold text-neutral-900">
@@ -81,7 +90,7 @@ export function RecipientsTable({ rows }: { rows: RecipientRow[] }) {
         <span className="font-normal text-neutral-400">({rows.length})</span>
       </h2>
       <DataTable
-        columns={columns}
+        columns={buildColumns(currencySymbol)}
         rows={rows}
         rowKey={(r) => r.id}
         searchValue={(r) => `${r.name} ${r.phone}`}

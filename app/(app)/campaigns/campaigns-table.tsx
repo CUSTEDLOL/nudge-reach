@@ -52,7 +52,9 @@ function StatusCell({ row }: { row: CampaignRow }) {
   );
 }
 
-const columns: DataTableColumn<CampaignRow>[] = [
+const buildColumns = (
+  currencySymbol: string
+): DataTableColumn<CampaignRow>[] => [
   {
     key: "name",
     header: "Campaign",
@@ -120,7 +122,7 @@ const columns: DataTableColumn<CampaignRow>[] = [
     sortValue: (r) => r.costMinor,
     cell: (r) => (
       <span className="tabular-nums">
-        {r.costMinor > 0 ? `₹${(r.costMinor / 100).toFixed(2)}` : "—"}
+        {r.costMinor > 0 ? `${currencySymbol}${(r.costMinor / 100).toFixed(2)}` : "—"}
       </span>
     ),
   },
@@ -136,7 +138,13 @@ const columns: DataTableColumn<CampaignRow>[] = [
   },
 ];
 
-export function CampaignsTable({ rows }: { rows: CampaignRow[] }) {
+export function CampaignsTable({
+  rows,
+  currencySymbol = "₹",
+}: {
+  rows: CampaignRow[];
+  currencySymbol?: string;
+}) {
   const router = useRouter();
 
   if (rows.length === 0) {
@@ -156,7 +164,7 @@ export function CampaignsTable({ rows }: { rows: CampaignRow[] }) {
 
   return (
     <DataTable
-      columns={columns}
+      columns={buildColumns(currencySymbol)}
       rows={rows}
       rowKey={(r) => r.id}
       searchValue={(r) => `${r.name} ${r.audienceName ?? ""}`}

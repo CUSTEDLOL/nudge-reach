@@ -33,12 +33,14 @@ export function RunPanel({
   audiences,
   defaultAudienceId,
   ratePaise,
+  currencySymbol = "₹",
   simulation,
 }: {
   campaignId: string;
   audiences: AudienceOption[];
   defaultAudienceId?: string | null;
   ratePaise: number;
+  currencySymbol?: string;
   simulation: boolean;
 }) {
   const [audienceId, setAudienceId] = useState(
@@ -121,9 +123,9 @@ export function RunPanel({
               Estimated cost
             </p>
             <p className="mt-1">
-              {selected?.optedInCount ?? 0} × ₹{(ratePaise / 100).toFixed(2)} ={" "}
+              {selected?.optedInCount ?? 0} × {currencySymbol}{(ratePaise / 100).toFixed(2)} ={" "}
               <span className="font-semibold text-neutral-900">
-                ₹{(estimate / 100).toFixed(2)}
+                {currencySymbol}{(estimate / 100).toFixed(2)}
               </span>{" "}
               <span className="text-xs text-neutral-400">(estimate)</span>
             </p>

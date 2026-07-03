@@ -9,7 +9,8 @@ import {
   Send,
 } from "lucide-react";
 import { requireOrg } from "@/lib/auth";
-import { formatInr } from "@/lib/billing";
+import { formatMoney } from "@/lib/billing";
+import { orgCurrency } from "@/lib/billing/money";
 import {
   countDelta,
   formatMinutes,
@@ -76,6 +77,7 @@ export default async function AnalyticsPage({
   searchParams: Promise<{ range?: string | string[] }>;
 }) {
   const org = await requireOrg();
+  const currency = orgCurrency(org);
   const days = parseRange((await searchParams).range);
 
   if (!(await hasAnyMessages(org.id))) {
@@ -160,7 +162,7 @@ export default async function AnalyticsPage({
         />
         <StatCard
           label="Campaign spend"
-          value={formatInr(current.totals.costMinorUnits)}
+          value={formatMoney(current.totals.costMinorUnits, currency)}
           delta={spendDelta && { ...spendDelta, direction: "neutral" }}
           icon={<IndianRupee className="h-4 w-4" aria-hidden />}
           hint="estimate"
@@ -277,7 +279,7 @@ export default async function AnalyticsPage({
                         {c.failed.toLocaleString("en-IN")}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatInr(c.costMinorUnits)}
+                        {formatMoney(c.costMinorUnits, currency)}
                       </TableCell>
                     </TableRow>
                   ))}

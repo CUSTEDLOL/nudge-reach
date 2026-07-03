@@ -35,10 +35,14 @@ export const envSchema = z
     // Pricing config (estimate shown to retailers; verify against Meta)
     WHATSAPP_MARKETING_RATE_INR: z.coerce.number().positive().default(0.99),
 
-    // Payments — Razorpay (optional; billing runs in free mode without them)
+    // Payments — Razorpay for INR orgs (optional; free mode without keys)
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
     RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+    // Payments — Stripe for USD orgs / global markets (optional)
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
     // Transactional email — Resend (optional; invites auto-join without it)
     RESEND_API_KEY: z.string().optional(),

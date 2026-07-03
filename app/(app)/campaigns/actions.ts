@@ -8,9 +8,13 @@ import { requireOrg, requireOrgContext, requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { canSendMarketing } from "@/lib/consent";
 import { buildContactWhere, type SegmentFilter } from "@/lib/segments";
-import { estimateCampaignCost, formatInr } from "@/lib/billing";
+import { estimateCampaignCost, formatMoney } from "@/lib/billing";
+import { orgCurrency } from "@/lib/billing/money";
 import { recordAudit } from "@/lib/audit";
-import { generateCampaignContent } from "@/lib/campaign/generate";
+import {
+  generateCampaignContent,
+  marketVoiceForDialCode,
+} from "@/lib/campaign/generate";
 import { repairAndValidate } from "@/lib/campaign/guardrails";
 import {
   campaignContentSchema,
@@ -113,9 +117,20 @@ async function createCampaignFromPhoto(
     };
   }
 
+  // Market voice: Indian workspaces keep the Hinglish-friendly voice,
+  // everyone else gets clear international English.
+  const orgRow = await prisma.org.findUnique({
+    where: { id: orgId },
+    select: { dialCode: true },
+  });
+
   let content: CampaignContent;
   try {
-    content = await generateCampaignContent({ description, image });
+    content = await generateCampaignContent({
+      description,
+      image,
+      voice: marketVoiceForDialCode(orgRow?.dialCode ?? "+91"),
+    });
   } catch (err) {
     return {
       ok: false,
@@ -408,14 +423,15 @@ export async function wizardAudienceAction(
   });
   revalidatePath(`/campaigns/${campaign.id}`);
 
-  const estimate = estimateCampaignCost(optedInCount);
+  const currency = orgCurrency(org);
+  const estimate = estimateCampaignCost(optedInCount, currency);
   return {
     ok: true,
     message: "Audience locked in.",
     audienceId,
     audienceName,
     optedInCount,
-    estimatedCostLabel: formatInr(estimate.totalMinorUnits),
+    estimatedCostLabel: formatMoney(estimate.totalMinorUnits, currency),
   };
 }
 
