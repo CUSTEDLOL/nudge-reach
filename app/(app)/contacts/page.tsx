@@ -49,10 +49,14 @@ export default async function ContactsPage({
         where: { orgId: org.id },
         orderBy: { createdAt: "asc" },
       }),
+      // Opted-in contacts for the "create audience" picker. Capped so a
+      // large org doesn't serialize tens of thousands of rows to the client
+      // on every contacts-page view (dynamic segments cover big audiences).
       prisma.contact.findMany({
         where: { orgId: org.id, optedIn: true, optedOutAt: null },
         select: { id: true, name: true, phoneE164: true },
         orderBy: { name: "asc" },
+        take: 1000,
       }),
     ]);
 

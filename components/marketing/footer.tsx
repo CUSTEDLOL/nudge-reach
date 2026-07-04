@@ -30,6 +30,13 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Book a demo", href: "/waitlist" },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+    ],
+  },
 ];
 
 export function Footer() {
@@ -37,7 +44,7 @@ export function Footer() {
     <footer className="relative overflow-hidden bg-ink text-white">
       <div className="bg-linegrid pointer-events-none absolute inset-0 opacity-30" />
       <Container className="relative z-10 py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
             <Logo tone="dark" />
             <p className="mt-4 text-[14.5px] leading-relaxed text-white/55">

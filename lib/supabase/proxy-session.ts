@@ -13,6 +13,8 @@ const PUBLIC_PATHS = [
   "/api/cron",
   "/waitlist",
   "/api/waitlist",
+  "/privacy",
+  "/terms",
 ];
 
 /**

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { requireOrg } from "@/lib/auth";
-import { canSendMarketing } from "@/lib/consent";
 import { campaignContentSchema } from "@/lib/campaign/schema";
 import { refreshTemplateStatus } from "@/lib/whatsapp/approval";
 import {
@@ -83,16 +82,31 @@ export default async function CampaignPage({
 
   let audiences: { id: string; name: string; optedInCount: number }[] = [];
   if (campaign.status === "TEMPLATE_APPROVED" || isScheduled) {
-    const rows = await prisma.audience.findMany({
-      where: { orgId: org.id },
-      include: { contacts: { include: { contact: true } } },
-      orderBy: { createdAt: "desc" },
-    });
+    // Count opted-in members per audience WITHOUT loading contact rows — a
+    // groupBy over the join table scales to large audiences (was loading every
+    // contact of every audience into memory just to count).
+    const [rows, grouped] = await Promise.all([
+      prisma.audience.findMany({
+        where: { orgId: org.id },
+        select: { id: true, name: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.audienceContact.groupBy({
+        by: ["audienceId"],
+        where: {
+          audience: { orgId: org.id },
+          contact: { optedIn: true, optedOutAt: null },
+        },
+        _count: { contactId: true },
+      }),
+    ]);
+    const countByAudience = new Map(
+      grouped.map((g) => [g.audienceId, g._count.contactId])
+    );
     audiences = rows.map((a) => ({
       id: a.id,
       name: a.name,
-      optedInCount: a.contacts.filter((m) => canSendMarketing(m.contact))
-        .length,
+      optedInCount: countByAudience.get(a.id) ?? 0,
     }));
   }
   const scheduledAudience = isScheduled
