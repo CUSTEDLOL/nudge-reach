@@ -10,6 +10,7 @@ export const AUTOMATION_TRIGGERS = [
   "contact_created",
   "tag_added",
   "campaign_reply",
+  "booking_created",
 ] as const;
 
 export type AutomationTrigger = (typeof AUTOMATION_TRIGGERS)[number];
@@ -41,6 +42,7 @@ export const TRIGGER_LABELS: Record<AutomationTrigger, string> = {
   contact_created: "Contact created",
   tag_added: "Tag added",
   campaign_reply: "Campaign reply",
+  booking_created: "Booking created",
 };
 
 export const STEP_LABELS: Record<StepKind, string> = {

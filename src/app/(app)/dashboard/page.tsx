@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowRight,
+  CalendarCheck,
   Check,
   CheckCheck,
   Eye,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { getDashboardData } from "@/modules/dashboard/queries";
+import { getRecoveryMetrics } from "@/modules/followup/metrics";
 import type { RecentCampaign, RecentConversation } from "@/modules/dashboard/queries";
 import {
   estimateRevenueInfluencedInr,
@@ -44,6 +46,7 @@ import { buttonVariants } from "@/components/ui/button";
 export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
   const data = await getDashboardData(org.id);
+  const recovery = await getRecoveryMetrics(org.id);
 
   // First visit with an empty workspace → guided setup (spec §M1).
   if (!org.onboardedAt && data.contactCount === 0) {
@@ -116,6 +119,16 @@ export default async function DashboardPage() {
           value={formatMajorAmount(revenueInr, org.currency)}
           icon={<IndianRupee className="h-4 w-4" aria-hidden />}
           hint={`Estimate · ${formatCount(data.wonContactCount)} won × ${formatMajorAmount(avgOrderValueInr, org.currency)}`}
+        />
+        <StatCard
+          label="Bookings this month"
+          value={formatCount(recovery.bookingsThisMonth)}
+          icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
+          hint={
+            recovery.enabled
+              ? `${formatCount(recovery.followUpsThisMonth)} follow-ups sent`
+              : "Turn on Revenue Recovery"
+          }
         />
         <StatCard
           label="Messages sent"

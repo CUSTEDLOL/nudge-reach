@@ -1,4 +1,5 @@
 import {
+  CalendarCheck,
   CheckCircle2,
   Clock,
   FileText,
@@ -65,6 +66,11 @@ const TRIGGER_DETAILS: Record<
     description: "A contact replies within 7 days of a campaign.",
     icon: Megaphone,
     tone: "brand",
+  },
+  booking_created: {
+    description: "The agent books an appointment into your calendar.",
+    icon: CalendarCheck,
+    tone: "success",
   },
 };
 

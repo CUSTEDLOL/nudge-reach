@@ -6,6 +6,9 @@ import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { env } from "@/lib/env";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
+import { getCalendarAccount } from "@/modules/calendar";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import { CalendarCard } from "./calendar-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,8 +40,10 @@ export default async function IntegrationsPage() {
     );
   }
 
-  const [account, apiKeys, endpoints, headerList] = await Promise.all([
-    getWhatsappAccount(ctx.org.id),
+  const [account, calendarAccount, apiKeys, endpoints, headerList] =
+    await Promise.all([
+      getWhatsappAccount(ctx.org.id),
+      getCalendarAccount(ctx.org.id),
     prisma.apiKey.findMany({
       where: { orgId: ctx.org.id },
       orderBy: { createdAt: "desc" },
@@ -152,6 +157,14 @@ export default async function IntegrationsPage() {
             </p>
           </div>
         </Card>
+
+        {/* AI Front Desk: real-calendar booking (the moat) */}
+        <CalendarCard
+          connected={Boolean(calendarAccount)}
+          email={calendarAccount?.accountEmail}
+          simulated={calendarAccount?.simulated ?? false}
+          hasFrontDesk={planHasAiFrontDesk(ctx.org.plan)}
+        />
 
         {/* Outbound webhooks (real — Zapier/Make/n8n/custom) */}
         <WebhooksCard webhooks={serializedWebhooks} canManage={canManage} />

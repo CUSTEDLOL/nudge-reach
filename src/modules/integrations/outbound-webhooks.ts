@@ -18,6 +18,7 @@ export const WEBHOOK_EVENTS = [
   { value: "message.sent", label: "Message sent to a contact" },
   { value: "campaign.completed", label: "Campaign finished sending" },
   { value: "contact.created", label: "New contact created" },
+  { value: "booking.created", label: "Appointment booked" },
   { value: "conversation.assigned", label: "Conversation assigned to an agent" },
   { value: "automation.run", label: "Automation executed" },
 ] as const;

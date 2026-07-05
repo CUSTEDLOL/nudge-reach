@@ -48,6 +48,14 @@ export const envSchema = z
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
 
+    // Google Calendar OAuth (optional). Left empty, "Connect calendar" works in
+    // SIMULATION with a mocked calendar — no Google app needed. Fill these only
+    // for real OAuth. Deliberately NOT in the live superRefine below: even a
+    // live WhatsApp deployment must boot without a calendar.
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_OAUTH_REDIRECT_URI: z.string().optional(),
+
     // Cron protection (optional): when set, /api/cron/* requires
     // "Authorization: Bearer <CRON_SECRET>" (Vercel Cron sends it natively).
     CRON_SECRET: z.string().optional(),

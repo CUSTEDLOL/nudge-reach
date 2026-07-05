@@ -69,6 +69,8 @@ model Org {
   webhookEndpoints WebhookEndpoint[]
   auditLogs        AuditLog[]
   bookingRequests  BookingRequest[]
+  calendarAccount  CalendarAccount?
+  followUpConfig   FollowUpConfig?
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -537,12 +539,55 @@ model BookingRequest {
   requestedFor   String
   partySize      Int?
   notes          String?
-  status         String   @default("pending") // pending | confirmed | declined
+  status         String   @default("pending") // pending | confirmed | declined | no_show | completed
+  // Parsed appointment instant (when we could resolve one) — powers the T-24h/
+  // T-2h reminders and no-show detection. Null when only free text is known.
+  scheduledFor   DateTime?
+  // Real calendar event id when the agent booked into a connected calendar.
+  calendarEventId String?
+  // Revenue-Recovery follow-up idempotency stamps (5.2): set once each fires.
+  reminder24SentAt DateTime?
+  reminder2SentAt  DateTime?
+  reviewAskedAt    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@index([orgId, status])
   @@index([contactId])
+  @@index([scheduledFor])
+}
+
+// Per-org Revenue-Recovery follow-up config (5.2). One toggle turns the whole
+// pack on; the individual recipe flags let a founder trim it later.
+model FollowUpConfig {
+  id                String   @id @default(cuid())
+  orgId             String   @unique
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  enabled           Boolean  @default(false)
+  bookingReminders  Boolean  @default(true)
+  noShowRebook      Boolean  @default(true)
+  postServiceReview Boolean  @default(true)
+  leadNudge         Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Per-org connected booking calendar (Google). One per org (MVP), mirroring
+// WhatsappAccount. In simulation the row is written with simulated=true and a
+// "sim" sentinel token so the whole booking flow demos with zero Google setup.
+model CalendarAccount {
+  id                    String   @id @default(cuid())
+  orgId                 String   @unique
+  org                   Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider              String   @default("google")
+  accountEmail          String
+  calendarId            String   @default("primary")
+  // Encrypted OAuth refresh token (live). Holds the literal "sim" when simulated.
+  refreshTokenEncrypted String
+  simulated             Boolean  @default(false)
+  status                String   @default("connected")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model Audience {

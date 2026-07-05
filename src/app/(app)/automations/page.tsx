@@ -4,16 +4,22 @@ import { Plus, Workflow } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { hasRole, requireOrgContext } from "@/modules/orgs/auth";
 import { parseKeywordConfig } from "@/modules/automation/definitions";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import { getRecoveryMetrics } from "@/modules/followup/metrics";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { AutomationsList, type AutomationRow } from "./automations-list";
+import { RevenueRecoveryCard } from "./revenue-recovery-card";
 
 export const metadata: Metadata = { title: "Automations" };
 
 export default async function AutomationsPage() {
   const { org, role } = await requireOrgContext();
   const canManage = hasRole(role, "ADMIN");
+
+  const recovery = await getRecoveryMetrics(org.id);
+  const hasFrontDesk = planHasAiFrontDesk(org.plan);
 
   const automations = await prisma.automation.findMany({
     where: { orgId: org.id },
@@ -58,6 +64,15 @@ export default async function AutomationsPage() {
           )
         }
       />
+      <div className="mb-6">
+        <RevenueRecoveryCard
+          enabled={recovery.enabled}
+          hasFrontDesk={hasFrontDesk}
+          bookingsThisMonth={recovery.bookingsThisMonth}
+          followUpsThisMonth={recovery.followUpsThisMonth}
+          canManage={canManage}
+        />
+      </div>
       {rows.length === 0 ? (
         <EmptyState
           icon={<Workflow className="h-5 w-5" aria-hidden />}

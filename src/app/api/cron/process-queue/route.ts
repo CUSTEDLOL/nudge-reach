@@ -8,6 +8,7 @@ import {
   releaseDueCampaigns,
 } from "@/modules/send/queue";
 import { tickAutomationRuns } from "@/modules/automation/engine";
+import { tickBookingReminders } from "@/modules/followup/reminders";
 
 /**
  * Queue tick: releases due SCHEDULED campaigns, resumes WAITING automation
@@ -37,6 +38,10 @@ export async function GET(request: Request) {
   // 2. Automation runs parked on a `wait` step whose resumeAt is due (§M6).
   const resumedRuns = await tickAutomationRuns();
 
+  // 2b. Revenue-Recovery follow-ups: T-24h/T-2h reminders, no-show rebooks,
+  //     post-service review asks (5.2). Consent + template-gated like every send.
+  const followUps = await tickBookingReminders();
+
   // 3. Advance every SENDING campaign (including freshly released ones).
   const sending = await prisma.campaign.findMany({
     where: { status: "SENDING" },
@@ -51,6 +56,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     released,
     resumedRuns,
+    followUps,
     campaigns: sending.length,
     processed,
   });

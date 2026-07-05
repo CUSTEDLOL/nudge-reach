@@ -39,6 +39,22 @@ export async function fireContactCreated(
   }
 }
 
+export async function fireBookingCreated(
+  orgId: string,
+  contactId: string,
+  bookingId: string
+): Promise<void> {
+  // Only ever runs outbound sends → never re-enters inbound (loop-safe, same
+  // guarantee as the other triggers).
+  void dispatchWebhook(orgId, "booking.created", { bookingId, contactId });
+  try {
+    const matched = await matchAutomations("booking_created", { orgId });
+    await runMatched(matched, orgId, contactId, "booking_created");
+  } catch (error) {
+    console.error("[automations] fireBookingCreated failed", error);
+  }
+}
+
 export async function fireTagAdded(
   orgId: string,
   contactId: string,

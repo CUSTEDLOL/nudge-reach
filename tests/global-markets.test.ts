@@ -62,7 +62,7 @@ describe("money", () => {
 
   it("every plan has a sensible USD price ladder", () => {
     const usd = PLANS.map((p) => planPrice(p, "USD"));
-    expect(usd).toEqual([0, 29, 69, 159]);
+    expect(usd).toEqual([0, 29, 69, 159, 179]);
     for (let i = 1; i < usd.length; i++) expect(usd[i]).toBeGreaterThan(usd[i - 1]);
   });
 

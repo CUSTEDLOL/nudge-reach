@@ -7,7 +7,9 @@ vi.mock("@/lib/db", () => ({
     conversation: { update: vi.fn().mockResolvedValue({}) },
     contact: { update: vi.fn().mockResolvedValue({}) },
     note: { create: vi.fn().mockResolvedValue({}) },
-    bookingRequest: { create: vi.fn().mockResolvedValue({}) },
+    bookingRequest: { create: vi.fn().mockResolvedValue({ id: "b1" }) },
+    // No calendar connected → the booking tool records the request + hands off.
+    calendarAccount: { findUnique: vi.fn().mockResolvedValue(null) },
   },
 }));
 

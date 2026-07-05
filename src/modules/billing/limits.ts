@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/db";
-import { getPlan, type Plan } from "@/modules/billing/plans";
+import { getPlan, PLANS, type Plan } from "@/modules/billing/plans";
+
+/** The flagship plan (AI Front Desk) — surfaced in gate messages + upsells. */
+export const AI_FRONT_DESK_PLAN = PLANS.find((p) => p.flagship)!;
+
+/** Pure: does this stored plan id include the AI Front Desk capability? */
+export function planHasAiFrontDesk(planId: string): boolean {
+  return getPlan(planId).limits.aiFrontDesk;
+}
 
 /**
  * Plan-limit enforcement (spec phase 6). One clean pattern everywhere:
@@ -81,6 +89,25 @@ export async function checkAutomationLimit(orgId: string): Promise<LimitCheck> {
   const plan = await planFor(orgId);
   const used = await prisma.automation.count({ where: { orgId } });
   return evaluateLimit(used, 1, plan.limits.automations, "automations", plan.name);
+}
+
+/**
+ * Flagship-only gate: calendar booking, the Revenue-Recovery follow-up engine,
+ * and the agent's real-action tools require the AI Front Desk plan. Single
+ * choke point — call it right before enabling any of those, exactly like the
+ * campaign-limit checks.
+ */
+export async function checkAiFrontDesk(orgId: string): Promise<LimitCheck> {
+  const plan = await planFor(orgId);
+  if (plan.limits.aiFrontDesk) {
+    return { allowed: true, message: "", used: 0, limit: null };
+  }
+  return {
+    allowed: false,
+    used: 0,
+    limit: 0,
+    message: `The AI Front Desk — calendar booking, the follow-up engine and agent actions — is on the ${AI_FRONT_DESK_PLAN.name} plan. Upgrade in Settings → Billing to switch it on.`,
+  };
 }
 
 /** Can this org queue `recipients` more campaign messages this month? */
