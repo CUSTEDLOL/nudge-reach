@@ -19,6 +19,21 @@ export interface ResolvedOrg {
   membership: Membership;
 }
 
+/**
+ * Prisma `org` relation filter: the caller OWNS the org OR holds a membership
+ * in it. Single source of truth for org-scoping the lightweight polling routes
+ * (campaign stats, template status) that skip a full `requireOrgContext()`.
+ *
+ * Owner-OR-member — the owner-only form silently 404'd the poll for non-owner
+ * teammates (M1). Keep both routes on this helper so the tenant-scope can't
+ * drift apart again.
+ */
+export function callerOrgFilter(userId: string): Prisma.OrgWhereInput {
+  return {
+    OR: [{ ownerUserId: userId }, { memberships: { some: { userId } } }],
+  };
+}
+
 export async function resolveOrgContext(
   userId: string,
   email?: string

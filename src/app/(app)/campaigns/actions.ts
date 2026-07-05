@@ -649,7 +649,19 @@ export async function sendScheduledNowAction(
 export async function updateCampaignAction(
   formData: FormData
 ): Promise<ActionResult> {
-  const org = await requireOrg();
+  // Editing a campaign overwrites its content and forces it back to DRAFT
+  // (invalidating any approval/schedule) — an org-wide mutation, so gate it to
+  // ADMIN like every other campaign action, not bare requireOrg().
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Not allowed.",
+    };
+  }
+  const org = ctx.org;
   const id = String(formData.get("campaignId") ?? "");
 
   const buttons: unknown[] = [];

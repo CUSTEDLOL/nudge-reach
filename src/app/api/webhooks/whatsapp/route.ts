@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { verifyWebhookSignature } from "@/modules/whatsapp/webhook-verify";
@@ -13,12 +14,22 @@ import type { MessageStatus } from "@prisma/client";
  * - inbound messages: STOP → permanent opt-out (rule 2)
  */
 
+/** Constant-time string compare (mirrors the HMAC checks elsewhere). */
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
 // Subscription verification handshake
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const expected = env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ?? "";
   if (
     searchParams.get("hub.mode") === "subscribe" &&
-    searchParams.get("hub.verify_token") === env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+    expected.length > 0 &&
+    timingSafeEqualStr(searchParams.get("hub.verify_token") ?? "", expected)
   ) {
     return new Response(searchParams.get("hub.challenge") ?? "", {
       status: 200,
@@ -71,7 +82,8 @@ export async function POST(request: Request) {
         );
       }
       if (change.field === "message_template_status_update") {
-        await processTemplateUpdate(change.value);
+        // entry.id is the WABA id — scope the update to the org that owns it.
+        await processTemplateUpdate(change.value, entry.id);
       }
     }
   }
@@ -86,6 +98,7 @@ export async function POST(request: Request) {
 interface WebhookPayload {
   object?: string;
   entry?: Array<{
+    id?: string; // the WABA id for this entry
     changes?: Array<{
       field?: string;
       value?: {
@@ -158,15 +171,26 @@ async function processInbound(
 }
 
 async function processTemplateUpdate(
-  value?: {
-    event?: string;
-    message_template_name?: string;
-    reason?: string;
-  }
+  value:
+    | {
+        event?: string;
+        message_template_name?: string;
+        reason?: string;
+      }
+    | undefined,
+  wabaId: string | undefined
 ) {
-  if (!value?.message_template_name || !value.event) return;
+  if (!value?.message_template_name || !value.event || !wabaId) return;
+  // Tenant isolation: template names are only unique per WABA, so resolve the
+  // org that owns this WABA and scope the lookup to it — a status event for one
+  // tenant must never flip another tenant's identically-named template.
+  const account = await prisma.whatsappAccount.findFirst({
+    where: { wabaId },
+    select: { orgId: true },
+  });
+  if (!account) return;
   const template = await prisma.template.findFirst({
-    where: { name: value.message_template_name },
+    where: { name: value.message_template_name, orgId: account.orgId },
     orderBy: { submittedAt: "desc" },
   });
   if (!template) return;

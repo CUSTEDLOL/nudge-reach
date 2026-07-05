@@ -8,6 +8,7 @@ import { getPlan, planPrice } from "@/modules/billing/plans";
 import { formatPlanPrice, orgCurrency } from "@/modules/billing/money";
 import {
   createRazorpayOrder,
+  fetchRazorpayOrder,
   isRazorpayConfigured,
   razorpayKeyId,
   verifyPaymentSignature,
@@ -125,11 +126,33 @@ export async function confirmCheckoutAction(
     const orderId = String(formData.get("razorpay_order_id") ?? "");
     const paymentId = String(formData.get("razorpay_payment_id") ?? "");
     const signature = String(formData.get("razorpay_signature") ?? "");
-    const planId = String(formData.get("planId") ?? "");
-    const plan = getPlan(planId);
 
     if (!verifyPaymentSignature({ orderId, paymentId, signature })) {
       return { ok: false, message: "Payment couldn't be verified. Not charged twice — try again." };
+    }
+
+    // The signature only proves a payment for (orderId, paymentId) happened —
+    // NOT which plan it was for. Never trust the client-supplied planId: derive
+    // the plan from the order's server-set notes and verify it belongs to this
+    // org and the captured amount matches the plan price. Otherwise a genuine
+    // ₹999 payment could be redeemed for the ₹5,999 tier (payment-integrity).
+    const order = await fetchRazorpayOrder(orderId);
+    if (!order || order.status !== "paid") {
+      return {
+        ok: false,
+        message:
+          "We couldn't confirm the payment yet. If you were charged, your plan will activate shortly.",
+      };
+    }
+    if (order.notes?.orgId !== ctx.org.id) {
+      return { ok: false, message: "That payment isn't linked to your workspace." };
+    }
+    const plan = getPlan(order.notes?.planId ?? "");
+    if (plan.id === "free" || order.amount !== planPrice(plan, "INR") * 100) {
+      return {
+        ok: false,
+        message: "That payment doesn't match a plan — please contact support.",
+      };
     }
 
     const periodEnd = new Date();

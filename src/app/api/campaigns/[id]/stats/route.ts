@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
+import { callerOrgFilter } from "@/modules/orgs/org";
 import {
   applySimulatedProgress,
   campaignStats,
@@ -26,9 +27,11 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // Scope to the caller's org without a separate org lookup.
+  // Org-scope without a full org resolution: owner OR member (M1 — was
+  // ownerUserId-only, which silently 404'd the live-stats poll for non-owner
+  // teammates). Shared helper keeps this identical to the templates route.
   const campaign = await prisma.campaign.findFirst({
-    where: { id, org: { ownerUserId: claims.sub } },
+    where: { id, org: callerOrgFilter(claims.sub) },
     select: { status: true },
   });
   if (!campaign) {

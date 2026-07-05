@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/db";
-import { requireOrg } from "@/modules/orgs/auth";
+import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { canSendMarketing } from "@/modules/consent";
 import { csvField } from "@/lib/csv";
 
 /**
  * Real data export (spec §M8): streams the org's contacts as a CSV download.
- * Auth + org scoping via requireOrg() — same guarantee as every page.
+ * Bulk PII export → ADMIN-gated (an AGENT must not exfiltrate the whole list).
  */
 
 export async function GET() {
-  const org = await requireOrg();
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+  } catch {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const org = ctx.org;
 
   const contacts = await prisma.contact.findMany({
     where: { orgId: org.id },

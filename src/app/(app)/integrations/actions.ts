@@ -33,8 +33,12 @@ export interface CreateApiKeyResult extends ActionResult {
  * decrypted token and reports what Meta says.
  */
 export async function testWhatsappConnectionAction(): Promise<ActionResult> {
-  const { org } = await requireOrgContext();
+  const ctx = await requireOrgContext();
+  const org = ctx.org;
   try {
+    // Live mode decrypts the org's WhatsApp token — ADMIN-gate it like every
+    // other integrations action.
+    requireRole(ctx, "ADMIN");
     const rate = checkRateLimit(`meta-test:${org.id}`, RATE_LIMITS.outboundTest);
     if (!rate.allowed) {
       return {

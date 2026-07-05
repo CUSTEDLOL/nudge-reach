@@ -31,6 +31,26 @@ export interface RazorpayOrder {
   amount: number;
   currency: string;
   status: string;
+  notes?: Record<string, string>;
+}
+
+/**
+ * Fetch an order back from Razorpay (GET /v1/orders/{id}). Used by the confirm
+ * path to derive the paid plan from the order's server-set `notes` and its
+ * captured `amount` — the client-supplied planId is NOT trusted, so a genuine
+ * payment for a cheap plan can't be redeemed for an expensive one.
+ */
+export async function fetchRazorpayOrder(
+  orderId: string
+): Promise<RazorpayOrder | null> {
+  if (!isRazorpayConfigured() || !orderId) return null;
+  const res = await fetch(
+    `https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}`,
+    { headers: { Authorization: authHeader() } }
+  );
+  const body = (await res.json().catch(() => null)) as RazorpayOrder | null;
+  if (!res.ok || !body?.id) return null;
+  return body;
 }
 
 /**

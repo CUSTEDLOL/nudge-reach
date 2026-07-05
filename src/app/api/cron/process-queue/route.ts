@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import {
@@ -19,11 +20,15 @@ import { tickAutomationRuns } from "@/modules/automation/engine";
  * additionally requires Vercel Cron's bearer header — defense in depth.
  */
 export async function GET(request: Request) {
-  if (
-    env.CRON_SECRET &&
-    request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`
-  ) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // With CRON_SECRET set, require Vercel Cron's bearer (timing-safe). Unset →
+  // open, which is acceptable here only because every op below is idempotent
+  // and consent-gated; production MUST set CRON_SECRET (see GO_LIVE runbook).
+  if (env.CRON_SECRET) {
+    const got = Buffer.from(request.headers.get("authorization") ?? "");
+    const want = Buffer.from(`Bearer ${env.CRON_SECRET}`);
+    if (got.length !== want.length || !crypto.timingSafeEqual(got, want)) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
   }
 
   // 1. Scheduled broadcasts whose time has come → SENDING (spec §M4).

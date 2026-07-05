@@ -1,16 +1,22 @@
 import { prisma } from "@/lib/db";
-import { requireOrg } from "@/modules/orgs/auth";
+import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { csvRow } from "@/lib/csv";
 
 /**
  * Message-history export (spec §M8): every conversation message and campaign
- * message for the org as one CSV, newest first. Auth + org scoping via
- * requireOrg(). Conversation rows carry the message body; campaign rows carry
- * the campaign name and delivery status (template bodies live on the
- * campaign, not per recipient).
+ * message for the org as one CSV, newest first. Bulk export of customer
+ * conversations → ADMIN-gated. Conversation rows carry the message body;
+ * campaign rows carry the campaign name and delivery status (template bodies
+ * live on the campaign, not per recipient).
  */
 export async function GET() {
-  const org = await requireOrg();
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+  } catch {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const org = ctx.org;
 
   const [conversationMessages, campaignMessages] = await Promise.all([
     prisma.conversationMessage.findMany({

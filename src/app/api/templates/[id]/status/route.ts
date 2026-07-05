@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
+import { callerOrgFilter } from "@/modules/orgs/org";
 import { refreshLibraryTemplateStatus } from "@/modules/whatsapp/library";
 
 /**
@@ -21,19 +22,9 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // Org-scope without a full org resolution: the caller must own the org or
-  // hold a membership in it.
+  // Org-scope without a full org resolution: owner OR member (shared helper).
   const template = await prisma.template.findFirst({
-    where: {
-      id,
-      campaignId: null,
-      org: {
-        OR: [
-          { ownerUserId: claims.sub },
-          { memberships: { some: { userId: claims.sub } } },
-        ],
-      },
-    },
+    where: { id, campaignId: null, org: callerOrgFilter(claims.sub) },
     select: { id: true, orgId: true },
   });
   if (!template?.orgId) {

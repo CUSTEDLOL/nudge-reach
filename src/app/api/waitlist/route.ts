@@ -22,8 +22,13 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   // Public endpoint → rate-limit by client IP (best-effort, per instance).
+  // Prefer x-real-ip: the platform (Vercel) sets it to the true client and
+  // overwrites any client-sent value, so it can't be spoofed to rotate past
+  // the throttle the way the leftmost x-forwarded-for entry can.
   const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
   const rate = checkRateLimit(`waitlist:${ip}`, RATE_LIMITS.publicForm);
   if (!rate.allowed) {
     return NextResponse.json(
