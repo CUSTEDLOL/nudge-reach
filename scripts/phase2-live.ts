@@ -20,7 +20,7 @@ for (const line of fs
 }
 
 async function main() {
-  const { generateCampaignContent } = await import("@/lib/campaign/generate");
+  const { generateCampaignContent } = await import("@/modules/campaign/generate");
 
   const imagePath = process.argv[2] ?? "/tmp/test-product.jpg";
   const image = {

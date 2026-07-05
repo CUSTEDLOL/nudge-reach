@@ -11,8 +11,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { runTool, toolDefs, calledHandoff, HANDOFF_TOOL_NAME } from "@/lib/agent/tools";
-import { buildAgentSystemPrompt, TOOL_GUIDANCE } from "@/lib/agent/prompt";
+import { runTool, toolDefs, calledHandoff, HANDOFF_TOOL_NAME } from "@/modules/agent/tools";
+import { buildAgentSystemPrompt, TOOL_GUIDANCE } from "@/modules/agent/prompt";
 
 const ctx = {
   orgId: "org1",

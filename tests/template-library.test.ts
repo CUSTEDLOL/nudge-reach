@@ -3,7 +3,7 @@ import {
   buildLibraryComponents,
   normalizeLibraryContent,
   type LibraryContentInput,
-} from "@/lib/whatsapp/library";
+} from "@/modules/whatsapp/library";
 
 const baseInput: LibraryContentInput = {
   displayName: "Diwali Offer",

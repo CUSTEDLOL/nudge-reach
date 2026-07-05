@@ -7,7 +7,7 @@ beforeAll(() => {
 
 describe("estimateCampaignCost", () => {
   it("multiplies recipients by the per-message rate", async () => {
-    const { estimateCampaignCost } = await import("@/lib/billing");
+    const { estimateCampaignCost } = await import("@/modules/billing");
     const estimate = estimateCampaignCost(100);
     expect(estimate.totalMinorUnits).toBe(
       100 * estimate.ratePerMessageMinorUnits
@@ -17,7 +17,7 @@ describe("estimateCampaignCost", () => {
   });
 
   it("formats paise as rupees", async () => {
-    const { formatInr } = await import("@/lib/billing");
+    const { formatInr } = await import("@/modules/billing");
     expect(formatInr(9900)).toBe("₹99.00");
     expect(formatInr(99)).toBe("₹0.99");
   });

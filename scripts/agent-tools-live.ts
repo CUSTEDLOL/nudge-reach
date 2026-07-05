@@ -17,7 +17,7 @@ for (const line of fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").split(
 
 async function main() {
   const { PrismaClient } = await import("@prisma/client");
-  const { handleInboundMessage } = await import("@/lib/agent/inbound");
+  const { handleInboundMessage } = await import("@/modules/agent/inbound");
   const prisma = new PrismaClient();
   const org = await prisma.org.findFirstOrThrow();
 

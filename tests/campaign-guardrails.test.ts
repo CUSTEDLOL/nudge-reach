@@ -4,7 +4,7 @@ import {
   repairAndValidate,
   repairOptOutFooter,
   repairPersonalization,
-} from "@/lib/campaign/guardrails";
+} from "@/modules/campaign/guardrails";
 
 describe("extractJson (defensive parsing)", () => {
   it("parses clean JSON", () => {

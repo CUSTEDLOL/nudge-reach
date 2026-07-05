@@ -6,14 +6,14 @@ import {
   parseAvgOrderValueInr,
   DEFAULT_AVG_ORDER_VALUE_INR,
   type ChecklistInput,
-} from "@/lib/dashboard/stats";
+} from "@/modules/dashboard/stats";
 import {
   formatCount,
   formatInrRupees,
   formatPercent,
   formatRelativeTime,
   greetingForHour,
-} from "@/lib/dashboard/format";
+} from "@/modules/dashboard/format";
 
 describe("computeMessageRates", () => {
   it("returns null rates when nothing has been sent", () => {

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isWithinServiceWindow } from "@/lib/agent/window";
+import { isWithinServiceWindow } from "@/modules/agent/window";
 import {
   buildAgentSystemPrompt,
   HANDOFF_SENTINEL,
-} from "@/lib/agent/prompt";
-import { buildHistory } from "@/lib/agent/reply";
+} from "@/modules/agent/prompt";
+import { buildHistory } from "@/modules/agent/reply";
 
 describe("isWithinServiceWindow (24h customer-service window)", () => {
   const now = new Date("2026-06-30T12:00:00Z");

@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildConversationWhere,
   parseInboxFilter,
-} from "@/lib/inbox/filters";
+} from "@/modules/inbox/filters";
 import {
   firstName,
   formatDayLabel,
   formatRelativeTime,
   serviceWindowState,
   toPreview,
-} from "@/lib/inbox/format";
+} from "@/modules/inbox/format";
 
 const ORG = "org_1";
 const ME = "user_me";

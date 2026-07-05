@@ -18,7 +18,7 @@ for (const line of fs
 async function main() {
   const { PrismaClient } = await import("@prisma/client");
   const { submitTemplateForApproval, refreshTemplateStatus } = await import(
-    "@/lib/whatsapp/approval"
+    "@/modules/whatsapp/approval"
   );
   const prisma = new PrismaClient();
 

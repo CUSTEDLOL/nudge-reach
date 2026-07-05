@@ -13,7 +13,7 @@ import {
   utcDayStart,
   windowFor,
   FIRST_RESPONSE_CAP_MINUTES,
-} from "@/lib/analytics/compute";
+} from "@/modules/analytics/compute";
 
 const NOW = new Date("2026-07-02T10:30:00.000Z");
 

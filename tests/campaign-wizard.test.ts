@@ -6,7 +6,7 @@ import {
   segmentAudienceName,
   sourceLabel,
 } from "@/app/(app)/campaigns/wizard-helpers";
-import { campaignContentSchema } from "@/lib/campaign/schema";
+import { campaignContentSchema } from "@/modules/campaign/schema";
 
 describe("blankCampaignContent", () => {
   it("produces schema-valid content with compliant defaults", () => {

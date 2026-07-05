@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { evaluateLimit } from "@/lib/billing/limits";
-import { getPlan, PLANS, planPrice } from "@/lib/billing/plans";
+import { evaluateLimit } from "@/modules/billing/limits";
+import { getPlan, PLANS, planPrice } from "@/modules/billing/plans";
 
 describe("evaluateLimit", () => {
   it("allows when under the cap", () => {

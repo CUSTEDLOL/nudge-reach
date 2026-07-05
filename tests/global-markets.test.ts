@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import crypto from "crypto";
 import { normalizePhoneE164 } from "@/lib/phone";
-import { verifyStripeWebhook } from "@/lib/billing/stripe";
+import { verifyStripeWebhook } from "@/modules/billing/stripe";
 import {
   CURRENCIES,
   CURRENCY_INFO,
@@ -10,8 +10,8 @@ import {
   isCurrency,
   orgCurrency,
   presetForDialCode,
-} from "@/lib/billing/money";
-import { PLANS, planPrice } from "@/lib/billing/plans";
+} from "@/modules/billing/money";
+import { PLANS, planPrice } from "@/modules/billing/plans";
 
 describe("normalizePhoneE164 — country-aware (global outreach)", () => {
   it("keeps the original Indian defaults intact", () => {

@@ -5,7 +5,7 @@ import {
   isSuggestTone,
   SUGGEST_TONES,
   type SuggestGrounding,
-} from "@/lib/ai/suggest-reply";
+} from "@/modules/ai/suggest-reply";
 
 const grounding: SuggestGrounding = {
   businessName: "Meera Boutique",

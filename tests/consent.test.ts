@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canSendMarketing } from "@/lib/consent";
+import { canSendMarketing } from "@/modules/consent";
 
 describe("canSendMarketing (rule 2: consent gate)", () => {
   it("allows an opted-in contact who never opted out", () => {

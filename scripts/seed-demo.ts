@@ -7,7 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { seedDemoWorkspace } from "../lib/demo/seed";
+import { seedDemoWorkspace } from "@/modules/demo/seed";
 
 const PROJECT_ROOT = process.env.PROJECT_ROOT ?? process.cwd();
 const envFile = path.join(PROJECT_ROOT, ".env.local");

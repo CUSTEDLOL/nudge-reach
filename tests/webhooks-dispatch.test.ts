@@ -5,7 +5,7 @@ import {
   generateWebhookSecret,
   isWebhookEvent,
   WEBHOOK_EVENTS,
-} from "@/lib/webhooks/dispatch";
+} from "@/modules/integrations/outbound-webhooks";
 
 describe("signWebhook", () => {
   it("produces a sha256= HMAC that a receiver can verify", () => {

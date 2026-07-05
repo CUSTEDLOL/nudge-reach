@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContactWhere, parseSegmentFilter } from "@/lib/segments";
+import { buildContactWhere, parseSegmentFilter } from "@/modules/contacts/segments";
 
 describe("buildContactWhere (dynamic segments — M3/M4 contract)", () => {
   it("always scopes to the org, even with an empty filter", () => {
