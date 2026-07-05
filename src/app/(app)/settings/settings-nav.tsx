@@ -11,6 +11,7 @@ import {
   Phone,
   ScrollText,
   Users,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -18,6 +19,7 @@ const items = [
   { href: "/settings/general", label: "General", icon: Building2 },
   { href: "/settings/team", label: "Team", icon: Users },
   { href: "/settings/agent", label: "AI Agent", icon: Bot },
+  { href: "/settings/concierge", label: "Concierge", icon: Wand2 },
   { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone },
   { href: "/settings/notifications", label: "Notifications", icon: Bell },
   { href: "/settings/billing", label: "Billing", icon: CreditCard },

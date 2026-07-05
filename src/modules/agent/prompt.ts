@@ -31,7 +31,12 @@ const VERTICAL_TEMPLATES: Record<
   clinic: {
     noun: "clinic",
     scope:
-      "services offered, opening hours, location, and booking or rescheduling appointments",
+      "services and treatments offered, prices, practitioners, opening hours, location, and booking or rescheduling appointments",
+  },
+  salon: {
+    noun: "salon",
+    scope:
+      "services and treatments offered, prices, stylists and therapists, opening hours, location, and booking or rescheduling appointments",
   },
   real_estate: {
     noun: "real-estate business",

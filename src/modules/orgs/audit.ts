@@ -24,6 +24,7 @@ export type AuditAction =
   | "calendar.disconnected"
   | "followup.enabled"
   | "followup.disabled"
+  | "concierge.client_setup"
   | "demo.reset";
 
 /** Human labels for the viewer. */
@@ -44,6 +45,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "calendar.disconnected": "Calendar disconnected",
   "followup.enabled": "Revenue Recovery enabled",
   "followup.disabled": "Revenue Recovery paused",
+  "concierge.client_setup": "Concierge client setup",
   "demo.reset": "Demo data reset",
 };
 
