@@ -68,6 +68,7 @@ model Org {
   templates        Template[]
   webhookEndpoints WebhookEndpoint[]
   auditLogs        AuditLog[]
+  bookingRequests  BookingRequest[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -511,11 +512,37 @@ model Contact {
   conversations Conversation[]
   tags        ContactTag[]
   notes       Note[]
+  bookingRequests BookingRequest[]
 
   @@unique([orgId, phoneE164])
   @@index([orgId])
   // Contacts list: newest-first within an org.
   @@index([orgId, createdAt])
+}
+
+// A booking/appointment request the AI agent captured from a conversation
+// (Milestone 1 "worker" action). It records intent for staff to confirm — it
+// does NOT hit an external calendar yet (that's a later per-vertical tool), so
+// it is deliberately low-risk and reversible.
+model BookingRequest {
+  id             String   @id @default(cuid())
+  orgId          String
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId      String
+  contact        Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  conversationId String?
+  // Free-text as the customer stated it (e.g. "tomorrow 8pm"), plus a parsed
+  // party size when given. We keep the raw text so staff see exactly what was asked.
+  name           String
+  requestedFor   String
+  partySize      Int?
+  notes          String?
+  status         String   @default("pending") // pending | confirmed | declined
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orgId, status])
+  @@index([contactId])
 }
 
 model Audience {

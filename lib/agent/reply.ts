@@ -1,9 +1,15 @@
-import { chat, type ChatTurn } from "@/lib/model-router";
+import { chat, runAgent, type ChatTurn } from "@/lib/model-router";
 import {
   buildAgentSystemPrompt,
   HANDOFF_SENTINEL,
   type AgentProfileInput,
 } from "@/lib/agent/prompt";
+import {
+  calledHandoff,
+  runTool,
+  toolDefs,
+  type ToolContext,
+} from "@/lib/agent/tools";
 
 export interface AgentReply {
   text: string;
@@ -29,6 +35,41 @@ export async function generateAgentReply(
     return { text: HANDOFF_MESSAGE, handoff: true };
   }
   return { text: raw, handoff: false };
+}
+
+export interface AgentActionReply extends AgentReply {
+  /** Tools the agent invoked this turn (for logging / the inbox timeline). */
+  actions: string[];
+}
+
+/**
+ * The "worker" reply: the agent may call tools (capture lead / booking / hand
+ * off) before answering. Falls back to a safe handoff line if the model
+ * returns nothing.
+ */
+export async function generateAgentActionReply(
+  profile: AgentProfileInput,
+  history: ChatTurn[],
+  ctx: ToolContext
+): Promise<AgentActionReply> {
+  const system = buildAgentSystemPrompt(profile, { withTools: true });
+
+  const { text, toolCalls } = await runAgent({
+    system,
+    messages: history,
+    tools: toolDefs(),
+    runTool: (call) => runTool(ctx, call),
+    maxTokens: 500,
+    maxSteps: 5,
+  });
+
+  const handoff = calledHandoff(toolCalls);
+  const actions = toolCalls.map((c) => c.name);
+
+  if (!text) {
+    return { text: HANDOFF_MESSAGE, handoff: true, actions };
+  }
+  return { text, handoff, actions };
 }
 
 /**

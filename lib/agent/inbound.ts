@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { isStopMessage } from "@/lib/webhook/verify";
 import { sendMessage } from "@/lib/messaging";
-import { buildHistory, generateAgentReply } from "@/lib/agent/reply";
+import { buildHistory, generateAgentActionReply } from "@/lib/agent/reply";
 import { runInboundAutomations } from "@/lib/automation/engine";
 import { toPreview } from "@/lib/inbox/format";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
@@ -15,6 +15,8 @@ export interface InboundResult {
   skipped?: "no_profile" | "disabled";
   /** Set when an automation (not the AI agent) produced the reply. */
   automated?: true;
+  /** Tools the agent invoked this turn (capture_lead, capture_booking_request, …). */
+  actions?: string[];
 }
 
 const HISTORY_LIMIT = 12;
@@ -121,7 +123,7 @@ export async function handleInboundMessage(
     take: HISTORY_LIMIT,
   });
 
-  const { text: replyText, handoff } = await generateAgentReply(
+  const { text: replyText, handoff, actions } = await generateAgentActionReply(
     {
       vertical: profile.vertical,
       businessName: profile.businessName,
@@ -129,7 +131,14 @@ export async function handleInboundMessage(
       tone: profile.tone,
       doNots: profile.doNots,
     },
-    buildHistory(recent)
+    buildHistory(recent),
+    {
+      orgId,
+      contactId: contact.id,
+      conversationId: conversation.id,
+      contactName: contact.name,
+      contactPhone: phoneE164,
+    }
   );
 
   const sent = await sendMessage(
@@ -166,5 +175,10 @@ export async function handleInboundMessage(
     });
   }
 
-  return { conversationId: conversation.id, reply: replyText, handoff };
+  return {
+    conversationId: conversation.id,
+    reply: replyText,
+    handoff,
+    ...(actions.length ? { actions } : {}),
+  };
 }
