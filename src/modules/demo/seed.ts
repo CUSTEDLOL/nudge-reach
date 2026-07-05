@@ -15,6 +15,7 @@
  */
 import { createHash } from "node:crypto";
 import { buildTemplatePayload } from "../whatsapp/template";
+import { installRevenueRecoveryPack } from "../followup/install";
 import type { CampaignContent } from "../campaign/schema";
 import type { LeadStage, MessageStatus, Prisma, PrismaClient } from "@prisma/client";
 
@@ -1070,6 +1071,76 @@ async function seedApiKey(prisma: PrismaClient, orgId: string) {
   });
 }
 
+/**
+ * AI Front Desk demo state (the flagship moat): a trained + enabled agent, a
+ * simulated calendar connection, the Revenue-Recovery pack, and a few confirmed
+ * bookings — so calendar booking + follow-ups + the dashboard card demo out of
+ * the box in keyless simulation. Idempotent.
+ */
+async function seedFrontDesk(
+  prisma: PrismaClient,
+  orgId: string,
+  contactIds: string[]
+) {
+  await prisma.agentProfile.upsert({
+    where: { orgId },
+    create: {
+      orgId,
+      enabled: true,
+      vertical: "retail",
+      businessName: "Aarav Textiles",
+      businessInfo:
+        "HOURS:\nMon–Sat 10am–8pm, Sun closed\n\nSERVICES:\nSarees, lehengas, kurta sets, festive collection\n\nPRICES:\nSarees from ₹1,200; lehengas from ₹4,500\n\nBOOKING & POLICIES:\nAppointments preferred for styling; walk-ins welcome.",
+      tone: "Warm, friendly, and concise",
+      doNots: "Never promise same-day delivery.",
+    },
+    update: { enabled: true },
+  });
+
+  // Simulated calendar — the "sim" sentinel token never touches encryptSecret,
+  // so this works with zero Google setup.
+  await prisma.calendarAccount.upsert({
+    where: { orgId },
+    create: {
+      orgId,
+      provider: "google",
+      accountEmail: "demo-calendar@nudge.local",
+      calendarId: "primary",
+      refreshTokenEncrypted: "sim",
+      simulated: true,
+    },
+    update: { simulated: true, status: "connected" },
+  });
+
+  // Approved templates + composed automation + enabled FollowUpConfig.
+  await installRevenueRecoveryPack(orgId);
+
+  // Confirmed bookings so the "bookings this month" card + reminder tick have data.
+  const bookings = [
+    { name: "Priya Sharma", contactId: contactIds[0], requestedFor: "Saturday 2pm", status: "confirmed", offsetHours: 20, event: "sim-cal-demo1" },
+    { name: "Rahul Verma", contactId: contactIds[1], requestedFor: "yesterday 4pm", status: "confirmed", offsetHours: -3, event: "sim-cal-demo2" },
+    { name: "Anjali Rao", contactId: contactIds[2], requestedFor: "Monday 11am", status: "no_show", offsetHours: -26, event: null as string | null },
+  ];
+  for (const b of bookings) {
+    if (!b.contactId) continue;
+    const exists = await prisma.bookingRequest.findFirst({
+      where: { orgId, name: b.name },
+    });
+    if (exists) continue;
+    await prisma.bookingRequest.create({
+      data: {
+        orgId,
+        contactId: b.contactId,
+        name: b.name,
+        requestedFor: b.requestedFor,
+        status: b.status,
+        scheduledFor: new Date(NOW.getTime() + b.offsetHours * 3_600_000),
+        calendarEventId: b.event,
+      },
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 export interface SeedCounts {
@@ -1104,12 +1175,20 @@ export async function seedDemoWorkspace(
     ? await prisma.org.findUniqueOrThrow({ where: { id: orgId } })
     : await prisma.org.findFirstOrThrow();
 
-  // Mark the demo org onboarded (only fills blanks; never overwrites).
+  // Mark the demo org onboarded (only fills blanks; never overwrites), and put
+  // it on the AI Front Desk flagship so the whole moat (calendar, follow-ups,
+  // concierge) is demoable in keyless simulation — the gate is checkAiFrontDesk,
+  // and nothing else grants front_desk without a real payment.
+  const periodEnd = new Date(NOW);
+  periodEnd.setMonth(periodEnd.getMonth() + 1);
   await prisma.org.update({
     where: { id: org.id },
     data: {
       vertical: org.vertical ?? "boutique",
       onboardedAt: org.onboardedAt ?? NOW,
+      plan: "front_desk",
+      subscriptionStatus: "active",
+      currentPeriodEnd: periodEnd,
       settings: {
         avgOrderValueInr: 1499,
         ...(typeof org.settings === "object" && org.settings !== null && !Array.isArray(org.settings)
@@ -1129,6 +1208,7 @@ export async function seedDemoWorkspace(
   await seedCampaigns(prisma, org.id, contactIds, audienceIds);
   await seedAutomations(prisma, org.id, contactIds, conversationIds, tagIds, templateIds);
   await seedApiKey(prisma, org.id);
+  await seedFrontDesk(prisma, org.id, contactIds);
 
   // Row counts (org-scoped where possible) so re-runs are easy to verify.
   const orgWhere = { orgId: org.id };

@@ -1,4 +1,6 @@
 import { env } from "@/lib/env";
+import { prisma } from "@/lib/db";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { CalendarSimulationDriver } from "@/modules/calendar/drivers/calendar-simulation";
 import { GoogleCalendarDriver } from "@/modules/calendar/drivers/calendar-google";
 import { isGoogleCalendarConfigured } from "@/modules/calendar/google";
@@ -46,6 +48,14 @@ export async function bookAppointment(
 ): Promise<BookOutcome> {
   const account = await getCalendarAccount(orgId);
   if (!account) return { status: "no_calendar" };
+
+  // Runtime flagship gate: an org that downgraded off AI Front Desk stops
+  // booking even though the connected-calendar row persists.
+  const org = await prisma.org.findUnique({
+    where: { id: orgId },
+    select: { plan: true },
+  });
+  if (!org || !planHasAiFrontDesk(org.plan)) return { status: "no_calendar" };
 
   const parsed = parseWhen(input.requestedFor, input.now);
   if (!parsed) return { status: "unparsed_time" };

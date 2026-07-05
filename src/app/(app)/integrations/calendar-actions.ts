@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { randomBytes } from "node:crypto";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAiFrontDesk } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
@@ -53,8 +55,16 @@ export async function connectCalendarAction(): Promise<ActionResult> {
           "Google Calendar isn't configured yet — add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.",
       };
     }
-    // state carries the org id back to the callback.
-    authUrl = googleAuthUrl(ctx.org.id);
+    // CSRF: an unguessable per-session nonce in `state`, checked in the callback.
+    const nonce = randomBytes(16).toString("hex");
+    (await cookies()).set("gcal_oauth_state", nonce, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 600,
+      path: "/",
+    });
+    authUrl = googleAuthUrl(nonce);
   } catch (err) {
     return {
       ok: false,

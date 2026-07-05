@@ -67,7 +67,7 @@ export function SalaryCalculator() {
             {/* salary slider */}
             <div className="mt-7">
               <div className="flex items-baseline justify-between">
-                <label htmlFor="salary" className="text-sm font-medium text-ink/70">
+                <label htmlFor="salary-input" className="text-sm font-medium text-ink/70">
                   A front-desk employee near you
                 </label>
                 <span className="font-display text-2xl text-ink">
@@ -76,7 +76,7 @@ export function SalaryCalculator() {
                 </span>
               </div>
               <input
-                id="salary"
+                id="salary-input"
                 type="range"
                 min={m.min}
                 max={m.max}

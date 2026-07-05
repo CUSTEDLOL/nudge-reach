@@ -261,7 +261,6 @@ export function FeaturesBento() {
             desc="Snap a product photo and Nudge writes a compliant, ready-to-send campaign in seconds."
             span="lg:col-span-2"
             highlight
-            href="#photo"
           >
             <PhotoVisual />
           </CardShell>

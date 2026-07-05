@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { sendApprovedTemplate } from "@/modules/followup/send";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
 
 const HOUR = 3_600_000;
 
@@ -22,16 +23,33 @@ export async function tickBookingReminders(
 ): Promise<ReminderTickResult> {
   const result: ReminderTickResult = { reminders: 0, reviews: 0, rebooks: 0 };
   const configs = await prisma.followUpConfig.findMany({ where: { enabled: true } });
+  if (!configs.length) return result;
+
+  // Runtime flagship gate: an org that downgraded off AI Front Desk stops
+  // running the paid moat, even if its config row is still enabled.
+  const orgs = await prisma.org.findMany({
+    where: { id: { in: configs.map((c) => c.orgId) } },
+    select: { id: true, plan: true },
+  });
+  const flagship = new Set(
+    orgs.filter((o) => planHasAiFrontDesk(o.plan)).map((o) => o.id)
+  );
 
   for (const cfg of configs) {
-    // 1) T-24h reminder — confirmed booking due within the next 24h.
+    if (!flagship.has(cfg.orgId)) continue;
+    // 1) T-24h reminder — confirmed booking due in the 2h–24h window (the >2h
+    //    lower bound stops a same-day booking from getting BOTH reminders on one
+    //    tick, and keeps the "tomorrow" copy honest).
     if (cfg.bookingReminders) {
       const due24 = await prisma.bookingRequest.findMany({
         where: {
           orgId: cfg.orgId,
           status: "confirmed",
           reminder24SentAt: null,
-          scheduledFor: { gt: now, lte: new Date(now.getTime() + 24 * HOUR) },
+          scheduledFor: {
+            gt: new Date(now.getTime() + 2 * HOUR),
+            lte: new Date(now.getTime() + 24 * HOUR),
+          },
         },
         include: { contact: true },
         take: 200,
