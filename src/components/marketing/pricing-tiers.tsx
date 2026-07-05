@@ -128,7 +128,60 @@ export function PricingTiers() {
         </div>
       </div>
 
-      <div className="mt-10 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4 xl:gap-5">
+      {/* Flagship — the hero tier (done-for-you AI Front Desk) */}
+      <Reveal className="mt-10">
+        <div className="bg-mesh relative overflow-hidden rounded-[2rem] bg-brand-950 p-7 shadow-lift sm:p-9">
+          <div className="relative z-10 grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-400 px-3 py-1 text-[11px] font-bold text-brand-950">
+                <Sparkles className="h-3 w-3" /> Flagship · done for you
+              </span>
+              <h3 className="mt-4 font-display text-3xl text-white sm:text-4xl">
+                AI Front Desk
+              </h3>
+              <p className="mt-3 max-w-md text-[15px] leading-relaxed text-brand-100/80">
+                Your AI employee — it books, chases and collects, and we set the
+                whole thing up. Priced against the hire it replaces, not against
+                software.
+              </p>
+              <div className="mt-6 flex items-end gap-1.5">
+                <span className="font-display text-5xl leading-none text-white">
+                  {priceLabel("front_desk", currency)}
+                </span>
+                <span className="mb-1 text-[13px] text-brand-100/60">per month</span>
+              </div>
+              <ButtonLink
+                href="/waitlist"
+                variant="primary-dark"
+                size="lg"
+                className="mt-6"
+              >
+                Book a setup call
+              </ButtonLink>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              {getPlan("front_desk").features.map((f) => (
+                <li key={f} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-400/20 text-brand-300">
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                  </span>
+                  <span className="text-[13.5px] leading-snug text-brand-100/85">
+                    {f}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal className="mt-14 text-center">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-ink/40">
+          Or start self-serve
+        </p>
+      </Reveal>
+
+      <div className="mt-6 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4 xl:gap-5">
         {TIERS.map((tier, i) => {
           const card = (
             <div

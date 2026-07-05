@@ -226,14 +226,14 @@ export function FeaturesBento() {
     <Section id="features" className="bg-white">
       <Container>
         <SectionHeading
-          eyebrow="Everything in one platform"
+          eyebrow="The full toolkit underneath"
           title={
             <>
-              A complete WhatsApp CRM —{" "}
-              <span className="text-gradient">not another inbox plugin</span>
+              The whole platform comes{" "}
+              <span className="text-gradient">in the box</span>
             </>
           }
-          subtitle="Conversations, leads, campaigns, automations and analytics live together. No tab-hopping, no spreadsheets, no leads slipping through."
+          subtitle="Under the AI Front Desk sits a complete WhatsApp toolkit — shared inbox, leads, campaigns, automations and analytics. On the self-serve tiers you run it yourself; on the flagship, we run it for you."
         />
 
         <Stagger className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-6">

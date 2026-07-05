@@ -7,19 +7,19 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Product",
     links: [
-      { label: "Features", href: "#features" },
-      { label: "Platform tour", href: "#showcase" },
+      { label: "vs. Meta's free AI", href: "#compare" },
+      { label: "The salary math", href: "#salary" },
       { label: "Industries", href: "#industries" },
+      { label: "The full toolkit", href: "#features" },
       { label: "Pricing", href: "#pricing" },
-      { label: "Photo → campaign", href: "#photo" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "Customers", href: "#testimonials" },
-      { label: "For sales & support", href: "#teams" },
-      { label: "Contact", href: "#get-started" },
+      { label: "For partners", href: "#partners" },
+      { label: "Book a setup call", href: "/waitlist" },
+      { label: "Contact", href: "mailto:hello@nudge.so" },
     ],
   },
   {
@@ -48,8 +48,8 @@ export function Footer() {
           <div className="max-w-xs">
             <Logo tone="dark" />
             <p className="mt-4 text-[14.5px] leading-relaxed text-white/55">
-              The WhatsApp CRM your whole team runs on — shared inbox, AI replies,
-              campaigns and analytics, compliant by default.
+              The AI Front Desk that runs your WhatsApp — it books, chases and
+              collects, and we set the whole thing up. Compliant by default.
             </p>
             <div className="mt-5 flex gap-2.5">
               <a

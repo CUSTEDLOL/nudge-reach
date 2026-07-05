@@ -38,9 +38,9 @@ export function FinalCTA() {
             </Reveal>
             <Reveal delay={0.1}>
               <p className="mt-5 max-w-lg text-lg leading-relaxed text-brand-100/70">
-                Start free and send your first campaign today — or book a
-                20-minute demo and we&apos;ll set everything up with you, live
-                on the call.
+                Start free and try the whole product today — or book a setup call
+                and we&apos;ll stand up your AI Front Desk with you, live on the
+                call.
               </p>
             </Reveal>
 

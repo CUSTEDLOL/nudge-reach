@@ -9,8 +9,8 @@ import { ButtonLink } from "./button";
 import { Magnetic } from "./motion-primitives";
 
 const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Platform", href: "#showcase" },
+  { label: "vs. Meta AI", href: "#compare" },
+  { label: "Salary math", href: "#salary" },
   { label: "Industries", href: "#industries" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
