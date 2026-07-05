@@ -44,7 +44,7 @@ model Org {
   timezone    String     @default("Asia/Kolkata")
   // Billing (spec: real usage + Razorpay when keys present). plan defaults to
   // the free tier; the paid fields fill in after a successful subscription.
-  plan                   String    @default("free") // free | starter | growth | scale
+  plan                   String    @default("free") // free | starter | growth | pro
   subscriptionStatus     String    @default("inactive") // inactive | active | past_due | cancelled
   razorpayCustomerId     String?
   razorpaySubscriptionId String?

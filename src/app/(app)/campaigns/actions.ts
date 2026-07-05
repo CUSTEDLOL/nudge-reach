@@ -25,7 +25,6 @@ import {
   submitTemplateForApproval,
 } from "@/modules/whatsapp/approval";
 import {
-  applySimulatedProgress,
   enqueueCampaign,
   processQueue,
   retryFailedMessages,
@@ -818,20 +817,6 @@ export async function retryFailedAction(
       message: err instanceof Error ? err.message : "Couldn't retry.",
     };
   }
-}
-
-/** Dashboard tick — advances queue + simulated statuses, then re-renders. */
-export async function tickCampaignAction(formData: FormData): Promise<void> {
-  const org = await requireOrg();
-  const id = String(formData.get("campaignId") ?? "");
-  const campaign = await prisma.campaign.findFirst({
-    where: { id, orgId: org.id },
-    select: { id: true },
-  });
-  if (!campaign) return;
-  await processQueue(id);
-  await applySimulatedProgress(id);
-  revalidatePath(`/campaigns/${id}`);
 }
 
 export async function deleteCampaignAction(

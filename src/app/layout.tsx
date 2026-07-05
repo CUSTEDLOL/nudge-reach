@@ -23,33 +23,33 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   metadataBase: new URL("https://nudge-reach.vercel.app"),
   title: {
-    default: "Nudge — WhatsApp CRM for modern retail & D2C teams",
+    default: "Nudge — the AI Front Desk that runs your WhatsApp",
     template: "%s · Nudge",
   },
   description:
-    "The WhatsApp CRM your whole team runs on. Shared inbox, AI replies, automated follow-ups, broadcasts and revenue analytics — Meta-compliant by default.",
+    "Meta's free AI answers your WhatsApp. Nudge's AI Front Desk runs it — books into your real calendar, chases every lead that goes quiet, collects payments, and we set it up for you. It's not software. It's your best employee.",
   keywords: [
-    "WhatsApp CRM",
-    "WhatsApp Business",
-    "shared team inbox",
-    "WhatsApp marketing",
-    "WhatsApp automation",
-    "retail CRM",
-    "D2C",
+    "AI front desk",
+    "WhatsApp AI agent",
+    "AI receptionist",
+    "WhatsApp appointment booking",
+    "lead follow-up automation",
+    "WhatsApp Business API",
+    "done-for-you WhatsApp",
   ],
   openGraph: {
-    title: "Nudge — The WhatsApp CRM your whole team runs on",
+    title: "Nudge — your AI Front Desk on WhatsApp",
     description:
-      "One shared inbox for every WhatsApp conversation, lead and campaign. AI replies, automations and revenue analytics, compliant by default.",
+      "It books real appointments into your calendar, chases quiet leads, and collects payments on WhatsApp — set up for you. A third of a front-desk salary, and it never sleeps.",
     siteName: "Nudge",
     type: "website",
     locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nudge — The WhatsApp CRM your whole team runs on",
+    title: "Nudge — your AI Front Desk on WhatsApp",
     description:
-      "Shared inbox, AI replies, automations and analytics for WhatsApp — compliant by default.",
+      "Books appointments, chases quiet leads, collects payments — done-for-you. Not another WhatsApp tool; an AI employee.",
   },
 };
 

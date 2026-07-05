@@ -21,8 +21,3 @@ export type VerticalValue = (typeof VERTICALS)[number]["value"];
 export function isVertical(value: string): value is VerticalValue {
   return VERTICALS.some((v) => v.value === value);
 }
-
-export function verticalLabel(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return VERTICALS.find((v) => v.value === value)?.label ?? value;
-}

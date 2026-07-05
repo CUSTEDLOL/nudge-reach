@@ -49,11 +49,6 @@ export const CURRENCY_INFO: Record<Currency, CurrencyInfo> = {
   GBP: { symbol: "£", locale: "en-GB", defaultMessageRateMinor: 4, gateway: "stripe" },
 };
 
-/** Which payment gateway bills this currency. */
-export function gatewayFor(currency: Currency): "razorpay" | "stripe" {
-  return CURRENCY_INFO[currency].gateway;
-}
-
 /** "₹1,234.50" / "$12.30" / "Rp 550,00" from minor units. */
 export function formatMoney(minorUnits: number, currency: Currency): string {
   const info = CURRENCY_INFO[currency];

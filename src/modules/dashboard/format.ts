@@ -30,15 +30,6 @@ export function formatMajorAmount(value: number, currency: string): string {
   }
 }
 
-/** Whole-rupee INR: 149900 → "₹1,49,900". */
-export function formatInrRupees(rupees: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(rupees);
-}
-
 /** Compact relative time for list rows: "just now", "5m ago", "2d ago". */
 export function formatRelativeTime(
   date: Date | null | undefined,
@@ -64,11 +55,6 @@ export function greetingForHour(hour: number): string {
   if (hour >= 5 && hour < 12) return "Good morning";
   if (hour >= 12 && hour < 17) return "Good afternoon";
   return "Good evening";
-}
-
-/** Current hour in India (the audience's timezone), 0–23. */
-export function istHour(now: Date = new Date()): number {
-  return hourInTimezone("Asia/Kolkata", now);
 }
 
 /** Hour of day (0-23) in the workspace's timezone (global outreach). */

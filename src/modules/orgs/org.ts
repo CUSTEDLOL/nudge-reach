@@ -135,11 +135,3 @@ async function upsertMembership(
   });
 }
 
-/**
- * One org per user (PRD §3). Finds the signed-in user's org or creates it
- * on first visit. Kept for existing call sites; new role-aware code should
- * use `requireOrgContext()` from lib/auth instead.
- */
-export async function ensureOrg(userId: string, email?: string): Promise<Org> {
-  return (await resolveOrgContext(userId, email)).org;
-}
