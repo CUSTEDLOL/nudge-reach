@@ -11,7 +11,7 @@ import { Footer } from "@/components/marketing/footer";
 export const metadata: Metadata = {
   title: "Book a demo",
   description:
-    "Book a 20-minute demo of Nudge — the WhatsApp CRM for Indian SMBs. We'll walk through the shared inbox, automations and campaigns, then set up your account live on the call.",
+    "Book a setup call for Nudge — the AI Front Desk that runs your WhatsApp. We'll show the agent booking a real appointment and chasing a quiet lead, then set up your account live on the call.",
 };
 
 const WHY = [

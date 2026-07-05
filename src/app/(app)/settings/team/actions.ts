@@ -153,7 +153,7 @@ export async function inviteMemberAction(
         subject: `${inviterName} invited you to ${ctx.org.name} on Nudge`,
         text: [
           `${inviterName} invited you to join ${ctx.org.name} on Nudge`,
-          `— the WhatsApp CRM they use for customer chats and campaigns.`,
+          `— the AI Front Desk they use to run their WhatsApp.`,
           ``,
           `Accept by signing up with this email address: ${signupUrl}`,
         ].join("\n"),

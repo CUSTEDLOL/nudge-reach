@@ -13,7 +13,7 @@ const SECTIONS: LegalSection[] = [
   {
     heading: "Who we are",
     body: [
-      "Nudge (\"Nudge\", \"we\", \"us\") is a WhatsApp CRM and marketing platform operated by [Legal Entity Name], [registered address], [jurisdiction]. This Privacy Policy explains how we handle personal data.",
+      "Nudge (\"Nudge\", \"we\", \"us\") is an AI Front Desk and WhatsApp marketing platform operated by [Legal Entity Name], [registered address], [jurisdiction]. This Privacy Policy explains how we handle personal data.",
       "We handle personal data in two roles. When you sign up and use Nudge, we are the data controller of your account data. When you use Nudge to message your own customers, you are the controller of your contacts' data and we act as your data processor — we process that data only to provide the service to you and on your instructions.",
     ],
   },

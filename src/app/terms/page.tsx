@@ -20,7 +20,7 @@ const SECTIONS: LegalSection[] = [
   {
     heading: "The service",
     body: [
-      "Nudge provides a WhatsApp CRM: a shared team inbox, contact management, broadcast campaigns, templates, automations, AI-assisted replies and analytics, built on the official Meta WhatsApp Cloud API.",
+      "Nudge provides an AI Front Desk for WhatsApp — an AI agent that answers customers, books appointments and follows up — plus a full toolkit: a shared team inbox, contact management, broadcast campaigns, templates, automations, AI-assisted replies and analytics, built on the official Meta WhatsApp Cloud API.",
       "WhatsApp connectivity depends on Meta. You need your own WhatsApp Business Account, phone number and Meta approvals; Meta's own terms and the WhatsApp Business Messaging Policy apply to your use alongside these Terms. We are not responsible for Meta's decisions, including template rejections, rate limits or account restrictions.",
       "Simulation mode is provided for evaluation and demos; messages in simulation are not delivered to real recipients.",
     ],
