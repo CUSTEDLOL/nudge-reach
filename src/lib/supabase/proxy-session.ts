@@ -13,6 +13,9 @@ const PUBLIC_PATHS = [
   "/api/cron",
   "/waitlist",
   "/api/waitlist",
+  // public marketing pages split off the landing page
+  "/pricing",
+  "/faq",
   "/privacy",
   "/terms",
 ];
