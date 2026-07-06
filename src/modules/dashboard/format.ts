@@ -1,0 +1,74 @@
+import { CURRENCY_INFO, isCurrency } from "@/modules/billing/money";
+
+/**
+ * Display formatting for the dashboard — pure and unit-testable.
+ * Dates render en-IN per the repo convention (spec §1).
+ */
+
+/** 0.62 → "62%"; null (nothing sent yet) → "—". */
+export function formatPercent(rate: number | null): string {
+  if (rate === null) return "—";
+  return `${Math.round(rate * 100)}%`;
+}
+
+/** Indian-style digit grouping: 123456 → "1,23,456". */
+export function formatCount(value: number): string {
+  return new Intl.NumberFormat("en-IN").format(value);
+}
+
+/** Whole-major-unit amount in the workspace currency: "₹1,49,900" / "$1,499". */
+export function formatMajorAmount(value: number, currency: string): string {
+  const locale = isCurrency(currency) ? CURRENCY_INFO[currency].locale : "en-IN";
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${currency} ${new Intl.NumberFormat(locale).format(value)}`;
+  }
+}
+
+/** Compact relative time for list rows: "just now", "5m ago", "2d ago". */
+export function formatRelativeTime(
+  date: Date | null | undefined,
+  now: Date = new Date()
+): string {
+  if (!date) return "—";
+  const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 60_000) return "just now";
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}
+
+/** Time-of-day greeting from a 0–23 hour. */
+export function greetingForHour(hour: number): string {
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/** Hour of day (0-23) in the workspace's timezone (global outreach). */
+export function hourInTimezone(timezone: string, now: Date = new Date()): number {
+  try {
+    return Number(
+      new Intl.DateTimeFormat("en-GB", {
+        hour: "numeric",
+        hour12: false,
+        timeZone: timezone,
+      }).format(now)
+    );
+  } catch {
+    // Unknown/garbled timezone string — fall back to server time.
+    return now.getHours();
+  }
+}

@@ -1,35 +1,105 @@
-# AGENTS.md — Nudge Reach (WhatsApp)
+# AGENTS.md — Nudge
 
-This file is read automatically at the start of every Claude Code session. Keep it short; it is the contract for how you work in this repo.
+Read automatically at the start of every session. It is the contract for how you
+work in this repo and, above all, **what this product is**. Keep it short and true.
 
-## What this is
-Nudge Reach is the first product of the **Nudge** B2B AI product studio for Asian SME retail. It turns a single retail product photo into a complete, Meta-policy-compliant WhatsApp **marketing** campaign and sends it to an opted-in contact list over the **official WhatsApp Cloud API**.
+## What Nudge is (do NOT drift from this)
 
-The audience is non-technical shop owners in India. The bar is "stupidly simple": a boutique owner with no marketing skill uploads one photo and gets a ready-to-send campaign. Ease of use beats feature count, always.
+Nudge is **not another WhatsApp CRM.** That market is owned (AiSensy, WATI,
+Interakt) and, since June 2026, "AI that replies on WhatsApp" is free platform
+plumbing (Meta Business Agent). Competing there on features-at-tool-prices is a
+guaranteed loss.
 
-## Non-negotiable rules
-1. **Official Cloud API only.** Never use unofficial WhatsApp automation, browser bots, or anything that bypasses Meta's API. That gets numbers banned and would kill the business. If a task seems to require bypassing the API, stop and flag it.
-2. **Consent is enforced in code, not just UI.** Marketing messages may only be sent to contacts with `opted_in = true`. Every send path checks this. Opt-outs are honored permanently.
-3. **Never call an expensive model at runtime.** Fable (you, in Claude Code) is the *build-time* engineer. The deployed app must call the cheapest vision-capable tier (default: Claude Haiku) through the `lib/model-router`. No app code ever hardcodes Fable/Opus for runtime generation. This is what keeps unit economics survivable after the build.
-4. **Build for reuse.** Auth, contacts/opt-in, the model-router, the messaging layer, and billing are *platform* modules that product 2 (email) will reuse. Keep them generic and cleanly separated from the WhatsApp-specific code.
-5. **Simulation mode must always work.** The founder has no WhatsApp Business Account on day one. With `SEND_MODE=simulation` the entire flow — generate → preview → "submit template" → "send" → dashboard — works end to end with mocked Meta responses, so it is demoable to a retailer immediately.
+Nudge is an **AI Front Desk** — a done-for-you AI *employee* that runs a small
+business's WhatsApp end-to-end. It is priced against the ₹18–25k/month human it
+replaces, not against ₹999 software.
+
+**The one-liner (north star for all copy):**
+> "Meta's free AI answers your WhatsApp. Nudge's AI Front Desk RUNS it — it books
+> into your real calendar, chases every lead that goes quiet, collects payments,
+> and we set the whole thing up for you. It's not software. It's your best
+> employee, for a third of the salary."
+
+**The three moats** (every build decision must strengthen at least one — they are
+what Meta's free agent does NOT cover):
+1. **Real actions in the client's real systems** — books into Google Calendar
+   with availability checks, sends payment links, writes to their CRM.
+2. **Outbound revenue generation** — the agent CHASES: follows up ghosted leads
+   via approved templates, booking reminders, no-show recovery, re-engages after
+   the 24h window. (Meta's agent is inbound-only.)
+3. **Done-for-you service** — we set up the knowledge base, flows, templates and
+   integrations (concierge onboarding). SMBs at this price buy an outcome.
+
+**Positioning of the existing feature set:** the CRM / inbox / campaigns /
+automations are **KEPT** as the self-serve lower tiers (Free / Starter / Growth /
+Pro) — their job is feature parity + making the flagship's price look reasonable.
+The flagship is **AI Front Desk** (₹14,999/mo India; ~S$599 / RM1,199 / $179;
+priced in all 10 currencies). Marketing leads with the flagship.
+
+**Business model:** Meta "Model A" Tech Provider (client's WABA connects to us;
+Meta bills the client for conversations; we earn the subscription). Founder-led
+direct sales in ONE vertical first (clinics/salons), then a reseller/white-label
+channel. Markets: India → Malaysia → Singapore → UAE.
+
+Full detail + competitive analysis: **`docs/STRATEGY.md`**. Do not re-open these
+decisions; do not slide back to "WhatsApp CRM" copy or campaign-blast-first framing.
+
+## The 7 protected invariants (NEVER break, in any change)
+
+1. **Official Meta Cloud API only** — no gray-market automation, ever.
+2. **Consent enforced in code** — marketing only to `opted_in`; double-gated
+   (queue + `sendMessage`); opt-outs permanent; STOP always wins; imports can't
+   resurrect an opt-out.
+3. **Cheap AI at runtime** — Haiku only, through the single `lib/model-router`,
+   with the expensive-model guard intact. Never hardcode Opus/Fable at runtime.
+4. **Simulation mode works end-to-end** — with `SEND_MODE=simulation` (default),
+   the ENTIRE product (generate → send → calendar booking → follow-ups →
+   dashboard) demos with zero external keys. Every new feature must too.
+5. **Tenant isolation** — every query org-scoped, RLS backstop, roles enforced
+   server-side (`requireOrgContext` + `requireRole`, not just hidden UI).
+6. **24-hour service window** — enforced in code everywhere free-form messages
+   can be sent (agent, inbox composer, follow-ups). Business-initiated
+   re-engagement uses approved templates, not free-form.
+7. **Agent scoped to one business** — grounded only in owner-provided knowledge;
+   no general-purpose chatbot behavior (Meta Jan-2026 policy).
+
+Each invariant has a direct test — see `docs/AUDIT_REPORT.md` §6 and the `tests/`.
+
+## How to work here (Karpathy discipline)
+
+- **Don't assume.** If a request conflicts with the repo, STOP, state the
+  conflict + tradeoff, and ask. Never silently pick an interpretation.
+- **Surface confusion immediately.** Never hide uncertainty behind confident code.
+- **Minimum viable change.** No speculative features, no abstractions for
+  single-use code. If 200 lines could be 50, rewrite before committing.
+- **Surgical edits only.** Touch only what the task requires; no drive-by refactors.
+- Before shipping, ask: "would a senior engineer say this is overcomplicated?"
+- **Keep every commit green** (tests + build + lint). Work one coherent change at
+  a time; update `PROGRESS.md`; commit with a clear message.
+
+## Architecture — where new code goes
+
+Structure mirrors the architecture (see **`docs/ARCHITECTURE.md`**). `@/*` → `src/*`.
+1. A **route**? → `src/app/…` (thin; server actions colocate as `actions.ts`).
+2. **Business logic for a bounded context**? → `src/modules/<context>/` (reuse an
+   existing module first). Platform modules (orgs, messaging, consent,
+   model-router, billing, integrations, calendar, followup) are product-2 reusable
+   — keep them generic.
+3. A **UI primitive**? → `src/components/ui/` (the only primitive layer). A feature
+   composition → `src/components/features/`. Marketing → `src/components/marketing/`.
+4. **Genuinely cross-cutting** (used by 3+ unrelated modules)? → `src/lib/`.
+5. **Tests** mirror the module under test in `tests/`.
 
 ## Stack (decided — do not re-litigate)
-- Next.js (App Router) + TypeScript + Tailwind CSS
-- Supabase: Postgres + Auth + Storage (product photos)
-- Prisma ORM
-- Background jobs / send queue: Inngest (or a Postgres-backed queue + Vercel Cron if Inngest setup stalls)
-- Deploy target: Vercel (app) + Supabase (data)
-- Runtime LLM: Anthropic API via `lib/model-router`, default model = cheapest vision-capable Haiku tier, configurable by env
 
-## How to work in this repo
-- Read `docs/PRD.md`, `docs/WHATSAPP_CLOUD_API.md`, and `docs/BUILD_PLAN.md` before writing code.
-- Work **one phase at a time** per `docs/BUILD_PLAN.md`. Do not jump ahead.
-- After each phase: run the build, run tests, update `PROGRESS.md`, and commit with a clear message.
-- Write unit tests for (a) the WhatsApp template-payload builder, (b) the send payload builder, and (c) the consent gate. These are the parts that cause real-world breakage.
-- Prefer deterministic code over AI at runtime wherever possible (e.g., image framing/branding with canvas/sharp, not generative image models).
-- Keep secrets in `.env.local`; never commit them. Maintain `.env.example`.
-- When you hit a decision the docs don't cover, make the simplest reversible choice, note it in `PROGRESS.md`, and keep moving.
+Next.js (App Router) + TypeScript + Tailwind · Supabase (Postgres + Auth +
+Storage) · Prisma · Postgres-backed queue + Vercel Cron · Vercel + Supabase ·
+runtime LLM = Anthropic Haiku via `lib/model-router`. Node 20+ (nvm). Secrets in
+`.env.local`; maintain `.env.example`.
 
-## Definition of done for the MVP
-A retailer can: sign in → upload a product photo → get a generated compliant campaign → edit it → preview it as a WhatsApp message → import an opted-in contact list → run the campaign (live or simulated) → see delivery/read/click stats and an estimated cost. Deployed and reachable on a URL.
+## Before you build
+
+Read `docs/STRATEGY.md`, `docs/ARCHITECTURE.md`, and `docs/PRD.md`. Write/keep
+unit tests for the parts that cause real breakage: the WhatsApp template-payload
+builder, the send-payload builder, the consent gate, the flagship gate, and the
+24h-window rule. Prefer deterministic code over runtime AI wherever possible.

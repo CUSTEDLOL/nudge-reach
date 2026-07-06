@@ -6,14 +6,13 @@ import {
   parseAvgOrderValueInr,
   DEFAULT_AVG_ORDER_VALUE_INR,
   type ChecklistInput,
-} from "@/lib/dashboard/stats";
+} from "@/modules/dashboard/stats";
 import {
   formatCount,
-  formatInrRupees,
   formatPercent,
   formatRelativeTime,
   greetingForHour,
-} from "@/lib/dashboard/format";
+} from "@/modules/dashboard/format";
 
 describe("computeMessageRates", () => {
   it("returns null rates when nothing has been sent", () => {
@@ -152,13 +151,9 @@ describe("formatPercent", () => {
   });
 });
 
-describe("formatCount / formatInrRupees", () => {
+describe("formatCount", () => {
   it("uses Indian digit grouping", () => {
     expect(formatCount(123456)).toBe("1,23,456");
-  });
-  it("formats whole rupees with the ₹ symbol", () => {
-    expect(formatInrRupees(5996)).toBe("₹5,996");
-    expect(formatInrRupees(0)).toBe("₹0");
   });
 });
 

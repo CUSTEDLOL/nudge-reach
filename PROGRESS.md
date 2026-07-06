@@ -5,6 +5,64 @@ what's next.
 
 ---
 
+## Landing v2 — "The Night Shift" (2026-07-06) ✅
+
+The landing page rebuilt as an immersive 3D scroll experience on branch
+`landing-v2` (spec: `docs/superpowers/specs/2026-07-06-landing-3d-design.md`):
+
+- **One persistent R3F world** behind the whole page — sky grades night → dawn
+  → morning (`world/palette.ts`), a keyframed camera path (`world/path.ts`),
+  and three chapter scenes: chat-bubble flythrough, calendar assembly, lead
+  orbit. Scroll is time: 11:47 PM → 9:00 AM on the DayRail shift clock.
+- **Pinned chapter story** (`chapters/night-shift.tsx`) synced to the same
+  `CHAPTERS` spans the 3D scenes use; morning payoff with counters; daylight
+  sections full-bleed (features → salary → compare → industries → reseller);
+  pricing and FAQ live on their own routes (`/pricing`, `/faq`).
+- **Adaptive quality on desktop AND mobile**: device tiering + live frame
+  governor (`world/quality.ts`, tested), dpr/particle step-down, no drei.
+- **Fallbacks structural**: no-JS / reduced-motion / no-WebGL get the complete
+  static story on the `.v2-page` night→day gradient; all copy is server HTML.
+- Deleted dead v1 landing components (hero, social-proof, agent-conversation)
+  and the superseded `nightfield.tsx`; pricing-tiers/roi-calculator stay (used
+  by the Pricing section).
+- New unit tests: progress spine, quality tiers, sky palette, camera path
+  (372 total green). Build + lint green throughout.
+
+## Course correction — AI Front Desk (2026-07-05) ✅
+
+Strategic pivot from "WhatsApp CRM" to **AI Front Desk** (see `docs/STRATEGY.md`),
+executed as an 8-phase branch chain. Highlights:
+
+- **Restructure** (`phase-2-structure`): root `app/lib/components` → `src/` with
+  `src/modules/*` domain modules, `src/lib` cross-cutting only; `@/*`→`src/*`.
+  `docs/ARCHITECTURE.md`. Pure moves, green at every commit.
+- **Hardening** (`phase-4-hardening`): fixed H1 (agent-profile role gate) + M1
+  (stats scoping) + a 23-agent adversarial security re-audit's findings — HIGH
+  billing payment-integrity (plan bound to the paid order, not client input),
+  SSRF guard on outbound webhooks, open-redirect guards, whatsapp template-status
+  tenant isolation, campaign-edit + export + integrations role gates, timing-safe
+  compares, x-real-ip rate-limit keying. +23 regression tests. `docs/SECURITY.md`.
+- **Purge** (`phase-3-purge`): depcheck/ts-prune-verified dead-code removal;
+  `docs/CHANGELOG_CLEANUP.md`.
+- **The moat** (`phase-5-product`): Google Calendar booking (sim|live driver
+  split, `src/modules/calendar`), the Revenue-Recovery follow-up engine
+  (`src/modules/followup`: reminders/no-show/review + quiet-lead nudge, all
+  consent+template gated), concierge onboarding (`src/modules/concierge`), and
+  the **AI Front Desk flagship tier** (₹14,999) + MYR + the `checkAiFrontDesk`
+  gate. Everything demoable in `SEND_MODE=simulation`.
+- **Landing** (`phase-6-landing`): rebuilt around the AI-employee USP — animated
+  agent conversation, Meta-vs-Nudge comparison, salary calculator, reseller CTA,
+  flagship-first pricing. Dep-free (no 3D lib), reduced-motion-safe.
+- **Docs** (`phase-7-docs`): `AGENTS.md`/`CLAUDE.md` carry the strategy + 7
+  invariants + architecture rules; `docs/STRATEGY.md`, README, DEMO_SCRIPT,
+  DEPLOYMENT refreshed.
+
+**Founder TODO after this branch:** `npm run db:push` + `npm run db:rls` (new
+tables: CalendarAccount, FollowUpConfig + BookingRequest fields), then the ordered
+list in `docs/HANDOVER.md` — Meta setup, deploy, legal placeholders, then SELL.
+
+---
+
 ## Phase 10 — Global markets (2026-07-04) ✅
 
 Two commits: multi-currency core + landing currency toggle. Verified in both

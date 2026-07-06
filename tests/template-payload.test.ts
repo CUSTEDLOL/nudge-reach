@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildTemplatePayload,
   slugifyTemplateName,
-} from "@/lib/whatsapp/template";
-import type { CampaignContent } from "@/lib/campaign/schema";
+} from "@/modules/whatsapp/template";
+import type { CampaignContent } from "@/modules/campaign/schema";
 
 const content: CampaignContent = {
   productName: "Summer Kurta",

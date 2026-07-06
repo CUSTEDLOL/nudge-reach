@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasRole, requireRole, type OrgContext } from "@/lib/auth";
+import { hasRole, requireRole, type OrgContext } from "@/modules/orgs/auth";
 
 const ctx = (role: OrgContext["role"]) => ({ role }) as OrgContext;
 

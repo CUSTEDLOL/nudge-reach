@@ -1,161 +1,145 @@
-# Nudge — WhatsApp CRM
+# Nudge — the AI Front Desk for small business WhatsApp
 
-**Live:** https://nudge-reach.vercel.app (simulation mode)
+**Live demo:** https://nudge-reach.vercel.app (simulation mode)
 
-Nudge is a WhatsApp CRM for Indian SME retail: a shared team inbox, contacts
-CRM, AI-generated broadcast campaigns, and automations — all on the **official
-WhatsApp Cloud API**, with Meta-policy compliance (opt-in, opt-out, the
-24-hour window) enforced in code. Built for non-technical shop owners; the
-entire product runs end to end in simulation mode with zero Meta setup.
+Nudge is a **done-for-you AI employee that runs a small business's WhatsApp end
+to end** — it answers customers, books them into a real Google Calendar, chases
+quiet leads and no-shows, and sends payment links. Not a chatbot that talks: an
+employee that *does the job*. One line: **the AI front-desk worker you hire for
+the price of a WhatsApp plan, not a salary.**
 
-## Features
+Underneath the flagship sits a full self-serve **WhatsApp CRM** — shared team
+inbox, contacts, AI broadcast campaigns, automations, analytics — offered as the
+lower tiers so a shop can start free and grow into the AI employee.
 
-**Inbox & AI**
-- Three-pane shared inbox: filters (Open / Mine / Unassigned / Resolved /
-  Unread), unread counts, assignment, tags, internal notes, lead stage
-- 24-hour service-window countdown; outside the window the composer switches
-  to an approved-template picker
-- AI suggest-reply with tone chips (Professional / Friendly / Short /
-  Persuasive) — drafts into the composer, **never auto-sends**
-- Optional per-org AI auto-reply agent, scoped to the business's own info,
-  with human handoff; simulation tester to play the customer
+## The product, top to bottom
 
-**CRM**
-- Contacts table with search, filters, bulk actions, CSV import (with an
-  explicit consent confirmation step), and per-contact profiles with a merged
-  activity timeline
-- Lead stages (New → Contacted → Qualified → Won → Lost), tags, static
-  audiences, and dynamic segments
-- Consent is data: opt-in badges everywhere, permanent opt-outs
+- **AI Front Desk** (flagship, ~₹14,999/mo · S$599 · RM1,199 · $179) — the
+  done-for-you AI employee: books into the customer's real Google Calendar, runs
+  the Revenue-Recovery follow-up engine, sends payment links, takes real actions
+  in the client's systems, and ships with concierge onboarding (we set it up).
+- **Free / Starter / Growth / Pro** — the self-serve CRM tiers: shared inbox with
+  the 24-hour service-window rule, contacts + segments, AI-generated compliant
+  broadcast campaigns, automations, team seats, analytics, webhooks + API.
 
-**Campaigns**
-- Broadcast wizard: product photo → AI-generated compliant campaign (or a
-  library template, or blank) → audience/segment → compliance interstitial →
-  send now or schedule
-- Template library with Meta review states (approved / pending / rejected +
-  reason, edit-and-resubmit)
-- Live delivery dashboard: sent / delivered / read / clicked / failed, plus
-  estimated and actual cost
+Everything runs on the **official WhatsApp Cloud API**, with Meta-policy
+compliance (opt-in, opt-out, the 24-hour window) enforced in code. Built for
+non-technical shop owners across India and SE Asia.
 
-**Automations**
-- 5 triggers (message received, keyword, contact created, tag added,
-  campaign reply) × 8 step kinds (send message/template, tag, assign, stage,
-  wait, resolve, handoff)
-- Wait/resume via cron, per-step run logs, one-click test runs
+## The three moats
 
-**Analytics**
-- Message volume, delivery/read/reply rates, campaign performance, agent
-  performance (incl. first-response time), lead funnel, top tags — 7/30/90
-  day ranges, computed from real data
+1. **Real actions in the client's own systems.** Nudge doesn't just reply — it
+   writes to the customer's real Google Calendar, sends payment links, and moves
+   leads. A generic chatbot answers; Nudge *books the appointment*.
+2. **Outbound revenue generation.** The Revenue-Recovery follow-up engine chases
+   quiet leads, no-shows, and reminders on its own. Most tools wait to be
+   messaged; Nudge goes and *brings money back* — it pays for itself.
+3. **Done-for-you service.** Concierge onboarding means the shop owner does
+   nothing technical. We stand up the workspace, calendar, and follow-ups for
+   them. The product is the outcome, not the software.
 
-**Platform**
-- Teams: OWNER / ADMIN / AGENT roles (server-enforced), email invites with
-  auto-join on signup (real invite emails when Resend is configured)
-- Billing: 4 plans (Free / ₹999 / ₹2,499 / ₹5,999 per month), Razorpay
-  checkout env-gated — free mode without keys
-- Outbound signed webhooks (6 events) for Zapier/Make/n8n/custom backends
-- Hashed API keys (shown once, revocable), CSV data export
+## Quickstart — full product, simulation mode, zero external keys
 
-## Stack
+`SEND_MODE=simulation` (the default) runs the **entire** product — including
+Google Calendar booking and the Revenue-Recovery follow-ups — with mocked
+responses. **No Meta, WhatsApp, or Google account required.** You only need a
+free Postgres database (Supabase) for the app's own data.
 
-- Next.js 16 (App Router) + TypeScript + Tailwind CSS v4
-- Supabase — Postgres, Auth, Storage
-- Prisma 6 (RLS enabled on every table — `npm run db:rls`)
-- Anthropic API at runtime via `lib/model-router` (cheap Haiku tier only,
-  enforced in code)
-- recharts, Vercel (app) + Supabase (data)
-
-## Local setup
-
-Requires **Node 20** (Node 18 fails). On this machine:
+Requires **Node 20** (Node 18 fails).
 
 ```bash
-export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
+# 1. Node 20 via nvm
+nvm install 20 && nvm use 20        # or: nvm use 20.20.2
+
+# 2. Clone + install
+git clone <repo-url> nudge-reach && cd nudge-reach
+npm install
+
+# 3. Environment — copy the example, keep SEND_MODE=simulation
+cp .env.example .env.local
+#   Fill in only the Supabase values (free tier is fine):
+#     NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+#     DATABASE_URL, DIRECT_URL
+#   Leave SEND_MODE=simulation. Leave WHATSAPP_*, GOOGLE_*, payment keys empty.
+#   Prisma's CLI only reads .env — put DATABASE_URL + DIRECT_URL in .env too.
+
+# 4. Create tables, then enable RLS (always both, in this order —
+#    new tables ship with RLS disabled)
+npm run db:push
+npm run db:rls
+
+# 5. Seed demo data (optional, recommended — idempotent, makes no AI calls)
+npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \
+  --outfile=.next/seed-demo.cjs --external:@prisma/client && node .next/seed-demo.cjs
+
+# 6. Run
+npm run dev            # http://localhost:3000 — sign up, land on the dashboard
 ```
 
-1. **Install dependencies**
+Notes:
+- **Schema is current.** `CalendarAccount`, `FollowUpConfig`, and the new
+  `BookingRequest` fields are created by `db:push`; `db:rls` locks them down.
+  Google Calendar works **mocked** in simulation — the optional
+  `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_OAUTH_REDIRECT_URI` are
+  only for real OAuth in live mode.
+- **The only key that unlocks anything in simulation** is `ANTHROPIC_API_KEY`,
+  used for live AI text generation (campaign copy, suggest-reply). The seeded
+  data and every send/calendar/follow-up flow run fully mocked without it.
 
-   ```bash
-   npm install
-   ```
+## The 7 protected invariants
 
-2. **Create a Supabase project** at [supabase.com](https://supabase.com)
-   (free tier is fine). You need:
-   - Project URL + publishable key — *Project Settings → API*
-   - Database connection strings (pooled + direct) — *Project Settings → Database*
-   - A public Storage bucket named `product-photos` (see
-     [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) §2)
+These are enforced in code and guarded by unit tests. Don't regress them.
 
-3. **Configure environment**
+1. **Official Cloud API only.** No unofficial WhatsApp automation exists anywhere
+   in the codebase — that gets numbers banned and kills the business.
+2. **Consent is code, not UI.** Marketing sends only to `opted_in` contacts,
+   checked at the lowest send layer (`canSendMarketing`). Inbound STOP /
+   unsubscribe opts out **permanently**; CSV re-import never resurrects it.
+3. **Cheap model at runtime, always.** Runtime AI is locked to the cheapest
+   vision-capable Haiku tier via `lib/model-router`; a guard throws on expensive
+   models. No app code ever calls Opus/Fable at runtime.
+4. **The 24-hour service window.** Free-form replies only within 24h of the
+   customer's last inbound; outside it, approved templates only.
+5. **AI never auto-sends in the inbox.** Suggest-reply drafts; a human sends. The
+   optional auto-reply agent is grounded in the owner's own info, hands off to a
+   human, and its tool loop is hard-capped.
+6. **Tenant isolation.** Every query is scoped by `orgId`, and RLS is enabled on
+   every table (`npm run db:rls` after every `db:push`).
+7. **Simulation mode always works.** The whole product — calendar booking and
+   Revenue-Recovery follow-ups included — demos end to end with mocked responses
+   and zero external keys.
 
-   ```bash
-   cp .env.example .env.local
-   # fill in the Supabase values; leave SEND_MODE=simulation
-   ```
+## Architecture
 
-   Note: the Prisma CLI only reads `.env`, while Next.js reads both — put
-   `DATABASE_URL` and `DIRECT_URL` in `.env` too (both files are git-ignored).
+`@/*` maps to `src/*`: routes in `src/app`, domain logic in `src/modules`,
+cross-cutting code in `src/lib`. Full layout and the one rule for where new code
+goes: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
-4. **Create the database tables, then enable RLS** (always run both,
-   in this order — new tables start with RLS disabled):
+Stack: Next.js 16 (App Router) + TypeScript + Tailwind v4 · Supabase (Postgres,
+Auth, Storage) · Prisma 6 with RLS · Anthropic API at runtime via
+`lib/model-router` (Haiku tier only) · recharts · Vercel + Supabase.
 
-   ```bash
-   npm run db:push
-   npm run db:rls
-   ```
+## Deploy & go live
 
-5. **Seed demo data** (optional but recommended — idempotent, no AI calls):
+- Production runbook (Vercel + Supabase, env checklist, cron, rollback):
+  **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+- Flipping `SEND_MODE=simulation` → `live` and the Meta paperwork (Business
+  Manager, WhatsApp product, tokens, webhook verification):
+  **[docs/GO_LIVE_WHATSAPP.md](docs/GO_LIVE_WHATSAPP.md)**.
 
-   ```bash
-   npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \
-     --outfile=.next/seed-demo.cjs --external:@prisma/client && node .next/seed-demo.cjs
-   ```
-
-6. **Run it**
-
-   ```bash
-   npm run dev
-   ```
-
-   > Machine quirk: `next dev` can OOM after long idle on this machine. If it
-   > does, use the production server instead:
-   >
-   > ```bash
-   > npm run build && npx next start
-   > ```
-
-   Open http://localhost:3000, create an account, and you land on the
-   dashboard with your workspace created.
-
-## Modes
-
-- `SEND_MODE=simulation` (default) — the entire product works end to end
-  with mocked Meta responses. No WhatsApp Business Account needed.
-- `SEND_MODE=live` — real sends over the WhatsApp Cloud API. The app refuses
-  to boot without the required `WHATSAPP_*` vars. See
-  [docs/GO_LIVE_WHATSAPP.md](docs/GO_LIVE_WHATSAPP.md).
-
-## Tests
+## Test / build / lint
 
 ```bash
-npm test   # vitest — 233 unit tests
+npm test          # vitest — 339 unit tests across 40 files (invariants covered)
+npm run build     # prisma generate && next build
+npm run lint      # eslint
 ```
 
-## Deployment
+## More docs
 
-Full production runbook (Supabase setup, env checklist, cron, go-live flip,
-rollback): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
-
-## Project docs
-
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production deploy runbook (Vercel + Supabase)
-- [docs/SECURITY.md](docs/SECURITY.md) — security posture, tenant isolation, compliance guarantees
-- [docs/GO_LIVE_WHATSAPP.md](docs/GO_LIVE_WHATSAPP.md) — switching from simulation to real WhatsApp
+- [docs/SECURITY.md](docs/SECURITY.md) — tenant isolation, compliance guarantees, env hygiene
 - [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — 5-minute sales demo flow
-- [docs/MVP_BUILD_SPEC.md](docs/MVP_BUILD_SPEC.md) — the build contract for the CRM MVP
-- [docs/PRD.md](docs/PRD.md) — original scope, data model, flows
-- [docs/WHATSAPP_CLOUD_API.md](docs/WHATSAPP_CLOUD_API.md) — integration + compliance reference
-- [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) — phased build plan
+- [docs/PRD.md](docs/PRD.md) · [docs/WHATSAPP_CLOUD_API.md](docs/WHATSAPP_CLOUD_API.md) — scope, data model, integration + compliance reference
 - [PROGRESS.md](PROGRESS.md) — build log and decisions
 
 ---

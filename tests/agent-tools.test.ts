@@ -7,12 +7,14 @@ vi.mock("@/lib/db", () => ({
     conversation: { update: vi.fn().mockResolvedValue({}) },
     contact: { update: vi.fn().mockResolvedValue({}) },
     note: { create: vi.fn().mockResolvedValue({}) },
-    bookingRequest: { create: vi.fn().mockResolvedValue({}) },
+    bookingRequest: { create: vi.fn().mockResolvedValue({ id: "b1" }) },
+    // No calendar connected → the booking tool records the request + hands off.
+    calendarAccount: { findUnique: vi.fn().mockResolvedValue(null) },
   },
 }));
 
-import { runTool, toolDefs, calledHandoff, HANDOFF_TOOL_NAME } from "@/lib/agent/tools";
-import { buildAgentSystemPrompt, TOOL_GUIDANCE } from "@/lib/agent/prompt";
+import { runTool, toolDefs, calledHandoff, HANDOFF_TOOL_NAME } from "@/modules/agent/tools";
+import { buildAgentSystemPrompt, TOOL_GUIDANCE } from "@/modules/agent/prompt";
 
 const ctx = {
   orgId: "org1",

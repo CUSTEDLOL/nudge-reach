@@ -4,7 +4,7 @@ import {
   displayPrefix,
   generateApiKey,
   hashApiKey,
-} from "@/lib/api-keys";
+} from "@/modules/integrations/api-keys";
 
 describe("generateApiKey", () => {
   it("starts with the nk_live_ prefix", () => {

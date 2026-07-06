@@ -6,8 +6,8 @@ import {
   parseKeywordConfig,
   readWaitMinutes,
   MAX_WAIT_MINUTES,
-} from "@/lib/automation/definitions";
-import { parseAutomationDraft, validateStepConfig } from "@/lib/automation/draft";
+} from "@/modules/automation/definitions";
+import { parseAutomationDraft, validateStepConfig } from "@/modules/automation/draft";
 
 describe("matchesKeyword (spec §M6: keyword trigger matching)", () => {
   const contains = { keywords: ["hours", "kab khulta"], match: "contains" };

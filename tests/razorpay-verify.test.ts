@@ -3,7 +3,7 @@ import crypto from "crypto";
 import {
   verifyPaymentSignature,
   verifyWebhookSignature,
-} from "@/lib/billing/razorpay";
+} from "@/modules/billing/razorpay";
 
 const SECRET = "test_secret_key";
 

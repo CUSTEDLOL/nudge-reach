@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSendPayload } from "@/lib/messaging/drivers/whatsapp-live";
+import { buildSendPayload } from "@/modules/messaging/drivers/whatsapp-live";
 
 describe("buildSendPayload (Cloud API send shape)", () => {
   it("matches the reference example in docs/WHATSAPP_CLOUD_API.md", () => {

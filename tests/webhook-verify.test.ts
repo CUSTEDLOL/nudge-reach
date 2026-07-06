@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { isStopMessage, verifyWebhookSignature } from "@/lib/webhook/verify";
+import { isStopMessage, verifyWebhookSignature } from "@/modules/whatsapp/webhook-verify";
 
 const SECRET = "test-app-secret";
 

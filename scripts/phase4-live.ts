@@ -20,7 +20,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function main() {
   const { PrismaClient } = await import("@prisma/client");
   const { enqueueCampaign, processQueue, applySimulatedProgress, campaignStats } =
-    await import("@/lib/send/queue");
+    await import("@/modules/send/queue");
   const prisma = new PrismaClient();
 
   const campaign = await prisma.campaign.findFirstOrThrow({

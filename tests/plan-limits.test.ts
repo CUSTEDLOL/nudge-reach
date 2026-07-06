@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { evaluateLimit } from "@/lib/billing/limits";
-import { getPlan, PLANS, planPrice } from "@/lib/billing/plans";
+import { evaluateLimit } from "@/modules/billing/limits";
+import { getPlan, PLANS, planPrice } from "@/modules/billing/plans";
 
 describe("evaluateLimit", () => {
   it("allows when under the cap", () => {
@@ -33,9 +33,23 @@ describe("evaluateLimit", () => {
 });
 
 describe("plans", () => {
-  it("has the four sellable tiers in order", () => {
-    expect(PLANS.map((p) => p.id)).toEqual(["free", "starter", "growth", "pro"]);
-    expect(PLANS.map((p) => planPrice(p, "INR"))).toEqual([0, 999, 2499, 5999]);
+  it("has the five sellable tiers in order (AI Front Desk flagship last)", () => {
+    expect(PLANS.map((p) => p.id)).toEqual([
+      "free",
+      "starter",
+      "growth",
+      "pro",
+      "front_desk",
+    ]);
+    expect(PLANS.map((p) => planPrice(p, "INR"))).toEqual([
+      0, 999, 2499, 5999, 14999,
+    ]);
+  });
+
+  it("only the flagship has the AI Front Desk capability", () => {
+    expect(PLANS.filter((p) => p.limits.aiFrontDesk).map((p) => p.id)).toEqual([
+      "front_desk",
+    ]);
   });
 
   it("maps the legacy 'scale' id to Pro", () => {

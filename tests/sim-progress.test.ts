@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isForwardTransition,
   simulatedStatusFor,
-} from "@/lib/send/sim-progress";
+} from "@/modules/send/sim-progress";
 
 describe("simulatedStatusFor", () => {
   const sentAt = 1_000_000;
