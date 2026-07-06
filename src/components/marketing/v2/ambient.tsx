@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { gsap, ScrollTrigger, motionAllowed } from "./gsap";
+import { shift, shiftClock } from "./progress";
 
 /**
  * The ambient layer: film grain over everything, a faint emerald cursor aura
  * (fine pointers only), and the day-rail — a fixed "shift clock" on the right
- * edge whose time runs from 11:47 PM through the next evening as you scroll
- * the page. The whole page is one shift; the rail makes that literal.
+ * edge whose time runs from 11:47 PM to 9:00 AM as you scroll the page
+ * (driven by the shared shift refs). The page is one shift; the rail makes
+ * that literal.
  */
 
 export function Grain() {
@@ -64,18 +66,6 @@ export function CursorAura() {
   );
 }
 
-/** Shift start: 11:47 PM. The clock runs a full 24h across the page scroll. */
-const SHIFT_START_MIN = 23 * 60 + 47;
-
-function shiftTime(progress: number): string {
-  const total = (SHIFT_START_MIN + Math.round(progress * 24 * 60)) % (24 * 60);
-  let h = Math.floor(total / 60);
-  const m = total % 60;
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
 export function DayRail() {
   const railRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
@@ -94,10 +84,10 @@ export function DayRail() {
       onUpdate(self) {
         const track = rail.clientHeight - dot.clientHeight;
         gsap.set(dot, { y: self.progress * track });
-        label.textContent = shiftTime(self.progress);
+        label.textContent = shiftClock(shift.story, shift.after);
       },
     });
-    label.textContent = shiftTime(0);
+    label.textContent = shiftClock(0, 0);
     return () => st.kill();
   }, []);
 
@@ -106,10 +96,10 @@ export function DayRail() {
       aria-hidden
       className="v2-dayrail fixed right-5 top-1/2 z-[60] hidden h-[42vh] -translate-y-1/2 flex-col items-center lg:flex"
     >
-      <span className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/30">
+      <span className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/30 day:text-ink/40">
         Shift
       </span>
-      <div ref={railRef} className="relative w-px flex-1 bg-white/10">
+      <div ref={railRef} className="relative w-px flex-1 bg-white/10 day:bg-ink/15">
         <div
           ref={dotRef}
           className="absolute -left-[3.5px] top-0 flex items-center"
@@ -117,12 +107,12 @@ export function DayRail() {
           <span className="h-[7px] w-[7px] rounded-full bg-brand-400 shadow-[0_0_12px_rgba(55,206,134,0.9)]" />
           <span
             ref={timeRef}
-            className="absolute right-3 whitespace-nowrap font-mono text-[10px] tracking-[0.08em] text-brand-200/80"
+            className="absolute right-3 whitespace-nowrap font-mono text-[10px] tracking-[0.08em] text-brand-200/80 day:text-brand-700"
           />
         </div>
       </div>
-      <span className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/30">
-        24h
+      <span className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/30 day:text-ink/40">
+        9 AM
       </span>
     </div>
   );

@@ -1,61 +1,25 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { ButtonLink } from "../button";
 import { Magnetic } from "../motion-primitives";
-import { gsap, useGSAP, motionAllowed } from "./gsap";
-
-const Nightfield = dynamic(() => import("./nightfield"), { ssr: false });
+import { gsap, motionAllowed, useGSAP } from "./gsap";
 
 /**
  * Hero — 11:47 PM. The headline is server HTML (it IS the LCP element); the
- * nightfield canvas, ambient video and intro choreography are all layered on
- * top after the fact and never gate first paint. The 3D chunk loads on idle,
- * desktop-only, and stops rendering the moment the hero leaves the viewport.
+ * persistent world (mounted by Experience) provides the sky behind it, so
+ * this section is transparent. bg-mesh remains as the designed no-WebGL look.
  */
 export function HeroV2() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [mount3d, setMount3d] = useState(false);
-  const [active3d, setActive3d] = useState(true);
-  const [videoOk, setVideoOk] = useState(true);
-  const [allowMedia, setAllowMedia] = useState(false);
-
-  // Lazy-mount the WebGL sky: motion allowed + desktop + browser idle.
-  useEffect(() => {
-    if (!motionAllowed()) return;
-    setAllowMedia(true);
-    if (!matchMedia("(min-width: 1024px)").matches) return;
-    const idle =
-      "requestIdleCallback" in window
-        ? (cb: () => void) => (window as Window & typeof globalThis).requestIdleCallback(cb, { timeout: 2500 })
-        : (cb: () => void) => setTimeout(cb, 350);
-    idle(() => setMount3d(true));
-  }, []);
-
-  // Pause the frameloop (and the ambient video) when the hero is offscreen.
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => setActive3d(entry.isIntersecting),
-      { threshold: 0.05 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   useGSAP(
     () => {
       if (!motionAllowed()) return;
       const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
       tl.from(".hero-eyebrow", { autoAlpha: 0, y: 14, duration: 0.7 }, 0.1)
-        .from(
-          ".hero-line",
-          { yPercent: 112, duration: 1.1, stagger: 0.12 },
-          0.15
-        )
+        .from(".hero-line", { yPercent: 112, duration: 1.1, stagger: 0.12 }, 0.15)
         .from(".hero-sub", { autoAlpha: 0, y: 18, duration: 0.8 }, 0.55)
         .from(".hero-ctas", { autoAlpha: 0, y: 16, duration: 0.8 }, 0.7)
         .from(".hero-chips", { autoAlpha: 0, duration: 0.9 }, 0.85)
@@ -80,44 +44,19 @@ export function HeroV2() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-[100svh] items-center overflow-hidden bg-night"
+      className="relative flex min-h-[100svh] items-center overflow-hidden"
       aria-label="Nudge — the AI Front Desk"
     >
-      {/* layer 0: aurora mesh (always present — the designed fallback) */}
-      <div className="bg-mesh absolute inset-0 opacity-60" aria-hidden />
+      {/* aurora mesh — the designed fallback when the world can't render */}
+      <div className="bg-mesh absolute inset-0 opacity-40" aria-hidden />
 
-      {/* layer 1: ambient video A1 (optional asset; hides itself on 404) */}
-      {allowMedia && videoOk && (
-        <video
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.22]"
-          autoPlay={active3d}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          poster="/landing/a1-poster.jpg"
-          onError={() => setVideoOk(false)}
-          aria-hidden
-        >
-          <source src="/landing/a1-hero-loop.webm" type="video/webm" />
-          <source src="/landing/a1-hero-loop.mp4" type="video/mp4" />
-        </video>
-      )}
-
-      {/* layer 2: the WebGL nightfield (lazy, desktop, idle) */}
-      {mount3d && (
-        <div className="absolute inset-0" aria-hidden>
-          <Nightfield active={active3d} />
-        </div>
-      )}
-
-      {/* layer 3: vignette so type always sits on solid night */}
+      {/* vignette so type always sits on solid night */}
       <div
         className="absolute inset-0"
         aria-hidden
         style={{
           background:
-            "radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(5,13,10,0.85) 100%)",
+            "radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(5,13,10,0.7) 100%)",
         }}
       />
 
@@ -156,7 +95,7 @@ export function HeroV2() {
             </ButtonLink>
           </Magnetic>
           <ButtonLink href="#night-shift" variant="secondary-dark" size="lg">
-            See it work
+            Watch the night shift
             <ArrowDown className="h-4 w-4" />
           </ButtonLink>
         </div>
