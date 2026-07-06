@@ -5,6 +5,28 @@ what's next.
 
 ---
 
+## Landing v2 — "The Night Shift" (2026-07-06) ✅
+
+The landing page rebuilt as an immersive 3D scroll experience on branch
+`landing-v2` (spec: `docs/superpowers/specs/2026-07-06-landing-3d-design.md`):
+
+- **One persistent R3F world** behind the whole page — sky grades night → dawn
+  → morning (`world/palette.ts`), a keyframed camera path (`world/path.ts`),
+  and three chapter scenes: chat-bubble flythrough, calendar assembly, lead
+  orbit. Scroll is time: 11:47 PM → 9:00 AM on the DayRail shift clock.
+- **Pinned chapter story** (`chapters/night-shift.tsx`) synced to the same
+  `CHAPTERS` spans the 3D scenes use; morning payoff with counters; daylight
+  sections (compare/salary/industries/features/pricing/FAQ) float as cards.
+- **Adaptive quality on desktop AND mobile**: device tiering + live frame
+  governor (`world/quality.ts`, tested), dpr/particle step-down, no drei.
+- **Fallbacks structural**: no-JS / reduced-motion / no-WebGL get the complete
+  static story on the `.v2-page` night→day gradient; all copy is server HTML.
+- Deleted dead v1 landing components (hero, social-proof, agent-conversation)
+  and the superseded `nightfield.tsx`; pricing-tiers/roi-calculator stay (used
+  by the Pricing section).
+- New unit tests: progress spine, quality tiers, sky palette, camera path
+  (372 total green). Build + lint green throughout.
+
 ## Course correction — AI Front Desk (2026-07-05) ✅
 
 Strategic pivot from "WhatsApp CRM" to **AI Front Desk** (see `docs/STRATEGY.md`),

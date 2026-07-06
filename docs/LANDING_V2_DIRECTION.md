@@ -1,14 +1,7 @@
-# LANDING v2 — Art Direction: "The Night Shift"
+# LANDING v2 — direction
 
-Gate A deliverable. Nothing below is built yet — this is the contract to approve
-(or redline) before the hero vertical slice. Positioning source of truth:
-`docs/STRATEGY.md`. Scope: marketing surface only, branch `landing-v2`.
-
----
-
-## 1. The concept
-
-**The page is one 24-hour shift.** Scroll is time. The story opens at 11:47 PM
-— the shop is closed, the AI Front Desk is not — and the visitor scrolls
-through the night into the next morning, watching the employee work: answer,
-book, follow up, recover. The page's
+Superseded. The approved design lives in
+`docs/superpowers/specs/2026-07-06-landing-3d-design.md`; the implementation
+plan in `docs/superpowers/plans/2026-07-06-landing-3d-night-shift.md`.
+Concept in one line: the page is one 24-hour shift — scroll is time,
+11:47 PM → 9:00 AM, one persistent WebGL world, all copy server-rendered.
