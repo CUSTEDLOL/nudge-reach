@@ -55,7 +55,7 @@ export function Navbar() {
             <li key={link.href}>
               <a
                 href={link.href}
-                className="rounded-full px-3.5 py-2 text-[14.5px] font-medium text-ink/70 transition-colors hover:bg-black/5 hover:text-ink"
+                className="rounded-full px-3.5 py-2 text-[14.5px] font-medium text-ink/70 transition-colors hover:bg-black/5 hover:text-ink night:text-white/70 night:hover:bg-white/10 night:hover:text-white"
               >
                 {link.label}
               </a>
@@ -92,7 +92,7 @@ export function Navbar() {
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="grid h-10 w-10 place-items-center rounded-full text-ink transition-colors hover:bg-black/5 md:hidden"
+          className="grid h-10 w-10 place-items-center rounded-full text-ink transition-colors hover:bg-black/5 night:text-white night:hover:bg-white/10 md:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>

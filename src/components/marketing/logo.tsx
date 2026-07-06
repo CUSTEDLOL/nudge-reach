@@ -36,7 +36,7 @@ export function Logo({
       <span
         className={cn(
           "text-[19px] font-bold tracking-tight",
-          tone === "light" ? "text-ink" : "text-white"
+          tone === "light" ? "text-ink night:text-white" : "text-white"
         )}
       >
         Nudge

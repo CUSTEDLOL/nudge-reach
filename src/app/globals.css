@@ -71,6 +71,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Landing v2 theme variants — scoped under the [data-shift] page wrapper. */
+@custom-variant night (&:where([data-shift="night"], [data-shift="night"] *));
+@custom-variant day (&:where([data-shift="day"], [data-shift="day"] *));
+
 /* ---- Keyframes (plain CSS so they are always emitted) ------------- */
 @keyframes float {
   0%,
@@ -404,5 +408,43 @@ html {
 
 /* Hairlines on night */
 .v2-hairline {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Static night→day gradient behind everything: THE page background for
+   no-JS / reduced-motion / no-WebGL. The opaque canvas covers it when the
+   world is running. */
+.v2-page {
+  background: linear-gradient(
+    to bottom,
+    #050d0a 0%,
+    #071310 34%,
+    #0e2a20 44%,
+    #d97b4a 50%,
+    #f4c17e 54%,
+    #f6fbf7 64%,
+    #f6fbf7 100%
+  );
+}
+
+/* Daylight sections float as cards inside the world. */
+.v2-daycard {
+  margin-inline: auto;
+  max-width: 82rem;
+  border-radius: 2.5rem;
+  border: 1px solid rgba(10, 15, 13, 0.06);
+  background: rgba(246, 251, 247, 0.94);
+  box-shadow: 0 30px 80px -40px rgba(5, 13, 10, 0.35);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .v2-daycard {
+    background: rgba(246, 251, 247, 0.88);
+    backdrop-filter: blur(14px);
+  }
+}
+
+/* Navbar glass pill on the night side */
+[data-shift="night"] .glass {
+  background: rgba(8, 18, 13, 0.6);
   border-color: rgba(255, 255, 255, 0.08);
 }
