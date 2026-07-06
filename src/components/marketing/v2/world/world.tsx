@@ -1,7 +1,7 @@
 // src/components/marketing/v2/world/world.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { QUALITY, shouldStepDown, stepDown, type Quality } from "./quality";
 import { Sky } from "./sky";
@@ -10,8 +10,7 @@ import { CameraRig } from "./camera-rig";
 
 /** Watches real frame times and sheds quality when they stay slow. */
 function Governor({ onDegrade }: { onDegrade: () => void }) {
-  const acc = { ms: 0, n: 0, cool: 0 };
-  // eslint-disable-next-line react-hooks/immutability
+  const acc = useRef({ ms: 0, n: 0, cool: 0 }).current;
   useFrame((_, delta) => {
     if (acc.cool > 0) {
       acc.cool -= delta;
@@ -45,6 +44,7 @@ export default function World({ quality: initial }: { quality: Quality }) {
     return () => document.removeEventListener("visibilitychange", fn);
   }, []);
 
+  // GL options apply only at renderer creation (initial tier); live quality degradation adjusts dpr and particle count only.
   return (
     <Canvas
       frameloop={hidden ? "never" : "always"}
