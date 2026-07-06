@@ -4,13 +4,16 @@ import { useRef } from "react";
 import { cn } from "@/lib/cn";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
-/** Daylight-zone wrapper: a floating card that tilts up into view on scroll. */
+/** Daylight-zone wrapper: a floating card that tilts up into view on scroll.
+ *  `bare` keeps the reveal but drops the card chrome (for full-bleed blocks). */
 export function FloatCard({
   children,
   className,
+  bare = false,
 }: {
   children: React.ReactNode;
   className?: string;
+  bare?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -34,7 +37,10 @@ export function FloatCard({
   );
 
   return (
-    <div ref={ref} className={cn("v2-reveal v2-daycard overflow-hidden", className)}>
+    <div
+      ref={ref}
+      className={cn("v2-reveal", !bare && "v2-daycard overflow-hidden", className)}
+    >
       {children}
     </div>
   );

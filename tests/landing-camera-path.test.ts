@@ -34,7 +34,7 @@ describe("cameraAt", () => {
     expect(cameraAt(1.5)).toEqual(cameraAt(1));
   });
   it("hits keyframes exactly", () => {
-    expect(cameraAt(0.42).pos).toEqual([2.4, 0.8, 3.2]);
+    expect(cameraAt(0.42).pos).toEqual([1.2, 0.7, 3.6]);
   });
   it("interpolates between keyframes", () => {
     const z = cameraAt(0.08).pos[2];

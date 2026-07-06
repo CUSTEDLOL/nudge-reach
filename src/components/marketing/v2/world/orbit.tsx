@@ -20,7 +20,7 @@ const LEADS = [
 ];
 
 const CENTER = new THREE.Vector3(-2.6, 0.4, 0); // camera looks here at 0.62
-const CHIP_H = 0.42;
+const CHIP_H = 0.34;
 
 /** Ghosted leads drift cold, then the chase pulls them back into orbit. */
 export function OrbitScene({ fx }: { fx: boolean }) {
@@ -48,12 +48,14 @@ export function OrbitScene({ fx }: { fx: boolean }) {
   useFrame(({ clock, camera }) => {
     const g = group.current;
     if (!g) return;
-    g.visible = shift.story > CHAPTERS.book.end - 0.05 && shift.story < 0.98;
+    // Scene envelope: enters with "It chases", gone before the dawn beat.
+    const exit = 1 - smooth01((shift.story - CHAPTERS.dawn.start) / 0.08);
+    g.visible = shift.story > CHAPTERS.book.end - 0.03 && exit > 0.02;
     if (!g.visible) return;
     const c = localProgress(shift.story, "chase");
     const drift = smooth01(clamp01(c / 0.45)); // leads going cold
     const pull = smooth01(clamp01((c - 0.45) / 0.55)); // the chase brings them back
-    const radius = 1.15 + drift * 1.6 - pull * 1.7;
+    const radius = 1.9 + drift * 1.3 - pull * 1.7;
     const t = clock.elapsedTime;
 
     g.children.forEach((child, i) => {
@@ -63,25 +65,25 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       child.position.set(
         CENTER.x + Math.cos(a) * radius,
         CENTER.y +
-          Math.sin(a) * radius * 0.45 +
+          Math.sin(a) * radius * 0.5 +
           Math.sin(t * chip.speed * 3 + i) * 0.05,
         CENTER.z + Math.sin(a * 1.3) * 0.4
       );
       child.lookAt(camera.position);
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      m.opacity = 0.95 - drift * 0.6 + pull * 0.6;
+      m.opacity = (0.95 - drift * 0.6 + pull * 0.6) * exit;
     });
 
     if (glow.current) {
       // The engine's heartbeat quickens as the chase lands.
-      (glow.current.material as THREE.SpriteMaterial).opacity = fx
-        ? 0.35 + pull * 0.35 + Math.sin(t * 3) * 0.07 * pull
-        : 0.3;
+      (glow.current.material as THREE.SpriteMaterial).opacity =
+        (fx ? 0.35 + pull * 0.35 + Math.sin(t * 3) * 0.07 * pull : 0.3) * exit;
     }
     // The orbit line itself materializes as leads come back under control.
     if (ring.current) {
-      ring.current.scale.set(radius, radius * 0.45, 1);
-      (ring.current.material as THREE.MeshBasicMaterial).opacity = pull * 0.3;
+      ring.current.scale.set(radius, radius * 0.5, 1);
+      (ring.current.material as THREE.MeshBasicMaterial).opacity =
+        pull * 0.3 * exit;
     }
   });
 

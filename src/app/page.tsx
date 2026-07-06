@@ -69,10 +69,11 @@ export default function Home() {
           <FloatCard>
             <FAQ />
           </FloatCard>
-          <FloatCard>
-            <FinalCTA />
-          </FloatCard>
         </div>
+        {/* full-bleed dark closer — the page ends on the ask, not a card */}
+        <FloatCard bare>
+          <FinalCTA />
+        </FloatCard>
       </main>
       <div className="relative z-10">
         <Footer />

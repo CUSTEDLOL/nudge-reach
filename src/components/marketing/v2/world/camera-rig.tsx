@@ -23,11 +23,11 @@ export function CameraRig() {
   useFrame(({ camera, pointer }) => {
     const k = cameraAt(shift.story);
     state.pos.set(k.pos[0] + pointer.x * 0.3, k.pos[1] + pointer.y * 0.15, k.pos[2]);
-    camera.position.lerp(state.pos, 0.08);
+    camera.position.lerp(state.pos, 0.06);
 
     // Damp the look target too, so chapter handovers glide instead of snap.
     state.look.set(k.look[0], k.look[1], k.look[2]);
-    state.lookNow.lerp(state.look, 0.09);
+    state.lookNow.lerp(state.look, 0.075);
     camera.lookAt(state.lookNow);
 
     // Banking: lean into the corridor flight, lean with the pointer.

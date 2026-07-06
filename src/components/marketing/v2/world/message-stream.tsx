@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CHAPTERS, shift } from "../progress";
-import { rand } from "./path";
+import { rand, smooth01 } from "./path";
 import { makeBubbleTexture } from "./textures";
 
 /** Real conversations, alternating customer (in) and Front Desk (out). */
@@ -26,6 +26,10 @@ const CARD_H = 0.5;
 export function MessageStream({ cards }: { cards: number }) {
   const group = useRef<THREE.Group>(null);
 
+  // One chat column drifting on the RIGHT of the flight path (the chapter
+  // copy owns the left half of the screen): inbound messages sit on the
+  // column's inner lane, Front Desk replies on the outer lane — a real
+  // conversation thread floating in space.
   const items = useMemo(
     () =>
       Array.from({ length: cards }, (_, i) => {
@@ -34,9 +38,9 @@ export function MessageStream({ cards }: { cards: number }) {
         return {
           texture,
           aspect,
-          x: (msg.out ? 1 : -1) * (1.15 + rand(i, 1) * 0.9),
-          y: -0.7 + rand(i, 2) * 1.9,
-          z: -1.5 - i * 1.05,
+          x: msg.out ? 2.2 + rand(i, 1) * 0.7 : 0.9 + rand(i, 1) * 0.5,
+          y: -0.5 + rand(i, 2) * 1.5,
+          z: -1.5 - i * 1.6,
           bob: 0.5 + rand(i, 3),
         };
       }),
@@ -48,7 +52,12 @@ export function MessageStream({ cards }: { cards: number }) {
   useFrame(({ clock, camera }) => {
     const g = group.current;
     if (!g) return;
-    g.visible = shift.story < CHAPTERS.book.end;
+    // Scene envelope: nothing at the hero, fade in as "It answers" opens,
+    // fully gone before the calendar chapter starts. One tableau at a time.
+    const env =
+      smooth01((shift.story - 0.015) / 0.05) *
+      (1 - smooth01((shift.story - CHAPTERS.book.start) / 0.08));
+    g.visible = env > 0.02;
     if (!g.visible) return;
     const t = clock.elapsedTime;
     g.children.forEach((child, i) => {
@@ -60,18 +69,14 @@ export function MessageStream({ cards }: { cards: number }) {
       const prox = Math.exp(-((dz + 2.2) * (dz + 2.2)) / 3.5);
       child.scale.setScalar(1 + prox * 0.18);
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      m.opacity = 0.55 + prox * 0.45;
+      m.opacity = (0.5 + prox * 0.5) * env;
     });
   });
 
   return (
     <group ref={group}>
       {items.map((it, i) => (
-        <mesh
-          key={i}
-          position={[it.x, it.y, it.z]}
-          rotation={[0, it.x > 0 ? -0.22 : 0.22, 0]}
-        >
+        <mesh key={i} position={[it.x, it.y, it.z]} rotation={[0, -0.24, 0]}>
           <planeGeometry args={[CARD_H * it.aspect, CARD_H]} />
           <meshBasicMaterial map={it.texture} transparent opacity={0.95} />
         </mesh>
