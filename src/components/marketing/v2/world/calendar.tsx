@@ -8,17 +8,26 @@ import { CHAPTERS, clamp01, localProgress, shift } from "../progress";
 import { rand, smooth01 } from "./path";
 import { makeRadialTexture, makeSlotTexture } from "./textures";
 
-const COLS = 7;
-const ROWS = 5;
+const COLS = 6;
+const ROWS = 4;
 const CELL_W = 0.38;
 const CELL_H = 0.28;
 const GAP = 0.07;
-const CENTER = new THREE.Vector3(2.4, 0.3, -38); // camera holds here 0.40–0.54
-const STAR = 17; // the slot that gets booked
-const TIMES = ["9:00", "10:30", "12:00", "3:30", "5:00"]; // one per row
+// Grid sits clearly right-of-center so the chapter copy on the left is
+// never covered. Camera holds on this anchor through the lock.
+const CENTER = new THREE.Vector3(3.1, 0.3, -38);
+const STAR = 21; // 7:30 PM — the slot that gets booked (and keeps its time)
 
-/** A week of real appointment slots — white cards that arc into a grid;
- *  the booked one flips green with a check and an expanding ring. */
+/** Every cell is a distinct half-hour slot: 9:00 → 8:30, left to right. */
+function slotLabel(i: number): string {
+  const mins = 9 * 60 + i * 30;
+  const h = Math.floor(mins / 60) % 12 || 12;
+  const m = mins % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+/** A day of real half-hour appointments — white cards that arc into a grid;
+ *  the 7:30 slot flips green with a check and an expanding ring. */
 export function CalendarScene() {
   const group = useRef<THREE.Group>(null);
   const booked = useRef<THREE.Mesh>(null);
@@ -31,15 +40,16 @@ export function CalendarScene() {
         const col = i % COLS;
         const row = Math.floor(i / COLS);
         return {
-          texture: makeSlotTexture(TIMES[row]),
+          texture: makeSlotTexture(slotLabel(i)),
           grid: new THREE.Vector3(
             CENTER.x + (col - (COLS - 1) / 2) * (CELL_W + GAP),
             CENTER.y + ((ROWS - 1) / 2 - row) * (CELL_H + GAP),
             CENTER.z
           ),
+          // Scatter stays right of the copy column.
           scatter: new THREE.Vector3(
-            CENTER.x + (rand(i, 4) - 0.5) * 7,
-            CENTER.y + (rand(i, 5) - 0.5) * 5,
+            CENTER.x + (rand(i, 4) - 0.25) * 4.5,
+            CENTER.y + (rand(i, 5) - 0.5) * 4.4,
             CENTER.z - 1.5 - rand(i, 6) * 5
           ),
           delay: rand(i, 7) * 0.25,
@@ -48,7 +58,7 @@ export function CalendarScene() {
       }),
     []
   );
-  const bookedTexture = useMemo(() => makeSlotTexture("7:30", true), []);
+  const bookedTexture = useMemo(() => makeSlotTexture(slotLabel(STAR), true), []);
 
   useEffect(
     () => () => {
@@ -83,8 +93,7 @@ export function CalendarScene() {
       child.rotation.z = (1 - e) * c.tilt;
     });
 
-    // The booked card: the green version crossfades over the white slot and
-    // pops with it.
+    // The booked card: the green 7:30 crossfades over the white 7:30.
     if (booked.current) {
       const cell = g.children[STAR];
       booked.current.position.copy(cell.position);

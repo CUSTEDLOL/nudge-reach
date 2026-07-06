@@ -14,8 +14,8 @@ export function WhatsAppCard({
   time = "10:30",
   tileGradient = "linear-gradient(135deg,#c8a24a,#9c1f3a)",
   tileLabel = "Banarasi Silk Dupatta",
-  header = "✨ New arrival, Priya!",
-  body = "Handwoven Banarasi silk dupattas just in — festive-ready in 6 colours. Visit this week for 10% off. 🛍️",
+  header = "New arrival, Priya!",
+  body = "Handwoven Banarasi silk dupattas just in — festive-ready in 6 colours. Visit this week for 10% off.",
   footer = "Reply STOP to opt out",
   buttons = [
     { label: "View collection", kind: "link" },

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import { Container, Section, SectionHeading } from "./section";
 import { Reveal } from "./motion-primitives";
 import { PLAN_PRICES } from "@/modules/billing/plans";
@@ -24,11 +23,12 @@ export function SalaryCalculator() {
   const [market, setMarket] = useState<keyof typeof MARKETS>("IN");
   const m = MARKETS[market];
   const [salary, setSalary] = useState(m.defaultSalary);
+  const [count, setCount] = useState(2);
 
   const nudge = PLAN_PRICES.front_desk[m.currency];
-  const monthlySaving = Math.max(0, salary - nudge);
+  const currentCost = salary * count;
+  const monthlySaving = Math.max(0, currentCost - nudge);
   const annualSaving = monthlySaving * 12;
-  const nudgePct = Math.min(100, Math.round((nudge / salary) * 100));
 
   function pick(key: keyof typeof MARKETS) {
     setMarket(key);
@@ -40,8 +40,8 @@ export function SalaryCalculator() {
       <Container>
         <SectionHeading
           eyebrow="The salary math"
-          title="A front-desk hire, for a third of the cost."
-          subtitle="It never calls in sick, never sleeps, and answers in seconds — every hour of every day."
+          title="What your front desk costs. What it could."
+          subtitle="Two numbers about your business today — and what changes the day the AI Front Desk clocks in."
         />
 
         <Reveal className="mx-auto mt-12 max-w-3xl">
@@ -64,15 +64,38 @@ export function SalaryCalculator() {
               ))}
             </div>
 
-            {/* salary slider */}
+            {/* input 1: headcount */}
             <div className="mt-7">
               <div className="flex items-baseline justify-between">
-                <label htmlFor="salary-input" className="text-sm font-medium text-ink/70">
-                  A front-desk employee near you
+                <label htmlFor="count-input" className="text-sm font-medium text-ink/70">
+                  Front-desk employees you have
                 </label>
-                <span className="font-display text-2xl text-ink">
+                <span className="text-2xl font-bold tracking-tight text-ink">
+                  {count}
+                </span>
+              </div>
+              <input
+                id="count-input"
+                type="range"
+                min={1}
+                max={8}
+                step={1}
+                value={count}
+                onChange={(e) => setCount(Number(e.target.value))}
+                className="mt-3 w-full accent-brand-500"
+                aria-label="Number of front-desk employees"
+              />
+            </div>
+
+            {/* input 2: salary each */}
+            <div className="mt-6">
+              <div className="flex items-baseline justify-between">
+                <label htmlFor="salary-input" className="text-sm font-medium text-ink/70">
+                  What you pay each, monthly
+                </label>
+                <span className="text-2xl font-bold tracking-tight text-ink">
                   {formatPlanPrice(salary, m.currency)}
-                  <span className="text-sm text-ink/40">/mo</span>
+                  <span className="text-sm font-normal text-ink/40">/mo</span>
                 </span>
               </div>
               <input
@@ -88,37 +111,46 @@ export function SalaryCalculator() {
               />
             </div>
 
-            {/* comparison bars */}
-            <div className="mt-8 space-y-4">
-              <Bar
-                label="Human front desk"
-                value={formatPlanPrice(salary, m.currency)}
-                pct={100}
-                tone="muted"
-              />
-              <Bar
-                label="Nudge AI Front Desk"
-                value={`${formatPlanPrice(nudge, m.currency)}/mo`}
-                pct={nudgePct}
-                tone="brand"
-              />
+            {/* the profit math */}
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-black/[0.03] p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
+                  Your front desk today
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-ink">
+                  {formatPlanPrice(currentCost, m.currency)}
+                  <span className="text-sm font-normal text-ink/40">/mo</span>
+                </p>
+                <p className="mt-1 text-xs text-ink/45">
+                  {count} {count === 1 ? "person" : "people"} · 9 hours a day
+                </p>
+              </div>
+              <div className="rounded-2xl bg-black/[0.03] p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
+                  Nudge AI Front Desk
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-ink">
+                  {formatPlanPrice(nudge, m.currency)}
+                  <span className="text-sm font-normal text-ink/40">/mo</span>
+                </p>
+                <p className="mt-1 text-xs text-ink/45">On WhatsApp 24×7 · set up for you</p>
+              </div>
             </div>
 
-            {/* result */}
-            <div className="mt-8 grid gap-4 rounded-2xl bg-brand-50 p-5 sm:grid-cols-2">
+            <div className="mt-3 grid gap-3 rounded-2xl bg-brand-50 p-5 sm:grid-cols-2">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-brand-700/70">
-                  You save every month
+                  Back in your pocket, monthly
                 </p>
-                <p className="font-display text-3xl text-brand-700">
+                <p className="text-3xl font-bold tracking-tight text-brand-700">
                   {formatPlanPrice(monthlySaving, m.currency)}
                 </p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-brand-700/70">
-                  That&rsquo;s a year
+                  Over a year
                 </p>
-                <p className="font-display text-3xl text-brand-700">
+                <p className="text-3xl font-bold tracking-tight text-brand-700">
                   {formatPlanPrice(annualSaving, m.currency)}
                 </p>
               </div>
@@ -131,39 +163,5 @@ export function SalaryCalculator() {
         </Reveal>
       </Container>
     </Section>
-  );
-}
-
-function Bar({
-  label,
-  value,
-  pct,
-  tone,
-}: {
-  label: string;
-  value: string;
-  pct: number;
-  tone: "muted" | "brand";
-}) {
-  return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between text-sm">
-        <span className="font-medium text-ink/70">{label}</span>
-        <span className={tone === "brand" ? "font-semibold text-brand-700" : "text-ink/50"}>
-          {value}
-        </span>
-      </div>
-      <div className="h-3 overflow-hidden rounded-full bg-black/5">
-        <motion.div
-          className={`h-full rounded-full ${
-            tone === "brand" ? "bg-brand-500" : "bg-neutral-300"
-          }`}
-          initial={{ width: 0 }}
-          whileInView={{ width: `${pct}%` }}
-          viewport={{ once: false }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        />
-      </div>
-    </div>
   );
 }

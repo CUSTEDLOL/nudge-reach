@@ -34,7 +34,7 @@ describe("cameraAt", () => {
     expect(cameraAt(1.5)).toEqual(cameraAt(1));
   });
   it("hits keyframes exactly", () => {
-    expect(cameraAt(0.4).pos).toEqual([1.2, 0.7, -34.4]);
+    expect(cameraAt(0.4).pos).toEqual([1.6, 0.7, -34.4]);
   });
   it("interpolates between keyframes (flying INTO the corridor)", () => {
     const z = cameraAt(0.12).pos[2];

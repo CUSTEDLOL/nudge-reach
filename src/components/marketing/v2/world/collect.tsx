@@ -13,7 +13,7 @@ const RECEIPTS: { out: boolean; text: string }[] = [
   { out: true, text: "Payment link sent — ₹500 deposit" },
   { out: false, text: "Paid ✓ UPI · 6:41 AM" },
   { out: true, text: "Reminder set — 10:30 AM today" },
-  { out: true, text: "See you at 7:30, Priya 🌅" },
+  { out: true, text: "See you at 7:30, Priya" },
 ];
 
 const CENTER = new THREE.Vector3(1.3, 0.8, -54); // camera frames this at 0.9

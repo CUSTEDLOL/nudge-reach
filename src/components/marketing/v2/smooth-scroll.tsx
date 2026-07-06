@@ -27,9 +27,14 @@ export function SmoothScroll() {
     gsap.ticker.lagSmoothing(0);
 
     const onClick = (e: MouseEvent) => {
-      const anchor = (e.target as HTMLElement).closest?.('a[href^="#"]');
+      // Handle "#id" and same-page "/#id" links (the navbar uses the latter
+      // so its anchors also work from /pricing and /faq).
+      const anchor = (e.target as HTMLElement).closest?.(
+        'a[href^="#"], a[href^="/#"]'
+      );
       if (!anchor) return;
-      const id = anchor.getAttribute("href");
+      const href = anchor.getAttribute("href") ?? "";
+      const id = href.slice(href.indexOf("#"));
       if (!id || id === "#") return;
       const target = document.querySelector(id);
       if (!target) return;

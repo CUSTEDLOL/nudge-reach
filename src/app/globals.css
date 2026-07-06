@@ -48,9 +48,9 @@
     0 28px 64px -18px rgba(11, 61, 46, 0.24);
   --shadow-glow: 0 24px 60px -18px rgba(6, 193, 103, 0.45);
 
-  /* Display face (wired up in layout via next/font) ----------------- */
-  --font-display: var(--font-instrument-serif), Georgia, "Times New Roman",
-    serif;
+  /* Display face — the same confident sans as the body, heavier. -----
+     (The serif display face read as generic "AI website"; retired.) */
+  --font-display: var(--font-geist-sans), -apple-system, "Segoe UI", sans-serif;
 
   /* Motion tokens → animate-* utilities ----------------------------- */
   --animate-float: float 7s ease-in-out infinite;

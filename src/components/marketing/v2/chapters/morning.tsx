@@ -19,8 +19,8 @@ export function Morning() {
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-brand-700">
           9:00 AM — you just walked in
         </p>
-        <h2 className="mt-5 font-display text-[clamp(2.6rem,6vw,4.8rem)] leading-[1.02] text-ink">
-          You slept. <span className="italic text-brand-600">It didn&rsquo;t.</span>
+        <h2 className="mt-5 font-display text-[clamp(2.4rem,5.5vw,4.4rem)] font-bold leading-[1.02] tracking-[-0.03em] text-ink">
+          You slept. <span className="text-brand-600">It didn&rsquo;t.</span>
         </h2>
         <p className="mx-auto mt-5 max-w-xl text-lg text-ink/60">
           One night like this, every night. Here&rsquo;s what a shift hands you
@@ -29,7 +29,7 @@ export function Morning() {
         <dl className="mt-12 grid grid-cols-2 gap-8 lg:grid-cols-4">
           {STATS.map((s) => (
             <div key={s.label}>
-              <dd className="font-display text-5xl text-ink">
+              <dd className="font-display text-5xl font-bold tracking-tight text-ink">
                 <CountUp to={s.to} prefix={s.prefix ?? ""} />
               </dd>
               <dt className="mt-2 text-sm text-ink/55">{s.label}</dt>

@@ -6,14 +6,13 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { ButtonLink } from "./button";
-import { Magnetic } from "./motion-primitives";
 
 const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Salary math", href: "#salary" },
-  { label: "Compare", href: "#compare" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Features", href: "/#features" },
+  { label: "Salary math", href: "/#salary" },
+  { label: "Compare", href: "/#compare" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "FAQ", href: "/faq" },
 ];
 
 export function Navbar() {
@@ -74,16 +73,14 @@ export function Navbar() {
               Book a demo
             </ButtonLink>
           </span>
-          <Magnetic>
-            <ButtonLink
-              href="/login"
-              variant="primary"
-              size="sm"
-              className="whitespace-nowrap"
-            >
-              Start free
-            </ButtonLink>
-          </Magnetic>
+          <ButtonLink
+            href="/login"
+            variant="primary"
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            Start free
+          </ButtonLink>
         </div>
 
         {/* Mobile toggle */}

@@ -19,7 +19,7 @@ const LEADS = [
   "Dev — no-show on Monday",
 ];
 
-const CENTER = new THREE.Vector3(-2.6, 0.4, -46); // camera looks here at 0.64
+const CENTER = new THREE.Vector3(-2.6, 0.15, -46); // camera looks here at 0.64
 const CHIP_H = 0.34;
 
 /** Ghosted leads drift cold, then the chase pulls them back into orbit. */
@@ -55,7 +55,8 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     const c = localProgress(shift.story, "chase");
     const drift = smooth01(clamp01(c / 0.45)); // leads going cold
     const pull = smooth01(clamp01((c - 0.45) / 0.55)); // the chase brings them back
-    const radius = 1.9 + drift * 1.3 - pull * 1.7;
+    // Tight enough that chips never leave the frame (or ride over the navbar).
+    const radius = 1.55 + drift * 0.85 - pull * 1.15;
     const t = clock.elapsedTime;
 
     g.children.forEach((child, i) => {
@@ -65,7 +66,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       child.position.set(
         CENTER.x + Math.cos(a) * radius,
         CENTER.y +
-          Math.sin(a) * radius * 0.5 +
+          Math.sin(a) * radius * 0.4 +
           Math.sin(t * chip.speed * 3 + i) * 0.05,
         CENTER.z + Math.sin(a * 1.3) * 0.4
       );
@@ -81,7 +82,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     }
     // The orbit line itself materializes as leads come back under control.
     if (ring.current) {
-      ring.current.scale.set(radius, radius * 0.5, 1);
+      ring.current.scale.set(radius, radius * 0.4, 1);
       (ring.current.material as THREE.MeshBasicMaterial).opacity =
         pull * 0.3 * exit;
     }

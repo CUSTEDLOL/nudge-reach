@@ -7,17 +7,17 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Product",
     links: [
-      { label: "vs. Meta's free AI", href: "#compare" },
-      { label: "The salary math", href: "#salary" },
-      { label: "Industries", href: "#industries" },
-      { label: "The full toolkit", href: "#features" },
-      { label: "Pricing", href: "#pricing" },
+      { label: "The comparison", href: "/#compare" },
+      { label: "The salary math", href: "/#salary" },
+      { label: "Industries", href: "/#industries" },
+      { label: "The full toolkit", href: "/#features" },
+      { label: "Pricing", href: "/pricing" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "For partners", href: "#partners" },
+      { label: "For partners", href: "/#partners" },
       { label: "Book a setup call", href: "/waitlist" },
       { label: "Contact", href: "mailto:hello@nudge.so" },
     ],
@@ -25,7 +25,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Resources",
     links: [
-      { label: "FAQ", href: "#faq" },
+      { label: "FAQ", href: "/faq" },
       { label: "Start free", href: "/login" },
       { label: "Book a demo", href: "/waitlist" },
     ],

@@ -6,6 +6,7 @@ import { Logo } from "@/components/marketing/logo";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { WhatsAppCard } from "@/components/marketing/whatsapp-card";
 import { Reveal } from "@/components/marketing/motion-primitives";
+import { ScrollTop } from "@/components/marketing/scroll-top";
 import { Footer } from "@/components/marketing/footer";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ const WHY = [
 export default function WaitlistPage() {
   return (
     <div className="flex min-h-screen flex-col bg-cream">
+      <ScrollTop />
       <header className="relative z-10">
         <Container className="flex items-center justify-between py-5">
           <Logo />

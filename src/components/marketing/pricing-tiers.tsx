@@ -283,11 +283,8 @@ export function PricingTiers() {
           return (
             <Reveal key={tier.name} delay={i * 0.08} className="h-full">
               {tier.popular ? (
-                <div className="relative h-full rounded-[1.85rem] p-[1.5px]">
-                  <div className="ring-aurora animate-spin-slow absolute inset-0 rounded-[1.85rem] opacity-90" />
-                  <div className="relative h-full rounded-[1.8rem] bg-brand-950">
-                    {card}
-                  </div>
+                <div className="relative h-full rounded-[1.85rem] border border-brand-400/60 bg-brand-950 shadow-[0_24px_60px_-24px_rgba(6,193,103,0.45)]">
+                  {card}
                 </div>
               ) : (
                 card

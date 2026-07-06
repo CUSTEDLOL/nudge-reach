@@ -31,9 +31,7 @@ export function FinalCTA() {
             <Reveal delay={0.05}>
               <h2 className="mt-5 text-balance text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-5xl">
                 Turn WhatsApp into your{" "}
-                <span className="font-display text-gradient italic">
-                  growth engine
-                </span>
+                <span className="text-gradient">growth engine</span>
               </h2>
             </Reveal>
             <Reveal delay={0.1}>

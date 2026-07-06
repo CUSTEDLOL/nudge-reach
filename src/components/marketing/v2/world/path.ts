@@ -32,9 +32,9 @@ const KEYS: Key[] = [
   // ride the whole message thread to its end
   { at: 0.28, pos: [0.4, 0.2, -31], look: [1.0, 0.1, -38] },
   // the calendar tableau, right-of-center…
-  { at: 0.4, pos: [1.2, 0.7, -34.4], look: [2.5, 0.3, -38] },
+  { at: 0.4, pos: [1.6, 0.7, -34.4], look: [3.1, 0.3, -38] },
   // …hold on it and push in while the slot locks
-  { at: 0.54, pos: [1.7, 0.55, -35.8], look: [2.45, 0.3, -38] },
+  { at: 0.54, pos: [2.0, 0.55, -35.6], look: [3.05, 0.3, -38] },
   // swing forward to the orbit
   { at: 0.64, pos: [-4.3, 0.9, -42.2], look: [-2.3, 0.3, -46] },
   // rise toward dawn and frame the collects stack

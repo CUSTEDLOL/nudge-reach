@@ -6,8 +6,6 @@ import { SalaryCalculator } from "@/components/marketing/salary-calculator";
 import { Industries } from "@/components/marketing/industries";
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { ResellerCTA } from "@/components/marketing/reseller-cta";
-import { Pricing } from "@/components/marketing/pricing";
-import { FAQ } from "@/components/marketing/faq";
 import { FinalCTA } from "@/components/marketing/final-cta";
 import { MotionGate } from "@/components/marketing/v2/motion-gate";
 import { Experience } from "@/components/marketing/v2/experience";
@@ -65,12 +63,7 @@ export default function Home() {
           <DaySection>
             <ResellerCTA />
           </DaySection>
-          <DaySection>
-            <Pricing />
-          </DaySection>
-          <DaySection>
-            <FAQ />
-          </DaySection>
+          {/* pricing and FAQ live on their own pages, via the navbar */}
           {/* full-bleed dark closer — the page ends on the ask */}
           <DaySection>
             <FinalCTA />

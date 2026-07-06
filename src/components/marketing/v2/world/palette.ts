@@ -20,7 +20,9 @@ const STOPS: Stop[] = [
   { at: 0.0, top: "#050d0a", horizon: "#0a1a12", fog: "#050d0a", ambient: 0.18 },
   { at: 0.75, top: "#071310", horizon: "#123024", fog: "#06110d", ambient: 0.24 },
   { at: 1.0, top: "#0e2a20", horizon: "#d97b4a", fog: "#0d241c", ambient: 0.38 },
-  { at: 1.5, top: "#7cc39a", horizon: "#f4c17e", fog: "#8fcfa9", ambient: 0.72 },
+  // Morning arrives fast once the daylight zone starts — the world must be
+  // bright long before the visitor reaches the sections below.
+  { at: 1.3, top: "#a5dcbc", horizon: "#f6d9a4", fog: "#b4e4c8", ambient: 0.85 },
   { at: 2.0, top: "#cfeeda", horizon: "#f6fbf7", fog: "#dcf3e6", ambient: 1.0 },
 ];
 

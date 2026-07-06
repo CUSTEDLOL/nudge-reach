@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { ButtonLink } from "../button";
-import { Magnetic } from "../motion-primitives";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
 /**
@@ -70,12 +69,12 @@ export function HeroV2() {
           11:47 PM — your shop closed five hours ago
         </p>
 
-        <h1 className="mt-7 font-display text-[clamp(3.1rem,9vw,7.25rem)] leading-[0.96] tracking-tight text-white">
+        <h1 className="mt-7 font-display text-[clamp(2.9rem,8vw,6.5rem)] font-bold leading-[0.98] tracking-[-0.03em] text-white">
           <span className="block overflow-hidden pb-1">
             <span className="hero-line block">Your best employee</span>
           </span>
           <span className="block overflow-hidden pb-2">
-            <span className="hero-line block italic text-brand-300">
+            <span className="hero-line block text-brand-300">
               doesn&rsquo;t sleep.
             </span>
           </span>
@@ -88,12 +87,10 @@ export function HeroV2() {
         </p>
 
         <div className="hero-ctas mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Magnetic>
-            <ButtonLink href="/waitlist" size="lg">
-              Hire your Front Desk
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-            </ButtonLink>
-          </Magnetic>
+          <ButtonLink href="/waitlist" size="lg">
+            Hire your Front Desk
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+          </ButtonLink>
           <ButtonLink href="#night-shift" variant="secondary-dark" size="lg">
             Watch the night shift
             <ArrowDown className="h-4 w-4" />

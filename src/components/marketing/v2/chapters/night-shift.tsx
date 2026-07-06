@@ -73,7 +73,7 @@ export function NightShift() {
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-brand-200/80">
                 {b.time}
               </p>
-              <h2 className="mt-4 font-display text-[clamp(2.4rem,6vw,4.6rem)] leading-[1.02] text-white">
+              <h2 className="mt-4 font-display text-[clamp(2.2rem,5.5vw,4.2rem)] font-bold leading-[1.02] tracking-[-0.03em] text-white">
                 {b.title}
               </h2>
               <p className="mt-5 max-w-md text-lg leading-relaxed text-white/60">
