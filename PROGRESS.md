@@ -16,7 +16,8 @@ The landing page rebuilt as an immersive 3D scroll experience on branch
   orbit. Scroll is time: 11:47 PM → 9:00 AM on the DayRail shift clock.
 - **Pinned chapter story** (`chapters/night-shift.tsx`) synced to the same
   `CHAPTERS` spans the 3D scenes use; morning payoff with counters; daylight
-  sections (compare/salary/industries/features/pricing/FAQ) float as cards.
+  sections full-bleed (features → salary → compare → industries → reseller);
+  pricing and FAQ live on their own routes (`/pricing`, `/faq`).
 - **Adaptive quality on desktop AND mobile**: device tiering + live frame
   governor (`world/quality.ts`, tested), dpr/particle step-down, no drei.
 - **Fallbacks structural**: no-JS / reduced-motion / no-WebGL get the complete

@@ -158,14 +158,14 @@ export function CountUp({
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-15%" });
   const reduce = useReducedMotion();
-  const [value, setValue] = useState(0);
+  // SSR / no-JS / reduced-motion show the real number; the count-up is an
+  // enhancement layered on top for motion-friendly visitors.
+  const [value, setValue] = useState(to);
 
   useEffect(() => {
-    if (!inView) return;
-    // For reduced-motion we snap instantly (duration 0). Either way the state
-    // is updated from the animation callback, never synchronously in the effect.
+    if (!inView || reduce) return;
     const controls = animate(0, to, {
-      duration: reduce ? 0 : duration,
+      duration,
       ease: EASE,
       onUpdate: (v) => setValue(v),
       onComplete: () => setValue(to),

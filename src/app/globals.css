@@ -321,14 +321,6 @@ html {
   background-size: 160px 160px;
 }
 
-/* Perspective stage for the phone + calendar cards */
-.v2-persp {
-  perspective: 1400px;
-}
-.v2-preserve {
-  transform-style: preserve-3d;
-}
-
 /* The Night Shift scroll track: tall + sticky ONLY under .jsm.
    Static (default) = normal flow, whole transcript visible. */
 .jsm .ns-track {
@@ -350,12 +342,7 @@ html {
 }
 
 /* Scrub-hidden elements: hidden ONLY when the scrub will drive them. */
-.jsm .ns-beat,
-.jsm .ns-caption,
-.jsm .ns-card {
-  opacity: 0;
-}
-.jsm .ns-dawn {
+.jsm .ns-beat {
   opacity: 0;
 }
 
@@ -373,42 +360,12 @@ html {
   opacity: 0;
 }
 
-/* Comparison checkmarks draw in under .jsm (full stroke by default). */
-.jsm .v2-draw {
-  stroke-dasharray: 24;
-  stroke-dashoffset: 24;
-}
-
 /* Day-rail (fixed shift clock at the right edge) exists only under .jsm. */
 .v2-dayrail {
   display: none;
 }
 .jsm .v2-dayrail {
   display: flex;
-}
-
-/* WhatsApp-dark thread surfaces (kept local to the landing) */
-.v2-bubble-in {
-  background: #1f2c34;
-  color: #f1f5f3;
-}
-.v2-bubble-out {
-  background: #005c4b;
-  color: #ffffff;
-}
-
-/* Emerald screen-light the phone casts onto the night canvas */
-.v2-screenlight {
-  background: radial-gradient(
-    42% 34% at 50% 42%,
-    rgba(6, 193, 103, 0.16),
-    transparent 70%
-  );
-}
-
-/* Hairlines on night */
-.v2-hairline {
-  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Static night→day gradient behind everything: THE page background for

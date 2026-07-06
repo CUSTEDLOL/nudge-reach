@@ -38,9 +38,9 @@ isolation (`tests/org-scope`, `tests/agent-profile-auth`), plan/flagship gate
 - **No Meta Business verification / App Review / real account setup.** That is
   human paperwork — the runbook (`docs/GO_LIVE_WHATSAPP.md`) is made accurate for
   the founder to execute.
-- **No 3D dependency** (R3F/Three.js) on the landing — the perf/JS budget and the
-  "no unapproved deps" rule won; the immersive feel is CSS/motion. If you later
-  want true 3D, it's a scoped add-behind-lazy-load.
+- **No 3D dependency at that time** — the phase-6 landing was CSS/motion only.
+  (Superseded on branch `landing-v2`: the landing now runs a lazy-loaded
+  R3F/Three.js world; see `docs/superpowers/specs/2026-07-06-landing-3d-design.md`.)
 - **`googleapis` SDK not added** — the calendar integration uses the Google REST
   API via `fetch` directly (no new dependency). Live OAuth needs a real Google
   Cloud OAuth client; simulation needs nothing.
