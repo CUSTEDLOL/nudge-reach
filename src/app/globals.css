@@ -34,6 +34,8 @@
   /* Ink + surfaces -------------------------------------------------- */
   --color-ink: #0a0f0d;
   --color-cream: #f6fbf7;
+  /* Landing v2 "Night Shift" canvas — near-black with a green undertone. */
+  --color-night: #050d0a;
 
   /* Radii ----------------------------------------------------------- */
   --radius-4xl: 2rem;
@@ -296,4 +298,102 @@ html {
   [class*="animate-"] {
     animation: none !important;
   }
+}
+
+/* ============================================================
+   Landing v2 — "The Night Shift"
+
+   Motion gate: a tiny inline script adds `jsm` to <html> ONLY when
+   JS runs AND the visitor does not prefer reduced motion. Default
+   CSS below is the fully-visible static layout (no-JS, reduced-
+   motion, crawlers); everything scroll-driven upgrades under .jsm.
+   This is what makes "content visible with JS disabled" structural
+   rather than hopeful.
+   ============================================================ */
+
+/* Film grain — pure CSS fallback (a4-grain.png replaces it when present). */
+.v2-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* Perspective stage for the phone + calendar cards */
+.v2-persp {
+  perspective: 1400px;
+}
+.v2-preserve {
+  transform-style: preserve-3d;
+}
+
+/* The Night Shift scroll track: tall + sticky ONLY under .jsm.
+   Static (default) = normal flow, whole transcript visible. */
+.jsm .ns-track {
+  height: 520vh;
+}
+.jsm .ns-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+@media (max-width: 1023px) {
+  .jsm .ns-track {
+    height: 420vh;
+  }
+}
+
+/* Scrub-hidden elements: hidden ONLY when the scrub will drive them. */
+.jsm .ns-beat,
+.jsm .ns-caption,
+.jsm .ns-card {
+  opacity: 0;
+}
+.jsm .ns-dawn {
+  opacity: 0;
+}
+
+/* Kinetic lines + generic scroll reveals: same rule — only .jsm hides. */
+.jsm .v2-reveal {
+  opacity: 0;
+}
+
+/* Comparison checkmarks draw in under .jsm (full stroke by default). */
+.jsm .v2-draw {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+
+/* Day-rail (fixed shift clock at the right edge) exists only under .jsm. */
+.v2-dayrail {
+  display: none;
+}
+.jsm .v2-dayrail {
+  display: flex;
+}
+
+/* WhatsApp-dark thread surfaces (kept local to the landing) */
+.v2-bubble-in {
+  background: #1f2c34;
+  color: #f1f5f3;
+}
+.v2-bubble-out {
+  background: #005c4b;
+  color: #ffffff;
+}
+
+/* Emerald screen-light the phone casts onto the night canvas */
+.v2-screenlight {
+  background: radial-gradient(
+    42% 34% at 50% 42%,
+    rgba(6, 193, 103, 0.16),
+    transparent 70%
+  );
+}
+
+/* Hairlines on night */
+.v2-hairline {
+  border-color: rgba(255, 255, 255, 0.08);
 }
