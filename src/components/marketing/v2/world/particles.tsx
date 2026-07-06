@@ -9,6 +9,56 @@ import { rand } from "./path";
 
 const PALETTE = ["#06c167", "#6fe3a8", "#37ce86", "#a9f0c9"];
 
+const STREAKS = [
+  { period: 7.3, offset: 0.0, x0: -7, y0: 3.6, z: -9, slope: -0.2 },
+  { period: 11.1, offset: 4.3, x0: -2, y0: 4.2, z: -12, slope: -0.14 },
+];
+
+/** Occasional meteor streaks — deep-night only, gone before dawn. */
+function ShootingStars() {
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+
+  useFrame(({ clock }) => {
+    const night = shift.story < 0.72;
+    const t = clock.elapsedTime;
+    STREAKS.forEach((s, i) => {
+      const m = refs.current[i];
+      if (!m) return;
+      const local = (t + s.offset) % s.period;
+      const dur = 1.2;
+      m.visible = night && local < dur;
+      if (!m.visible) return;
+      const p = local / dur;
+      m.position.set(s.x0 + p * 10, s.y0 + p * 10 * s.slope, s.z);
+      (m.material as THREE.MeshBasicMaterial).opacity = Math.sin(p * Math.PI) * 0.55;
+    });
+  });
+
+  return (
+    <>
+      {STREAKS.map((s, i) => (
+        <mesh
+          key={i}
+          visible={false}
+          rotation={[0, 0, Math.atan(s.slope)]}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+        >
+          <planeGeometry args={[1.3, 0.02]} />
+          <meshBasicMaterial
+            color="#bfffdd"
+            transparent
+            opacity={0}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
 /** The emerald night sky that thins into daylight motes as morning comes. */
 export function Particles({ count }: { count: number }) {
   const points = useRef<THREE.Points>(null);
@@ -50,21 +100,24 @@ export function Particles({ count }: { count: number }) {
   });
 
   return (
-    <points ref={points}>
-      <bufferGeometry key={count}>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial
-        ref={material}
-        size={0.055}
-        sizeAttenuation
-        vertexColors
-        transparent
-        opacity={0.8}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
+    <>
+      <points ref={points}>
+        <bufferGeometry key={count}>
+          <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          ref={material}
+          size={0.055}
+          sizeAttenuation
+          vertexColors
+          transparent
+          opacity={0.8}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      <ShootingStars />
+    </>
   );
 }

@@ -4,13 +4,15 @@
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { shift } from "../progress";
+import { localProgress, shift } from "../progress";
 import { skyAt } from "./palette";
+import { smooth01 } from "./path";
 import { makeRadialTexture } from "./textures";
 
 /**
  * The sky: scene background + fog + a horizon glow sprite + lights, all
- * scrubbed by scroll every frame. This is what turns night into morning.
+ * scrubbed by scroll every frame — plus the sun itself, which climbs from
+ * below the horizon through dawn and hangs in the morning sky.
  */
 export function Sky() {
   const { scene } = useThree();
@@ -24,6 +26,7 @@ export function Sky() {
   }, [scene]);
 
   const glow = useRef<THREE.Sprite>(null);
+  const sunDisc = useRef<THREE.Sprite>(null);
   const sun = useRef<THREE.DirectionalLight>(null);
   const amb = useRef<THREE.AmbientLight>(null);
   const glowTexture = useMemo(() => makeRadialTexture(), []);
@@ -39,6 +42,17 @@ export function Sky() {
     }
     if (amb.current) amb.current.intensity = 0.4 + s.ambient * 1.2;
     if (sun.current) sun.current.intensity = s.ambient * 1.8;
+
+    // Sunrise: starts breaking the horizon late in the dawn chapter,
+    // fully up by the end of the daylight zone.
+    if (sunDisc.current) {
+      const rise = localProgress(shift.story, "dawn") * 0.35 + shift.after * 0.65;
+      const m = sunDisc.current.material as THREE.SpriteMaterial;
+      m.opacity = smooth01(rise) * 0.9;
+      sunDisc.current.position.y = -3.4 + rise * 4.8;
+      const scale = 3 + rise * 2.5;
+      sunDisc.current.scale.set(scale, scale, 1);
+    }
   });
 
   return (
@@ -50,6 +64,17 @@ export function Sky() {
           map={glowTexture}
           transparent
           opacity={0.5}
+          depthWrite={false}
+          fog={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </sprite>
+      <sprite ref={sunDisc} position={[1.8, -3.4, -15]} scale={[3, 3, 1]}>
+        <spriteMaterial
+          map={glowTexture}
+          color="#ffd9a0"
+          transparent
+          opacity={0}
           depthWrite={false}
           fog={false}
           blending={THREE.AdditiveBlending}

@@ -74,13 +74,17 @@ function gpuString(): string {
 }
 
 export function detectQuality(): Quality {
-  const nav = navigator as Navigator & { deviceMemory?: number };
-  return QUALITY[
-    pickTier({
-      memory: nav.deviceMemory,
-      cores: navigator.hardwareConcurrency,
-      mobile: matchMedia("(pointer: coarse)").matches,
-      gpu: gpuString(),
-    })
-  ];
+  try {
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    return QUALITY[
+      pickTier({
+        memory: nav.deviceMemory,
+        cores: navigator.hardwareConcurrency,
+        mobile: matchMedia("(pointer: coarse)").matches,
+        gpu: gpuString(),
+      })
+    ];
+  } catch {
+    return QUALITY.mid; // odd WebViews: same default as unknown hardware
+  }
 }

@@ -45,21 +45,33 @@ export function MessageStream({ cards }: { cards: number }) {
 
   useEffect(() => () => items.forEach((it) => it.texture.dispose()), [items]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const g = group.current;
     if (!g) return;
     g.visible = shift.story < CHAPTERS.book.end;
     if (!g.visible) return;
     const t = clock.elapsedTime;
     g.children.forEach((child, i) => {
-      child.position.y = items[i].y + Math.sin(t * items[i].bob + i) * 0.08;
+      const it = items[i];
+      child.position.y = it.y + Math.sin(t * it.bob + i) * 0.08;
+      // Proximity activation: each bubble wakes as the camera reaches it —
+      // scales up and brightens just ahead of the flight path, dims behind.
+      const dz = it.z - camera.position.z;
+      const prox = Math.exp(-((dz + 2.2) * (dz + 2.2)) / 3.5);
+      child.scale.setScalar(1 + prox * 0.18);
+      const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      m.opacity = 0.55 + prox * 0.45;
     });
   });
 
   return (
     <group ref={group}>
       {items.map((it, i) => (
-        <mesh key={i} position={[it.x, it.y, it.z]}>
+        <mesh
+          key={i}
+          position={[it.x, it.y, it.z]}
+          rotation={[0, it.x > 0 ? -0.22 : 0.22, 0]}
+        >
           <planeGeometry args={[CARD_H * it.aspect, CARD_H]} />
           <meshBasicMaterial map={it.texture} transparent opacity={0.95} />
         </mesh>

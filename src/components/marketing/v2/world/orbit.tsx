@@ -26,6 +26,7 @@ const CHIP_H = 0.42;
 export function OrbitScene({ fx }: { fx: boolean }) {
   const group = useRef<THREE.Group>(null);
   const glow = useRef<THREE.Sprite>(null);
+  const ring = useRef<THREE.Mesh>(null);
   const glowTexture = useMemo(() => makeRadialTexture(), []);
 
   const chips = useMemo(
@@ -56,12 +57,14 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     const t = clock.elapsedTime;
 
     g.children.forEach((child, i) => {
-      if (i >= chips.length) return; // the glow sprite
+      if (i >= chips.length) return; // the glow sprite + orbit ring
       const chip = chips[i];
       const a = chip.angle + t * chip.speed * (0.15 + pull);
       child.position.set(
         CENTER.x + Math.cos(a) * radius,
-        CENTER.y + Math.sin(a) * radius * 0.45,
+        CENTER.y +
+          Math.sin(a) * radius * 0.45 +
+          Math.sin(t * chip.speed * 3 + i) * 0.05,
         CENTER.z + Math.sin(a * 1.3) * 0.4
       );
       child.lookAt(camera.position);
@@ -70,9 +73,15 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     });
 
     if (glow.current) {
+      // The engine's heartbeat quickens as the chase lands.
       (glow.current.material as THREE.SpriteMaterial).opacity = fx
-        ? 0.35 + pull * 0.35
+        ? 0.35 + pull * 0.35 + Math.sin(t * 3) * 0.07 * pull
         : 0.3;
+    }
+    // The orbit line itself materializes as leads come back under control.
+    if (ring.current) {
+      ring.current.scale.set(radius, radius * 0.45, 1);
+      (ring.current.material as THREE.MeshBasicMaterial).opacity = pull * 0.3;
     }
   });
 
@@ -94,6 +103,17 @@ export function OrbitScene({ fx }: { fx: boolean }) {
           blending={THREE.AdditiveBlending}
         />
       </sprite>
+      <mesh ref={ring} position={[CENTER.x, CENTER.y, CENTER.z]}>
+        <ringGeometry args={[0.99, 1.02, 64]} />
+        <meshBasicMaterial
+          color="#06c167"
+          transparent
+          opacity={0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
     </group>
   );
 }
