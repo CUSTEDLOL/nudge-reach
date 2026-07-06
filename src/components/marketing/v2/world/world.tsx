@@ -7,6 +7,7 @@ import { QUALITY, shouldStepDown, stepDown, type Quality } from "./quality";
 import { Sky } from "./sky";
 import { Particles } from "./particles";
 import { CameraRig } from "./camera-rig";
+import { MessageStream } from "./message-stream";
 
 /** Watches real frame times and sheds quality when they stay slow. */
 function Governor({ onDegrade }: { onDegrade: () => void }) {
@@ -59,6 +60,7 @@ export default function World({ quality: initial }: { quality: Quality }) {
       <Sky />
       <CameraRig />
       <Particles count={quality.particles} />
+      <MessageStream cards={quality.streamCards} />
       {quality.tier !== "low" && (
         <Governor onDegrade={() => setQuality((q) => QUALITY[stepDown(q.tier)])} />
       )}
