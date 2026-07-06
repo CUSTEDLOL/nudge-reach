@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/marketing/navbar";
-import { Hero } from "@/components/marketing/hero";
-import { SocialProof } from "@/components/marketing/social-proof";
+import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
 import { SalaryCalculator } from "@/components/marketing/salary-calculator";
 import { Industries } from "@/components/marketing/industries";
@@ -10,7 +9,12 @@ import { ResellerCTA } from "@/components/marketing/reseller-cta";
 import { Pricing } from "@/components/marketing/pricing";
 import { FAQ } from "@/components/marketing/faq";
 import { FinalCTA } from "@/components/marketing/final-cta";
-import { Footer } from "@/components/marketing/footer";
+import { MotionGate } from "@/components/marketing/v2/motion-gate";
+import { Experience } from "@/components/marketing/v2/experience";
+import { HeroV2 } from "@/components/marketing/v2/hero-v2";
+import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
+import { Morning } from "@/components/marketing/v2/chapters/morning";
+import { FloatCard } from "@/components/marketing/v2/float-card";
 
 export const metadata: Metadata = {
   title: "Nudge — the AI Front Desk that runs your WhatsApp",
@@ -25,28 +29,54 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * The Night Shift. One page, one 24-hour shift: scroll is time. A persistent
+ * WebGL world (Experience) grades from 11:47 PM night to 9:00 AM morning
+ * behind server-rendered copy. Without JS/WebGL/motion, .v2-page's gradient
+ * and the default-visible CSS produce the complete static story.
+ */
 export default function Home() {
   return (
-    <>
+    <div data-shift="night" className="v2-page">
+      <MotionGate />
       <Navbar />
-      <main className="overflow-x-clip bg-cream">
-        {/* 1 — the AI-employee USP, product as hero */}
-        <Hero />
-        <SocialProof />
-        {/* 2 — Meta's free AI vs. the AI Front Desk */}
-        <MetaVsNudge />
-        {/* 3 — the salary math */}
-        <SalaryCalculator />
-        {/* 4 — vertical proof (clinics/salons) + the full toolkit underneath */}
-        <Industries />
-        <FeaturesBento />
-        {/* 5 — reseller channel, pricing, FAQ, legal */}
-        <ResellerCTA />
-        <Pricing />
-        <FAQ />
-        <FinalCTA />
+      <Experience />
+      <main className="relative z-10 overflow-x-clip">
+        {/* THE NIGHT — 11:47 PM → dawn */}
+        <HeroV2 />
+        <NightShift />
+        {/* THE MORNING — the payoff, then the daylight zone */}
+        <Morning />
+        <div className="space-y-10 px-4 pb-24 sm:px-6">
+          <FloatCard>
+            <MetaVsNudge />
+          </FloatCard>
+          <FloatCard>
+            <SalaryCalculator />
+          </FloatCard>
+          <FloatCard>
+            <Industries />
+          </FloatCard>
+          <FloatCard>
+            <FeaturesBento />
+          </FloatCard>
+          <FloatCard>
+            <ResellerCTA />
+          </FloatCard>
+          <FloatCard>
+            <Pricing />
+          </FloatCard>
+          <FloatCard>
+            <FAQ />
+          </FloatCard>
+          <FloatCard>
+            <FinalCTA />
+          </FloatCard>
+        </div>
       </main>
-      <Footer />
-    </>
+      <div className="relative z-10">
+        <Footer />
+      </div>
+    </div>
   );
 }
