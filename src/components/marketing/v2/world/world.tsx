@@ -8,6 +8,8 @@ import { Sky } from "./sky";
 import { Particles } from "./particles";
 import { CameraRig } from "./camera-rig";
 import { MessageStream } from "./message-stream";
+import { CalendarScene } from "./calendar";
+import { OrbitScene } from "./orbit";
 
 /** Watches real frame times and sheds quality when they stay slow. */
 function Governor({ onDegrade }: { onDegrade: () => void }) {
@@ -61,6 +63,8 @@ export default function World({ quality: initial }: { quality: Quality }) {
       <CameraRig />
       <Particles count={quality.particles} />
       <MessageStream cards={quality.streamCards} />
+      <CalendarScene />
+      <OrbitScene fx={quality.fx} />
       {quality.tier !== "low" && (
         <Governor onDegrade={() => setQuality((q) => QUALITY[stepDown(q.tier)])} />
       )}
