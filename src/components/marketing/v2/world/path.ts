@@ -21,18 +21,26 @@ interface Key {
 }
 
 /**
- * The camera's journey through the night, keyed to story progress.
- * Scene anchors: message corridor along -z at x≈0, calendar at [2.4, 0.3, 0],
- * lead orbit at [-2.6, 0.4, 0].
+ * The camera's journey through the night — one continuous flight forward,
+ * never doubling back. Scene anchors along the route: message corridor
+ * z −2…−30, calendar at [2.4, 0.3, −38], lead orbit at [−2.6, 0.4, −46],
+ * the dawn "collects" stack at [1.3, 0.8, −54].
  */
 const KEYS: Key[] = [
   { at: 0.0, pos: [0, 0.4, 7], look: [0, 0, 0] },
-  { at: 0.16, pos: [0, 0.2, 4.4], look: [0.6, 0.1, -4] },
-  { at: 0.28, pos: [0, 0.2, 1.8], look: [0.8, 0, -6] },
-  { at: 0.42, pos: [1.2, 0.7, 3.6], look: [2.6, 0.3, 0] },
-  { at: 0.62, pos: [-4.3, 0.9, 3.8], look: [-2.3, 0.3, 0] },
-  { at: 0.84, pos: [0, 1.6, 6.2], look: [0, 0.6, 0] },
-  { at: 1.0, pos: [0, 2.0, 7.5], look: [0, 0.8, 0] },
+  { at: 0.06, pos: [0, 0.3, 4], look: [0.7, 0.1, -4] },
+  // ride the whole message thread to its end
+  { at: 0.28, pos: [0.4, 0.2, -31], look: [1.0, 0.1, -38] },
+  // the calendar tableau, right-of-center…
+  { at: 0.4, pos: [1.2, 0.7, -34.4], look: [2.5, 0.3, -38] },
+  // …hold on it and push in while the slot locks
+  { at: 0.54, pos: [1.7, 0.55, -35.8], look: [2.45, 0.3, -38] },
+  // swing forward to the orbit
+  { at: 0.64, pos: [-4.3, 0.9, -42.2], look: [-2.3, 0.3, -46] },
+  // rise toward dawn and frame the collects stack
+  { at: 0.8, pos: [-2.0, 1.1, -46.5], look: [0.4, 0.5, -52] },
+  { at: 0.9, pos: [-0.4, 1.3, -48.5], look: [1.3, 0.7, -54] },
+  { at: 1.0, pos: [0, 2.0, -51], look: [0.6, 0.9, -57] },
 ];
 
 function lerpVec(a: Vec3, b: Vec3, t: number): Vec3 {

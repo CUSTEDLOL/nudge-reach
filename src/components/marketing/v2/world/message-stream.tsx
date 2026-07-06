@@ -40,7 +40,9 @@ export function MessageStream({ cards }: { cards: number }) {
           aspect,
           x: msg.out ? 2.2 + rand(i, 1) * 0.7 : 0.9 + rand(i, 1) * 0.5,
           y: -0.5 + rand(i, 2) * 1.5,
-          z: -1.5 - i * 1.6,
+          // constant-length corridor (z −2…−30) whatever the card count, so
+          // the camera's flight always reaches the end of the thread
+          z: -2 - (i * 28) / cards,
           bob: 0.5 + rand(i, 3),
         };
       }),

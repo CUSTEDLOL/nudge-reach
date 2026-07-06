@@ -31,7 +31,7 @@ export function Sky() {
   const amb = useRef<THREE.AmbientLight>(null);
   const glowTexture = useMemo(() => makeRadialTexture(), []);
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const s = skyAt(shift.story, shift.after);
     colors.bg.set(s.top);
     (scene.fog as THREE.FogExp2).color.set(s.fog);
@@ -39,6 +39,8 @@ export function Sky() {
       const m = glow.current.material as THREE.SpriteMaterial;
       m.color.set(s.horizon);
       m.opacity = 0.45 + s.ambient * 0.35;
+      // The horizon is infinitely far away: it travels with the camera.
+      glow.current.position.set(camera.position.x, -1.6, camera.position.z - 16);
     }
     if (amb.current) amb.current.intensity = 0.4 + s.ambient * 1.2;
     if (sun.current) sun.current.intensity = s.ambient * 1.8;
@@ -49,7 +51,11 @@ export function Sky() {
       const rise = localProgress(shift.story, "dawn") * 0.35 + shift.after * 0.65;
       const m = sunDisc.current.material as THREE.SpriteMaterial;
       m.opacity = smooth01(rise) * 0.9;
-      sunDisc.current.position.y = -3.4 + rise * 4.8;
+      sunDisc.current.position.set(
+        camera.position.x + 1.8,
+        -3.4 + rise * 4.8,
+        camera.position.z - 15
+      );
       const scale = 3 + rise * 2.5;
       sunDisc.current.scale.set(scale, scale, 1);
     }

@@ -19,7 +19,7 @@ const LEADS = [
   "Dev — no-show on Monday",
 ];
 
-const CENTER = new THREE.Vector3(-2.6, 0.4, 0); // camera looks here at 0.62
+const CENTER = new THREE.Vector3(-2.6, 0.4, -46); // camera looks here at 0.64
 const CHIP_H = 0.34;
 
 /** Ghosted leads drift cold, then the chase pulls them back into orbit. */

@@ -27,18 +27,18 @@ describe("cameraAt", () => {
     expect(cameraAt(0).pos).toEqual([0, 0.4, 7]);
   });
   it("ends at the dawn pullback", () => {
-    expect(cameraAt(1).pos).toEqual([0, 2.0, 7.5]);
+    expect(cameraAt(1).pos).toEqual([0, 2.0, -51]);
   });
   it("clamps outside [0,1]", () => {
     expect(cameraAt(-0.5)).toEqual(cameraAt(0));
     expect(cameraAt(1.5)).toEqual(cameraAt(1));
   });
   it("hits keyframes exactly", () => {
-    expect(cameraAt(0.42).pos).toEqual([1.2, 0.7, 3.6]);
+    expect(cameraAt(0.4).pos).toEqual([1.2, 0.7, -34.4]);
   });
-  it("interpolates between keyframes", () => {
-    const z = cameraAt(0.08).pos[2];
-    expect(z).toBeLessThan(7);
-    expect(z).toBeGreaterThan(4.2);
+  it("interpolates between keyframes (flying INTO the corridor)", () => {
+    const z = cameraAt(0.12).pos[2];
+    expect(z).toBeLessThan(4);
+    expect(z).toBeGreaterThan(-31);
   });
 });

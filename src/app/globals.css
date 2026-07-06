@@ -332,7 +332,7 @@ html {
 /* The Night Shift scroll track: tall + sticky ONLY under .jsm.
    Static (default) = normal flow, whole transcript visible. */
 .jsm .ns-track {
-  height: 900vh;
+  height: 1300vh;
 }
 .jsm .ns-stage {
   position: sticky;
@@ -345,7 +345,7 @@ html {
 }
 @media (max-width: 1023px) {
   .jsm .ns-track {
-    height: 700vh;
+    height: 1000vh;
   }
 }
 

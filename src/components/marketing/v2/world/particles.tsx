@@ -18,7 +18,7 @@ const STREAKS = [
 function ShootingStars() {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const night = shift.story < 0.72;
     const t = clock.elapsedTime;
     STREAKS.forEach((s, i) => {
@@ -29,7 +29,12 @@ function ShootingStars() {
       m.visible = night && local < dur;
       if (!m.visible) return;
       const p = local / dur;
-      m.position.set(s.x0 + p * 10, s.y0 + p * 10 * s.slope, s.z);
+      // streaks live in the far sky — they ride along with the camera
+      m.position.set(
+        camera.position.x + s.x0 + p * 10,
+        s.y0 + p * 10 * s.slope,
+        camera.position.z + s.z
+      );
       (m.material as THREE.MeshBasicMaterial).opacity = Math.sin(p * Math.PI) * 0.55;
     });
   });
@@ -86,6 +91,13 @@ export function Particles({ count }: { count: number }) {
   useFrame((state, delta) => {
     const p = points.current;
     if (!p) return;
+    // The star field is ambient: it recenters on the camera (with a touch of
+    // parallax lag) so the flight never leaves it behind.
+    p.position.set(
+      state.camera.position.x * 0.9,
+      0,
+      state.camera.position.z * 0.92
+    );
     p.rotation.y += delta * 0.016;
     const px = state.pointer.x * 0.12;
     const py = state.pointer.y * 0.06;

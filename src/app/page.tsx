@@ -14,7 +14,7 @@ import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { Morning } from "@/components/marketing/v2/chapters/morning";
-import { FloatCard } from "@/components/marketing/v2/float-card";
+import { DaySection } from "@/components/marketing/v2/day-section";
 
 export const metadata: Metadata = {
   title: "Nudge — the AI Front Desk that runs your WhatsApp",
@@ -45,35 +45,37 @@ export default function Home() {
         {/* THE NIGHT — 11:47 PM → dawn */}
         <HeroV2 />
         <NightShift />
-        {/* THE MORNING — the payoff, then the daylight zone */}
+        {/* THE MORNING — the payoff, then the daylight zone.
+            Full-bleed sections, Apple-style scrubbed entrances:
+            features (the USP) → the salary math → the honest comparison. */}
         <Morning />
-        <div className="space-y-10 px-4 pb-24 sm:px-6">
-          <FloatCard>
-            <MetaVsNudge />
-          </FloatCard>
-          <FloatCard>
-            <SalaryCalculator />
-          </FloatCard>
-          <FloatCard>
-            <Industries />
-          </FloatCard>
-          <FloatCard>
+        <div className="space-y-8 pb-16">
+          <DaySection>
             <FeaturesBento />
-          </FloatCard>
-          <FloatCard>
+          </DaySection>
+          <DaySection>
+            <SalaryCalculator />
+          </DaySection>
+          <DaySection>
+            <MetaVsNudge />
+          </DaySection>
+          <DaySection>
+            <Industries />
+          </DaySection>
+          <DaySection>
             <ResellerCTA />
-          </FloatCard>
-          <FloatCard>
+          </DaySection>
+          <DaySection>
             <Pricing />
-          </FloatCard>
-          <FloatCard>
+          </DaySection>
+          <DaySection>
             <FAQ />
-          </FloatCard>
+          </DaySection>
+          {/* full-bleed dark closer — the page ends on the ask */}
+          <DaySection>
+            <FinalCTA />
+          </DaySection>
         </div>
-        {/* full-bleed dark closer — the page ends on the ask, not a card */}
-        <FloatCard bare>
-          <FinalCTA />
-        </FloatCard>
       </main>
       <div className="relative z-10">
         <Footer />

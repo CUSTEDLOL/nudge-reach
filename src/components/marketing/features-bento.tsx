@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Bot,
   Camera,
   Inbox,
   KanbanSquare,
@@ -88,6 +89,30 @@ function CardShell({
 }
 
 /* ---- small decorative visuals ---- */
+
+function FrontDeskVisual() {
+  return (
+    <div className="grid gap-2 rounded-2xl border border-black/5 bg-brand-50/40 p-3">
+      <div className="max-w-[75%] rounded-xl rounded-tl-sm bg-white px-3 py-2 text-[13px] text-ink shadow-soft">
+        Do you have anything tomorrow evening?
+      </div>
+      <div className="ml-auto max-w-[80%] rounded-xl rounded-tr-sm bg-brand-500 px-3 py-2 text-[13px] text-white shadow-soft">
+        7:30 PM with Dr. Mehta is open — booking it now.
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-[11.5px] font-semibold">
+        <span className="rounded-lg bg-white px-2.5 py-1.5 text-ink/70 shadow-soft ring-1 ring-black/5">
+          Calendar ✓
+        </span>
+        <span className="rounded-lg bg-white px-2.5 py-1.5 text-ink/70 shadow-soft ring-1 ring-black/5">
+          Reminder ✓
+        </span>
+        <span className="rounded-lg bg-brand-500 px-2.5 py-1.5 text-white shadow-soft">
+          ₹500 deposit collected
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function InboxVisual() {
   const rows = [
@@ -226,24 +251,26 @@ export function FeaturesBento() {
     <Section id="features" className="bg-white">
       <Container>
         <SectionHeading
-          eyebrow="The full toolkit underneath"
+          eyebrow="What you're hiring"
           title={
             <>
-              The whole platform comes{" "}
-              <span className="text-gradient">in the box</span>
+              One AI employee.{" "}
+              <span className="text-gradient">A whole toolkit under it.</span>
             </>
           }
-          subtitle="Under the AI Front Desk sits a complete WhatsApp toolkit — shared inbox, leads, campaigns, automations and analytics. On the self-serve tiers you run it yourself; on the flagship, we run it for you."
+          subtitle="The AI Front Desk is the job it does — answer, book, chase, collect. Underneath sits the complete WhatsApp platform: shared inbox, leads, campaigns, automations and analytics."
         />
 
         <Stagger className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-6">
           <CardShell
-            icon={Inbox}
-            title="Shared team inbox"
-            desc="Route conversations to the right teammate, leave internal notes, and reply with one source of truth. Presence shows who's typing, live."
+            icon={Bot}
+            title="The AI Front Desk"
+            desc="Trained on your services, prices and tone. It answers in seconds, books into your real calendar, chases quiet leads with approved templates, and collects deposits — all night, every night. We set it up for you."
             span="md:col-span-2 lg:col-span-4"
+            highlight
+            href="/waitlist"
           >
-            <InboxVisual />
+            <FrontDeskVisual />
           </CardShell>
 
           <CardShell
@@ -256,11 +283,19 @@ export function FeaturesBento() {
           </CardShell>
 
           <CardShell
+            icon={Inbox}
+            title="Shared team inbox"
+            desc="Route conversations to teammates with notes and live presence."
+            span="lg:col-span-2"
+          >
+            <InboxVisual />
+          </CardShell>
+
+          <CardShell
             icon={Camera}
             title="Photo → campaign"
             desc="Snap a product photo and Nudge writes a compliant, ready-to-send campaign in seconds."
             span="lg:col-span-2"
-            highlight
           >
             <PhotoVisual />
           </CardShell>
@@ -296,7 +331,7 @@ export function FeaturesBento() {
             icon={ShieldCheck}
             title="Compliance & consent"
             desc="Opt-in tracking and automatic STOP handling keep your number healthy."
-            span="lg:col-span-2"
+            span="md:col-span-2 lg:col-span-6"
           >
             <div className="flex items-center gap-2 text-[11.5px] font-semibold">
               <span className="rounded-lg bg-brand-50 px-2.5 py-1.5 text-brand-700 ring-1 ring-brand-200/60">

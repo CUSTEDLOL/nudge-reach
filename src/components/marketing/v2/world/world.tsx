@@ -10,6 +10,7 @@ import { CameraRig } from "./camera-rig";
 import { MessageStream } from "./message-stream";
 import { CalendarScene } from "./calendar";
 import { OrbitScene } from "./orbit";
+import { CollectScene } from "./collect";
 
 /** Watches real frame times and sheds quality when they stay slow. */
 function Governor({ onDegrade }: { onDegrade: () => void }) {
@@ -65,6 +66,7 @@ export default function World({ quality: initial }: { quality: Quality }) {
       <MessageStream cards={quality.streamCards} />
       <CalendarScene />
       <OrbitScene fx={quality.fx} />
+      <CollectScene />
       {quality.tier !== "low" && (
         <Governor onDegrade={() => setQuality((q) => QUALITY[stepDown(q.tier)])} />
       )}
