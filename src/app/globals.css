@@ -355,6 +355,15 @@ html {
   opacity: 0;
 }
 
+/* Beats stack in normal flow by default (no-JS); under .jsm they overlap
+   in the sticky stage and the scrub crossfades them. GSAP owns yPercent. */
+.jsm .ns-beat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+}
+
 /* Kinetic lines + generic scroll reveals: same rule — only .jsm hides. */
 .jsm .v2-reveal {
   opacity: 0;
