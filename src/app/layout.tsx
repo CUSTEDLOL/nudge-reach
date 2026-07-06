@@ -54,9 +54,23 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* Motion gate: adds `jsm` to <html> ONLY when JS runs AND the
+            visitor doesn't prefer reduced motion. Inline in the LAYOUT so it
+            executes during HTML parse (before first paint) and, because the
+            layout persists across client-side navigations, React never
+            client-renders it (which would log an error and not execute). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('jsm')}}catch(e){}",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

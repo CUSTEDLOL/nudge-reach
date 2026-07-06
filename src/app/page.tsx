@@ -7,7 +7,6 @@ import { Industries } from "@/components/marketing/industries";
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { ResellerCTA } from "@/components/marketing/reseller-cta";
 import { FinalCTA } from "@/components/marketing/final-cta";
-import { MotionGate } from "@/components/marketing/v2/motion-gate";
 import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
@@ -36,7 +35,6 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div data-shift="night" className="v2-page">
-      <MotionGate />
       <Navbar />
       <Experience />
       <main className="relative z-10 overflow-x-clip">
