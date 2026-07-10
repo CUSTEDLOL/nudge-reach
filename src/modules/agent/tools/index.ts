@@ -3,12 +3,18 @@ import type { AgentTool, ToolContext } from "@/modules/agent/tools/types";
 import { handoffTool, HANDOFF_TOOL_NAME } from "@/modules/agent/tools/handoff";
 import { captureLeadTool } from "@/modules/agent/tools/capture-lead";
 import { captureBookingTool } from "@/modules/agent/tools/capture-booking";
+import { askOwnerTool } from "@/modules/agent/tools/ask-owner";
 
 export type { ToolContext } from "@/modules/agent/tools/types";
 export { HANDOFF_TOOL_NAME } from "@/modules/agent/tools/handoff";
 
-/** The worker's tool belt (Milestone 1). Keep it small and sharp. */
-const TOOLS: AgentTool[] = [handoffTool, captureLeadTool, captureBookingTool];
+/** The worker's tool belt. Keep it small and sharp. */
+const TOOLS: AgentTool[] = [
+  handoffTool,
+  captureLeadTool,
+  captureBookingTool,
+  askOwnerTool,
+];
 const BY_NAME = new Map(TOOLS.map((t) => [t.def.name, t]));
 
 /** Schemas handed to the model. */
