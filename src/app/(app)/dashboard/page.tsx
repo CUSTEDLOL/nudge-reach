@@ -17,6 +17,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { getDashboardData } from "@/modules/dashboard/queries";
 import { getRecoveryMetrics } from "@/modules/followup/metrics";
@@ -47,6 +48,9 @@ export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
   const data = await getDashboardData(org.id);
   const recovery = await getRecoveryMetrics(org.id);
+  const pendingQuestions = await prisma.ownerQuestion.count({
+    where: { orgId: org.id, status: "pending" },
+  });
 
   // First visit with an empty workspace → guided setup (spec §M1).
   if (!org.onboardedAt && data.contactCount === 0) {
@@ -79,6 +83,20 @@ export default async function DashboardPage() {
           </Link>
         }
       />
+
+      {pendingQuestions > 0 && (
+        <Link
+          href="/knowledge"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm transition-colors hover:bg-amber-100"
+        >
+          <span className="font-medium text-amber-900">
+            Your AI has {pendingQuestions} customer question
+            {pendingQuestions === 1 ? "" : "s"} it needs your answer on — each
+            answer makes it permanently smarter.
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+        </Link>
+      )}
 
       {!data.checklist.allDone && (
         <ChecklistCard checklist={data.checklist} orgName={org.name} />

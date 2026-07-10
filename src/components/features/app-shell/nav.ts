@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Blocks,
+  BookOpen,
   Inbox,
   LayoutDashboard,
   LayoutTemplate,
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Campaigns", href: "/campaigns", icon: Megaphone },
   { label: "Templates", href: "/templates", icon: LayoutTemplate, hideForAgent: true },
   { label: "Automations", href: "/automations", icon: Workflow, hideForAgent: true },
+  { label: "Knowledge", href: "/knowledge", icon: BookOpen },
   { label: "Analytics", href: "/analytics", icon: BarChart3, hideForAgent: true },
   { label: "Integrations", href: "/integrations", icon: Blocks, hideForAgent: true },
   { label: "Settings", href: "/settings", icon: Settings, hideForAgent: true },
