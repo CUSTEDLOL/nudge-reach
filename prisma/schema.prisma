@@ -71,6 +71,8 @@ model Org {
   bookingRequests  BookingRequest[]
   calendarAccount  CalendarAccount?
   followUpConfig   FollowUpConfig?
+  knowledgeEntries KnowledgeEntry[]
+  ownerQuestions   OwnerQuestion[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -625,4 +627,45 @@ model WaitlistSignup {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// Structured agent knowledge — one fact per row (spec 2026-07-10). The agent
+// reads a categorized digest of active rows, never the raw table. `condition`
+// is a plain-language applicability window ("weekends only") applied against
+// the org-local current time in the prompt.
+model KnowledgeEntry {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  category  String   // menu_services | pricing | hours | location | policies | payments | faq | other
+  fact      String
+  condition String?  // plain-language applicability, e.g. "weekends only"
+  source    String   // owner_answer | questionnaire | manual | import
+  status    String   @default("active") // active | archived
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, status, category])
+}
+
+// A question the agent could not answer, waiting for the owner
+// (learn-on-the-job). Deduped in code on (orgId, questionKey, pending) —
+// ten customers asking the same thing become one owner question, and every
+// waiter in `waiting` gets a follow-up when the answer arrives (24h-gated).
+model OwnerQuestion {
+  id          String    @id @default(cuid())
+  orgId       String
+  org         Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  question    String
+  questionKey String
+  status      String    @default("pending") // pending | answered | dismissed
+  waiting     Json      @default("[]") // [{conversationId, contactId, askedAt, followedUpAt?}]
+  askCount    Int       @default(1)
+  answerText  String?
+  entryIds    String[]  @default([])
+  askedAt     DateTime  @default(now())
+  answeredAt  DateTime?
+
+  @@index([orgId, status])
+  @@index([orgId, questionKey])
 }
