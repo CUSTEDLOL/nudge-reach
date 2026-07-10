@@ -83,10 +83,18 @@ export interface ChecklistInput {
   /** Campaigns that are SENT or SENDING. */
   activeCampaignCount: number;
   enabledAutomationCount: number;
+  /** Active KnowledgeEntry rows — the AI's structured brain. */
+  knowledgeFactCount: number;
 }
 
 export interface ChecklistItem {
-  key: "whatsapp" | "contacts" | "template" | "campaign" | "automation";
+  key:
+    | "whatsapp"
+    | "contacts"
+    | "template"
+    | "campaign"
+    | "automation"
+    | "knowledge";
   title: string;
   description: string;
   href: string;
@@ -153,6 +161,16 @@ export function buildChecklist(input: ChecklistInput): Checklist {
           : "Auto-reply to keywords and new contacts.",
       href: "/automations",
       done: input.enabledAutomationCount > 0,
+    },
+    {
+      key: "knowledge",
+      title: "Teach your AI the business",
+      description:
+        input.knowledgeFactCount > 0
+          ? "Your AI has structured knowledge to answer from."
+          : "Run the questionnaire so the AI answers like staff.",
+      href: "/knowledge/questionnaire",
+      done: input.knowledgeFactCount > 0,
     },
   ];
 

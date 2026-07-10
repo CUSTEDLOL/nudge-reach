@@ -64,6 +64,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     enabledAutomationCount,
     whatsappAccountCount,
     templateCount,
+    knowledgeFactCount,
     conversations,
     campaigns,
   ] = await Promise.all([
@@ -95,6 +96,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     prisma.template.count({
       where: { OR: [{ orgId }, { campaign: { orgId } }] },
     }),
+    prisma.knowledgeEntry.count({ where: { orgId, status: "active" } }),
     prisma.conversation.findMany({
       where: { orgId },
       orderBy: [
@@ -149,6 +151,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
       templateCount,
       activeCampaignCount: campaignsSentCount,
       enabledAutomationCount,
+      knowledgeFactCount,
     }),
     simulationMode,
     recentConversations: conversations.map((c) => ({

@@ -90,11 +90,12 @@ describe("buildChecklist", () => {
     templateCount: 0,
     activeCampaignCount: 0,
     enabledAutomationCount: 0,
+    knowledgeFactCount: 0,
   };
 
   it("everything pending on a fresh live-mode org", () => {
     const checklist = buildChecklist(empty);
-    expect(checklist.total).toBe(5);
+    expect(checklist.total).toBe(6);
     expect(checklist.completed).toBe(0);
     expect(checklist.allDone).toBe(false);
     expect(checklist.items.every((i) => !i.done)).toBe(true);
@@ -125,8 +126,9 @@ describe("buildChecklist", () => {
       templateCount: 2,
       activeCampaignCount: 1,
       enabledAutomationCount: 1,
+      knowledgeFactCount: 8,
     });
-    expect(checklist.completed).toBe(5);
+    expect(checklist.completed).toBe(6);
     expect(checklist.allDone).toBe(true);
   });
 

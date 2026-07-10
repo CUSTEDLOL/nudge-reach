@@ -149,15 +149,20 @@ export interface ConciergeStatus {
 /** The client go-live gate — computed from REAL state (mirrors the WhatsApp
  *  go-live checklist), not stored flags. */
 export async function getConciergeStatus(orgId: string): Promise<ConciergeStatus> {
-  const [profile, calendar, approvedTemplates, followUp] = await Promise.all([
-    prisma.agentProfile.findUnique({ where: { orgId } }),
-    prisma.calendarAccount.findUnique({ where: { orgId } }),
-    prisma.template.count({
-      where: { orgId, campaignId: null, metaStatus: "APPROVED" },
-    }),
-    prisma.followUpConfig.findUnique({ where: { orgId } }),
-  ]);
-  const agentConfigured = Boolean(profile && profile.businessInfo.trim().length > 0);
+  const [profile, calendar, approvedTemplates, followUp, knowledgeCount] =
+    await Promise.all([
+      prisma.agentProfile.findUnique({ where: { orgId } }),
+      prisma.calendarAccount.findUnique({ where: { orgId } }),
+      prisma.template.count({
+        where: { orgId, campaignId: null, metaStatus: "APPROVED" },
+      }),
+      prisma.followUpConfig.findUnique({ where: { orgId } }),
+      prisma.knowledgeEntry.count({ where: { orgId, status: "active" } }),
+    ]);
+  // Structured knowledge counts as a configured KB, same as the legacy blob.
+  const agentConfigured =
+    Boolean(profile && profile.businessInfo.trim().length > 0) ||
+    knowledgeCount > 0;
   const agentEnabled = Boolean(profile?.enabled);
   const calendarConnected = Boolean(calendar);
   const followUpEnabled = Boolean(followUp?.enabled);

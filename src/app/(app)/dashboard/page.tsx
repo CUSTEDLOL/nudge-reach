@@ -229,7 +229,7 @@ function ChecklistCard({
         </div>
       </div>
 
-      <ol className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <ol className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {checklist.items.map((item, index) => (
           <li key={item.key}>
             <Link
