@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { isWithinServiceWindow } from "@/modules/agent/window";
 import {
   buildAgentSystemPrompt,
+  formatNowLine,
+  GENERIC_SCOPE,
   HANDOFF_SENTINEL,
 } from "@/modules/agent/prompt";
 import { buildHistory } from "@/modules/agent/reply";
@@ -57,9 +59,83 @@ describe("buildAgentSystemPrompt (scoped, compliant)", () => {
     );
   });
 
-  it("falls back to the restaurant template for an unknown vertical", () => {
-    const p = buildAgentSystemPrompt({ ...profile, vertical: "spaceship" });
-    expect(p).toContain("restaurant");
+  it("introduces itself from the org's own vertical when no curated template exists (no restaurant fallback)", () => {
+    const p = buildAgentSystemPrompt({ ...profile, vertical: "jewellery" });
+    expect(p).toContain("a jewellery business");
+    expect(p).not.toContain("restaurant");
+    expect(p).toContain(GENERIC_SCOPE);
+  });
+
+  it("handles underscored vertical slugs and empty verticals", () => {
+    expect(
+      buildAgentSystemPrompt({ ...profile, vertical: "home_decor" })
+    ).toContain("a home decor business");
+    expect(buildAgentSystemPrompt({ ...profile, vertical: "" })).toContain(
+      'for "Spice Garden", a business'
+    );
+  });
+
+  it("keeps the curated template when one exists", () => {
+    const p = buildAgentSystemPrompt({ ...profile, vertical: "clinic" });
+    expect(p).toContain("a clinic");
+    expect(p).toContain("practitioners");
+  });
+});
+
+describe("buildAgentSystemPrompt (knowledge digest + time awareness)", () => {
+  const profile = {
+    vertical: "restaurant",
+    businessName: "Spice Garden",
+    businessInfo: "Legacy blob info here.",
+    tone: "Warm",
+    doNots: "",
+  };
+  const digest =
+    "MENU & SERVICES:\n- Chicken dishes available — only: weekends only";
+  const now = new Date("2026-07-14T09:42:00Z"); // Tuesday 3:12 PM in Kolkata
+
+  it("formatNowLine renders org-local weekday and time", () => {
+    const line = formatNowLine(now, "Asia/Kolkata");
+    expect(line).toContain("Tuesday");
+    expect(line).toContain("3:12 PM");
+  });
+
+  it("formatNowLine survives a bad timezone", () => {
+    expect(formatNowLine(now, "Not/AZone")).toContain("2026");
+  });
+
+  it("injects TODAY + the conditional-facts rule only when time context is given", () => {
+    const p = buildAgentSystemPrompt(profile, {
+      now,
+      timezone: "Asia/Kolkata",
+    });
+    expect(p).toContain("TODAY: Tuesday");
+    expect(p).toContain("— only:");
+    const bare = buildAgentSystemPrompt(profile);
+    expect(bare).not.toContain("TODAY:");
+  });
+
+  it("puts the knowledge digest above the legacy blob and demotes the blob header", () => {
+    const p = buildAgentSystemPrompt(profile, { knowledgeDigest: digest });
+    expect(p.indexOf("BUSINESS KNOWLEDGE")).toBeGreaterThan(-1);
+    expect(p.indexOf("BUSINESS KNOWLEDGE")).toBeLessThan(
+      p.indexOf("ADDITIONAL BUSINESS INFORMATION")
+    );
+    expect(p).toContain("Chicken dishes available");
+    expect(p).toContain("Legacy blob info here.");
+  });
+
+  it("without a digest the original blob section is unchanged", () => {
+    const p = buildAgentSystemPrompt(profile);
+    expect(p).toContain(
+      "BUSINESS INFORMATION (this is your only source of truth"
+    );
+    expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
+  });
+
+  it("tool guidance teaches ask_owner", () => {
+    const p = buildAgentSystemPrompt(profile, { withTools: true });
+    expect(p).toContain("ask_owner");
   });
 });
 
