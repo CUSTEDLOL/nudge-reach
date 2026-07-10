@@ -3,6 +3,7 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import { isStopMessage } from "@/modules/whatsapp/webhook-verify";
 import { sendMessage } from "@/modules/messaging";
 import { buildHistory, generateAgentActionReply } from "@/modules/agent/reply";
+import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { runInboundAutomations } from "@/modules/automation/engine";
 import { toPreview } from "@/modules/inbox/format";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
@@ -117,11 +118,23 @@ export async function handleInboundMessage(
   if (!profile.enabled)
     return { conversationId: conversation.id, skipped: "disabled" };
 
-  const recent = await prisma.conversationMessage.findMany({
-    where: { conversationId: conversation.id },
-    orderBy: { createdAt: "asc" },
-    take: HISTORY_LIMIT,
-  });
+  // Structured knowledge + org-local time make the prompt condition-aware
+  // ("weekends only" resolves against TODAY). The digest is the primary
+  // source of truth; the legacy businessInfo blob rides along until migrated.
+  const [recent, org, knowledgeEntries] = await Promise.all([
+    prisma.conversationMessage.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: "asc" },
+      take: HISTORY_LIMIT,
+    }),
+    prisma.org.findUnique({ where: { id: orgId }, select: { timezone: true } }),
+    prisma.knowledgeEntry.findMany({
+      where: { orgId, status: "active" },
+      select: { category: true, fact: true, condition: true },
+      orderBy: { createdAt: "asc" },
+      take: 400,
+    }),
+  ]);
 
   const { text: replyText, handoff, actions } = await generateAgentActionReply(
     {
@@ -138,6 +151,11 @@ export async function handleInboundMessage(
       conversationId: conversation.id,
       contactName: contact.name,
       contactPhone: phoneE164,
+    },
+    {
+      knowledgeDigest: buildKnowledgeDigest(knowledgeEntries),
+      now: new Date(),
+      timezone: org?.timezone ?? "Asia/Kolkata",
     }
   );
 

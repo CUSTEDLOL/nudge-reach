@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { chat } from "@/lib/model-router";
 import { buildHistory } from "@/modules/agent/reply";
+import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { firstName } from "@/modules/inbox/format";
 import { SUGGEST_TONES, type SuggestTone, isSuggestTone } from "@/modules/ai/tones";
 
@@ -39,13 +40,28 @@ export interface SuggestGrounding {
 /** Pure system-prompt builder (unit-tested). */
 export function buildSuggestSystemPrompt(
   grounding: SuggestGrounding,
-  tone: SuggestTone
+  tone: SuggestTone,
+  knowledgeDigest = ""
 ): string {
+  const digest = knowledgeDigest.trim();
   return [
     `You are drafting a WhatsApp reply that a human agent at "${grounding.businessName}" will review, edit and send. Draft the single best reply to the customer's latest message.`,
     "",
-    "BUSINESS INFORMATION (your only source of truth — never invent details not stated here):",
-    grounding.businessInfo.trim() || "(No details provided.)",
+    ...(digest
+      ? [
+          "BUSINESS KNOWLEDGE (your only source of truth — never invent details not stated here):",
+          digest,
+          "",
+        ]
+      : []),
+    digest
+      ? grounding.businessInfo.trim()
+        ? "ADDITIONAL BUSINESS INFORMATION:"
+        : ""
+      : "BUSINESS INFORMATION (your only source of truth — never invent details not stated here):",
+    digest && !grounding.businessInfo.trim()
+      ? ""
+      : grounding.businessInfo.trim() || "(No details provided.)",
     "",
     grounding.tone.trim() ? `HOUSE STYLE: ${grounding.tone.trim()}.` : "",
     `TONE FOR THIS DRAFT: ${TONE_INSTRUCTIONS[tone]}`,
@@ -136,9 +152,20 @@ export async function suggestReply(
     };
   }
 
+  const knowledgeEntries = await prisma.knowledgeEntry.findMany({
+    where: { orgId, status: "active" },
+    select: { category: true, fact: true, condition: true },
+    orderBy: { createdAt: "asc" },
+    take: 400,
+  });
+
   try {
     const draft = await chat({
-      system: buildSuggestSystemPrompt(grounding, tone),
+      system: buildSuggestSystemPrompt(
+        grounding,
+        tone,
+        buildKnowledgeDigest(knowledgeEntries)
+      ),
       messages: history,
       maxTokens: 300,
     });

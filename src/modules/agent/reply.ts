@@ -3,6 +3,7 @@ import {
   buildAgentSystemPrompt,
   HANDOFF_SENTINEL,
   type AgentProfileInput,
+  type AgentPromptOptions,
 } from "@/modules/agent/prompt";
 import {
   calledHandoff,
@@ -26,9 +27,10 @@ const HANDOFF_MESSAGE =
  */
 export async function generateAgentReply(
   profile: AgentProfileInput,
-  history: ChatTurn[]
+  history: ChatTurn[],
+  promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
 ): Promise<AgentReply> {
-  const system = buildAgentSystemPrompt(profile);
+  const system = buildAgentSystemPrompt(profile, promptOptions);
   const raw = await chat({ system, messages: history, maxTokens: 400 });
 
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
@@ -50,9 +52,13 @@ export interface AgentActionReply extends AgentReply {
 export async function generateAgentActionReply(
   profile: AgentProfileInput,
   history: ChatTurn[],
-  ctx: ToolContext
+  ctx: ToolContext,
+  promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
 ): Promise<AgentActionReply> {
-  const system = buildAgentSystemPrompt(profile, { withTools: true });
+  const system = buildAgentSystemPrompt(profile, {
+    ...promptOptions,
+    withTools: true,
+  });
 
   const { text, toolCalls } = await runAgent({
     system,

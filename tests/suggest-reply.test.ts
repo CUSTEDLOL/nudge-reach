@@ -76,3 +76,32 @@ describe("isSuggestTone", () => {
     expect(isSuggestTone("")).toBe(false);
   });
 });
+
+describe("buildSuggestSystemPrompt (knowledge digest)", () => {
+  const grounding = {
+    businessName: "Spice Garden",
+    businessInfo: "Legacy blob.",
+    tone: "",
+    doNots: "",
+  };
+
+  it("puts the digest above the demoted blob", () => {
+    const p = buildSuggestSystemPrompt(
+      grounding,
+      "professional",
+      "HOURS:\n- Open till 8pm"
+    );
+    expect(p.indexOf("BUSINESS KNOWLEDGE")).toBeGreaterThan(-1);
+    expect(p.indexOf("BUSINESS KNOWLEDGE")).toBeLessThan(
+      p.indexOf("ADDITIONAL BUSINESS INFORMATION")
+    );
+    expect(p).toContain("Open till 8pm");
+    expect(p).toContain("Legacy blob.");
+  });
+
+  it("without a digest the original section is unchanged", () => {
+    const p = buildSuggestSystemPrompt(grounding, "professional");
+    expect(p).toContain("BUSINESS INFORMATION (your only source of truth");
+    expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
+  });
+});
