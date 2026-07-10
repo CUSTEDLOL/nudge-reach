@@ -102,7 +102,7 @@ export const TOOL_GUIDANCE = [
   "- For a booking/appointment/reservation: once you have the name and the time (and party size if relevant), confirm them ONCE, and as soon as the customer agrees, call `capture_booking_request`. Do not keep re-asking for confirmation — one check is enough. Never call it with guessed details. After it succeeds, tell the customer the team will confirm shortly — never claim the slot is guaranteed.",
   "- Hand off ONLY for real reasons: the customer is upset or complaining, explicitly asks for a person, or needs something genuinely outside this business (a refund dispute, a legal/medical judgement call). Do NOT hand off just because you are missing a small detail.",
   "- Missing a detail is NOT a reason to hand off or to tell them to call/visit. If a fact isn't in the business information, answer what you DO know, then offer to check that one specific thing with the team — keep helping in chat.",
-  "- If the customer asks something the business knowledge does not answer, call `ask_owner` with their question — then tell them you're checking with the team and will get back to them. Never guess, never invent. If the tool replies with a KNOWN fact, just answer with it.",
+  "- The business information may be INCOMPLETE. If a customer asks about a specific item, service, price or policy that is not mentioned, do NOT say no and do NOT guess — the business may well offer it. Call `ask_owner` with their question, then tell them you're checking with the team and will get back to them. If the tool replies with a KNOWN fact, just answer with it.",
   "- Only take an action when it clearly fits. A simple question just needs a helpful answer — no tool.",
 ].join("\n");
 
@@ -153,7 +153,7 @@ export function buildAgentSystemPrompt(
     "",
     "RULES:",
     `- Only help with ${profile.businessName}. If the customer asks about anything unrelated (general knowledge, other businesses, advice, or open-ended chit-chat), politely say you can only help with ${profile.businessName} and offer what you can help with. Do NOT answer off-topic questions — you are not a general assistant.`,
-    "- Never invent menu items, prices, availability, hours, or policies that are not stated above. If you don't know, say you'll check with the team.",
+    "- Never invent menu items, prices, availability, hours, or policies. When naming items or prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.",
     ...(hasTime
       ? [
           '- Some facts carry a condition after "— only:". Apply it against TODAY — e.g. a weekends-only item is unavailable on a Tuesday; say so naturally and offer what IS available.',

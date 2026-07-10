@@ -16,6 +16,7 @@
 import { createHash } from "node:crypto";
 import { buildTemplatePayload } from "../whatsapp/template";
 import { installRevenueRecoveryPack } from "../followup/install";
+import { questionKey } from "../knowledge/normalize";
 import type { CampaignContent } from "../campaign/schema";
 import type { LeadStage, MessageStatus, Prisma, PrismaClient } from "@prisma/client";
 
@@ -1136,6 +1137,66 @@ async function seedFrontDesk(
         status: b.status,
         scheduledFor: new Date(NOW.getTime() + b.offsetHours * 3_600_000),
         calendarEventId: b.event,
+      },
+    });
+  }
+
+  // Structured knowledge (spec 2026-07-10) — includes conditional facts so the
+  // "weekends only" demo answers correctly against TODAY.
+  const knowledgeFacts: {
+    category: string;
+    fact: string;
+    condition?: string;
+  }[] = [
+    { category: "menu_services", fact: "Sarees, lehengas, kurta sets and a festive collection in store" },
+    { category: "menu_services", fact: "Custom blouse stitching available", condition: "weekdays only" },
+    { category: "menu_services", fact: "Saree pre-pleating service available", condition: "weekends only" },
+    { category: "pricing", fact: "Sarees start at ₹1,200; lehengas from ₹4,500" },
+    { category: "pricing", fact: "10% discount on bills above ₹10,000", condition: "festive season (October–December)" },
+    { category: "hours", fact: "Open Monday to Saturday, 10am to 8pm" },
+    { category: "hours", fact: "Closed on Sundays" },
+    { category: "location", fact: "Shop 12, Textile Market, MG Road — opposite the metro exit; parking in the market basement" },
+    { category: "policies", fact: "Exchanges within 7 days with the bill; no cash refunds" },
+    { category: "payments", fact: "UPI, all major cards and cash accepted" },
+  ];
+  if ((await prisma.knowledgeEntry.count({ where: { orgId } })) === 0) {
+    await prisma.knowledgeEntry.createMany({
+      data: knowledgeFacts.map((f) => ({
+        orgId,
+        category: f.category,
+        fact: f.fact,
+        condition: f.condition ?? null,
+        source: "import",
+      })),
+    });
+  }
+
+  // One pending owner question so the /knowledge queue + dashboard nudge demo.
+  const demoQuestion = "Do you have bridal lehengas on rent?";
+  const demoKey = questionKey(demoQuestion);
+  const pendingExists = await prisma.ownerQuestion.findFirst({
+    where: { orgId, questionKey: demoKey },
+  });
+  if (!pendingExists) {
+    const convo = await prisma.conversation.findFirst({
+      where: { orgId },
+      select: { id: true, contactId: true },
+    });
+    await prisma.ownerQuestion.create({
+      data: {
+        orgId,
+        question: demoQuestion,
+        questionKey: demoKey,
+        askCount: 2,
+        waiting: convo
+          ? [
+              {
+                conversationId: convo.id,
+                contactId: convo.contactId,
+                askedAt: NOW.toISOString(),
+              },
+            ]
+          : [],
       },
     });
   }

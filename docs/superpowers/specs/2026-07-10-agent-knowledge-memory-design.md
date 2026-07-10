@@ -1,6 +1,6 @@
 # Agent Knowledge Memory — "the employee that trains itself"
 
-**Date:** 2026-07-10 · **Status:** approved by founder · **Builds on:** `src/modules/agent`,
+**Date:** 2026-07-10 · **Status:** BUILT (branch feat/agent-knowledge, 2026-07-10) · **Builds on:** `src/modules/agent`,
 `AgentProfile`, concierge onboarding.
 
 ## Why

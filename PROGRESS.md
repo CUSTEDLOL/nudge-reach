@@ -5,6 +5,67 @@ what's next.
 
 ---
 
+## Agent Knowledge Memory — "the employee that trains itself" (2026-07-10) ✅
+
+Branch `feat/agent-knowledge` (spec:
+`docs/superpowers/specs/2026-07-10-agent-knowledge-memory-design.md`). The
+agent's knowledge is now structured, categorized, conditional, and
+self-growing — no fine-tuning (Meta policy + Haiku economics), all prompt
+grounding.
+
+### Done
+- **Structured memory**: `KnowledgeEntry` (category / fact / optional
+  condition, org-scoped + RLS). The prompt reads a categorized digest
+  (`modules/knowledge/digest.ts`, capped, pure) — never the raw blob.
+- **Time-aware conditions**: prompt carries `TODAY: <org-local weekday/time>`;
+  "weekends only" facts answer correctly per day (verified live: asked for
+  weekend-only kebabs on a Friday → agent said "today is Friday, weekends
+  only").
+- **Learn-on-the-job**: new `ask_owner` agent tool. Unknown in-scope question
+  → "checking with the team" + deduped `OwnerQuestion` (10 phrasings = 1
+  question via `questionKey`). Owner answers on **/knowledge** → Haiku
+  distills to facts (keyless fallback: raw answer as one fact) → every
+  waiting customer still inside the 24h window gets an automatic follow-up
+  through `sendMessage`. Known-fact short-circuit stops the agent asking
+  what it already knows.
+- **Any-business identity**: prompt introduces the agent from the org's OWN
+  vertical ("a jewellery business") — the silent restaurant fallback is dead.
+- **/knowledge page**: answer queue + fact library (add/edit/archive,
+  ADMIN-gated server-side) + one-click "structure my existing info" blob
+  migration. Sidebar entry, dashboard nudge banner, audit-log actions.
+- **Questionnaire** (`/knowledge/questionnaire`): one deterministic
+  20-question script (per-vertical wording), two modes — premade form and
+  chat-style interview — both distilling into the same memory. New
+  "Teach your AI the business" onboarding-checklist step (now 6 steps);
+  concierge counts structured knowledge as a configured KB.
+- **Inbox suggest-reply** reads the same digest.
+- Demo seed: 10 categorized facts (2 conditional) + 1 pending owner question.
+- **E2E verified live** (`scripts/knowledge-live.ts`, real code paths, Haiku,
+  simulation sends): ask-unknown → queue → answer → distill → auto follow-up
+  → re-ask answered from memory with the condition applied. Cleans up after
+  itself.
+- **422 tests / 52 files** (was 372/45); tsc, lint, build green.
+
+### Decisions
+- No embeddings/RAG — an SMB's 50–500 facts fit Haiku's context; the digest
+  is deterministic and testable. Revisit if a client passes ~1,000 facts.
+- Prompt hardened against closed-world reading: "business information may be
+  INCOMPLETE — absence ≠ no; ask_owner instead of denying" (the E2E caught
+  the agent saying "we don't have kebabs" before this rule).
+
+### Known limitations
+- Haiku can still name invented alternatives when being helpful (observed:
+  fictional dishes offered alongside a correct answer). Mitigations: the
+  never-invent/verbatim rules, the `not_offered` questionnaire item, and the
+  fact base growing with real traffic. Watch in production transcripts.
+- Follow-ups outside the 24h window are memory-only (template re-open is a
+  documented v2).
+- Owner is asked in-app only (WhatsApp-to-owner is v2).
+
+### Founder TODO
+- Production: `npm run db:push` + `npm run db:rls` (two new tables) before
+  deploying this branch; then merge to main.
+
 ## Landing v2 — "The Night Shift" (2026-07-06) ✅
 
 The landing page rebuilt as an immersive 3D scroll experience on branch
