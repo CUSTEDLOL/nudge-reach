@@ -25,7 +25,10 @@ export type AuditAction =
   | "followup.enabled"
   | "followup.disabled"
   | "concierge.client_setup"
-  | "demo.reset";
+  | "demo.reset"
+  | "knowledge.answered"
+  | "knowledge.dismissed"
+  | "knowledge.entry_archived";
 
 /** Human labels for the viewer. */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -47,6 +50,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "followup.disabled": "Revenue Recovery paused",
   "concierge.client_setup": "Concierge client setup",
   "demo.reset": "Demo data reset",
+  "knowledge.answered": "Owner answered agent question",
+  "knowledge.dismissed": "Agent question dismissed",
+  "knowledge.entry_archived": "Knowledge fact archived",
 };
 
 export function recordAudit(
