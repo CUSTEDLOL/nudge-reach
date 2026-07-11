@@ -355,13 +355,168 @@ html {
   opacity: 0;
 }
 
-/* Beats stack in normal flow by default (no-JS); under .jsm they overlap
-   in the sticky stage and the scrub crossfades them. GSAP owns yPercent. */
+/* Static fallback keeps the transcript in normal flow. The browser framing
+   appears only when its scrubbed WebGL world is available. */
+.ns-browser,
+.ns-world-mask {
+  display: none;
+}
+
+/* Under the motion gate, the left copy behaves like a vertical service rail:
+   the active beat settles at centre while its neighbours remain faint above
+   and below. */
+.jsm .ns-copy {
+  position: absolute;
+  z-index: 8;
+  left: 6vw;
+  top: 50%;
+  width: 36vw;
+  max-width: 34rem;
+}
 .jsm .ns-beat {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
+}
+
+/* The fixed world stays full-screen for continuity. Four white masks expose
+   it only through this browser-shaped opening during the pinned story. */
+@media (min-width: 1024px) {
+  .jsm .ns-world-mask {
+    position: absolute;
+    z-index: 5;
+    display: block;
+    background: #ffffff;
+  }
+  .jsm .ns-mask-left {
+    inset: 0 auto 0 0;
+    width: 48vw;
+  }
+  .jsm .ns-mask-top {
+    left: 48vw;
+    right: 4vw;
+    top: 0;
+    height: 13vh;
+  }
+  .jsm .ns-mask-right {
+    inset: 0 0 0 auto;
+    width: 4vw;
+  }
+  .jsm .ns-mask-bottom {
+    left: 48vw;
+    right: 4vw;
+    bottom: 0;
+    height: 13vh;
+  }
+}
+
+.jsm .ns-browser {
+  position: absolute;
+  z-index: 7;
+  right: 4vw;
+  top: 50%;
+  display: block;
+  width: 48vw;
+  height: 74vh;
+  height: 74svh;
+  overflow: hidden;
+  transform: translateY(-50%);
+  border: 1px solid rgba(10, 15, 13, 0.18);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 90px -30px rgba(10, 15, 13, 0.32),
+    14px 14px 0 rgba(6, 193, 103, 0.14);
+}
+
+.ns-browser-chrome {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  height: 3.6rem;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(10, 15, 13, 0.1);
+  background: rgba(246, 248, 247, 0.96);
+  padding-inline: 1.25rem;
+  backdrop-filter: blur(16px);
+}
+
+.ns-browser-viewport {
+  position: absolute;
+  inset: 3.6rem 0 0;
+  overflow: hidden;
+}
+
+.jsm .ns-browser-address:not(:first-child),
+.jsm .ns-browser-status:not(:first-child) {
+  opacity: 0;
+}
+
+.ns-browser-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image: linear-gradient(rgba(10, 15, 13, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 15, 13, 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent 75%);
+}
+
+@media (max-width: 1023px) {
+  .jsm .ns-stage {
+    align-items: stretch;
+  }
+  .jsm .ns-copy {
+    left: 1.25rem;
+    right: 1.25rem;
+    top: 25%;
+    width: auto;
+    max-width: none;
+  }
+  .jsm .ns-browser {
+    left: 1.25rem;
+    right: 1.25rem;
+    top: auto;
+    bottom: 5vh;
+    width: auto;
+    height: 48vh;
+    height: 48svh;
+    transform: none;
+    border-radius: 1.1rem;
+  }
+  .jsm .ns-world-mask {
+    position: absolute;
+    z-index: 5;
+    display: block;
+    background: #ffffff;
+  }
+  .jsm .ns-mask-top {
+    inset: 0 0 auto;
+    height: 47vh;
+    height: 47svh;
+  }
+  .jsm .ns-mask-left {
+    left: 0;
+    top: 47vh;
+    bottom: 5vh;
+    width: 1.25rem;
+  }
+  .jsm .ns-mask-right {
+    right: 0;
+    top: 47vh;
+    bottom: 5vh;
+    width: 1.25rem;
+  }
+  .jsm .ns-mask-bottom {
+    inset: auto 0 0;
+    height: 5vh;
+  }
+  .jsm .ns-beat p:last-child {
+    max-width: 34rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
 }
 
 /* Kinetic lines + generic scroll reveals: same rule — only .jsm hides. */

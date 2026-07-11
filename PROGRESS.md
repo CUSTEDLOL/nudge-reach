@@ -5,6 +5,33 @@ what's next.
 
 ---
 
+## Night Shift split-screen showcase (2026-07-11) ✅
+
+Reframed the four top scroll chapters to match a pinned services/showcase
+interaction: narrative on the left, one persistent product browser on the
+right.
+
+### Done
+- The left rail now advances vertically through **answers → books → chases →
+  collects**. The active chapter settles at full contrast while the previous
+  and next chapters move above/below at low opacity.
+- The existing WebGL scenes remain scroll-synced, but desktop and mobile masks
+  expose them through a bordered browser viewport instead of across the whole
+  page during the Night Shift.
+- Browser chrome updates with each chapter: product route, `01 / 04` chapter
+  count, action status and one continuous progress line.
+- Desktop uses the requested side-by-side pinned composition. Narrow screens
+  stack the active copy above a shorter browser viewport while preserving the
+  same four-part scrub.
+- No screenshots or third-party website embeds: all visuals remain native,
+  deterministic Nudge product scenes with the existing quality governor and
+  reduced-motion/static fallbacks.
+
+### Verification
+- `npm run lint` — green.
+- `npm run build` — green.
+- **423 tests / 52 files** — green under Node 22.
+
 ## Landing white-world art direction (2026-07-11) ✅
 
 Reworked the Night Shift landing after moving its canvas from dark to white,
