@@ -34,7 +34,7 @@ export const metadata: Metadata = {
  */
 export default function Home() {
   return (
-    <div data-shift="night" className="v2-page">
+    <div data-shift="day" className="v2-page">
       <Navbar />
       <Experience />
       <main className="relative z-10 overflow-x-clip">
@@ -45,7 +45,7 @@ export default function Home() {
             Full-bleed sections, Apple-style scrubbed entrances:
             features (the USP) → the salary math → the honest comparison. */}
         <Morning />
-        <div className="space-y-8 pb-16">
+        <div className="pb-16">
           <DaySection>
             <FeaturesBento />
           </DaySection>

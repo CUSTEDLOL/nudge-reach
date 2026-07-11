@@ -69,14 +69,14 @@ export function NightShift() {
       <div className="ns-stage">
         <div className="relative mx-auto w-full max-w-6xl px-5 sm:px-8">
           {BEATS.map((b) => (
-            <article key={b.time} className="ns-beat max-w-xl py-16 lg:py-0">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-brand-200/80">
+            <article key={b.time} className="ns-beat max-w-xl border-l-4 border-brand-500 bg-white/80 py-5 pl-6 pr-5 backdrop-blur-sm lg:py-6">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-700">
                 {b.time}
               </p>
-              <h2 className="mt-4 font-display text-[clamp(2.2rem,5.5vw,4.2rem)] font-bold leading-[1.02] tracking-[-0.03em] text-white">
+              <h2 className="mt-4 font-display text-[clamp(2.2rem,5.5vw,4.2rem)] font-bold leading-[1.02] tracking-[-0.03em] text-ink">
                 {b.title}
               </h2>
-              <p className="mt-5 max-w-md text-lg leading-relaxed text-white/60">
+              <p className="mt-5 max-w-md text-lg font-medium leading-relaxed text-ink/68">
                 {b.body}
               </p>
             </article>

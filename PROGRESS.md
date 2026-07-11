@@ -5,6 +5,36 @@ what's next.
 
 ---
 
+## Landing white-world art direction (2026-07-11) ✅
+
+Reworked the Night Shift landing after moving its canvas from dark to white,
+without replacing the scroll/WebGL animation system.
+
+### Done
+- Restored the core hero idea as **“Your front desk sleeps. This one
+  doesn’t.”** and rebuilt the opening as a bold split composition with a live
+  overnight shift ledger instead of copy floating alone on white.
+- Kept the world background genuinely white while restoring scene definition
+  through darker emerald particles, stronger calendar/bubble borders, richer
+  caught-lead and payment states, and more visible horizon light.
+- Expanded the chase and collect scenes into readable, deterministic customer
+  stories; retained responsive scene offsets, adaptive quality, scroll sync,
+  reduced-motion behavior and static copy fallbacks.
+- Removed the repeated numbered-header + italic-serif treatment from the
+  daylight sections. Replaced generic SaaS card styling with a single dark
+  flagship block, ruled supporting tools, stronger sans typography, direct
+  headlines, white section surfaces and hard-edged green/ink accents.
+- Refined the morning payoff, salary math, comparison, industries, reseller
+  and closing CTA so the page reads like one sales argument rather than a set
+  of interchangeable AI-generated sections.
+
+### Verification
+- Desktop and narrow-viewport screenshots checked with local headless Chrome.
+- `npm run lint` — green.
+- `npm run build` — green.
+- **423 tests / 52 files** — green under Node 22. The machine default is Node
+  20.14; Vite 7 requires Node 20.19+ before `npm test` can start normally.
+
 ## Agent Knowledge Memory — "the employee that trains itself" (2026-07-10) ✅
 
 Branch `feat/agent-knowledge` (spec:

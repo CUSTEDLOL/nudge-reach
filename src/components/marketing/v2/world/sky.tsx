@@ -17,11 +17,11 @@ import { makeRadialTexture } from "./textures";
 export function Sky() {
   const { scene } = useThree();
   const colors = useMemo(() => {
-    const bg = new THREE.Color("#050d0a");
+    const bg = new THREE.Color("#f5faf7");
     // eslint-disable-next-line react-hooks/immutability
     scene.background = bg;
     // eslint-disable-next-line react-hooks/immutability
-    scene.fog = new THREE.FogExp2("#050d0a", 0.05);
+    scene.fog = new THREE.FogExp2("#f5faf7", 0.05);
     return { bg };
   }, [scene]);
 
@@ -38,7 +38,7 @@ export function Sky() {
     if (glow.current) {
       const m = glow.current.material as THREE.SpriteMaterial;
       m.color.set(s.horizon);
-      m.opacity = 0.45 + s.ambient * 0.35;
+      m.opacity = 0.38; // visible colour, while the page itself remains white
       // The horizon is infinitely far away: it travels with the camera.
       glow.current.position.set(camera.position.x, -1.6, camera.position.z - 16);
     }
@@ -50,7 +50,7 @@ export function Sky() {
     if (sunDisc.current) {
       const rise = localProgress(shift.story, "dawn") * 0.35 + shift.after * 0.65;
       const m = sunDisc.current.material as THREE.SpriteMaterial;
-      m.opacity = smooth01(rise) * 0.9;
+      m.opacity = smooth01(rise) * 0.72;
       sunDisc.current.position.set(
         camera.position.x + 1.8,
         -3.4 + rise * 4.8,
@@ -72,18 +72,16 @@ export function Sky() {
           opacity={0.5}
           depthWrite={false}
           fog={false}
-          blending={THREE.AdditiveBlending}
         />
       </sprite>
       <sprite ref={sunDisc} position={[1.8, -3.4, -15]} scale={[3, 3, 1]}>
         <spriteMaterial
           map={glowTexture}
-          color="#ffd9a0"
+          color="#f4b64f"
           transparent
           opacity={0}
           depthWrite={false}
           fog={false}
-          blending={THREE.AdditiveBlending}
         />
       </sprite>
     </>

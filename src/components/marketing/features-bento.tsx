@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Container, Section, SectionHeading } from "./section";
-import { SpotlightCard, Stagger, StaggerItem } from "./motion-primitives";
+import { Stagger, StaggerItem } from "./motion-primitives";
 import { cn } from "@/lib/cn";
 
 function CardShell({
@@ -34,38 +34,37 @@ function CardShell({
   children?: React.ReactNode;
   href?: string;
 }) {
+  // The flagship gets one unapologetically dark block. Supporting tools stay
+  // as a quiet ruled list so the page does not become a grid of SaaS cards.
   const inner = (
-    <SpotlightCard
+    <div
       className={cn(
-        "flex h-full flex-col rounded-3xl border p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-7",
+        "group flex h-full flex-col transition-colors duration-300",
         highlight
-          ? "border-brand-300/70 bg-gradient-to-br from-brand-50 to-white"
-          : "border-black/5 bg-white"
+          ? "bg-ink p-7 text-white shadow-[12px_12px_0_#06c167] sm:p-9"
+          : "border-t border-ink/20 pt-6 hover:border-brand-500"
       )}
-      spotlight={highlight ? "rgba(6,193,103,0.22)" : "rgba(6,193,103,0.14)"}
     >
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            "inline-grid h-11 w-11 place-items-center rounded-2xl ring-1 transition-transform duration-300 group-hover:scale-110",
-            highlight
-              ? "bg-brand-500 text-white ring-brand-400"
-              : "bg-brand-50 text-brand-600 ring-brand-200/60"
-          )}
-        >
-          <Icon className="h-[22px] w-[22px]" />
+      <div className="flex items-center justify-between gap-3">
+        <span className={cn("grid h-10 w-10 place-items-center", highlight ? "bg-brand-500 text-ink" : "bg-ink text-white")}>
+          <Icon className="h-[19px] w-[19px]" aria-hidden />
         </span>
         {highlight && (
-          <span className="rounded-full bg-brand-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-700">
-            Signature feature
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-300">
+            The job you&rsquo;re hiring for
           </span>
         )}
       </div>
 
-      <h3 className="mt-5 text-xl font-semibold tracking-tight text-ink">
+      <h3
+        className={cn(
+          "mt-5 font-display text-xl font-bold tracking-tight",
+          highlight ? "text-3xl text-white" : "text-ink"
+        )}
+      >
         {title}
       </h3>
-      <p className="mt-2 max-w-md text-[14.5px] leading-relaxed text-ink/60">
+      <p className={cn("mt-2 max-w-lg text-[14.5px] leading-relaxed", highlight ? "text-white/65" : "text-ink/60")}>
         {desc}
       </p>
 
@@ -74,13 +73,13 @@ function CardShell({
       {href && (
         <Link
           href={href}
-          className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700"
+          className={cn("mt-6 inline-flex items-center gap-1.5 text-sm font-bold transition-colors", highlight ? "text-brand-300 hover:text-brand-200" : "text-brand-700 hover:text-brand-600")}
         >
           See how it works
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
       )}
-    </SpotlightCard>
+    </div>
   );
 
   return (
@@ -254,14 +253,13 @@ export function FeaturesBento() {
           eyebrow="What you're hiring"
           title={
             <>
-              One AI employee.{" "}
-              <span className="text-gradient">A whole toolkit under it.</span>
+              One front desk. Everything it needs to do the job.
             </>
           }
           subtitle="The AI Front Desk is the job it does — answer, book, chase, collect. Underneath sits the complete WhatsApp platform: shared inbox, leads, campaigns, automations and analytics."
         />
 
-        <Stagger className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-6">
+        <Stagger className="mt-14 grid grid-cols-1 gap-x-12 gap-y-14 md:grid-cols-2 lg:grid-cols-6">
           <CardShell
             icon={Bot}
             title="The AI Front Desk"

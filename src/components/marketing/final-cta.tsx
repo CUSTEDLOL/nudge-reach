@@ -24,14 +24,16 @@ export function FinalCTA() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
             <Reveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[13px] font-semibold text-brand-200">
-                Get started
-              </span>
+              <div className="flex items-baseline gap-4 border-b border-white/10 pb-4">
+                <span className="font-mono text-sm font-semibold text-brand-400">06</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-brand-200/70">
+                  Get started
+                </span>
+              </div>
             </Reveal>
             <Reveal delay={0.05}>
-              <h2 className="mt-5 text-balance text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-5xl">
-                Turn WhatsApp into your{" "}
-                <span className="text-gradient">growth engine</span>
+              <h2 className="mt-8 text-balance font-display text-4xl font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-5xl">
+                Wake up to booked work.
               </h2>
             </Reveal>
             <Reveal delay={0.1}>

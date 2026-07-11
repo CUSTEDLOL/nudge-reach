@@ -159,6 +159,15 @@ html {
    Reusable premium helpers
    ============================================================ */
 
+/* Editorial serif accent — one word per headline, the "designed, not
+   templated" cue. System serif so no new font ships. */
+.accent-serif {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 450;
+  letter-spacing: -0.015em;
+}
+
 /* Emerald gradient text */
 .text-gradient {
   background-image: linear-gradient(
@@ -372,30 +381,21 @@ html {
    no-JS / reduced-motion / no-WebGL. The opaque canvas covers it when the
    world is running. */
 .v2-page {
-  background: linear-gradient(
-    to bottom,
-    #050d0a 0%,
-    #071310 34%,
-    #0e2a20 44%,
-    #d97b4a 50%,
-    #f4c17e 54%,
-    #f6fbf7 64%,
-    #f6fbf7 100%
-  );
+  background: #ffffff;
 }
 
 /* Daylight sections float as cards inside the world. */
 .v2-daycard {
   margin-inline: auto;
   max-width: 82rem;
-  border-radius: 2.5rem;
-  border: 1px solid rgba(10, 15, 13, 0.06);
-  background: rgba(246, 251, 247, 0.94);
-  box-shadow: 0 30px 80px -40px rgba(5, 13, 10, 0.35);
+  border: 1px solid rgba(10, 15, 13, 0.18);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 18px 18px 0 rgba(6, 193, 103, 0.16),
+    0 30px 80px -40px rgba(5, 13, 10, 0.35);
 }
 @supports (backdrop-filter: blur(1px)) {
   .v2-daycard {
-    background: rgba(246, 251, 247, 0.88);
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(14px);
   }
 }

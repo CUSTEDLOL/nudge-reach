@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { clamp01, shift } from "../progress";
 import { rand } from "./path";
 
-const PALETTE = ["#06c167", "#6fe3a8", "#37ce86", "#a9f0c9"];
+const PALETTE = ["#006b42", "#06c167", "#18945c", "#0a3d2e"];
 
 const STREAKS = [
   { period: 7.3, offset: 0.0, x0: -7, y0: 3.6, z: -9, slope: -0.2 },
@@ -52,11 +52,10 @@ function ShootingStars() {
         >
           <planeGeometry args={[1.3, 0.02]} />
           <meshBasicMaterial
-            color="#bfffdd"
+            color="#7bcfa4"
             transparent
             opacity={0}
             depthWrite={false}
-            blending={THREE.AdditiveBlending}
           />
         </mesh>
       ))}
@@ -80,7 +79,7 @@ export function Particles({ count }: { count: number }) {
       pos[i * 3 + 1] = (rand(i, 13) - 0.35) * 8;
       pos[i * 3 + 2] = Math.sin(angle) * radius - 4;
       c.set(PALETTE[i % PALETTE.length]);
-      const dim = 0.35 + rand(i, 14) * 0.65;
+      const dim = 0.55 + rand(i, 14) * 0.45;
       col[i * 3] = c.r * dim;
       col[i * 3 + 1] = c.g * dim;
       col[i * 3 + 2] = c.b * dim;
@@ -106,8 +105,8 @@ export function Particles({ count }: { count: number }) {
     if (material.current) {
       const day = shift.story >= 1 ? clamp01(shift.after) : 0;
       const twinkle = 0.75 + Math.sin(state.clock.elapsedTime * 0.6) * 0.15;
-      material.current.opacity = twinkle * (1 - day * 0.7);
-      material.current.size = 0.055 - day * 0.02;
+      material.current.opacity = twinkle * (1 - day * 0.55);
+      material.current.size = 0.075 - day * 0.025;
     }
   });
 
@@ -120,13 +119,12 @@ export function Particles({ count }: { count: number }) {
         </bufferGeometry>
         <pointsMaterial
           ref={material}
-          size={0.055}
+          size={0.075}
           sizeAttenuation
           vertexColors
           transparent
-          opacity={0.8}
+          opacity={0.78}
           depthWrite={false}
-          blending={THREE.AdditiveBlending}
         />
       </points>
       <ShootingStars />

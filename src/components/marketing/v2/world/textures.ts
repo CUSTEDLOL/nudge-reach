@@ -29,10 +29,10 @@ export function makeSlotTexture(
   const ctx = c.getContext("2d")!;
   ctx.beginPath();
   ctx.roundRect(4, 4, w - 8, h - 8, 26);
-  ctx.fillStyle = booked ? "#06c167" : "#f6fbf7";
+  ctx.fillStyle = booked ? "#06c167" : "#ffffff";
   ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = booked ? "rgba(255,255,255,0.35)" : "rgba(10,15,13,0.1)";
+  ctx.lineWidth = booked ? 3 : 5;
+  ctx.strokeStyle = booked ? "rgba(255,255,255,0.5)" : "rgba(10,15,13,0.42)";
   ctx.stroke();
   ctx.fillStyle = booked ? "#ffffff" : "#0a0f0d";
   ctx.font = "600 44px -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -48,24 +48,44 @@ export function makeSlotTexture(
   return texture;
 }
 
-const BUBBLE = {
+export type BubbleStyle = "out" | "in" | "dim" | "caught" | "receipt";
+
+const BUBBLE: Record<
+  BubbleStyle,
+  { bg: string; fg: string; border?: string }
+> = {
   out: { bg: "#005c4b", fg: "#ffffff" },
-  in: { bg: "#1f2c34", fg: "#f1f5f3" },
+  in: { bg: "#ffffff", fg: "#101815", border: "rgba(10,15,13,0.35)" },
+  // A lead gone cold: pale, quiet — barely there against the white sky.
+  dim: { bg: "#edf2ef", fg: "#617169", border: "rgba(10,15,13,0.25)" },
+  // The same lead after the follow-up lands: lit green, clearly alive.
+  caught: { bg: "#bff2d5", fg: "#043d29", border: "rgba(0,107,66,0.85)" },
+  // Payment/receipt system card for the dawn "collects" thread.
+  receipt: { bg: "#ffe8b8", fg: "#5f4107", border: "rgba(150,95,0,0.7)" },
 };
 
-const FONT = "26px -apple-system, 'Segoe UI', Roboto, sans-serif";
+const font = (scale: number) =>
+  `${Math.round(26 * scale)}px -apple-system, 'Segoe UI', Roboto, sans-serif`;
+const subFont = (scale: number) =>
+  `600 ${Math.round(22 * scale)}px -apple-system, 'Segoe UI', Roboto, sans-serif`;
 
-/** WhatsApp-style chat bubble drawn to a canvas texture. */
+/** WhatsApp-style chat bubble drawn to a canvas texture. `style` accepts the
+ *  legacy boolean (true = outbound) or a named style. `subline` renders a
+ *  small green status line under the text (e.g. "↳ follow-up sent ✓"). */
 export function makeBubbleTexture(
   text: string,
-  outbound: boolean
+  style: boolean | BubbleStyle,
+  subline?: string,
+  scale = 1
 ): { texture: THREE.CanvasTexture; aspect: number } {
-  const pad = 28;
-  const lineH = 36;
-  const maxW = 460;
+  const key: BubbleStyle =
+    typeof style === "boolean" ? (style ? "out" : "in") : style;
+  const pad = 28 * scale;
+  const lineH = 36 * scale;
+  const maxW = 460 * scale;
   const c = document.createElement("canvas");
   const ctx = c.getContext("2d")!;
-  ctx.font = FONT;
+  ctx.font = font(scale);
 
   const lines: string[] = [];
   let line = "";
@@ -80,19 +100,35 @@ export function makeBubbleTexture(
   }
   if (line) lines.push(line);
 
-  const textW = Math.min(maxW, Math.max(...lines.map((l) => ctx.measureText(l).width)));
+  ctx.font = subFont(scale);
+  const subW = subline ? ctx.measureText(subline).width : 0;
+  ctx.font = font(scale);
+  const textW = Math.min(
+    maxW,
+    Math.max(subW, ...lines.map((l) => ctx.measureText(l).width))
+  );
   c.width = Math.ceil(textW + pad * 2);
-  c.height = lines.length * lineH + pad * 2 - 6;
+  c.height = lines.length * lineH + pad * 2 - 6 * scale + (subline ? 34 * scale : 0);
 
-  const s = BUBBLE[outbound ? "out" : "in"];
+  const s = BUBBLE[key];
   ctx.beginPath();
-  ctx.roundRect(0, 0, c.width, c.height, 20);
+  ctx.roundRect(2 * scale, 2 * scale, c.width - 4 * scale, c.height - 4 * scale, 20 * scale);
   ctx.fillStyle = s.bg;
   ctx.fill();
-  ctx.font = FONT; // canvas resize resets 2D state
+  if (s.border) {
+    ctx.lineWidth = 3 * scale;
+    ctx.strokeStyle = s.border;
+    ctx.stroke();
+  }
+  ctx.font = font(scale); // canvas resize resets 2D state
   ctx.fillStyle = s.fg;
   ctx.textBaseline = "top";
-  lines.forEach((l, i) => ctx.fillText(l, pad, pad - 8 + i * lineH));
+  lines.forEach((l, i) => ctx.fillText(l, pad, pad - 8 * scale + i * lineH));
+  if (subline) {
+    ctx.font = subFont(scale);
+    ctx.fillStyle = "#047f48";
+    ctx.fillText(subline, pad, pad - (10 - 6) * scale + lines.length * lineH);
+  }
 
   const texture = new THREE.CanvasTexture(c);
   texture.anisotropy = 4;

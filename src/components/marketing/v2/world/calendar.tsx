@@ -14,8 +14,12 @@ const CELL_W = 0.38;
 const CELL_H = 0.28;
 const GAP = 0.07;
 // Grid sits clearly right-of-center so the chapter copy on the left is
-// never covered. Camera holds on this anchor through the lock.
+// never covered (the camera's look-target stays left of this anchor).
 const CENTER = new THREE.Vector3(3.1, 0.3, -38);
+// The tableau recedes to the LEFT: left columns sit deeper and every card
+// carries a matching Y-tilt, mirroring the old rightward perspective.
+const COL_SHEAR = 0.17; // z per column away from center
+const CARD_TILT = -0.3; // radians — left edge away from camera
 const STAR = 21; // 7:30 PM — the slot that gets booked (and keeps its time)
 
 /** Every cell is a distinct half-hour slot: 9:00 → 8:30, left to right. */
@@ -44,11 +48,13 @@ export function CalendarScene() {
           grid: new THREE.Vector3(
             CENTER.x + (col - (COLS - 1) / 2) * (CELL_W + GAP),
             CENTER.y + ((ROWS - 1) / 2 - row) * (CELL_H + GAP),
-            CENTER.z
+            // Left columns recede — the grid tilts toward the left.
+            CENTER.z + (col - (COLS - 1) / 2) * COL_SHEAR
           ),
-          // Scatter stays right of the copy column.
+          // Scatter stays strictly right of the copy column — both endpoints
+          // of the flight are right of the text, so the whole path is too.
           scatter: new THREE.Vector3(
-            CENTER.x + (rand(i, 4) - 0.25) * 4.5,
+            CENTER.x + (rand(i, 4) + 0.08) * 3.9,
             CENTER.y + (rand(i, 5) - 0.5) * 4.4,
             CENTER.z - 1.5 - rand(i, 6) * 5
           ),
@@ -68,7 +74,7 @@ export function CalendarScene() {
     [cells, bookedTexture]
   );
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const g = group.current;
     if (!g) return;
     // Scene envelope: assembles through "It books", exits fast the moment
@@ -79,6 +85,12 @@ export function CalendarScene() {
     const b = localProgress(shift.story, "book");
     const t = clock.elapsedTime;
     const lock = smooth01(clamp01((b - 0.72) / 0.18));
+
+    // Portrait screens can't fit copy-left + grid-right side by side: slide
+    // the whole tableau down, left and deeper so it reads below the copy.
+    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
+    const squeeze = smooth01((1.05 - aspect) / 0.5);
+    g.position.set(-1.45 * squeeze, -1.05 * squeeze, -1.7 * squeeze);
 
     g.children.forEach((child, i) => {
       if (i >= cells.length) return; // booked overlay + ring come after
@@ -91,6 +103,8 @@ export function CalendarScene() {
       const pop = i === STAR ? 1 + lock * 0.35 : 1;
       child.scale.setScalar(Math.max(e * pop * exit, 0.0001));
       child.rotation.z = (1 - e) * c.tilt;
+      // Settle into the leftward tilt of the tableau as each card lands.
+      child.rotation.y = CARD_TILT * e;
     });
 
     // The booked card: the green 7:30 crossfades over the white 7:30.
@@ -99,6 +113,7 @@ export function CalendarScene() {
       booked.current.position.copy(cell.position);
       booked.current.position.z += 0.01;
       booked.current.scale.copy(cell.scale);
+      booked.current.rotation.copy(cell.rotation);
       (booked.current.material as THREE.MeshBasicMaterial).opacity = lock * exit;
     }
     // Confirmation ring: an expanding pulse radiating from the booked slot.

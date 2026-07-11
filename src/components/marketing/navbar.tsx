@@ -35,7 +35,7 @@ export function Navbar() {
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-3 sm:pt-4">
+    <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-5 sm:pt-6">
       <motion.nav
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

@@ -12,22 +12,22 @@ describe("lerpHex", () => {
 });
 
 describe("skyAt", () => {
-  it("is deep night at the top of the page", () => {
+  it("keeps the page white while the opening horizon carries colour", () => {
     expect(skyAt(0, 0)).toEqual({
-      top: "#050d0a",
-      horizon: "#0a1a12",
-      fog: "#050d0a",
-      ambient: 0.18,
+      top: "#ffffff",
+      horizon: "#8ee8b7",
+      fog: "#ffffff",
+      ambient: 0.9,
     });
   });
-  it("shows the dawn horizon at story end", () => {
-    expect(skyAt(1, 0).horizon).toBe("#d97b4a");
+  it("shows the warm dawn horizon at story end", () => {
+    expect(skyAt(1, 0).horizon).toBe("#edb966");
   });
-  it("is full morning at the end of the daylight zone", () => {
+  it("is pure white at the end of the daylight zone", () => {
     expect(skyAt(1, 1)).toEqual({
-      top: "#cfeeda",
-      horizon: "#f6fbf7",
-      fog: "#dcf3e6",
+      top: "#ffffff",
+      horizon: "#ffffff",
+      fog: "#ffffff",
       ambient: 1,
     });
   });

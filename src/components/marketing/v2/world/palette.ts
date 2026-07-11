@@ -17,13 +17,13 @@ interface Stop extends SkyState {
 }
 
 const STOPS: Stop[] = [
-  { at: 0.0, top: "#050d0a", horizon: "#0a1a12", fog: "#050d0a", ambient: 0.18 },
-  { at: 0.75, top: "#071310", horizon: "#123024", fog: "#06110d", ambient: 0.24 },
-  { at: 1.0, top: "#0e2a20", horizon: "#d97b4a", fog: "#0d241c", ambient: 0.38 },
-  // Morning arrives fast once the daylight zone starts — the world must be
-  // bright long before the visitor reaches the sections below.
-  { at: 1.3, top: "#a5dcbc", horizon: "#f6d9a4", fog: "#b4e4c8", ambient: 0.85 },
-  { at: 2.0, top: "#cfeeda", horizon: "#f6fbf7", fog: "#dcf3e6", ambient: 1.0 },
+  // The canvas stays genuinely white. Time is carried by the horizon light,
+  // object colour and the shift clock instead of tinting the whole page.
+  { at: 0.0, top: "#ffffff", horizon: "#8ee8b7", fog: "#ffffff", ambient: 0.9 },
+  { at: 0.75, top: "#ffffff", horizon: "#b2efd0", fog: "#ffffff", ambient: 0.92 },
+  { at: 1.0, top: "#ffffff", horizon: "#edb966", fog: "#ffffff", ambient: 0.94 },
+  { at: 1.3, top: "#ffffff", horizon: "#f6d9a4", fog: "#ffffff", ambient: 0.97 },
+  { at: 2.0, top: "#ffffff", horizon: "#ffffff", fog: "#ffffff", ambient: 1.0 },
 ];
 
 export function lerpHex(a: string, b: string, t: number): string {

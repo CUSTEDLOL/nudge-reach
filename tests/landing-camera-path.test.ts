@@ -34,7 +34,13 @@ describe("cameraAt", () => {
     expect(cameraAt(1.5)).toEqual(cameraAt(1));
   });
   it("hits keyframes exactly", () => {
-    expect(cameraAt(0.4).pos).toEqual([1.6, 0.7, -34.4]);
+    expect(cameraAt(0.4).pos).toEqual([1.15, 0.65, -34.4]);
+  });
+  it("keeps the calendar look-target left of the grid so copy stays clear", () => {
+    // Grid center x = 3.1; looking straight at it would re-center the grid
+    // over the chapter copy (the S1 overlap bug).
+    expect(cameraAt(0.4).look[0]).toBeLessThan(2.2);
+    expect(cameraAt(0.54).look[0]).toBeLessThan(2.2);
   });
   it("interpolates between keyframes (flying INTO the corridor)", () => {
     const z = cameraAt(0.12).pos[2];

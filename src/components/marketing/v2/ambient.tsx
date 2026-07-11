@@ -57,10 +57,10 @@ export function CursorAura() {
     <div
       ref={ref}
       aria-hidden
-      className="pointer-events-none fixed left-0 top-0 z-[2] h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 mix-blend-screen transition-opacity duration-500"
+      className="pointer-events-none fixed left-0 top-0 z-[2] h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 mix-blend-multiply transition-opacity duration-500"
       style={{
         background:
-          "radial-gradient(closest-side, rgba(6,193,103,0.09), transparent 70%)",
+          "radial-gradient(closest-side, rgba(6,193,103,0.06), transparent 70%)",
       }}
     />
   );

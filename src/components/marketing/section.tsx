@@ -73,14 +73,13 @@ export function GradientText({
   return <span className={cn("text-gradient", className)}>{children}</span>;
 }
 
-/**
- * Section header: eyebrow + title + optional subtitle, animated in.
- */
+/** A direct, left-aligned section introduction. The small green rule is the
+ * shared brand cue; sections create their own composition below it. */
 export function SectionHeading({
   eyebrow,
   title,
   subtitle,
-  align = "center",
+  align = "left",
   tone = "light",
   className,
 }: {
@@ -91,19 +90,32 @@ export function SectionHeading({
   tone?: "light" | "dark";
   className?: string;
 }) {
+  const light = tone === "light";
   return (
     <Reveal
       className={cn(
-        "flex flex-col gap-5",
+        "flex flex-col",
         align === "center" ? "items-center text-center" : "items-start text-left",
         className
       )}
     >
-      {eyebrow ? <Eyebrow tone={tone}>{eyebrow}</Eyebrow> : null}
+      {eyebrow && (
+        <div className={cn("flex items-center gap-3", align === "center" && "justify-center")}>
+          <span className={cn("h-[3px] w-8", light ? "bg-brand-500" : "bg-brand-300")} />
+          <span
+            className={cn(
+              "text-xs font-black uppercase tracking-[0.14em]",
+              light ? "text-ink/60" : "text-white/60"
+            )}
+          >
+            {eyebrow}
+          </span>
+        </div>
+      )}
       <h2
         className={cn(
-          "max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-5xl",
-          tone === "light" ? "text-ink" : "text-white"
+          "mt-6 max-w-4xl text-balance font-display text-4xl font-black leading-[0.98] tracking-[-0.045em] sm:text-[3.65rem]",
+          light ? "text-ink" : "text-white"
         )}
       >
         {title}
@@ -111,8 +123,8 @@ export function SectionHeading({
       {subtitle ? (
         <p
           className={cn(
-            "max-w-2xl text-pretty text-lg leading-relaxed",
-            tone === "light" ? "text-ink/60" : "text-brand-100/70"
+            "mt-5 max-w-2xl text-pretty text-lg font-medium leading-relaxed",
+            light ? "text-ink/58" : "text-white/65"
           )}
         >
           {subtitle}

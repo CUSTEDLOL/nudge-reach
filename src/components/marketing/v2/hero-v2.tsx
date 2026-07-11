@@ -21,7 +21,8 @@ export function HeroV2() {
         .from(".hero-line", { yPercent: 112, duration: 1.1, stagger: 0.12 }, 0.15)
         .from(".hero-sub", { autoAlpha: 0, y: 18, duration: 0.8 }, 0.55)
         .from(".hero-ctas", { autoAlpha: 0, y: 16, duration: 0.8 }, 0.7)
-        .from(".hero-chips", { autoAlpha: 0, duration: 0.9 }, 0.85)
+        .from(".hero-ledger", { autoAlpha: 0, x: 36, rotate: 1.5, duration: 1 }, 0.48)
+        .from(".hero-ledger-row", { autoAlpha: 0, x: 16, duration: 0.55, stagger: 0.08 }, 0.7)
         .from(".hero-cue", { autoAlpha: 0, duration: 0.9 }, 1.0);
 
       // Gentle drift as the hero scrolls away — depth without distraction.
@@ -46,68 +47,90 @@ export function HeroV2() {
       className="relative flex min-h-[100svh] items-center overflow-hidden"
       aria-label="Nudge — the AI Front Desk"
     >
-      {/* aurora mesh — the designed fallback when the world can't render */}
-      <div className="bg-mesh absolute inset-0 opacity-40" aria-hidden />
-
-      {/* vignette so type always sits on solid night */}
+      {/* White stays the canvas. The ink wash gives the type a focal plane. */}
       <div
         className="absolute inset-0"
         aria-hidden
         style={{
           background:
-            "radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(5,13,10,0.7) 100%)",
+            "radial-gradient(70% 65% at 18% 38%, rgba(6,193,103,0.09), transparent 72%)",
         }}
       />
 
-      {/* copy */}
-      <div className="hero-copy relative z-10 mx-auto w-full max-w-6xl px-5 pb-24 pt-32 sm:px-8">
-        <p className="hero-eyebrow flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.22em] text-brand-200/80">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-400" />
-          </span>
-          11:47 PM — your shop closed five hours ago
-        </p>
-
-        <h1 className="mt-7 font-display text-[clamp(2.9rem,8vw,6.5rem)] font-bold leading-[0.98] tracking-[-0.03em] text-white">
-          <span className="block overflow-hidden pb-1">
-            <span className="hero-line block">Your best employee</span>
-          </span>
-          <span className="block overflow-hidden pb-2">
-            <span className="hero-line block text-brand-300">
-              doesn&rsquo;t sleep.
+      <div className="hero-copy relative z-10 mx-auto grid w-full max-w-[100vw] grid-cols-[minmax(0,1fr)] items-center gap-12 overflow-hidden px-5 pb-24 pt-32 sm:px-8 lg:max-w-7xl lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,.65fr)] lg:gap-16 lg:overflow-visible">
+        <div className="min-w-0 max-w-[calc(100vw-2.5rem)] sm:max-w-none">
+          <p className="hero-eyebrow flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.16em] text-brand-700">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
             </span>
-          </span>
-        </h1>
+            On shift now · 11:47 PM
+          </p>
 
-        <p className="hero-sub mt-7 max-w-xl text-lg leading-relaxed text-white/60">
-          Nudge&rsquo;s AI Front Desk answers, books, and follows up on
-          WhatsApp — set up for you, for a third of a salary. It works the
-          hours you can&rsquo;t.
-        </p>
+          <h1 className="mt-7 font-display text-[clamp(2.65rem,7.2vw,6.7rem)] font-black leading-[0.91] tracking-[-0.055em] text-ink">
+            <span className="block overflow-hidden pb-2">
+              <span className="hero-line block">
+                Your front desk <span className="block">sleeps.</span>
+              </span>
+            </span>
+            <span className="block overflow-hidden pb-3">
+              <span className="hero-line block text-brand-600">
+                This one doesn&rsquo;t.
+              </span>
+            </span>
+          </h1>
 
-        <div className="hero-ctas mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <ButtonLink href="/waitlist" size="lg">
-            Hire your Front Desk
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-          </ButtonLink>
-          <ButtonLink href="#night-shift" variant="secondary-dark" size="lg">
-            Watch the night shift
-            <ArrowDown className="h-4 w-4" />
-          </ButtonLink>
+          <p className="hero-sub mt-7 max-w-2xl text-lg font-medium leading-relaxed text-ink/65 sm:text-xl">
+            Nudge answers customers, books your real calendar, chases quiet
+            leads and collects deposits on WhatsApp. We set up the entire
+            front desk for you.
+          </p>
+
+          <div className="hero-ctas mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <ButtonLink href="/waitlist" size="lg">
+              Hire your Front Desk
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+            </ButtonLink>
+            <ButtonLink href="#night-shift" variant="secondary" size="lg">
+              Watch one night
+              <ArrowDown className="h-4 w-4" />
+            </ButtonLink>
+          </div>
         </div>
 
-        <ul className="hero-chips mt-12 flex flex-wrap gap-x-8 gap-y-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-white/40">
-          <li>Books real appointments</li>
-          <li>Chases quiet leads</li>
-          <li>Set up for you</li>
-        </ul>
+        <aside className="hero-ledger relative min-w-0 max-w-[calc(100vw-2.5rem)] overflow-hidden border border-ink bg-ink p-6 text-white shadow-[8px_8px_0_#06c167] sm:max-w-none sm:p-7 lg:shadow-[18px_18px_0_#06c167]" aria-label="Live overnight shift log">
+          <div className="absolute right-0 top-0 h-24 w-24 bg-brand-500" aria-hidden />
+          <div className="relative flex items-start justify-between border-b border-white/20 pb-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-300">Night shift</p>
+              <p className="mt-1 text-sm text-white/55">Live activity</p>
+            </div>
+            <span className="relative z-10 grid h-10 w-10 place-items-center bg-white font-mono text-xs font-black text-ink">24/7</span>
+          </div>
+          <ol className="relative divide-y divide-white/10">
+            {[
+              ["12:31", "Answered a new enquiry"],
+              ["02:15", "Booked Dr. Mehta · 7:30 PM"],
+              ["04:40", "Recovered a quiet lead"],
+              ["06:48", "Collected ₹500 deposit"],
+            ].map(([time, event]) => (
+              <li key={time} className="hero-ledger-row grid grid-cols-[3.5rem_1fr] gap-4 py-4">
+                <span className="font-mono text-[11px] text-brand-300">{time}</span>
+                <span className="text-sm font-semibold text-white/90">{event}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="relative flex items-end justify-between border-t border-white/20 pt-5">
+            <p className="text-xs uppercase tracking-[0.14em] text-white/45">Missed overnight</p>
+            <p className="font-display text-4xl font-black text-brand-300">0</p>
+          </div>
+        </aside>
       </div>
 
       {/* scroll cue */}
       <div className="hero-cue absolute bottom-7 left-1/2 z-10 -translate-x-1/2" aria-hidden>
-        <div className="flex h-9 w-5 items-start justify-center rounded-full border border-white/15 p-1.5">
-          <span className="h-1.5 w-[3px] animate-bounce rounded-full bg-brand-300" />
+        <div className="flex h-9 w-5 items-start justify-center rounded-full border border-ink/20 p-1.5">
+          <span className="h-1.5 w-[3px] animate-bounce rounded-full bg-brand-600" />
         </div>
       </div>
     </section>

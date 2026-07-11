@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Container, Section, SectionHeading } from "./section";
-import { SpotlightCard, Stagger, StaggerItem } from "./motion-primitives";
+import { Stagger, StaggerItem } from "./motion-primitives";
 
 const INDUSTRIES: {
   icon: LucideIcon;
@@ -62,32 +62,33 @@ export function Industries() {
           eyebrow="Who it's for"
           title={
             <>
-              Built for businesses that{" "}
-              <span className="text-gradient">run on WhatsApp</span>
+              If the phone rings all day, Nudge fits.
             </>
           }
           subtitle="From a two-chair salon in Indore to a D2C brand shipping across India — if your customers message you, Nudge fits the way you already work."
         />
 
-        <Stagger className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {INDUSTRIES.map(({ icon: Icon, title, outcome, body }) => (
-            <StaggerItem key={title} className="h-full">
-              <SpotlightCard className="group h-full rounded-3xl border border-black/5 bg-white p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
-                <div className="relative flex h-full flex-col">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="inline-grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/60 transition-transform duration-300 group-hover:scale-110">
-                      <Icon className="h-6 w-6" />
-                    </span>
-                    <span className="rounded-full bg-brand-50 px-3 py-1 text-[11.5px] font-bold text-brand-700 ring-1 ring-inset ring-brand-200/50">
-                      {outcome}
-                    </span>
-                  </div>
-                  <h3 className="mt-5 text-lg font-semibold text-ink">{title}</h3>
-                  <p className="mt-2 text-[14.5px] leading-relaxed text-ink/60">
-                    {body}
-                  </p>
+        {/* A ledger, not a card grid: numbered rows with hairline rules. */}
+        <Stagger className="mt-14 grid grid-cols-1 gap-x-16 lg:grid-cols-2">
+          {INDUSTRIES.map(({ icon: Icon, title, outcome, body }, i) => (
+            <StaggerItem key={title}>
+              <article className="group border-t border-ink/15 py-7 transition-colors duration-300 hover:border-ink/40">
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
+                  <span className="font-mono text-[13px] font-semibold tabular-nums text-ink/35">
+                    0{i + 1}
+                  </span>
+                  <h3 className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight text-ink">
+                    <Icon className="h-[18px] w-[18px] text-brand-600" aria-hidden />
+                    {title}
+                  </h3>
+                  <span className="ml-auto whitespace-nowrap font-mono text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-700">
+                    {outcome}
+                  </span>
                 </div>
-              </SpotlightCard>
+                <p className="mt-3 max-w-lg pl-9 text-[14.5px] leading-relaxed text-ink/60">
+                  {body}
+                </p>
+              </article>
             </StaggerItem>
           ))}
         </Stagger>

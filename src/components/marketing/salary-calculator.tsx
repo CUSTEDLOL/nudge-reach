@@ -36,16 +36,21 @@ export function SalaryCalculator() {
   }
 
   return (
-    <Section id="salary" className="bg-cream">
+    <Section id="salary" className="border-t border-ink/10 bg-white">
       <Container>
         <SectionHeading
           eyebrow="The salary math"
-          title="What your front desk costs. What it could."
+          title={
+            <>
+              Pay for the work. Not another salary.
+            </>
+          }
           subtitle="Two numbers about your business today — and what changes the day the AI Front Desk clocks in."
         />
 
-        <Reveal className="mx-auto mt-12 max-w-3xl">
-          <div className="overflow-hidden rounded-3xl border border-black/10 bg-white p-6 shadow-soft sm:p-8">
+        <Reveal className="mt-12">
+          <div className="grid gap-10 border-t border-ink/15 pt-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+            <div>
             {/* market toggle */}
             <div className="flex flex-wrap gap-2">
               {Object.entries(MARKETS).map(([key, v]) => (
@@ -111,54 +116,55 @@ export function SalaryCalculator() {
               />
             </div>
 
-            {/* the profit math */}
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-black/[0.03] p-5">
-                <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
-                  Your front desk today
-                </p>
-                <p className="mt-1 text-3xl font-bold tracking-tight text-ink">
-                  {formatPlanPrice(currentCost, m.currency)}
-                  <span className="text-sm font-normal text-ink/40">/mo</span>
-                </p>
-                <p className="mt-1 text-xs text-ink/45">
-                  {count} {count === 1 ? "person" : "people"} · 9 hours a day
-                </p>
-              </div>
-              <div className="rounded-2xl bg-black/[0.03] p-5">
-                <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
-                  Nudge AI Front Desk
-                </p>
-                <p className="mt-1 text-3xl font-bold tracking-tight text-ink">
-                  {formatPlanPrice(nudge, m.currency)}
-                  <span className="text-sm font-normal text-ink/40">/mo</span>
-                </p>
-                <p className="mt-1 text-xs text-ink/45">On WhatsApp 24×7 · set up for you</p>
-              </div>
             </div>
 
-            <div className="mt-3 grid gap-3 rounded-2xl bg-brand-50 p-5 sm:grid-cols-2">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-brand-700/70">
-                  Back in your pocket, monthly
+            {/* the ledger: today vs the hire that never sleeps */}
+            <div className="flex flex-col">
+              <div className="grid grid-cols-2">
+                <div className="border-t border-ink/15 pt-4">
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink/45">
+                    Your front desk today
+                  </p>
+                  <p className="mt-2 font-display text-3xl font-bold tracking-[-0.02em] text-ink sm:text-4xl">
+                    {formatPlanPrice(currentCost, m.currency)}
+                    <span className="text-sm font-normal text-ink/40">/mo</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ink/45">
+                    {count} {count === 1 ? "person" : "people"} · 9 hours a day
+                  </p>
+                </div>
+                <div className="border-t border-brand-500 pt-4 pl-6">
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand-700">
+                    Nudge AI Front Desk
+                  </p>
+                  <p className="mt-2 font-display text-3xl font-bold tracking-[-0.02em] text-ink sm:text-4xl">
+                    {formatPlanPrice(nudge, m.currency)}
+                    <span className="text-sm font-normal text-ink/40">/mo</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ink/45">
+                    On WhatsApp 24×7 · set up for you
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 flex-1 bg-brand-950 p-7 sm:p-8">
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-brand-300">
+                  Back in your pocket
                 </p>
-                <p className="text-3xl font-bold tracking-tight text-brand-700">
+                <p className="mt-3 font-display text-5xl font-bold tracking-[-0.03em] text-white sm:text-6xl">
                   {formatPlanPrice(monthlySaving, m.currency)}
+                  <span className="text-lg font-normal text-white/40"> /mo</span>
+                </p>
+                <p className="mt-4 border-t border-white/10 pt-4 text-sm text-brand-100/70">
+                  {formatPlanPrice(annualSaving, m.currency)} over a year —{" "}
+                  <span className="font-bold text-white">every year it doesn&rsquo;t sleep.</span>
                 </p>
               </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-brand-700/70">
-                  Over a year
-                </p>
-                <p className="text-3xl font-bold tracking-tight text-brand-700">
-                  {formatPlanPrice(annualSaving, m.currency)}
-                </p>
-              </div>
+              <p className="mt-4 text-xs text-ink/40">
+                Conservative estimate. Nudge price is the AI Front Desk plan;
+                WhatsApp per-message fees are billed by Meta separately.
+              </p>
             </div>
-            <p className="mt-4 text-center text-xs text-ink/40">
-              Conservative estimate. Nudge price is the AI Front Desk plan;
-              WhatsApp per-message fees are billed by Meta separately.
-            </p>
           </div>
         </Reveal>
       </Container>

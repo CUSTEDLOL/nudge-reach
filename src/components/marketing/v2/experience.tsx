@@ -49,7 +49,7 @@ export function Experience() {
           end: "bottom bottom",
           onUpdate: (s) => {
             shift.story = s.progress;
-            root?.setAttribute("data-shift", s.progress > 0.96 ? "day" : "night");
+            root?.setAttribute("data-shift", "day"); // white world — always day
           },
         }),
       morning &&
