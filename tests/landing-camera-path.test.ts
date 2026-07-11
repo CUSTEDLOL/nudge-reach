@@ -23,28 +23,29 @@ describe("rand", () => {
 });
 
 describe("cameraAt", () => {
-  it("starts at the hero framing", () => {
-    expect(cameraAt(0).pos).toEqual([0, 0.4, 7]);
+  it("starts at the straight-on answers framing", () => {
+    expect(cameraAt(0).pos).toEqual([0, 0.35, 4]);
   });
-  it("ends at the dawn pullback", () => {
-    expect(cameraAt(1).pos).toEqual([0, 2.0, -51]);
+  it("ends at the stable collects framing", () => {
+    expect(cameraAt(1).pos).toEqual([0, 0.8, -42]);
   });
   it("clamps outside [0,1]", () => {
     expect(cameraAt(-0.5)).toEqual(cameraAt(0));
     expect(cameraAt(1.5)).toEqual(cameraAt(1));
   });
-  it("hits keyframes exactly", () => {
-    expect(cameraAt(0.4).pos).toEqual([1.15, 0.65, -34.4]);
+  it("holds the camera still inside each chapter", () => {
+    expect(cameraAt(0.1)).toEqual(cameraAt(0.2));
+    expect(cameraAt(0.35)).toEqual(cameraAt(0.48));
+    expect(cameraAt(0.62)).toEqual(cameraAt(0.72));
+    expect(cameraAt(0.86)).toEqual(cameraAt(0.96));
   });
-  it("keeps the calendar look-target left of the grid so copy stays clear", () => {
-    // Grid center x = 3.1; looking straight at it would re-center the grid
-    // over the chapter copy (the S1 overlap bug).
+  it("keeps the calendar target left so the grid lands inside the right browser", () => {
     expect(cameraAt(0.4).look[0]).toBeLessThan(2.2);
-    expect(cameraAt(0.54).look[0]).toBeLessThan(2.2);
+    expect(cameraAt(0.5).look[0]).toBeLessThan(2.2);
   });
-  it("interpolates between keyframes (flying INTO the corridor)", () => {
-    const z = cameraAt(0.12).pos[2];
+  it("moves only during the short chapter hand-offs", () => {
+    const z = cameraAt(0.275).pos[2];
     expect(z).toBeLessThan(4);
-    expect(z).toBeGreaterThan(-31);
+    expect(z).toBeGreaterThan(-28);
   });
 });

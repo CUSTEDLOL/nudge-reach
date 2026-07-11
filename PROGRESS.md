@@ -5,6 +5,35 @@ what's next.
 
 ---
 
+## Night Shift viewport correction + features simplification (2026-07-11) ✅
+
+Corrected the split-screen scenes after real-browser review exposed framing
+that had been inherited from the old full-screen camera flight.
+
+### Done
+- **Answers:** replaced the fly-through corridor with one straight-on thread;
+  six messages rise into fixed rows sequentially and stay centred.
+- **Books:** removed card shear, Y tilt, rotation and forward arc; the calendar
+  now assembles on one flat plane under a held, wider camera.
+- **Chases:** widened the camera, reduced chip size, removed idle drift/pop and
+  kept the useful green pursuit lines + `follow-up sent ✓` state.
+- **Collects:** moved the camera back, reduced message size, removed Y rotation
+  and bobbing; payment messages now arrive one by one in a straight stack.
+- Rebuilt the left copy motion as one translated rail with 320px slots. Older
+  chapters retain their own positions instead of stacking at one exit point.
+- Removed the fixed page-wide `Shift` clock. Progress now exists only inside
+  the four-chapter browser where it is meaningful; Features, Comparison and
+  other daylight sections no longer carry a night-shift ornament.
+- Replaced the decorative eight-tile feature collage with two direct blocks:
+  **the job** (answer/book/chase/collect) and **the desk behind it** (inbox,
+  leads, compliant outbound and measurement). Removed miniature fake-product
+  visuals and generic SaaS bento treatment.
+
+### Verification
+- `npm run lint` — green.
+- `npm run build` — green.
+- **423 tests / 52 files** — green under Node 22.
+
 ## Night Shift split-screen showcase (2026-07-11) ✅
 
 Reframed the four top scroll chapters to match a pinned services/showcase

@@ -16,10 +16,6 @@ const GAP = 0.07;
 // Grid sits clearly right-of-center so the chapter copy on the left is
 // never covered (the camera's look-target stays left of this anchor).
 const CENTER = new THREE.Vector3(3.1, 0.3, -38);
-// The tableau recedes to the LEFT: left columns sit deeper and every card
-// carries a matching Y-tilt, mirroring the old rightward perspective.
-const COL_SHEAR = 0.17; // z per column away from center
-const CARD_TILT = -0.3; // radians — left edge away from camera
 const STAR = 21; // 7:30 PM — the slot that gets booked (and keeps its time)
 
 /** Every cell is a distinct half-hour slot: 9:00 → 8:30, left to right. */
@@ -48,18 +44,16 @@ export function CalendarScene() {
           grid: new THREE.Vector3(
             CENTER.x + (col - (COLS - 1) / 2) * (CELL_W + GAP),
             CENTER.y + ((ROWS - 1) / 2 - row) * (CELL_H + GAP),
-            // Left columns recede — the grid tilts toward the left.
-            CENTER.z + (col - (COLS - 1) / 2) * COL_SHEAR
+            CENTER.z
           ),
           // Scatter stays strictly right of the copy column — both endpoints
           // of the flight are right of the text, so the whole path is too.
           scatter: new THREE.Vector3(
             CENTER.x + (rand(i, 4) + 0.08) * 3.9,
             CENTER.y + (rand(i, 5) - 0.5) * 4.4,
-            CENTER.z - 1.5 - rand(i, 6) * 5
+            CENTER.z - 0.3 - rand(i, 6) * 0.5
           ),
           delay: rand(i, 7) * 0.25,
-          tilt: (rand(i, 8) - 0.5) * 2,
         };
       }),
     []
@@ -97,14 +91,11 @@ export function CalendarScene() {
       const c = cells[i];
       const e = smooth01(clamp01((b - c.delay) / 0.6));
       child.position.lerpVectors(c.scatter, c.grid, e);
-      // Arc toward the camera mid-flight, breathe gently once settled.
-      child.position.z += Math.sin(e * Math.PI) * 0.5;
+      // Assemble on one flat plane; only a tiny idle breath remains.
       child.position.y += Math.sin(t * 1.2 + i) * 0.012 * e;
       const pop = i === STAR ? 1 + lock * 0.35 : 1;
       child.scale.setScalar(Math.max(e * pop * exit, 0.0001));
-      child.rotation.z = (1 - e) * c.tilt;
-      // Settle into the leftward tilt of the tableau as each card lands.
-      child.rotation.y = CARD_TILT * e;
+      child.rotation.set(0, 0, 0);
     });
 
     // The booked card: the green 7:30 crossfades over the white 7:30.

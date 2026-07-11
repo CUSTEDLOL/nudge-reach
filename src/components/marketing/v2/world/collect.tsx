@@ -29,7 +29,7 @@ const THREAD: { style: BubbleStyle; text: string }[] = [
 const CUSTOMER_INDEX = 1; // the reply that gets a typing indicator first
 
 const CENTER = new THREE.Vector3(1.3, 0.8, -54); // camera frames this at 0.9
-const CHIP_H = 0.62; // ~2× — the thread must read like a real chat, not confetti
+const CHIP_H = 0.46;
 const ROW = 0.78;
 const TOP = CENTER.y + 1.9;
 const MOTES = 14;
@@ -105,10 +105,10 @@ export function CollectScene() {
       const chip = chips[i];
       if (!chip) return;
       const enter = smooth01(clamp01((d - chip.enterAt) / 0.09));
-      // Rises into its row like a message landing in a chat.
+      // Each message rises into a fixed, straight row in reading order.
       child.position.set(
         chip.x,
-        chip.y - (1 - enter) * 0.5 + Math.sin(t * 0.7 + i * 1.7) * 0.02,
+        chip.y - (1 - enter) * 0.35,
         CENTER.z
       );
       child.scale.setScalar(Math.max(0.85 + enter * 0.15, 0.0001));
@@ -142,13 +142,13 @@ export function CollectScene() {
     <>
       <group ref={group} visible={false}>
         {chips.map((chip, i) => (
-          <mesh key={i} rotation={[0, -0.12, 0]}>
+          <mesh key={i}>
             <planeGeometry args={[CHIP_H * chip.aspect, CHIP_H]} />
             <meshBasicMaterial map={chip.texture} transparent opacity={0} />
           </mesh>
         ))}
       </group>
-      <mesh ref={typing} rotation={[0, -0.12, 0]} visible={false}>
+      <mesh ref={typing} visible={false}>
         <planeGeometry
           args={[CHIP_H * typingTexture.aspect * 0.8, CHIP_H * 0.8]}
         />

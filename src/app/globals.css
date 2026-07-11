@@ -377,7 +377,11 @@ html {
   position: absolute;
   left: 0;
   right: 0;
-  top: 50%;
+  top: 0;
+}
+
+.jsm .ns-copy-rail {
+  position: relative;
 }
 
 /* The fixed world stays full-screen for continuity. Four white masks expose
@@ -522,14 +526,6 @@ html {
 /* Kinetic lines + generic scroll reveals: same rule — only .jsm hides. */
 .jsm .v2-reveal {
   opacity: 0;
-}
-
-/* Day-rail (fixed shift clock at the right edge) exists only under .jsm. */
-.v2-dayrail {
-  display: none;
-}
-.jsm .v2-dayrail {
-  display: flex;
 }
 
 /* Static night→day gradient behind everything: THE page background for

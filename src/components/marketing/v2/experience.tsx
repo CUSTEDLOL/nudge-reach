@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { SmoothScroll } from "./smooth-scroll";
-import { CursorAura, DayRail, Grain } from "./ambient";
+import { CursorAura, Grain } from "./ambient";
 import { ScrollTrigger, motionAllowed } from "./gsap";
 import { shift } from "./progress";
 import { detectQuality, webglSupported, type Quality } from "./world/quality";
@@ -71,7 +71,6 @@ export function Experience() {
       <SmoothScroll />
       <Grain />
       <CursorAura />
-      <DayRail />
       {quality && (
         <div className="fixed inset-0 z-0" aria-hidden>
           <World quality={quality} />

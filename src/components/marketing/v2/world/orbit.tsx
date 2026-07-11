@@ -20,7 +20,7 @@ const LEADS = [
 ];
 
 const CENTER = new THREE.Vector3(-2.6, 0.15, -46); // camera looks here at 0.64
-const CHIP_H = 0.34;
+const CHIP_H = 0.26;
 
 /**
  * The chase, literally: quiet leads pop into the night at scattered spots,
@@ -134,13 +134,11 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       if (!chip) return;
       const enter = smooth01(clamp01((c - chip.enterAt) / 0.1));
       const caught = smooth01(clamp01((c - chip.catchAt) / 0.07));
-      // Subtle entrance: fade + slight rise. Then a gentle pop when caught.
-      const floatY = Math.sin(t * 0.5 + i * 2.1) * 0.02;
-      const y = chip.pos.y - (1 - enter) * 0.35 + floatY;
+      // Quiet entrance, then a direct colour change when the follow-up lands.
+      const y = chip.pos.y - (1 - enter) * 0.2;
       child.position.set(chip.pos.x, y, chip.pos.z);
       child.lookAt(camera.position);
-      const popScale = 1 + Math.sin(caught * Math.PI) * 0.09;
-      child.scale.setScalar(Math.max(enter * popScale, 0.0001));
+      child.scale.setScalar(Math.max(enter, 0.0001));
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       // Dim while quiet; the caught overlay carries the lit state.
       m.opacity = enter * (0.85 - caught * 0.85) * exit;

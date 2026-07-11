@@ -21,27 +21,23 @@ interface Key {
 }
 
 /**
- * The camera's journey through the night — one continuous flight forward,
- * never doubling back. Scene anchors along the route: message corridor
- * z −2…−30, calendar at [2.4, 0.3, −38], lead orbit at [−2.6, 0.4, −46],
- * the dawn "collects" stack at [1.3, 0.8, −54].
+ * Four stable, straight-on chapter framings. The duplicated keys hold the
+ * camera still while a scene plays; short gaps between chapters create a
+ * restrained hand-off instead of zooming through the content.
  */
 const KEYS: Key[] = [
-  { at: 0.0, pos: [0, 0.4, 7], look: [0, 0, 0] },
-  { at: 0.06, pos: [0, 0.3, 4], look: [0.7, 0.1, -4] },
-  // ride the whole message thread to its end
-  { at: 0.28, pos: [0.4, 0.2, -31], look: [1.0, 0.1, -38] },
-  // the calendar tableau — look-target stays LEFT of the grid so the grid
-  // renders on the RIGHT half of the screen and never covers the chapter copy
-  { at: 0.4, pos: [1.15, 0.65, -34.4], look: [1.75, 0.28, -38] },
-  // …hold and push in while the slot locks, keeping the same right offset
-  { at: 0.54, pos: [1.55, 0.5, -35.5], look: [1.95, 0.28, -38] },
-  // swing forward to the orbit
-  { at: 0.64, pos: [-4.3, 0.9, -42.2], look: [-2.3, 0.3, -46] },
-  // rise toward dawn and frame the collects stack
-  { at: 0.8, pos: [-2.0, 1.1, -46.5], look: [0.4, 0.5, -52] },
-  { at: 0.9, pos: [-0.4, 1.3, -48.5], look: [1.3, 0.7, -54] },
-  { at: 1.0, pos: [0, 2.0, -51], look: [0.6, 0.9, -57] },
+  // Answers — one centred message thread, no fly-through.
+  { at: 0.0, pos: [0, 0.35, 4], look: [-1.2, 0.1, -6] },
+  { at: 0.25, pos: [0, 0.35, 4], look: [-1.2, 0.1, -6] },
+  // Books — the calendar is held flat and at a comfortable distance.
+  { at: 0.3, pos: [0, 0.5, -28], look: [0.75, 0.25, -38] },
+  { at: 0.52, pos: [0, 0.5, -28], look: [0.75, 0.25, -38] },
+  // Chases — framed wider so all lead chips remain inside the browser.
+  { at: 0.58, pos: [0, 0.55, -34], look: [-5.0, 0.15, -46] },
+  { at: 0.76, pos: [0, 0.55, -34], look: [-5.0, 0.15, -46] },
+  // Collects — a straight, centred message stack with no final push-in.
+  { at: 0.82, pos: [0, 0.8, -42], look: [-1.8, 0.55, -54] },
+  { at: 1.0, pos: [0, 0.8, -42], look: [-1.8, 0.55, -54] },
 ];
 
 function lerpVec(a: Vec3, b: Vec3, t: number): Vec3 {

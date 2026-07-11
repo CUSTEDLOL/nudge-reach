@@ -44,6 +44,7 @@ export function NightShift() {
     () => {
       if (!motionAllowed()) return;
       const beats = gsap.utils.toArray<HTMLElement>(".ns-beat");
+      const rail = ref.current?.querySelector<HTMLElement>(".ns-copy-rail");
       const addresses = gsap.utils.toArray<HTMLElement>(".ns-browser-address");
       const statuses = gsap.utils.toArray<HTMLElement>(".ns-browser-status");
       const screens = [...addresses, ...statuses];
@@ -52,9 +53,10 @@ export function NightShift() {
 
       gsap.set(beats, {
         yPercent: -50,
-        y: (i) => i * 190,
+        y: (i) => i * 320,
         autoAlpha: (i) => (i === 0 ? 1 : 0.1),
       });
+      if (rail) gsap.set(rail, { y: 0 });
       gsap.set(screens, {
         y: (i) => (i === 0 ? 0 : 12),
         autoAlpha: (i) => (i === 0 ? 1 : 0),
@@ -80,13 +82,21 @@ export function NightShift() {
         const enter = i === 0 ? c.start : c.start + 0.015;
         const exit = Math.max(enter, c.end - 0.07);
 
+        if (rail) {
+          tl.to(
+            rail,
+            { y: -i * 320, duration: 0.075, ease: "power2.inOut" },
+            enter
+          );
+        }
+
         tl.to(
           beat,
-          { autoAlpha: 1, y: 0, duration: 0.065, ease: "power2.out" },
+          { autoAlpha: 1, duration: 0.055, ease: "power2.out" },
           enter
         ).to(
           beat,
-          { autoAlpha: 0.1, y: -190, duration: 0.07, ease: "power2.in" },
+          { autoAlpha: 0.1, duration: 0.06, ease: "power2.in" },
           exit
         );
 
@@ -123,8 +133,9 @@ export function NightShift() {
         <div className="ns-world-mask ns-mask-bottom" aria-hidden />
 
         <div className="ns-copy">
-          {BEATS.map((b) => (
-            <article key={b.time} className="ns-beat max-w-lg py-6">
+          <div className="ns-copy-rail">
+            {BEATS.map((b) => (
+              <article key={b.time} className="ns-beat max-w-lg py-6">
               <div className="flex items-center gap-3">
                 <span className="h-2.5 w-2.5 bg-brand-500" aria-hidden />
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-700">
@@ -137,8 +148,9 @@ export function NightShift() {
               <p className="mt-5 max-w-md text-lg font-medium leading-relaxed text-ink/65">
                 {b.body}
               </p>
-            </article>
-          ))}
+              </article>
+            ))}
+          </div>
         </div>
 
         <div className="ns-browser" aria-hidden>
