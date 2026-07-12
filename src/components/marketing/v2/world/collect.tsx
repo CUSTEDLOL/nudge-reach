@@ -28,10 +28,10 @@ const THREAD: { style: BubbleStyle; text: string }[] = [
 ];
 const CUSTOMER_INDEX = 1; // the reply that gets a typing indicator first
 
-const CENTER = new THREE.Vector3(1.3, 0.8, -54); // camera frames this at 0.9
-const CHIP_H = 0.58;
+const CENTER = new THREE.Vector3(1.3, -0.4, -54);
+const CHIP_H = 0.52;
 const ROW = 0.72;
-const TOP = CENTER.y + 1.9;
+const TOP = CENTER.y + 1.7;
 const MOTES = 14;
 
 /** Dawn scene: the payment thread writes itself while golden motes rise. */
@@ -111,6 +111,7 @@ export function CollectScene() {
         chip.y - (1 - enter) * 0.35,
         CENTER.z
       );
+      child.quaternion.copy(camera.quaternion);
       child.scale.setScalar(Math.max(0.85 + enter * 0.15, 0.0001));
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       m.opacity = enter * env;
@@ -122,6 +123,7 @@ export function CollectScene() {
       const pre = smooth01(clamp01((d - (reply.enterAt - 0.1)) / 0.05));
       const done = smooth01(clamp01((d - reply.enterAt) / 0.04));
       typing.current.position.set(reply.x, reply.y, CENTER.z + 0.01);
+      typing.current.quaternion.copy(camera.quaternion);
       (typing.current.material as THREE.MeshBasicMaterial).opacity =
         pre * (1 - done) * env;
     }

@@ -84,6 +84,7 @@ export function CalendarScene() {
       const c = cells[i];
       const e = smooth01(clamp01((b - c.delay) / 0.6));
       child.position.copy(c.grid);
+      child.quaternion.copy(camera.quaternion);
       const pop = i === STAR ? 1 + lock * 0.35 : 1;
       child.scale.setScalar(Math.max(e * pop * exit, 0.0001));
       child.rotation.set(0, 0, 0);

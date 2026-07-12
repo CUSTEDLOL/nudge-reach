@@ -27,7 +27,7 @@ describe("cameraAt", () => {
     expect(cameraAt(0).pos).toEqual([0, 0.4, 7]);
   });
   it("ends at the stable collects framing", () => {
-    expect(cameraAt(1).pos).toEqual([0, 0.8, -47]);
+    expect(cameraAt(1).pos).toEqual([0, 0, -47]);
   });
   it("clamps outside [0,1]", () => {
     expect(cameraAt(-0.5)).toEqual(cameraAt(0));
@@ -48,6 +48,6 @@ describe("cameraAt", () => {
     expect(z).toBeGreaterThan(-31);
   });
   it("snaps directly to the fixed calendar frame", () => {
-    expect(cameraAt(0.28).pos).toEqual([0, 0.5, -33]);
+    expect(cameraAt(0.28).pos).toEqual([0, 0.5, -33.5]);
   });
 });

@@ -28,9 +28,9 @@ const ANSWER_KEYS: Key[] = [
 ];
 
 /** The other three chapters snap to one fixed frame and never zoom. */
-const BOOK = { pos: [0, 0.5, -33] as Vec3, look: [-1.5, 0.25, -38] as Vec3 };
-const CHASE = { pos: [0, 0.5, -39] as Vec3, look: [-3.6, 0.1, -46] as Vec3 };
-const COLLECT = { pos: [0, 0.8, -47] as Vec3, look: [-2.5, 0.55, -54] as Vec3 };
+const BOOK = { pos: [0, 0.5, -33.5] as Vec3, look: [1.0, 0.25, -38] as Vec3 };
+const CHASE = { pos: [0, 0.5, -37.5] as Vec3, look: [-2.0, 0.1, -46] as Vec3 };
+const COLLECT = { pos: [0, 0, -47] as Vec3, look: [-0.9, -0.4, -54] as Vec3 };
 
 function lerpVec(a: Vec3, b: Vec3, t: number): Vec3 {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];

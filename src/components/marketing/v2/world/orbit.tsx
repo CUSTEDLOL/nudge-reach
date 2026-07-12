@@ -19,8 +19,8 @@ const LEADS = [
   "Dev — no-show on Monday",
 ];
 
-const CENTER = new THREE.Vector3(0, 0.1, -46);
-const CHIP_H = 0.38;
+const CENTER = new THREE.Vector3(-1.2, 0.1, -46);
+const CHIP_H = 0.42;
 
 /**
  * The chase, literally: quiet leads pop into the night at scattered spots,
@@ -45,16 +45,17 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     return LEADS.map((text, i) => {
       const dim = makeBubbleTexture(text, "dim", undefined, 2);
       const caught = makeBubbleTexture(text, "caught", "↳ follow-up sent ✓", 2);
-      const angle = -Math.PI / 2 + (i * Math.PI * 2) / LEADS.length;
+      const col = i % 2;
+      const row = Math.floor(i / 2);
       return {
         dimTexture: dim.texture,
         caughtTexture: caught.texture,
         aspect: dim.aspect,
         caughtAspect: caught.aspect,
         pos: new THREE.Vector3(
-          CENTER.x + Math.cos(angle) * 2.5,
-          CENTER.y + Math.sin(angle) * 1.65,
-          CENTER.z
+          CENTER.x + 1.0 + col * 2.35,
+          CENTER.y + 1.65 - row * 1.08,
+          CENTER.z + (rand(i, 33) - 0.5) * 0.18
         ),
         // Quiet leads appear at semi-random moments…
         enterAt: 0.03 + rand(i, 34) * 0.19,
@@ -131,7 +132,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       // Quiet entrance, then a direct colour change when the follow-up lands.
       const y = chip.pos.y - (1 - enter) * 0.2;
       child.position.set(chip.pos.x, y, chip.pos.z);
-      child.lookAt(camera.position);
+      child.quaternion.copy(camera.quaternion);
       child.scale.setScalar(Math.max(enter, 0.0001));
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       // Dim while quiet; the caught overlay carries the lit state.
@@ -211,7 +212,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       <sprite
         ref={glow}
         position={[CENTER.x, CENTER.y, CENTER.z]}
-        scale={[1.6, 1.6, 1]}
+        scale={[1.4, 1.4, 1]}
       >
         <spriteMaterial
           map={glowTexture}
@@ -221,10 +222,15 @@ export function OrbitScene({ fx }: { fx: boolean }) {
           depthWrite={false}
         />
       </sprite>
-      <mesh position={[CENTER.x, CENTER.y, CENTER.z + 0.02]}>
-        <circleGeometry args={[0.13, 32]} />
-        <meshBasicMaterial color="#06c167" depthWrite={false} />
-      </mesh>
+      <sprite position={[CENTER.x, CENTER.y, CENTER.z + 0.02]} scale={[0.3, 0.3, 1]}>
+        <spriteMaterial
+          map={glowTexture}
+          color="#06c167"
+          transparent
+          opacity={1}
+          depthWrite={false}
+        />
+      </sprite>
     </>
   );
 }

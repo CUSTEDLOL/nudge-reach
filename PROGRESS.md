@@ -5,6 +5,29 @@ what's next.
 
 ---
 
+## Night Shift frame alignment + screenshot QA (2026-07-12) ✅
+
+Corrected the remaining perspective and overflow issues using forced chapter
+captures from the real rendered landing page.
+
+### Done
+- **Books:** calendar cards now copy the camera quaternion, remain perfectly
+  screen-straight and fit as a centred grid inside the animation box.
+- **Chases:** returned to the clearer left-side engine dot with eight readable
+  follow-up cards arranged in two columns to its right; every card and line is
+  contained by the frame.
+- **Collects:** payment messages now use fixed lanes and screen-aligned
+  quaternions so the entire thread is straight, centred and fully contained.
+- Retuned the three fixed camera targets without reintroducing any chapter
+  zoom, travel or roll.
+
+### Verification
+- Captured and visually inspected forced Books, Chases and Collects renders at
+  1440 × 900 before removing the temporary preview hook.
+- `npm run lint` — green.
+- `npm run build` — green.
+- **424 tests / 52 files** — green under Node 22.
+
 ## Night Shift fixed-stage compositions (2026-07-12) ✅
 
 Finalised the four browser-box scenes based on founder review of real scroll
