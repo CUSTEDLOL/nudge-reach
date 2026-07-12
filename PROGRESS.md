@@ -5,6 +5,32 @@ what's next.
 
 ---
 
+## Night Shift box utilisation — exact projection framing (2026-07-12) ✅
+
+Founder review: Books/Chases/Collects sat cramped against the showcase box's
+left edge (Answers was right). Root cause: scene placement used hand-tuned
+world offsets that only line up at one aspect ratio — the box is a CSS
+construct (right 48vw on desktop, lower half on phones) and its NDC centre
+never matched the look-axis on other viewports.
+
+### Done
+- New `world/stage.ts` — `placeStage()` projects each scene's visual-centre
+  anchor through the live camera, unprojects the BOX centre at the same
+  depth, offsets the group by the difference and uniform-scales the
+  composition about the anchor to fill ~88% of the box (94% on phones,
+  readability-capped at 1.2–1.3×). Exact at every aspect ratio; replaces all
+  per-scene squeeze/offset magic in calendar, orbit and collect.
+- Calendar cards keep the camera-quaternion billboard (removed the rotation
+  reset that was cancelling it); collect's typing indicator moved inside the
+  scene group so it inherits the same transform.
+- Screenshot-verified at 1440×900, 1920×1080 and 390×844: all three scenes
+  centred in the box, filling it, nothing clipped; Answers untouched.
+
+### Verification
+- `tests/landing-stage.test.ts` — anchor lands on the box centre at 5 aspect
+  ratios, edges stay inside the box, depth (apparent size) preserved.
+- **428 tests / 53 files**, lint, build, `git diff --check` — green.
+
 ## Night Shift full-chapter screenshot QA — begin/mid/end × 3 viewports (2026-07-12) ✅
 
 Meticulous pixel pass over the four pinned chapters using a scratchpad

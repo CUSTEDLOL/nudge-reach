@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CHAPTERS, clamp01, localProgress, shift } from "../progress";
 import { rand, smooth01 } from "./path";
+import { placeStage } from "./stage";
 import { makeRadialTexture, makeSlotTexture } from "./textures";
 
 const COLS = 6;
@@ -61,7 +62,7 @@ export function CalendarScene() {
     [cells, bookedTexture]
   );
 
-  useFrame(({ clock, camera }) => {
+  useFrame(({ clock, camera, size }) => {
     const g = group.current;
     if (!g) return;
     // Scene envelope: assembles through "It books", exits fast the moment
@@ -73,11 +74,8 @@ export function CalendarScene() {
     const t = clock.elapsedTime;
     const lock = smooth01(clamp01((b - 0.72) / 0.18));
 
-    // Portrait screens can't fit copy-left + grid-right side by side: slide
-    // the whole tableau down, left and deeper so it reads below the copy.
-    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
-    const squeeze = smooth01((1.05 - aspect) / 0.5);
-    g.position.set(-1.0 * squeeze, -1.95 * squeeze, -3.8 * squeeze);
+    // Centre the grid in the showcase box and fill it, on every viewport.
+    placeStage(camera, size.width, CENTER, 1.85, 0.95, g);
 
     g.children.forEach((child, i) => {
       if (i >= cells.length) return; // booked overlay + ring come after
@@ -89,7 +87,6 @@ export function CalendarScene() {
       // never a jumble of differently-sized cards mid-assembly.
       const pop = i === STAR ? 1 + lock * 0.35 : 1;
       child.scale.setScalar(Math.max((0.92 + 0.08 * e) * pop, 0.0001));
-      child.rotation.set(0, 0, 0);
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       m.opacity = e * exit;
     });

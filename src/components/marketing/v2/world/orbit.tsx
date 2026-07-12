@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { CHAPTERS, clamp01, localProgress, shift } from "../progress";
 import { rand, smooth01 } from "./path";
 import { makeBubbleTexture, makeRadialTexture } from "./textures";
+import { placeStage } from "./stage";
 
 const LEADS = [
   "Priya — asked about the bridal package",
@@ -19,7 +20,12 @@ const LEADS = [
   "Dev — no-show on Monday",
 ];
 
-const CENTER = new THREE.Vector3(-1.2, 0.1, -46);
+const CENTER = new THREE.Vector3(-1.2, 0.1, -46); // the engine dot
+// Visual centre of the whole composition (dot left, card columns right) and
+// its half-extents — placeStage centres THIS in the box and sizes to fit.
+const STAGE = new THREE.Vector3(CENTER.x + 2.2, CENTER.y + 0.05, CENTER.z);
+const STAGE_HALF_W = 2.9;
+const STAGE_HALF_H = 2.0;
 const CHIP_H = 0.42;
 
 /**
@@ -101,7 +107,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     [chips, threads]
   );
 
-  useFrame(({ clock, camera }) => {
+  useFrame(({ clock, camera, size }) => {
     const g = group.current;
     const cg = caughtGroup.current;
     const tg = threadGroup.current;
@@ -119,13 +125,17 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     const c = localProgress(shift.story, "chase");
     const t = clock.elapsedTime;
 
-    // Portrait screens: pull the cloud toward the look axis and deeper.
-    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
-    const squeeze = smooth01((1.05 - aspect) / 0.5);
-    g.position.set(-3.5 * squeeze, -2.2 * squeeze, -4.0 * squeeze);
+    // Centre the composition in the showcase box on every viewport; the
+    // sibling groups must carry the identical transform.
+    placeStage(camera, size.width, STAGE, STAGE_HALF_W, STAGE_HALF_H, g, 1.25);
     cg.position.copy(g.position);
+    cg.scale.copy(g.scale);
     tg.position.copy(g.position);
-    if (hub.current) hub.current.position.copy(g.position);
+    tg.scale.copy(g.scale);
+    if (hub.current) {
+      hub.current.position.copy(g.position);
+      hub.current.scale.copy(g.scale);
+    }
 
     g.children.forEach((child, i) => {
       const chip = chips[i];

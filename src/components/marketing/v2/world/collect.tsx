@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { clamp01, localProgress, shift } from "../progress";
 import { rand, smooth01 } from "./path";
+import { placeStage } from "./stage";
 import {
   makeBubbleTexture,
   makeRadialTexture,
@@ -29,6 +30,10 @@ const THREAD: { style: BubbleStyle; text: string }[] = [
 const CUSTOMER_INDEX = 1; // the reply that gets a typing indicator first
 
 const CENTER = new THREE.Vector3(1.3, -0.4, -54);
+// Visual centre + half-extents of the conversation, for box placement.
+const STAGE = new THREE.Vector3(CENTER.x + 0.1, CENTER.y - 0.1, CENTER.z);
+const STAGE_HALF_W = 2.1;
+const STAGE_HALF_H = 2.15;
 const CHIP_H = 0.52;
 const ROW = 0.72;
 const TOP = CENTER.y + 1.7;
@@ -80,7 +85,7 @@ export function CollectScene() {
     [chips, typingTexture]
   );
 
-  useFrame(({ clock, camera }) => {
+  useFrame(({ clock, camera, size }) => {
     const g = group.current;
     if (!g) return;
     const d = localProgress(shift.story, "dawn");
@@ -96,10 +101,8 @@ export function CollectScene() {
     if (!g.visible) return;
     const t = clock.elapsedTime;
 
-    // Portrait: nudge the thread toward the look axis and a touch deeper.
-    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
-    const squeeze = smooth01((1.05 - aspect) / 0.5);
-    g.position.set(-2.46 * squeeze, -2.05 * squeeze, -2.3 * squeeze);
+    // Centre the conversation in the showcase box on every viewport.
+    placeStage(camera, size.width, STAGE, STAGE_HALF_W, STAGE_HALF_H, g, 1.2);
 
     g.children.forEach((child, i) => {
       const chip = chips[i];
@@ -130,6 +133,7 @@ export function CollectScene() {
 
     if (moteGroup.current) {
       moteGroup.current.position.copy(g.position);
+      moteGroup.current.scale.copy(g.scale);
       moteGroup.current.children.forEach((mote, i) => {
         const mt = motes[i];
         const cycle = ((t * mt.speed + mt.phase) % 1 + 1) % 1;
@@ -149,13 +153,17 @@ export function CollectScene() {
             <meshBasicMaterial map={chip.texture} transparent opacity={0} />
           </mesh>
         ))}
+        <mesh ref={typing} visible={false}>
+          <planeGeometry
+            args={[CHIP_H * typingTexture.aspect * 0.8, CHIP_H * 0.8]}
+          />
+          <meshBasicMaterial
+            map={typingTexture.texture}
+            transparent
+            opacity={0}
+          />
+        </mesh>
       </group>
-      <mesh ref={typing} visible={false}>
-        <planeGeometry
-          args={[CHIP_H * typingTexture.aspect * 0.8, CHIP_H * 0.8]}
-        />
-        <meshBasicMaterial map={typingTexture.texture} transparent opacity={0} />
-      </mesh>
       <group ref={moteGroup} visible={false}>
         {motes.map((mt, i) => (
           <sprite key={i} scale={[mt.size, mt.size, 1]}>
