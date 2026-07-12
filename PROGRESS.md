@@ -5,6 +5,39 @@ what's next.
 
 ---
 
+## Night Shift full-chapter screenshot QA — begin/mid/end × 3 viewports (2026-07-12) ✅
+
+Meticulous pixel pass over the four pinned chapters using a scratchpad
+headless-Chrome rig (real wheel scrolling through Lenis, no preview hooks in
+product code). Captured and inspected begin/mid/end of Books, Chases and
+Collects plus Answers at 1440×900, 1024×768 and 390×844.
+
+### Corrections from the screenshots
+- **Books:** slots now reveal by OPACITY at final size (no more random-size
+  card jumble mid-assembly); grid nudged onto the box's visual centre; BOOK
+  camera pulled back slightly so the grid clears the frame on 1024-wide
+  screens too.
+- **Chases:** scene now holds at full strength for the whole chapter (the old
+  early fade at story 0.695 — a leftover from the flying camera — left an
+  empty box while the copy was still active); engine dot visibly brighter;
+  dim→caught crossfade cleaned.
+- **Collects:** tail fade moved from d=0.86 to d=0.93 so the finished
+  conversation stays readable while its copy is active, still fully gone by
+  story end.
+- **Mobile (390×844):** all three fixed-camera scenes re-framed for the
+  portrait viewport window (they had inherited desktop offsets and clipped
+  hard left/right); every card verified inside the box across chapters.
+- **Copy rail:** both desktop and mobile rails are now clipped, masked
+  windows — ghost chapters fade at the window edges instead of piling onto
+  the navbar (1024) or bleeding over the animation box (mobile).
+
+### Verification
+- 20+ screenshots captured and visually inspected across the three viewports,
+  re-shot after every adjustment; QA rig lives outside the repo (scratchpad).
+- `npm run lint`, `npm run build`, `git diff --check` — green.
+- **424 tests / 52 files** — green (camera keyframe test updated for the
+  BOOK pullback).
+
 ## Night Shift frame alignment + screenshot QA (2026-07-12) ✅
 
 Corrected the remaining perspective and overflow issues using forced chapter

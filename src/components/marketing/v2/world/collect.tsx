@@ -88,7 +88,7 @@ export function CollectScene() {
     // lingers behind the morning section (belt: dawn tail; braces: after).
     const env =
       smooth01(clamp01(d / 0.15)) *
-      (1 - smooth01((d - 0.86) / 0.14)) *
+      (1 - smooth01((d - 0.93) / 0.07)) *
       (1 - smooth01(shift.after * 2.2));
     g.visible = env > 0.02;
     if (moteGroup.current) moteGroup.current.visible = g.visible;
@@ -99,7 +99,7 @@ export function CollectScene() {
     // Portrait: nudge the thread toward the look axis and a touch deeper.
     const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
     const squeeze = smooth01((1.05 - aspect) / 0.5);
-    g.position.set(-0.85 * squeeze, -0.35 * squeeze, -1.2 * squeeze);
+    g.position.set(-2.46 * squeeze, -2.05 * squeeze, -2.3 * squeeze);
 
     g.children.forEach((child, i) => {
       const chip = chips[i];

@@ -48,6 +48,6 @@ describe("cameraAt", () => {
     expect(z).toBeGreaterThan(-31);
   });
   it("snaps directly to the fixed calendar frame", () => {
-    expect(cameraAt(0.28).pos).toEqual([0, 0.5, -33.5]);
+    expect(cameraAt(0.28).pos).toEqual([0, 0.5, -32.8]);
   });
 });

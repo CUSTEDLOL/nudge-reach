@@ -34,6 +34,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
   const caughtGroup = useRef<THREE.Group>(null);
   const threadGroup = useRef<THREE.Group>(null);
   const glow = useRef<THREE.Sprite>(null);
+  const hub = useRef<THREE.Group>(null);
   const glowTexture = useMemo(() => makeRadialTexture(), []);
 
   const chips = useMemo(() => {
@@ -105,10 +106,11 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     const cg = caughtGroup.current;
     const tg = threadGroup.current;
     if (!g || !cg || !tg) return;
-    // Scene envelope: enters with "It chases"; fades BEFORE the camera's
-    // dawn flight reaches the chip field (story ~0.75), so no giant
-    // close-up bubbles ever sweep across the next chapter's copy.
-    const exit = 1 - smooth01((shift.story - 0.695) / 0.055);
+    // Scene envelope: the camera CUTS between fixed chapter frames now, so
+    // the scene holds at full strength while its copy is active and fades
+    // only in the final beats before the Collects cut.
+    const exit =
+      1 - smooth01((shift.story - (CHAPTERS.chase.end - 0.035)) / 0.03);
     const on = shift.story > CHAPTERS.book.end - 0.03 && exit > 0.02;
     g.visible = on;
     cg.visible = on;
@@ -120,9 +122,10 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     // Portrait screens: pull the cloud toward the look axis and deeper.
     const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
     const squeeze = smooth01((1.05 - aspect) / 0.5);
-    g.position.set(-0.7 * squeeze, -0.55 * squeeze, -1.5 * squeeze);
+    g.position.set(-3.5 * squeeze, -2.2 * squeeze, -4.0 * squeeze);
     cg.position.copy(g.position);
     tg.position.copy(g.position);
+    if (hub.current) hub.current.position.copy(g.position);
 
     g.children.forEach((child, i) => {
       const chip = chips[i];
@@ -136,7 +139,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       child.scale.setScalar(Math.max(enter, 0.0001));
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       // Dim while quiet; the caught overlay carries the lit state.
-      m.opacity = enter * (0.85 - caught * 0.85) * exit;
+      m.opacity = enter * (1 - caught) * exit;
 
       // Caught overlay: same spot, brighter texture, crossfades in.
       const over = cg.children[i] as THREE.Mesh | undefined;
@@ -172,8 +175,8 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       const chasing = smooth01(clamp01((c - 0.35) / 0.5));
       (glow.current.material as THREE.SpriteMaterial).opacity =
         (fx
-          ? 0.12 + chasing * 0.1 + Math.sin(t * 2.4) * 0.03 * chasing
-          : 0.12) * exit;
+          ? 0.34 + chasing * 0.12 + Math.sin(t * 2.4) * 0.04 * chasing
+          : 0.34) * exit;
     }
   });
 
@@ -209,28 +212,33 @@ export function OrbitScene({ fx }: { fx: boolean }) {
           <primitive key={i} object={l} />
         ))}
       </group>
-      <sprite
-        ref={glow}
-        position={[CENTER.x, CENTER.y, CENTER.z]}
-        scale={[1.4, 1.4, 1]}
-      >
-        <spriteMaterial
-          map={glowTexture}
-          color="#06c167"
-          transparent
-          opacity={0.12}
-          depthWrite={false}
-        />
-      </sprite>
-      <sprite position={[CENTER.x, CENTER.y, CENTER.z + 0.02]} scale={[0.3, 0.3, 1]}>
-        <spriteMaterial
-          map={glowTexture}
-          color="#06c167"
-          transparent
-          opacity={1}
-          depthWrite={false}
-        />
-      </sprite>
+      <group ref={hub}>
+        <sprite
+          ref={glow}
+          position={[CENTER.x, CENTER.y, CENTER.z]}
+          scale={[1.4, 1.4, 1]}
+        >
+          <spriteMaterial
+            map={glowTexture}
+            color="#06c167"
+            transparent
+            opacity={0.12}
+            depthWrite={false}
+          />
+        </sprite>
+        <sprite
+          position={[CENTER.x, CENTER.y, CENTER.z + 0.02]}
+          scale={[0.3, 0.3, 1]}
+        >
+          <spriteMaterial
+            map={glowTexture}
+            color="#06c167"
+            transparent
+            opacity={1}
+            depthWrite={false}
+          />
+        </sprite>
+      </group>
     </>
   );
 }

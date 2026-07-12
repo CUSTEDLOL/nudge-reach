@@ -15,7 +15,7 @@ const CELL_H = 0.38;
 const GAP = 0.1;
 // Grid sits clearly right-of-center so the chapter copy on the left is
 // never covered (the camera's look-target stays left of this anchor).
-const CENTER = new THREE.Vector3(3.1, 0.3, -38);
+const CENTER = new THREE.Vector3(3.04, 0.3, -38);
 const STAR = 21; // 7:30 PM — the slot that gets booked (and keeps its time)
 
 /** Every cell is a distinct half-hour slot: 9:00 → 8:30, left to right. */
@@ -77,7 +77,7 @@ export function CalendarScene() {
     // the whole tableau down, left and deeper so it reads below the copy.
     const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1.6;
     const squeeze = smooth01((1.05 - aspect) / 0.5);
-    g.position.set(-1.45 * squeeze, -1.05 * squeeze, -1.7 * squeeze);
+    g.position.set(-1.0 * squeeze, -1.95 * squeeze, -3.8 * squeeze);
 
     g.children.forEach((child, i) => {
       if (i >= cells.length) return; // booked overlay + ring come after
@@ -85,9 +85,13 @@ export function CalendarScene() {
       const e = smooth01(clamp01((b - c.delay) / 0.6));
       child.position.copy(c.grid);
       child.quaternion.copy(camera.quaternion);
+      // Reveal by OPACITY at final size — a grid materialising in place,
+      // never a jumble of differently-sized cards mid-assembly.
       const pop = i === STAR ? 1 + lock * 0.35 : 1;
-      child.scale.setScalar(Math.max(e * pop * exit, 0.0001));
+      child.scale.setScalar(Math.max((0.92 + 0.08 * e) * pop, 0.0001));
       child.rotation.set(0, 0, 0);
+      const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      m.opacity = e * exit;
     });
 
     // The booked card: the green 7:30 crossfades over the white 7:30.
