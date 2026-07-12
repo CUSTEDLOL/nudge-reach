@@ -10,9 +10,9 @@ import { makeRadialTexture, makeSlotTexture } from "./textures";
 
 const COLS = 6;
 const ROWS = 4;
-const CELL_W = 0.38;
-const CELL_H = 0.28;
-const GAP = 0.07;
+const CELL_W = 0.52;
+const CELL_H = 0.38;
+const GAP = 0.1;
 // Grid sits clearly right-of-center so the chapter copy on the left is
 // never covered (the camera's look-target stays left of this anchor).
 const CENTER = new THREE.Vector3(3.1, 0.3, -38);
@@ -45,13 +45,6 @@ export function CalendarScene() {
             CENTER.x + (col - (COLS - 1) / 2) * (CELL_W + GAP),
             CENTER.y + ((ROWS - 1) / 2 - row) * (CELL_H + GAP),
             CENTER.z
-          ),
-          // Scatter stays strictly right of the copy column — both endpoints
-          // of the flight are right of the text, so the whole path is too.
-          scatter: new THREE.Vector3(
-            CENTER.x + (rand(i, 4) + 0.08) * 3.9,
-            CENTER.y + (rand(i, 5) - 0.5) * 4.4,
-            CENTER.z - 0.3 - rand(i, 6) * 0.5
           ),
           delay: rand(i, 7) * 0.25,
         };
@@ -90,9 +83,7 @@ export function CalendarScene() {
       if (i >= cells.length) return; // booked overlay + ring come after
       const c = cells[i];
       const e = smooth01(clamp01((b - c.delay) / 0.6));
-      child.position.lerpVectors(c.scatter, c.grid, e);
-      // Assemble on one flat plane; only a tiny idle breath remains.
-      child.position.y += Math.sin(t * 1.2 + i) * 0.012 * e;
+      child.position.copy(c.grid);
       const pop = i === STAR ? 1 + lock * 0.35 : 1;
       child.scale.setScalar(Math.max(e * pop * exit, 0.0001));
       child.rotation.set(0, 0, 0);

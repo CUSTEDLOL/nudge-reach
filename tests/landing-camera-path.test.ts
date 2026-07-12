@@ -23,18 +23,17 @@ describe("rand", () => {
 });
 
 describe("cameraAt", () => {
-  it("starts at the straight-on answers framing", () => {
-    expect(cameraAt(0).pos).toEqual([0, 0.35, 4]);
+  it("restores the original answers framing", () => {
+    expect(cameraAt(0).pos).toEqual([0, 0.4, 7]);
   });
   it("ends at the stable collects framing", () => {
-    expect(cameraAt(1).pos).toEqual([0, 0.8, -42]);
+    expect(cameraAt(1).pos).toEqual([0, 0.8, -47]);
   });
   it("clamps outside [0,1]", () => {
     expect(cameraAt(-0.5)).toEqual(cameraAt(0));
     expect(cameraAt(1.5)).toEqual(cameraAt(1));
   });
-  it("holds the camera still inside each chapter", () => {
-    expect(cameraAt(0.1)).toEqual(cameraAt(0.2));
+  it("holds the camera still inside books, chases and collects", () => {
     expect(cameraAt(0.35)).toEqual(cameraAt(0.48));
     expect(cameraAt(0.62)).toEqual(cameraAt(0.72));
     expect(cameraAt(0.86)).toEqual(cameraAt(0.96));
@@ -43,9 +42,12 @@ describe("cameraAt", () => {
     expect(cameraAt(0.4).look[0]).toBeLessThan(2.2);
     expect(cameraAt(0.5).look[0]).toBeLessThan(2.2);
   });
-  it("moves only during the short chapter hand-offs", () => {
-    const z = cameraAt(0.275).pos[2];
+  it("keeps the original fly-through only for answers", () => {
+    const z = cameraAt(0.12).pos[2];
     expect(z).toBeLessThan(4);
-    expect(z).toBeGreaterThan(-28);
+    expect(z).toBeGreaterThan(-31);
+  });
+  it("snaps directly to the fixed calendar frame", () => {
+    expect(cameraAt(0.28).pos).toEqual([0, 0.5, -33]);
   });
 });

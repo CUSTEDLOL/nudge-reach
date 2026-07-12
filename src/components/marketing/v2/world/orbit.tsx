@@ -19,8 +19,8 @@ const LEADS = [
   "Dev — no-show on Monday",
 ];
 
-const CENTER = new THREE.Vector3(-2.6, 0.15, -46); // camera looks here at 0.64
-const CHIP_H = 0.26;
+const CENTER = new THREE.Vector3(0, 0.1, -46);
+const CHIP_H = 0.38;
 
 /**
  * The chase, literally: quiet leads pop into the night at scattered spots,
@@ -45,22 +45,16 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     return LEADS.map((text, i) => {
       const dim = makeBubbleTexture(text, "dim", undefined, 2);
       const caught = makeBubbleTexture(text, "caught", "↳ follow-up sent ✓", 2);
-      // Jittered 4×2 slot grid: generous, deterministic spacing so chips
-      // never pile on top of each other (checkerboard y-offset for air).
-      const col = i % 4;
-      const row = Math.floor(i / 4);
+      const angle = -Math.PI / 2 + (i * Math.PI * 2) / LEADS.length;
       return {
         dimTexture: dim.texture,
         caughtTexture: caught.texture,
         aspect: dim.aspect,
         caughtAspect: caught.aspect,
         pos: new THREE.Vector3(
-          CENTER.x + 0.15 + col * 1.24 + (rand(i, 31) - 0.5) * 0.3,
-          CENTER.y +
-            (row === 0 ? 1.05 : -1.05) +
-            (col % 2 ? 0.42 : -0.18) +
-            (rand(i, 32) - 0.5) * 0.24,
-          CENTER.z + (rand(i, 33) - 0.5) * 0.5
+          CENTER.x + Math.cos(angle) * 2.5,
+          CENTER.y + Math.sin(angle) * 1.65,
+          CENTER.z
         ),
         // Quiet leads appear at semi-random moments…
         enterAt: 0.03 + rand(i, 34) * 0.19,
@@ -217,7 +211,7 @@ export function OrbitScene({ fx }: { fx: boolean }) {
       <sprite
         ref={glow}
         position={[CENTER.x, CENTER.y, CENTER.z]}
-        scale={[2.6, 2.6, 1]}
+        scale={[1.6, 1.6, 1]}
       >
         <spriteMaterial
           map={glowTexture}
@@ -227,6 +221,10 @@ export function OrbitScene({ fx }: { fx: boolean }) {
           depthWrite={false}
         />
       </sprite>
+      <mesh position={[CENTER.x, CENTER.y, CENTER.z + 0.02]}>
+        <circleGeometry args={[0.13, 32]} />
+        <meshBasicMaterial color="#06c167" depthWrite={false} />
+      </mesh>
     </>
   );
 }

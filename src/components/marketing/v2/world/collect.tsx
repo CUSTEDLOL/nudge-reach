@@ -29,8 +29,8 @@ const THREAD: { style: BubbleStyle; text: string }[] = [
 const CUSTOMER_INDEX = 1; // the reply that gets a typing indicator first
 
 const CENTER = new THREE.Vector3(1.3, 0.8, -54); // camera frames this at 0.9
-const CHIP_H = 0.46;
-const ROW = 0.78;
+const CHIP_H = 0.58;
+const ROW = 0.72;
 const TOP = CENTER.y + 1.9;
 const MOTES = 14;
 
@@ -51,7 +51,7 @@ export function CollectScene() {
         return {
           texture,
           aspect,
-          x: CENTER.x + lane + (rand(i, 21) - 0.5) * 0.12,
+          x: CENTER.x + lane,
           y: TOP - i * ROW,
           // Sequential reveal: one bubble at a time, reading order.
           enterAt: 0.06 + i * 0.11,

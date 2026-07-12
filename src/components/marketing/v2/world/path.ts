@@ -20,25 +20,17 @@ interface Key {
   look: Vec3;
 }
 
-/**
- * Four stable, straight-on chapter framings. The duplicated keys hold the
- * camera still while a scene plays; short gaps between chapters create a
- * restrained hand-off instead of zooming through the content.
- */
-const KEYS: Key[] = [
-  // Answers — one centred message thread, no fly-through.
-  { at: 0.0, pos: [0, 0.35, 4], look: [-1.2, 0.1, -6] },
-  { at: 0.25, pos: [0, 0.35, 4], look: [-1.2, 0.1, -6] },
-  // Books — the calendar is held flat and at a comfortable distance.
-  { at: 0.3, pos: [0, 0.5, -28], look: [0.75, 0.25, -38] },
-  { at: 0.52, pos: [0, 0.5, -28], look: [0.75, 0.25, -38] },
-  // Chases — framed wider so all lead chips remain inside the browser.
-  { at: 0.58, pos: [0, 0.55, -34], look: [-5.0, 0.15, -46] },
-  { at: 0.76, pos: [0, 0.55, -34], look: [-5.0, 0.15, -46] },
-  // Collects — a straight, centred message stack with no final push-in.
-  { at: 0.82, pos: [0, 0.8, -42], look: [-1.8, 0.55, -54] },
-  { at: 1.0, pos: [0, 0.8, -42], look: [-1.8, 0.55, -54] },
+/** Answers keeps the original camera flight the founder preferred. */
+const ANSWER_KEYS: Key[] = [
+  { at: 0.0, pos: [0, 0.4, 7], look: [0, 0, 0] },
+  { at: 0.06, pos: [0, 0.3, 4], look: [0.7, 0.1, -4] },
+  { at: 0.28, pos: [0.4, 0.2, -31], look: [1.0, 0.1, -38] },
 ];
+
+/** The other three chapters snap to one fixed frame and never zoom. */
+const BOOK = { pos: [0, 0.5, -33] as Vec3, look: [-1.5, 0.25, -38] as Vec3 };
+const CHASE = { pos: [0, 0.5, -39] as Vec3, look: [-3.6, 0.1, -46] as Vec3 };
+const COLLECT = { pos: [0, 0.8, -47] as Vec3, look: [-2.5, 0.55, -54] as Vec3 };
 
 function lerpVec(a: Vec3, b: Vec3, t: number): Vec3 {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -46,10 +38,14 @@ function lerpVec(a: Vec3, b: Vec3, t: number): Vec3 {
 
 export function cameraAt(story: number): { pos: Vec3; look: Vec3 } {
   const t = clamp01(story);
+  if (t >= 0.8) return COLLECT;
+  if (t >= 0.55) return CHASE;
+  if (t >= 0.28) return BOOK;
+
   let i = 0;
-  while (i < KEYS.length - 2 && KEYS[i + 1].at <= t) i++;
-  const a = KEYS[i];
-  const b = KEYS[i + 1];
+  while (i < ANSWER_KEYS.length - 2 && ANSWER_KEYS[i + 1].at <= t) i++;
+  const a = ANSWER_KEYS[i];
+  const b = ANSWER_KEYS[i + 1];
   const f = smooth01((t - a.at) / (b.at - a.at));
   return { pos: lerpVec(a.pos, b.pos, f), look: lerpVec(a.look, b.look, f) };
 }

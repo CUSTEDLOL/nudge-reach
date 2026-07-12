@@ -426,35 +426,16 @@ html {
   height: 74svh;
   overflow: hidden;
   transform: translateY(-50%);
-  border: 1px solid rgba(10, 15, 13, 0.18);
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 30px 90px -30px rgba(10, 15, 13, 0.32),
-    14px 14px 0 rgba(6, 193, 103, 0.14);
-}
-
-.ns-browser-chrome {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  height: 3.6rem;
-  align-items: center;
-  gap: 1rem;
-  border-bottom: 1px solid rgba(10, 15, 13, 0.1);
-  background: rgba(246, 248, 247, 0.96);
-  padding-inline: 1.25rem;
-  backdrop-filter: blur(16px);
+  border: 1px solid rgba(10, 15, 13, 0.2);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 70px -34px rgba(10, 15, 13, 0.3);
 }
 
 .ns-browser-viewport {
   position: absolute;
-  inset: 3.6rem 0 0;
+  inset: 0;
   overflow: hidden;
-}
-
-.jsm .ns-browser-address:not(:first-child),
-.jsm .ns-browser-status:not(:first-child) {
-  opacity: 0;
 }
 
 .ns-browser-grid {
@@ -487,7 +468,7 @@ html {
     height: 48vh;
     height: 48svh;
     transform: none;
-    border-radius: 1.1rem;
+    border-radius: 0.75rem;
   }
   .jsm .ns-world-mask {
     position: absolute;

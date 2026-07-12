@@ -5,6 +5,33 @@ what's next.
 
 ---
 
+## Night Shift fixed-stage compositions (2026-07-12) ✅
+
+Finalised the four browser-box scenes based on founder review of real scroll
+captures.
+
+### Done
+- Restored **Answers** to the exact preferred corridor behaviour: original
+  message distribution, camera flight, proximity scaling, bob and gentle bank.
+- **Books** now snaps to one fixed camera and never moves during the chapter.
+  Calendar slots occupy a larger flat grid, reveal in place on scroll and the
+  7:30 slot turns green; no scatter flight, perspective tilt or zoom.
+- **Chases** now snaps to a fixed closer camera. Eight readable follow-ups sit
+  around a solid central green engine dot, with pursuit lines radiating from
+  the centre and the existing `follow-up sent ✓` state.
+- **Collects** now snaps to a fixed closer camera with larger, aligned messages
+  that rise sequentially; no chapter camera movement or inherited roll.
+- The showcase is now a plain bordered animation box. Removed traffic lights,
+  fake URL/prompt bar, route text, chapter counter, status badges, LIVE badge,
+  progress strip and green offset shadow.
+- Camera changes into Books/Chases/Collects are immediate scene cuts; only the
+  restored Answers chapter retains cinematic camera motion.
+
+### Verification
+- `npm run lint` — green.
+- `npm run build` — green.
+- **424 tests / 52 files** — green under Node 22.
+
 ## Night Shift viewport correction + features simplification (2026-07-11) ✅
 
 Corrected the split-screen scenes after real-browser review exposed framing
