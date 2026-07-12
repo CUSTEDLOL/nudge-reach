@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
-import { SalaryCalculator } from "@/components/marketing/salary-calculator";
 import { Industries } from "@/components/marketing/industries";
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { ResellerCTA } from "@/components/marketing/reseller-cta";
@@ -10,7 +9,6 @@ import { FinalCTA } from "@/components/marketing/final-cta";
 import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
-import { Morning } from "@/components/marketing/v2/chapters/morning";
 import { DaySection } from "@/components/marketing/v2/day-section";
 
 export const metadata: Metadata = {
@@ -32,25 +30,55 @@ export const metadata: Metadata = {
  * behind server-rendered copy. Without JS/WebGL/motion, .v2-page's gradient
  * and the default-visible CSS produce the complete static story.
  */
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      name: "Nudge",
+      url: "https://nudge-reach.vercel.app",
+      logo: "https://nudge-reach.vercel.app/icon.svg",
+      description:
+        "Nudge is an AI Front Desk for small businesses: it answers customers, books appointments, chases quiet leads and collects payments on WhatsApp.",
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "Nudge AI Front Desk",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description:
+        "A done-for-you AI employee that runs a small business's WhatsApp: real calendar bookings, lead follow-ups and payment collection over the official WhatsApp Cloud API.",
+      offers: [
+        {
+          "@type": "Offer",
+          name: "AI Front Desk",
+          price: "14999",
+          priceCurrency: "INR",
+        },
+        { "@type": "Offer", name: "Free", price: "0", priceCurrency: "INR" },
+      ],
+    },
+  ],
+};
+
 export default function Home() {
   return (
     <div data-shift="day" className="v2-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
       <Navbar />
       <Experience />
       <main className="relative z-10 overflow-x-clip">
         {/* THE NIGHT — 11:47 PM → dawn */}
         <HeroV2 />
         <NightShift />
-        {/* THE MORNING — the payoff, then the daylight zone.
-            Full-bleed sections, Apple-style scrubbed entrances:
-            features (the USP) → the salary math → the honest comparison. */}
-        <Morning />
-        <div className="pb-16">
+        {/* THE DAYLIGHT ZONE — features (the USP) → the honest comparison.
+            The salary math lives on /pricing next to the plans. */}
+        <div id="daylight" className="pb-16">
           <DaySection>
             <FeaturesBento />
-          </DaySection>
-          <DaySection>
-            <SalaryCalculator />
           </DaySection>
           <DaySection>
             <MetaVsNudge />

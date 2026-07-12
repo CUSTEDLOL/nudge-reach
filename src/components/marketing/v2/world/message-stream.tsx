@@ -30,7 +30,7 @@ export function MessageStream({ cards }: { cards: number }) {
     () =>
       Array.from({ length: cards }, (_, i) => {
         const msg = THREAD[i % THREAD.length];
-        const { texture, aspect } = makeBubbleTexture(msg.text, msg.out);
+        const { texture, aspect } = makeBubbleTexture(msg.text, msg.out, undefined, 2.5);
         return {
           texture,
           aspect,

@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { QUALITY, shouldStepDown, stepDown, type Quality } from "./quality";
 import { Sky } from "./sky";
-import { Particles } from "./particles";
 import { CameraRig } from "./camera-rig";
 import { MessageStream } from "./message-stream";
 import { CalendarScene } from "./calendar";
@@ -62,7 +61,6 @@ export default function World({ quality: initial }: { quality: Quality }) {
     >
       <Sky />
       <CameraRig />
-      <Particles count={quality.particles} />
       <MessageStream cards={quality.streamCards} />
       <CalendarScene />
       <OrbitScene fx={quality.fx} />

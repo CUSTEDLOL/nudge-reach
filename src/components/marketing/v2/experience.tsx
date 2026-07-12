@@ -33,7 +33,7 @@ export function Experience() {
     if (!motionAllowed()) return;
     const root = document.querySelector<HTMLElement>("[data-shift]");
     const track = document.getElementById("night-shift");
-    const morning = document.getElementById("morning");
+    const morning = document.getElementById("daylight");
     const triggers = [
       ScrollTrigger.create({
         start: 0,

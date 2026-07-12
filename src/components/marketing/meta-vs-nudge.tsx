@@ -32,7 +32,7 @@ function Cell({ on }: { on: boolean }) {
       <span className="sr-only">Yes</span>
     </span>
   ) : (
-    <span className="font-mono text-sm text-ink/25" aria-hidden>
+    <span className="text-lg font-black leading-none text-ink/50" aria-hidden>
       —
     </span>
   );
@@ -51,7 +51,13 @@ export function MetaVsNudge() {
               Answers are cheap. Running the desk isn&rsquo;t.
             </>
           }
-          subtitle="Meta's free AI replies to questions. The CRM tools give you software to operate yourself. A hire works nine hours. The AI Front Desk does the whole job."
+          subtitle={
+            <>
+              Meta&rsquo;s free AI <strong className="font-bold text-ink/85">replies to questions</strong>. The CRM tools give
+              you software to <strong className="font-bold text-ink/85">operate yourself</strong>. A hire works nine hours.
+              The AI Front Desk <strong className="font-bold text-ink/85">does the whole job</strong>.
+            </>
+          }
         />
 
         <Reveal className="mt-12">

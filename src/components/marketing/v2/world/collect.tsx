@@ -5,13 +5,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { clamp01, localProgress, shift } from "../progress";
-import { rand, smooth01 } from "./path";
+import { smooth01 } from "./path";
 import { placeStage } from "./stage";
-import {
-  makeBubbleTexture,
-  makeRadialTexture,
-  type BubbleStyle,
-} from "./textures";
+import { makeBubbleTexture, type BubbleStyle } from "./textures";
 
 /** The 6:48 AM receipts — a real WhatsApp exchange, not four floating chips:
  *  link sent → customer replies → UPI receipt → deposit logged → reminder →
@@ -37,20 +33,17 @@ const STAGE_HALF_H = 2.15;
 const CHIP_H = 0.52;
 const ROW = 0.72;
 const TOP = CENTER.y + 1.7;
-const MOTES = 14;
 
 /** Dawn scene: the payment thread writes itself while golden motes rise. */
 export function CollectScene() {
   const group = useRef<THREE.Group>(null);
   const typing = useRef<THREE.Mesh>(null);
-  const moteGroup = useRef<THREE.Group>(null);
-  const moteTexture = useMemo(() => makeRadialTexture(64), []);
-  const typingTexture = useMemo(() => makeBubbleTexture("• • •", "in", undefined, 2), []);
+  const typingTexture = useMemo(() => makeBubbleTexture("• • •", "in", undefined, 3), []);
 
   const chips = useMemo(
     () =>
       THREAD.map((r, i) => {
-        const { texture, aspect } = makeBubbleTexture(r.text, r.style, undefined, 2);
+        const { texture, aspect } = makeBubbleTexture(r.text, r.style, undefined, 3);
         const lane =
           r.style === "out" ? 0.85 : r.style === "in" ? -1.0 : -0.15;
         return {
@@ -65,18 +58,6 @@ export function CollectScene() {
     []
   );
 
-  const motes = useMemo(
-    () =>
-      Array.from({ length: MOTES }, (_, i) => ({
-        x: CENTER.x + (rand(i, 22) - 0.5) * 4.5,
-        z: CENTER.z + (rand(i, 23) - 0.5) * 3,
-        speed: 0.14 + rand(i, 24) * 0.22,
-        phase: rand(i, 25) * 10,
-        size: 0.1 + rand(i, 26) * 0.16,
-      })),
-    []
-  );
-
   useEffect(
     () => () => {
       chips.forEach((c) => c.texture.dispose());
@@ -85,7 +66,7 @@ export function CollectScene() {
     [chips, typingTexture]
   );
 
-  useFrame(({ clock, camera, size }) => {
+  useFrame(({ camera, size }) => {
     const g = group.current;
     if (!g) return;
     const d = localProgress(shift.story, "dawn");
@@ -96,10 +77,8 @@ export function CollectScene() {
       (1 - smooth01((d - 0.93) / 0.07)) *
       (1 - smooth01(shift.after * 2.2));
     g.visible = env > 0.02;
-    if (moteGroup.current) moteGroup.current.visible = g.visible;
     if (typing.current) typing.current.visible = g.visible;
     if (!g.visible) return;
-    const t = clock.elapsedTime;
 
     // Centre the conversation in the showcase box on every viewport.
     placeStage(camera, size.width, STAGE, STAGE_HALF_W, STAGE_HALF_H, g, 1.2);
@@ -131,17 +110,6 @@ export function CollectScene() {
         pre * (1 - done) * env;
     }
 
-    if (moteGroup.current) {
-      moteGroup.current.position.copy(g.position);
-      moteGroup.current.scale.copy(g.scale);
-      moteGroup.current.children.forEach((mote, i) => {
-        const mt = motes[i];
-        const cycle = ((t * mt.speed + mt.phase) % 1 + 1) % 1;
-        mote.position.set(mt.x, CENTER.y - 1.6 + cycle * 3.4, mt.z);
-        const m = (mote as THREE.Sprite).material as THREE.SpriteMaterial;
-        m.opacity = Math.sin(cycle * Math.PI) * 0.35 * env;
-      });
-    }
   });
 
   return (
@@ -163,19 +131,6 @@ export function CollectScene() {
             opacity={0}
           />
         </mesh>
-      </group>
-      <group ref={moteGroup} visible={false}>
-        {motes.map((mt, i) => (
-          <sprite key={i} scale={[mt.size, mt.size, 1]}>
-            <spriteMaterial
-              map={moteTexture}
-              color="#e4b566"
-              transparent
-              opacity={0}
-              depthWrite={false}
-            />
-          </sprite>
-        ))}
       </group>
     </>
   );

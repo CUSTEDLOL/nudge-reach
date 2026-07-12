@@ -10,22 +10,49 @@ const BEATS = [
   {
     time: "12:31 AM",
     title: "It answers.",
-    body: "A customer writes at half past midnight. The Front Desk replies in seconds — your services, your prices, your tone. No 'we'll get back to you.'",
+    body: (
+      <>
+        A customer writes at half past midnight. The Front Desk{" "}
+        <strong className="font-bold text-ink/90">replies in seconds</strong> —
+        your services, your prices, your tone. No &lsquo;we&rsquo;ll get back
+        to you.&rsquo;
+      </>
+    ),
   },
   {
     time: "2:15 AM",
     title: "It books.",
-    body: "Not 'we open at 10.' It checks your real calendar, locks the slot, and sends the confirmation — booked while you sleep.",
+    body: (
+      <>
+        Not &lsquo;we open at 10.&rsquo; It checks{" "}
+        <strong className="font-bold text-ink/90">your real calendar</strong>,
+        locks the slot, and sends the confirmation —{" "}
+        <strong className="font-bold text-ink/90">booked while you sleep</strong>.
+      </>
+    ),
   },
   {
     time: "4:40 AM",
     title: "It chases.",
-    body: "The lead that went quiet on Tuesday gets a follow-up worth answering. Meta's free AI can't start that conversation. Yours can.",
+    body: (
+      <>
+        The lead that went quiet on Tuesday gets a{" "}
+        <strong className="font-bold text-ink/90">follow-up worth answering</strong>.
+        Meta&rsquo;s free AI can&rsquo;t start that conversation. Yours can.
+      </>
+    ),
   },
   {
     time: "6:48 AM",
     title: "It collects.",
-    body: "Payment link sent, deposit in, reminder scheduled. The night's work is already revenue before you're awake.",
+    body: (
+      <>
+        Payment link sent, <strong className="font-bold text-ink/90">deposit in</strong>,
+        reminder scheduled. The night&rsquo;s work is{" "}
+        <strong className="font-bold text-ink/90">already revenue</strong> before
+        you&rsquo;re awake.
+      </>
+    ),
   },
 ];
 
@@ -120,9 +147,7 @@ export function NightShift() {
         </div>
 
         <div className="ns-browser" aria-hidden>
-          <div className="ns-browser-viewport">
-            <div className="ns-browser-grid" />
-          </div>
+          <div className="ns-browser-viewport" />
         </div>
       </div>
     </section>

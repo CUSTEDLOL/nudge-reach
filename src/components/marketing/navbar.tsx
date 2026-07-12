@@ -9,7 +9,7 @@ import { ButtonLink } from "./button";
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
-  { label: "Salary math", href: "/#salary" },
+  { label: "Salary math", href: "/pricing#salary" },
   { label: "Compare", href: "/#compare" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
@@ -36,15 +36,17 @@ export function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-5 sm:pt-6">
+      {/* At rest the bar spans the page (logo hard left, CTAs hard right);
+          on scroll it eases into the compact ~90%-opaque pill. */}
       <motion.nav
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "flex w-full max-w-6xl items-center justify-between gap-4 rounded-full px-3 py-2.5 pl-5 transition-all duration-500",
+          "flex w-full items-center justify-between gap-4 rounded-full px-3 py-2.5 pl-5 transition-all duration-300 ease-out",
           scrolled
-            ? "glass border border-black/5 shadow-soft"
-            : "border border-transparent"
+            ? "max-w-6xl border border-black/5 bg-white/90 shadow-soft backdrop-blur-md"
+            : "max-w-[110rem] border border-transparent"
         )}
       >
         <Logo />

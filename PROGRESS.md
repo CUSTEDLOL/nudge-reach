@@ -5,6 +5,43 @@ what's next.
 
 ---
 
+## Landing fix sprint — founder review round (2026-07-12) ✅
+
+Seven fixes from live-page review, each screenshot-verified at 1440×900 and
+390×844 with the scratchpad headless-Chrome rig.
+
+### Done
+- **Plain white showcase box**: removed the WebGL particle field, the CSS
+  grid overlay, the golden motes and the tinted sky — the box interior is
+  now pure white (the box background is transparent; the world provides the
+  white, which a first pass got wrong and blanked the scenes).
+- **High-resolution scene graphics**: calendar slot textures now draw at
+  2.5×, chase/collect bubbles at 3×, corridor messages at 2.5×, anisotropy
+  8 — crisp at the new box-filling sizes on retina screens.
+- **Hero de-AI'd**: the "Night shift · Live activity" ledger card replaced
+  with a concrete WhatsApp conversation mockup (Sunrise Dental: enquiry →
+  7:30 PM offer → booked → ₹500 UPI receipt), pure HTML/CSS so it is
+  resolution-independent; heading reduced one size step.
+- **Redundancy removed**: the "You slept. It didn't." morning stats section
+  and the features "The job" 4-verb block are gone (both repeated the four
+  chapters); features now leads with "the desk behind it". The salary
+  calculator moved to /pricing under the plan cards; nav/footer anchors
+  updated; the world's after-trigger retargeted to #daylight.
+- **Bold pass**: comparison-table dashes are now bold and visible; key
+  fragments bolded across hero, chapter copy and the comparison subtitle.
+- **Navbar**: full-width at the top of the page (logo hard left, CTAs hard
+  right), easing into the compact pill on scroll; scrolled pill is
+  bg-white/90 + blur instead of the lighter glass.
+- **SEO**: robots.ts, sitemap.ts, generated OG image (next/og), SVG favicon,
+  Organization + SoftwareApplication JSON-LD on the home page, FAQPage
+  JSON-LD on /faq (FAQ data split into faq-data.ts so server components can
+  read it); middleware allowlists the SEO artifacts.
+
+### Verification
+- `npm run lint`, `npm run build`, `git diff --check` — green.
+- **421 tests / 52 files** — green (palette module and its tests removed
+  with the tinted sky).
+
 ## Night Shift box utilisation — exact projection framing (2026-07-12) ✅
 
 Founder review: Books/Chases/Collects sat cramped against the showcase box's

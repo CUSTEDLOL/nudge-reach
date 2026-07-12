@@ -19,14 +19,16 @@ export function makeRadialTexture(size = 256): THREE.CanvasTexture {
  *  green "booked" version with a check. Drawn at 2× for sharpness. */
 export function makeSlotTexture(
   label: string,
-  booked = false
+  booked = false,
+  scale = 2.5
 ): THREE.CanvasTexture {
   const w = 240;
   const h = 176;
   const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
+  c.width = w * scale;
+  c.height = h * scale;
   const ctx = c.getContext("2d")!;
+  ctx.scale(scale, scale);
   ctx.beginPath();
   ctx.roundRect(4, 4, w - 8, h - 8, 26);
   ctx.fillStyle = booked ? "#06c167" : "#ffffff";
@@ -44,7 +46,7 @@ export function makeSlotTexture(
   ctx.fillStyle = booked ? "rgba(255,255,255,0.55)" : "rgba(10,15,13,0.12)";
   ctx.fill();
   const texture = new THREE.CanvasTexture(c);
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
   return texture;
 }
 
@@ -131,6 +133,6 @@ export function makeBubbleTexture(
   }
 
   const texture = new THREE.CanvasTexture(c);
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
   return { texture, aspect: c.width / c.height };
 }

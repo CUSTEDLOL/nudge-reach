@@ -50,8 +50,8 @@ export function OrbitScene({ fx }: { fx: boolean }) {
     );
     const rankOf = new Map(order.map((chip, rank) => [chip, rank]));
     return LEADS.map((text, i) => {
-      const dim = makeBubbleTexture(text, "dim", undefined, 2);
-      const caught = makeBubbleTexture(text, "caught", "↳ follow-up sent ✓", 2);
+      const dim = makeBubbleTexture(text, "dim", undefined, 3);
+      const caught = makeBubbleTexture(text, "caught", "↳ follow-up sent ✓", 3);
       const col = i % 2;
       const row = Math.floor(i / 2);
       return {
