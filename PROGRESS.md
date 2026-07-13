@@ -5,6 +5,30 @@ what's next.
 
 ---
 
+## Hero image shipped — cinematic still-life (2026-07-14) ✅
+
+Art direction converged over four founder iterations: photoreal night scene
+(too dark for the white site) → full cartoon (too childish) → semi-real
+shutter scene (people distracted from the product) → final: a no-people
+cinematic still-life. Closing time on a salon counter: keys down, chai
+steaming, the phone upright showing a WhatsApp-style chat, glossy green
+bubbles floating up like steam. Semi-realistic stylized 3D, warm cream/mint
+palette — the same world as the rest of the page.
+
+### Done
+- Founder-generated image placed at `public/hero/front-desk.jpg` (PNG →
+  JPEG q88, 1.7MB → 275KB). The hero's light treatment (previous entry)
+  fits it: ink headline on the image's empty left wall, white legibility
+  gradients, glass chat toast landing beside the rendered cup.
+- Mobile: phones crop to the image's busy right side, so a phone-only
+  vertical white wash (`sm:hidden`) keeps the text zone readable while the
+  counter ghosts through below the CTAs.
+
+### Verification
+- Screenshots at 1440×900 and 390×844 with the real image — headline
+  contrast, toast placement and mobile wash all verified.
+- Full suite + lint + build + `git diff --check` — green.
+
 ## Photo hero + de-grey pass (2026-07-14) ✅
 
 Founder direction with Manychat/Intercom references: the opening viewport

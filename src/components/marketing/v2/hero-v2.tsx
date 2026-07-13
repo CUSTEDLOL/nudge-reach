@@ -101,6 +101,11 @@ export function HeroV2() {
         className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-white/70 to-transparent"
         aria-hidden
       />
+      {/* phones crop the image to its busy right side — wash the text zone */}
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/70 to-white/15 sm:hidden"
+        aria-hidden
+      />
 
       <div className="hero-copy relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-center px-5 pb-24 pt-32 sm:px-8">
         <div className="max-w-3xl">
