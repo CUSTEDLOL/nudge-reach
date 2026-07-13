@@ -68,7 +68,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
-      <Navbar overDark />
+      <Navbar />
       <Experience />
       <main className="relative z-10 overflow-x-clip">
         {/* THE NIGHT — 11:47 PM → dawn */}

@@ -19,14 +19,14 @@ const TRUST = [
 ];
 
 /**
- * Hero — 11:47 PM, photo-first. A full-bleed cinematic photograph of an
- * owner at ease after close carries the promise; the headline is server
- * HTML (it IS the LCP element) set against the photo's dark left half.
- * Without the photo the deep-green night gradient underneath is the look.
+ * Hero — photo-first, in the site's own light world. A full-bleed stylized
+ * illustration of an owner at ease carries the promise; the headline is
+ * server HTML (it IS the LCP element) set against the image's airy left
+ * half. Without the image the soft mint-morning gradient is the look.
  */
 export function HeroV2() {
   const sectionRef = useRef<HTMLElement>(null);
-  // The night gradient IS the look until the photo ships (or if it 404s).
+  // The mint gradient IS the look until the image ships (or if it 404s).
   const [photoOk, setPhotoOk] = useState(true);
 
   useGSAP(
@@ -61,16 +61,16 @@ export function HeroV2() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-[100svh] items-center overflow-hidden bg-[#08110c]"
+      className="relative flex min-h-[100svh] items-center overflow-hidden bg-white"
       aria-label="Nudge — the AI Front Desk"
     >
-      {/* Night-gradient base: the designed look until/behind the photo. */}
+      {/* Soft mint-morning base: the designed look until/behind the photo. */}
       <div
         className="absolute inset-0"
         aria-hidden
         style={{
           background:
-            "radial-gradient(90% 90% at 78% 30%, #14352a 0%, #0b1d15 48%, #060d09 100%)",
+            "radial-gradient(90% 90% at 74% 35%, #e3f3ea 0%, #f4faf7 52%, #ffffff 100%)",
         }}
       />
       {photoOk && (
@@ -84,50 +84,50 @@ export function HeroV2() {
           onError={() => setPhotoOk(false)}
         />
       )}
-      {/* Legibility grade: dark left third for type, settled base, quiet top. */}
+      {/* Legibility grade: airy white left third for type, quiet top/bottom. */}
       <div
         className="absolute inset-0"
         aria-hidden
         style={{
           background:
-            "linear-gradient(90deg, rgba(4,9,7,0.88) 0%, rgba(4,9,7,0.62) 34%, rgba(4,9,7,0.18) 62%, rgba(4,9,7,0.30) 100%)",
+            "linear-gradient(90deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.68) 34%, rgba(255,255,255,0.10) 62%, rgba(255,255,255,0.22) 100%)",
         }}
       />
       <div
-        className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#040907]/85 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-white/85 to-transparent"
         aria-hidden
       />
       <div
-        className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#040907]/70 to-transparent"
+        className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-white/70 to-transparent"
         aria-hidden
       />
 
       <div className="hero-copy relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-center px-5 pb-24 pt-32 sm:px-8">
         <div className="max-w-3xl">
-          <p className="hero-eyebrow flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.16em] text-brand-300">
+          <p className="hero-eyebrow flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.16em] text-brand-700">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-400" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
             </span>
             On shift now · 11:47 PM
           </p>
 
-          <h1 className="mt-7 font-display text-[clamp(2.6rem,6vw,5.6rem)] font-black leading-[0.95] tracking-[-0.045em] text-white">
+          <h1 className="mt-7 font-display text-[clamp(2.6rem,6vw,5.6rem)] font-black leading-[0.95] tracking-[-0.045em] text-ink">
             <span className="block overflow-hidden pb-1">
               <span className="hero-line block">Your front desk sleeps.</span>
             </span>
             <span className="block overflow-hidden pb-3">
-              <span className="hero-line block text-brand-400">
+              <span className="hero-line block text-brand-600">
                 This one doesn&rsquo;t.
               </span>
             </span>
           </h1>
 
-          <p className="hero-sub mt-6 max-w-xl text-lg font-medium leading-relaxed text-white/70 sm:text-xl">
+          <p className="hero-sub mt-6 max-w-xl text-lg font-medium leading-relaxed text-ink/65 sm:text-xl">
             Nudge answers customers,{" "}
-            <strong className="font-bold text-white">books your real calendar</strong>,
+            <strong className="font-bold text-ink/90">books your real calendar</strong>,
             chases quiet leads and{" "}
-            <strong className="font-bold text-white">collects deposits</strong>{" "}
+            <strong className="font-bold text-ink/90">collects deposits</strong>{" "}
             on WhatsApp — set up entirely for you.
           </p>
 
@@ -136,7 +136,7 @@ export function HeroV2() {
               Hire your Front Desk
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
             </ButtonLink>
-            <ButtonLink href="#night-shift" variant="secondary-dark" size="lg">
+            <ButtonLink href="#night-shift" variant="secondary" size="lg">
               Watch one night
               <ArrowDown className="h-4 w-4" />
             </ButtonLink>
@@ -146,9 +146,9 @@ export function HeroV2() {
             {TRUST.map(({ icon: Icon, label }) => (
               <li
                 key={label}
-                className="flex items-center gap-2 text-[13px] font-semibold text-white/55"
+                className="flex items-center gap-2 text-[13px] font-semibold text-ink/55"
               >
-                <Icon className="h-4 w-4 text-brand-400/90" aria-hidden />
+                <Icon className="h-4 w-4 text-brand-600" aria-hidden />
                 {label}
               </li>
             ))}
@@ -158,29 +158,29 @@ export function HeroV2() {
 
       {/* the night's receipt — a quiet chat toast riding the photo */}
       <aside
-        className="hero-ledger absolute bottom-16 right-8 z-10 hidden w-[19.5rem] overflow-hidden rounded-2xl border border-white/12 bg-[#0b1712]/70 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl md:block xl:right-14"
+        className="hero-ledger absolute bottom-16 right-8 z-10 hidden w-[19.5rem] overflow-hidden rounded-2xl border border-black/[0.07] bg-white/85 shadow-lift backdrop-blur-xl md:block xl:right-14"
         aria-label="A real overnight WhatsApp conversation handled by Nudge"
       >
-        <div className="flex items-center gap-2.5 border-b border-white/8 px-4 py-3">
+        <div className="flex items-center gap-2.5 border-b border-black/[0.06] px-4 py-3">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-500 text-[11.5px] font-black text-white">
             S
           </span>
-          <p className="truncate text-[12.5px] font-bold text-white/90">
+          <p className="truncate text-[12.5px] font-bold text-ink">
             Sunrise Dental Clinic
           </p>
-          <span className="ml-auto font-mono text-[9.5px] font-bold text-white/35">
+          <span className="ml-auto font-mono text-[9.5px] font-bold text-ink/35">
             12:32 AM
           </span>
         </div>
         <div className="flex flex-col gap-2 px-3.5 py-4">
-          <div className="hero-ledger-row max-w-[88%] self-start rounded-xl rounded-tl-sm bg-white/10 px-3 py-2 text-[12.5px] leading-snug text-white/85">
+          <div className="hero-ledger-row max-w-[88%] self-start rounded-xl rounded-tl-sm bg-[#eef3f0] px-3 py-2 text-[12.5px] leading-snug text-ink">
             Anything tomorrow evening? Tooth&rsquo;s been hurting since Sunday
           </div>
           <div className="hero-ledger-row max-w-[88%] self-end rounded-xl rounded-tr-sm bg-brand-600 px-3 py-2 text-[12.5px] leading-snug text-white">
             Booked — <strong>7:30 PM with Dr. Mehta</strong>. Deposit link sent
             to hold it.
           </div>
-          <div className="hero-ledger-row self-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 font-mono text-[10.5px] font-bold text-amber-300">
+          <div className="hero-ledger-row self-center rounded-full border border-amber-500/40 bg-amber-50 px-3 py-1 font-mono text-[10.5px] font-bold text-amber-800">
             ₹500 received · UPI ✓
           </div>
         </div>
@@ -188,8 +188,8 @@ export function HeroV2() {
 
       {/* scroll cue */}
       <div className="hero-cue absolute bottom-7 left-1/2 z-10 -translate-x-1/2" aria-hidden>
-        <div className="flex h-9 w-5 items-start justify-center rounded-full border border-white/25 p-1.5">
-          <span className="h-1.5 w-[3px] animate-bounce rounded-full bg-brand-400" />
+        <div className="flex h-9 w-5 items-start justify-center rounded-full border border-ink/20 p-1.5">
+          <span className="h-1.5 w-[3px] animate-bounce rounded-full bg-brand-600" />
         </div>
       </div>
     </section>
