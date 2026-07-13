@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Container, Section } from "./section";
 import { Reveal, Stagger, StaggerItem } from "./motion-primitives";
+import { TiltCard, TiltChip } from "./tilt-card";
 
 const INDUSTRIES: {
   icon: LucideIcon;
@@ -75,16 +76,20 @@ export function Industries() {
         <Stagger className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {INDUSTRIES.map(({ icon: Icon, title, outcome, body }) => (
             <StaggerItem key={title} className="h-full">
-              <div className="flex h-full flex-col items-center rounded-2xl border border-black/[0.04] bg-[#f4f6f5] px-6 py-8 text-center">
-                <Icon className="h-6 w-6 text-ink/70" aria-hidden />
-                <h3 className="mt-4 text-[16px] font-bold text-ink">{title}</h3>
-                <p className="serif-display mt-0.5 text-[15px] text-ink/50">
+              <TiltCard surfaceClassName="flex flex-col items-center px-6 py-9 text-center">
+                <TiltChip>
+                  <Icon className="h-[22px] w-[22px]" aria-hidden />
+                </TiltChip>
+                <h3 className="mt-5 text-[16px] font-bold text-ink [transform:translateZ(24px)]">
+                  {title}
+                </h3>
+                <p className="serif-display mt-0.5 text-[15px] text-ink/50 [transform:translateZ(18px)]">
                   {outcome}
                 </p>
-                <p className="mt-3 text-[13.5px] leading-relaxed text-ink/55">
+                <p className="mt-3 text-[13.5px] leading-relaxed text-ink/55 [transform:translateZ(10px)]">
                   {body}
                 </p>
-              </div>
+              </TiltCard>
             </StaggerItem>
           ))}
         </Stagger>

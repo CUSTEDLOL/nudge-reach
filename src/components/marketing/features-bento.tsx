@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import { ButtonLink } from "./button";
 import { Container, Section } from "./section";
-import { Reveal, Stagger, StaggerItem } from "./motion-primitives";
+import { Magnetic, Reveal, Stagger, StaggerItem } from "./motion-primitives";
+import { TiltCard, TiltChip } from "./tilt-card";
 
 const DESK = [
   {
@@ -54,13 +55,17 @@ export function FeaturesBento() {
         <Stagger className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {DESK.map(({ icon: Icon, title, body }) => (
             <StaggerItem key={title} className="h-full">
-              <div className="flex h-full flex-col items-center rounded-2xl border border-black/[0.04] bg-[#f4f6f5] px-6 py-8 text-center">
-                <Icon className="h-6 w-6 text-ink/70" aria-hidden />
-                <h3 className="mt-4 text-[16px] font-bold text-ink">{title}</h3>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-ink/55">
+              <TiltCard surfaceClassName="flex flex-col items-center px-6 py-9 text-center">
+                <TiltChip>
+                  <Icon className="h-[22px] w-[22px]" aria-hidden />
+                </TiltChip>
+                <h3 className="mt-5 text-[16px] font-bold text-ink [transform:translateZ(22px)]">
+                  {title}
+                </h3>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-ink/55 [transform:translateZ(12px)]">
                   {body}
                 </p>
-              </div>
+              </TiltCard>
             </StaggerItem>
           ))}
         </Stagger>
@@ -74,13 +79,17 @@ export function FeaturesBento() {
             for you — that&rsquo;s the &lsquo;done-for-you&rsquo; part.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/waitlist" variant="primary">
-              Hire the Front Desk
-              <ArrowRight className="h-4 w-4" />
-            </ButtonLink>
-            <ButtonLink href="/pricing" variant="secondary">
-              See pricing
-            </ButtonLink>
+            <Magnetic strength={0.18}>
+              <ButtonLink href="/waitlist" variant="primary">
+                Hire the Front Desk
+                <ArrowRight className="h-4 w-4" />
+              </ButtonLink>
+            </Magnetic>
+            <Magnetic strength={0.18}>
+              <ButtonLink href="/pricing" variant="secondary">
+                See pricing
+              </ButtonLink>
+            </Magnetic>
           </div>
         </Reveal>
       </Container>

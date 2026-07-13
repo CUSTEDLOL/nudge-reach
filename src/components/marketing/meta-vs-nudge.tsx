@@ -60,7 +60,7 @@ export function MetaVsNudge() {
 
         <Reveal className="mt-12">
           <div className="overflow-x-auto">
-            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border border-black/[0.05] bg-[#fafbfa] px-6 py-2">
+            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border border-black/[0.05] bg-[#fafbfa] px-6 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_40px_80px_-52px_rgba(10,31,26,0.35)]">
               {/* header row — a ruled ledger, not a card */}
               <div className={`${GRID} items-stretch border-b border-ink/15`}>
                 <div className="px-1 py-4" />
@@ -75,7 +75,7 @@ export function MetaVsNudge() {
                     <span className="text-[11px] text-ink/35">{col.sub}</span>
                   </div>
                 ))}
-                <div className="flex flex-col items-center justify-center bg-brand-600 px-2 py-4 text-center">
+                <div className="flex flex-col items-center justify-center rounded-t-xl bg-brand-600 px-2 py-4 text-center shadow-[0_18px_36px_-18px_rgba(5,150,105,0.6)]">
                   <span className="font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-white">
                     Nudge
                   </span>
@@ -83,10 +83,10 @@ export function MetaVsNudge() {
                 </div>
               </div>
 
-              {ROWS.map((row) => (
+              {ROWS.map((row, i) => (
                 <div
                   key={row.label}
-                  className={`${GRID} items-center border-b border-ink/[0.07] last:border-b-0`}
+                  className={`${GRID} items-center border-b border-ink/[0.07] transition-colors duration-200 last:border-b-0 hover:bg-white/80`}
                 >
                   <div className="py-3.5 pr-4 text-sm font-medium text-ink/80">
                     {row.label}
@@ -96,7 +96,11 @@ export function MetaVsNudge() {
                       <Cell on={on} />
                     </div>
                   ))}
-                  <div className="flex justify-center self-stretch bg-brand-500/[0.07] py-3.5">
+                  <div
+                    className={`flex justify-center self-stretch bg-brand-500/[0.07] py-3.5 ${
+                      i === ROWS.length - 1 ? "rounded-b-xl" : ""
+                    }`}
+                  >
                     <Cell on={true} />
                   </div>
                 </div>

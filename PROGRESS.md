@@ -5,6 +5,35 @@ what's next.
 
 ---
 
+## Daylight zone — physical depth pass (2026-07-13) ✅
+
+Founder verdict on the re-skin: too flat. Kept the minimal language, made the
+cards physical — the 2026 pattern set (multi-axis tilt, layered Z-depth,
+cursor-tracked spotlight border, glare, layered shadows).
+
+### Done
+- New `TiltCard` primitive (`marketing/tilt-card.tsx`): spring-damped 3D tilt
+  toward the cursor, brand-green border glow + interior spotlight + white
+  glare that follow the pointer, hover lift with a deep soft shadow. Children
+  opt into real Z-depth (`translateZ`) — icon chips float 34px above the card
+  plane, titles 22–24px, body copy ~10px, so the card reads as layered glass
+  when tilted. Touch and reduced-motion get the same static card.
+- `TiltChip`: white icon chip with brand-green icon, soft drop shadow and
+  inset highlight — cards read tactile even before hover.
+- Applied to all 4 feature cards and all 6 industry cards.
+- Comparison table: deep soft elevation + inset top light on the card, row
+  hover highlight, and the NUDGE column lifted as a physical rail (rounded
+  header with green glow, rounded tail).
+- Magnetic cursor-pull on the section CTAs (features, partners, final CTA).
+- Ambient radial brand washes behind the partners band and final CTA; the
+  lead form sits in a cursor-following spotlight (no tilt — it's a form).
+
+### Verification
+- Hover states screenshot-verified at 1440×900 with the headless rig (mouse
+  moved onto specific cards): tilt, spotlight, chip depth and shadows all
+  render; non-hovered cards stay minimal.
+- Full suite + lint + build + `git diff --check` — green.
+
 ## Daylight zone — minimal re-skin after ConverSimple reference (2026-07-13) ✅
 
 Founder supplied conversimple.com as the visual reference for everything

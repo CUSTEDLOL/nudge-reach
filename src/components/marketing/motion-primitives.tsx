@@ -31,7 +31,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  * ------------------------------------------------------------------ */
 const emptySubscribe = () => () => {};
 
-function useReducedMotionSafe() {
+export function useReducedMotionSafe() {
   const reduce = useReducedMotion();
   // false on the server and during hydration, true after — so the first
   // client render always matches the SSR output.

@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Container } from "./section";
 import { ButtonLink } from "./button";
 import { LeadForm } from "./lead-form";
-import { Reveal } from "./motion-primitives";
+import { Magnetic, Reveal, SpotlightCard } from "./motion-primitives";
 
 const POINTS = [
   "Free plan — no credit card",
@@ -15,9 +15,13 @@ export function FinalCTA() {
   return (
     <section
       id="get-started"
-      className="relative scroll-mt-24 border-t border-black/[0.05] bg-white py-24 sm:py-28"
+      className="relative scroll-mt-24 overflow-hidden border-t border-black/[0.05] bg-white py-24 sm:py-28"
     >
-      <Container>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(760px_circle_at_50%_-10%,rgba(6,193,103,0.06),transparent_70%)]"
+      />
+      <Container className="relative">
         <Reveal className="mx-auto max-w-3xl text-center">
           <h2 className="font-display text-[2.2rem] font-black uppercase leading-[1.05] tracking-[-0.02em] text-ink sm:text-[3.1rem]">
             Your customers are
@@ -31,13 +35,17 @@ export function FinalCTA() {
             call.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/login" variant="primary" size="lg">
-              Start free
-              <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
-            </ButtonLink>
-            <ButtonLink href="/waitlist" variant="secondary" size="lg">
-              Book a demo
-            </ButtonLink>
+            <Magnetic strength={0.18}>
+              <ButtonLink href="/login" variant="primary" size="lg">
+                Start free
+                <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+              </ButtonLink>
+            </Magnetic>
+            <Magnetic strength={0.18}>
+              <ButtonLink href="/waitlist" variant="secondary" size="lg">
+                Book a demo
+              </ButtonLink>
+            </Magnetic>
           </div>
           <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {POINTS.map((p) => (
@@ -53,7 +61,12 @@ export function FinalCTA() {
         </Reveal>
 
         <Reveal delay={0.1} className="mx-auto mt-14 max-w-xl">
-          <LeadForm surface="home" defaultIntent="demo" />
+          <SpotlightCard
+            className="rounded-3xl"
+            spotlight="rgba(6,193,103,0.09)"
+          >
+            <LeadForm surface="home" defaultIntent="demo" />
+          </SpotlightCard>
         </Reveal>
       </Container>
     </section>
