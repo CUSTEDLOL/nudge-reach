@@ -38,8 +38,6 @@ export function HeroV2() {
         .from(".hero-sub", { autoAlpha: 0, y: 18, duration: 0.8 }, 0.55)
         .from(".hero-ctas", { autoAlpha: 0, y: 16, duration: 0.8 }, 0.7)
         .from(".hero-trust", { autoAlpha: 0, y: 12, duration: 0.8 }, 0.85)
-        .from(".hero-ledger", { autoAlpha: 0, y: 24, duration: 0.9 }, 0.6)
-        .from(".hero-ledger-row", { autoAlpha: 0, y: 10, duration: 0.5, stagger: 0.12 }, 0.8)
         .from(".hero-cue", { autoAlpha: 0, duration: 0.9 }, 1.0);
 
       // Gentle drift as the hero scrolls away — depth without distraction.
@@ -160,36 +158,6 @@ export function HeroV2() {
           </ul>
         </div>
       </div>
-
-      {/* the night's receipt — a quiet chat toast riding the photo */}
-      <aside
-        className="hero-ledger absolute bottom-16 right-8 z-10 hidden w-[19.5rem] overflow-hidden rounded-2xl border border-black/[0.07] bg-white/85 shadow-lift backdrop-blur-xl md:block xl:right-14"
-        aria-label="A real overnight WhatsApp conversation handled by Nudge"
-      >
-        <div className="flex items-center gap-2.5 border-b border-black/[0.06] px-4 py-3">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-500 text-[11.5px] font-black text-white">
-            S
-          </span>
-          <p className="truncate text-[12.5px] font-bold text-ink">
-            Sunrise Dental Clinic
-          </p>
-          <span className="ml-auto font-mono text-[9.5px] font-bold text-ink/35">
-            12:32 AM
-          </span>
-        </div>
-        <div className="flex flex-col gap-2 px-3.5 py-4">
-          <div className="hero-ledger-row max-w-[88%] self-start rounded-xl rounded-tl-sm bg-[#eef3f0] px-3 py-2 text-[12.5px] leading-snug text-ink">
-            Anything tomorrow evening? Tooth&rsquo;s been hurting since Sunday
-          </div>
-          <div className="hero-ledger-row max-w-[88%] self-end rounded-xl rounded-tr-sm bg-brand-600 px-3 py-2 text-[12.5px] leading-snug text-white">
-            Booked — <strong>7:30 PM with Dr. Mehta</strong>. Deposit link sent
-            to hold it.
-          </div>
-          <div className="hero-ledger-row self-center rounded-full border border-amber-500/40 bg-amber-50 px-3 py-1 font-mono text-[10.5px] font-bold text-amber-800">
-            ₹500 received · UPI ✓
-          </div>
-        </div>
-      </aside>
 
       {/* scroll cue */}
       <div className="hero-cue absolute bottom-7 left-1/2 z-10 -translate-x-1/2" aria-hidden>
