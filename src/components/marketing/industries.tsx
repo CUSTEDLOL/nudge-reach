@@ -7,8 +7,8 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { Container, Section, SectionHeading } from "./section";
-import { Stagger, StaggerItem } from "./motion-primitives";
+import { Container, Section } from "./section";
+import { Reveal, Stagger, StaggerItem } from "./motion-primitives";
 
 const INDUSTRIES: {
   icon: LucideIcon;
@@ -19,76 +19,72 @@ const INDUSTRIES: {
   {
     icon: Scissors,
     title: "Salons & spas",
-    outcome: "Fewer empty chairs",
-    body: "Appointment reminders go out the evening before, and a rebooking nudge lands three weeks later. Chairs stay full without the front desk spending mornings on the phone.",
+    outcome: "fewer empty chairs",
+    body: "Reminders the evening before, a rebooking nudge three weeks later. Chairs stay full without mornings on the phone.",
   },
   {
     icon: Stethoscope,
     title: "Clinics & dentists",
-    outcome: "Fewer no-shows",
-    body: "Tomorrow's appointments get confirmed automatically, and recall reminders bring patients back on schedule. People read WhatsApp — so fewer slots go to waste.",
+    outcome: "fewer no-shows",
+    body: "Tomorrow's appointments confirmed automatically, recall reminders on schedule. People actually read WhatsApp.",
   },
   {
     icon: ShoppingBag,
     title: "Ecommerce & D2C",
-    outcome: "Recovered orders",
-    body: "Abandoned-cart nudges, COD confirmations and delivery updates run from one inbox. Orders that email would have quietly lost come back as sales.",
+    outcome: "recovered orders",
+    body: "Abandoned-cart nudges, COD confirmations and delivery updates from one inbox — sales email would have lost.",
   },
   {
     icon: Building2,
     title: "Real estate",
-    outcome: "Warmer leads",
-    body: "Portal enquiries get answered in seconds with AI drafts, site-visit details go out on time, and follow-ups keep buyers engaged through weeks of deciding.",
+    outcome: "warmer leads",
+    body: "Portal enquiries answered in seconds, site-visit details on time, follow-ups through weeks of deciding.",
   },
   {
     icon: GraduationCap,
     title: "Education & coaching",
-    outcome: "Fuller batches",
-    body: "Admission enquiries get a reply before parents call the next institute. Fee reminders, batch updates and demo-class follow-ups go out on time, every time.",
+    outcome: "fuller batches",
+    body: "Admission enquiries answered before parents call the next institute. Fee reminders and demo follow-ups, on time.",
   },
   {
     icon: Wrench,
     title: "Local services",
-    outcome: "More repeat bookings",
-    body: "Quote requests, booking confirmations and “reaching in 20 minutes” updates — the polish of a big brand, from a two-person team.",
+    outcome: "repeat bookings",
+    body: "Quotes, confirmations and \u201creaching in 20 minutes\u201d updates — big-brand polish from a two-person team.",
   },
 ];
 
 export function Industries() {
   return (
-    <Section id="industries" className="border-y border-black/5 bg-white">
+    <Section id="industries" className="bg-white">
       <Container>
-        <SectionHeading
-          eyebrow="Who it's for"
-          title={
-            <>
-              If the phone rings all day, Nudge fits.
-            </>
-          }
-          subtitle="From a two-chair salon in Indore to a D2C brand shipping across India — if your customers message you, Nudge fits the way you already work."
-        />
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <h2 className="font-display text-[2.1rem] font-black uppercase leading-[1.06] tracking-[-0.02em] text-ink sm:text-[2.9rem]">
+            If the phone rings all day,
+            <span className="serif-display mt-3 block text-[1.7rem] normal-case tracking-normal text-ink/85 sm:text-[2.3rem]">
+              Nudge fits.
+            </span>
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-[16px] leading-relaxed text-ink/55">
+            From a two-chair salon in Indore to a D2C brand shipping across
+            India — if your customers message you, it fits the way you already
+            work.
+          </p>
+        </Reveal>
 
-        {/* A ledger, not a card grid: numbered rows with hairline rules. */}
-        <Stagger className="mt-14 grid grid-cols-1 gap-x-16 lg:grid-cols-2">
-          {INDUSTRIES.map(({ icon: Icon, title, outcome, body }, i) => (
-            <StaggerItem key={title}>
-              <article className="group border-t border-ink/15 py-7 transition-colors duration-300 hover:border-ink/40">
-                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
-                  <span className="font-mono text-[13px] font-semibold tabular-nums text-ink/35">
-                    0{i + 1}
-                  </span>
-                  <h3 className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight text-ink">
-                    <Icon className="h-[18px] w-[18px] text-brand-600" aria-hidden />
-                    {title}
-                  </h3>
-                  <span className="ml-auto whitespace-nowrap font-mono text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-700">
-                    {outcome}
-                  </span>
-                </div>
-                <p className="mt-3 max-w-lg pl-9 text-[14.5px] leading-relaxed text-ink/60">
+        <Stagger className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {INDUSTRIES.map(({ icon: Icon, title, outcome, body }) => (
+            <StaggerItem key={title} className="h-full">
+              <div className="flex h-full flex-col items-center rounded-2xl border border-black/[0.04] bg-[#f4f6f5] px-6 py-8 text-center">
+                <Icon className="h-6 w-6 text-ink/70" aria-hidden />
+                <h3 className="mt-4 text-[16px] font-bold text-ink">{title}</h3>
+                <p className="serif-display mt-0.5 text-[15px] text-ink/50">
+                  {outcome}
+                </p>
+                <p className="mt-3 text-[13.5px] leading-relaxed text-ink/55">
                   {body}
                 </p>
-              </article>
+              </div>
             </StaggerItem>
           ))}
         </Stagger>

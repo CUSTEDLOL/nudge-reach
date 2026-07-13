@@ -73,13 +73,14 @@ export function GradientText({
   return <span className={cn("text-gradient", className)}>{children}</span>;
 }
 
-/** A direct, left-aligned section introduction. The small green rule is the
- * shared brand cue; sections create their own composition below it. */
+/** Centered, minimal section introduction — quiet grey eyebrow, big title,
+ * one measured subtitle. Sections that want the caps+serif pairing compose
+ * it inside `title`. */
 export function SectionHeading({
   eyebrow,
   title,
   subtitle,
-  align = "left",
+  align = "center",
   tone = "light",
   className,
 }: {
@@ -95,26 +96,25 @@ export function SectionHeading({
     <Reveal
       className={cn(
         "flex flex-col",
-        align === "center" ? "items-center text-center" : "items-start text-left",
+        align === "center"
+          ? "items-center text-center"
+          : "items-start text-left",
         className
       )}
     >
       {eyebrow && (
-        <div className={cn("flex items-center gap-3", align === "center" && "justify-center")}>
-          <span className={cn("h-[3px] w-8", light ? "bg-brand-500" : "bg-brand-300")} />
-          <span
-            className={cn(
-              "text-xs font-black uppercase tracking-[0.14em]",
-              light ? "text-ink/60" : "text-white/60"
-            )}
-          >
-            {eyebrow}
-          </span>
-        </div>
+        <span
+          className={cn(
+            "text-[11.5px] font-bold uppercase tracking-[0.18em]",
+            light ? "text-ink/40" : "text-white/50"
+          )}
+        >
+          {eyebrow}
+        </span>
       )}
       <h2
         className={cn(
-          "mt-6 max-w-4xl text-balance font-display text-4xl font-black leading-[0.98] tracking-[-0.045em] sm:text-[3.65rem]",
+          "mt-4 max-w-3xl text-balance font-display text-[2.1rem] font-black leading-[1.05] tracking-[-0.03em] sm:text-[2.9rem]",
           light ? "text-ink" : "text-white"
         )}
       >
@@ -123,8 +123,9 @@ export function SectionHeading({
       {subtitle ? (
         <p
           className={cn(
-            "mt-5 max-w-2xl text-pretty text-lg font-medium leading-relaxed",
-            light ? "text-ink/58" : "text-white/65"
+            "mt-5 max-w-2xl text-pretty text-[16px] leading-relaxed",
+            align === "center" && "mx-auto",
+            light ? "text-ink/55" : "text-white/65"
           )}
         >
           {subtitle}

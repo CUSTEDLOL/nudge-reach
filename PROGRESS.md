@@ -5,6 +5,35 @@ what's next.
 
 ---
 
+## Daylight zone — minimal re-skin after ConverSimple reference (2026-07-13) ✅
+
+Founder supplied conversimple.com as the visual reference for everything
+below the Night Shift animations. Studied the reference with headless-Chrome
+captures, then re-skinned the lower half to its language: centered
+compositions, generous whitespace, soft grey cards, and the caps-sans +
+quiet-serif headline pairing (new `.serif-display` utility, system Georgia).
+
+### Done
+- **Features:** four centered grey cards (inbox, leads, compliance,
+  measurement) under "SOFTWARE YOUR EMPLOYEE USES / Not software you have to
+  run.", concierge line + two pill CTAs.
+- **Comparison:** centered caps+serif heading; the ledger table now sits in a
+  soft rounded card; bold dashes kept.
+- **Industries:** six centered grey cards with icon, bold title, serif
+  outcome line and short body.
+- **Reseller:** quiet centered band on faint grey with an outlined CTA.
+- **Final CTA:** light and centered — "YOUR CUSTOMERS ARE / already on
+  WhatsApp." + buttons + inline check-points + the lead form in a narrow
+  centered card. Dark mesh panels removed.
+- **Footer:** light re-skin (same links/columns).
+- **SectionHeading** (shared with /pricing, /faq) recentered to the same
+  minimal system.
+
+### Verification
+- Screenshot pass over all five sections at 1440×900 — visually matches the
+  reference language; no clipping or overflow.
+- Full suite + lint + build + `git diff --check` — green.
+
 ## Landing fix sprint — founder review round (2026-07-12) ✅
 
 Seven fixes from live-page review, each screenshot-verified at 1440×900 and

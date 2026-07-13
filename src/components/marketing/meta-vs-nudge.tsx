@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { Container, Section, SectionHeading } from "./section";
+import { Container, Section } from "./section";
 import { Reveal } from "./motion-primitives";
 
 /**
@@ -44,25 +44,23 @@ export function MetaVsNudge() {
   return (
     <Section id="compare" className="border-t border-ink/10 bg-white">
       <Container>
-        <SectionHeading
-          eyebrow="The honest comparison"
-          title={
-            <>
-              Answers are cheap. Running the desk isn&rsquo;t.
-            </>
-          }
-          subtitle={
-            <>
-              Meta&rsquo;s free AI <strong className="font-bold text-ink/85">replies to questions</strong>. The CRM tools give
-              you software to <strong className="font-bold text-ink/85">operate yourself</strong>. A hire works nine hours.
-              The AI Front Desk <strong className="font-bold text-ink/85">does the whole job</strong>.
-            </>
-          }
-        />
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <h2 className="font-display text-[2.1rem] font-black uppercase leading-[1.06] tracking-[-0.02em] text-ink sm:text-[2.9rem]">
+            Answers are cheap.
+            <span className="serif-display mt-3 block text-[1.7rem] normal-case tracking-normal text-ink/85 sm:text-[2.3rem]">
+              Running the desk isn&rsquo;t.
+            </span>
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-[16px] leading-relaxed text-ink/55">
+            Meta&rsquo;s free AI <strong className="font-bold text-ink/85">replies to questions</strong>. The CRM tools give
+            you software to <strong className="font-bold text-ink/85">operate yourself</strong>. A hire works nine hours.
+            The AI Front Desk <strong className="font-bold text-ink/85">does the whole job</strong>.
+          </p>
+        </Reveal>
 
         <Reveal className="mt-12">
           <div className="overflow-x-auto">
-            <div className="mx-auto min-w-[860px] max-w-6xl border-y border-ink/15">
+            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border border-black/[0.05] bg-[#fafbfa] px-6 py-2">
               {/* header row — a ruled ledger, not a card */}
               <div className={`${GRID} items-stretch border-b border-ink/15`}>
                 <div className="px-1 py-4" />

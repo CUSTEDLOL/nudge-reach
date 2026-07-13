@@ -159,6 +159,14 @@ html {
    Reusable premium helpers
    ============================================================ */
 
+/* Minimal-editorial display serif: the second line of section headlines
+   (bold caps sans + quiet serif is the daylight zone's type signature). */
+.serif-display {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
 /* Editorial serif accent — one word per headline, the "designed, not
    templated" cue. System serif so no new font ships. */
 .accent-serif {
