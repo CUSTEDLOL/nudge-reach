@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { CHAPTERS } from "../progress";
 import { gsap, motionAllowed, useGSAP } from "../gsap";
+import { PhoneChat } from "./phone";
 
 /** DOM copy for the four night chapters, timed to the same story spans the
  *  3D scenes use, so words and world stay in lockstep. */
@@ -118,13 +119,6 @@ export function NightShift() {
       aria-label="What the Front Desk does overnight"
     >
       <div className="ns-stage">
-        {/* Desktop masks leave one clean window into the persistent WebGL
-            world. The animation remains the same; it now reads as product UI. */}
-        <div className="ns-world-mask ns-mask-left" aria-hidden />
-        <div className="ns-world-mask ns-mask-top" aria-hidden />
-        <div className="ns-world-mask ns-mask-right" aria-hidden />
-        <div className="ns-world-mask ns-mask-bottom" aria-hidden />
-
         <div className="ns-copy">
           <div className="ns-copy-rail">
             {BEATS.map((b) => (
@@ -146,9 +140,7 @@ export function NightShift() {
           </div>
         </div>
 
-        <div className="ns-browser" aria-hidden>
-          <div className="ns-browser-viewport" />
-        </div>
+        <PhoneChat />
       </div>
     </section>
   );

@@ -5,6 +5,36 @@ what's next.
 
 ---
 
+## Night Shift — WhatsApp phone mock replaces the WebGL world (2026-07-14) ✅
+
+Founder verdict on the 3D chapter scenes: flying bubbles and the tilted
+calendar felt abstract; wanted the four chapters to play as ONE WhatsApp
+conversation on a phone — "exactly like a mock WhatsApp thing", no gray
+browser box. Reference screenshot supplied.
+
+### Done
+- New `chapters/phone.tsx`: a WhatsApp-exact phone mock (header with
+  avatar/online, doodle wallpaper, bubble tails, ✓✓ ticks, time chips,
+  composer) pinned where the browser box was. One continuous customer
+  thread ("Priya") spans the four chapters — asks & answers (12:31 AM),
+  books 9 PM + straight-on calendar card whose tick draws in (2:15 AM),
+  gets chased with a follow-up (4:40 AM), pays a ₹500 deposit link with a
+  UPI receipt chip (6:48 AM). Every item pops in at its story beat and the
+  thread auto-scrolls; the header flips to "typing…" before her messages.
+  All scrubbed off the same CHAPTERS spans as the copy rail.
+- Removed the entire WebGL world (`v2/world/` — sky, camera rig, message
+  stream, calendar, orbit, collect, stage, quality, textures) and the
+  browser-box + mask CSS; dropped `three`, `@react-three/fiber`,
+  `@types/three` from deps. `progress.ts` trimmed to just CHAPTERS.
+- No-JS/reduced-motion fallback: the phone sits in normal flow with the
+  full transcript visible and scrollable (same `.jsm` gate pattern).
+
+### Verification
+- Build + lint + full suite green (392 tests; world/stage/quality/camera
+  tests removed with their subjects, progress test trimmed to CHAPTERS).
+- Served page contains the phone markup; no `ns-browser`/`ns-world-mask`
+  remnants.
+
 ## Hero image shipped — cinematic still-life (2026-07-14) ✅
 
 Art direction converged over four founder iterations: photoreal night scene

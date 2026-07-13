@@ -363,11 +363,70 @@ html {
   opacity: 0;
 }
 
-/* Static fallback keeps the transcript in normal flow. The browser framing
-   appears only when its scrubbed WebGL world is available. */
-.ns-browser,
-.ns-world-mask {
-  display: none;
+/* The phone: static fallback sits in normal flow with the whole transcript
+   visible and scrollable; under .jsm it pins beside the copy rail and the
+   scrub drives the conversation. */
+.ns-phone {
+  width: min(23.5rem, 92vw);
+  height: min(46rem, 150vw);
+  margin: 3rem auto;
+  padding: 10px;
+  border-radius: 2.75rem;
+  background: #0b0f0d;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 34px 90px -30px rgba(10, 15, 13, 0.55);
+}
+.jsm .ns-phone {
+  position: absolute;
+  z-index: 7;
+  margin: 0;
+  right: 7vw;
+  top: 50%;
+  transform: translateY(-50%);
+  height: min(82vh, 46rem);
+  height: min(82svh, 46rem);
+  width: auto;
+  aspect-ratio: 9 / 18.6;
+}
+
+/* WhatsApp doodle wallpaper — subtle inline pattern over the beige base. */
+.ns-wallpaper {
+  position: absolute;
+  inset: 0;
+  min-height: 100%;
+  pointer-events: none;
+  opacity: 0.42;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cg fill='none' stroke='%23d5ccc0' stroke-width='1.4'%3E%3Ccircle cx='22' cy='24' r='7'/%3E%3Cpath d='M96 18l3.5 7 7.5 1-5.5 5.5 1.5 7.5-7-3.5-7 3.5 1.5-7.5L85 26l7.5-1z'/%3E%3Cpath d='M30 96c4-6 12-6 16 0s12 6 16 0'/%3E%3Crect x='94' y='92' width='14' height='14' rx='4' transform='rotate(12 101 99)'/%3E%3Ccircle cx='64' cy='58' r='4'/%3E%3Cpath d='M120 58c0-4 8-4 8 0s-8 8-8 8'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+.jsm .ns-wallpaper {
+  /* The rail translates; the wallpaper must cover the full thread height. */
+  min-height: 300%;
+}
+
+/* Bubble tails — the little WhatsApp corner flags. */
+.wa-tail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 13px;
+}
+.wa-tail-in::before {
+  left: -8px;
+  background: #ffffff;
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+}
+.wa-tail-out::before {
+  right: -8px;
+  background: #d9fdd3;
+  clip-path: polygon(0 0, 0 100%, 100% 0);
+}
+
+/* Scrub-hidden thread items — hidden ONLY when the scrub will reveal them. */
+.jsm .ns-msg {
+  opacity: 0;
 }
 
 /* Under the motion gate, the left copy behaves like a vertical service rail:
@@ -400,62 +459,6 @@ html {
   height: 100%;
 }
 
-/* The fixed world stays full-screen for continuity. Four white masks expose
-   it only through this browser-shaped opening during the pinned story. */
-@media (min-width: 1024px) {
-  .jsm .ns-world-mask {
-    position: absolute;
-    z-index: 5;
-    display: block;
-    background: #ffffff;
-  }
-  .jsm .ns-mask-left {
-    inset: 0 auto 0 0;
-    width: 48vw;
-  }
-  .jsm .ns-mask-top {
-    left: 48vw;
-    right: 4vw;
-    top: 0;
-    height: 13vh;
-  }
-  .jsm .ns-mask-right {
-    inset: 0 0 0 auto;
-    width: 4vw;
-  }
-  .jsm .ns-mask-bottom {
-    left: 48vw;
-    right: 4vw;
-    bottom: 0;
-    height: 13vh;
-  }
-}
-
-.jsm .ns-browser {
-  position: absolute;
-  z-index: 7;
-  right: 4vw;
-  top: 50%;
-  display: block;
-  width: 48vw;
-  height: 74vh;
-  height: 74svh;
-  overflow: hidden;
-  transform: translateY(-50%);
-  border: 1px solid rgba(10, 15, 13, 0.2);
-  border-radius: 0.75rem;
-  /* transparent — the world's own white background shows through the box */
-  background: transparent;
-  box-shadow: 0 24px 70px -34px rgba(10, 15, 13, 0.3);
-}
-
-.ns-browser-viewport {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-
 @media (max-width: 1023px) {
   .jsm .ns-stage {
     align-items: stretch;
@@ -473,43 +476,16 @@ html {
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
     mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
   }
-  .jsm .ns-browser {
-    left: 1.25rem;
-    right: 1.25rem;
+  .jsm .ns-phone {
+    left: 50%;
+    right: auto;
     top: auto;
-    bottom: 5vh;
-    width: auto;
-    height: 48vh;
-    height: 48svh;
-    transform: none;
-    border-radius: 0.75rem;
-  }
-  .jsm .ns-world-mask {
-    position: absolute;
-    z-index: 5;
-    display: block;
-    background: #ffffff;
-  }
-  .jsm .ns-mask-top {
-    inset: 0 0 auto;
-    height: 47vh;
-    height: 47svh;
-  }
-  .jsm .ns-mask-left {
-    left: 0;
-    top: 47vh;
-    bottom: 5vh;
-    width: 1.25rem;
-  }
-  .jsm .ns-mask-right {
-    right: 0;
-    top: 47vh;
-    bottom: 5vh;
-    width: 1.25rem;
-  }
-  .jsm .ns-mask-bottom {
-    inset: auto 0 0;
-    height: 5vh;
+    bottom: 2.5vh;
+    transform: translateX(-50%);
+    height: 52vh;
+    height: 52svh;
+    border-radius: 2rem;
+    padding: 7px;
   }
   .jsm .ns-beat p:last-child {
     max-width: 34rem;

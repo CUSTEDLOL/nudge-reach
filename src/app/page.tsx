@@ -25,10 +25,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * The Night Shift. One page, one 24-hour shift: scroll is time. A persistent
- * WebGL world (Experience) grades from 11:47 PM night to 9:00 AM morning
- * behind server-rendered copy. Without JS/WebGL/motion, .v2-page's gradient
- * and the default-visible CSS produce the complete static story.
+ * The Night Shift. One page, one 24-hour shift: scroll is time. The pinned
+ * night section plays one WhatsApp conversation on a phone mock (DOM,
+ * scroll-scrubbed) beside the chapter copy. Without JS/motion, the
+ * default-visible CSS produces the complete static story.
  */
 const JSON_LD = {
   "@context": "https://schema.org",
