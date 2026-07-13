@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { ButtonLink } from "./button";
 import { Container, Section } from "./section";
-import { Magnetic, Reveal, Stagger, StaggerItem } from "./motion-primitives";
+import { Reveal, Stagger, StaggerItem } from "./motion-primitives";
 import { TiltCard, TiltChip } from "./tilt-card";
 
 const DESK = [
@@ -79,17 +79,13 @@ export function FeaturesBento() {
             for you — that&rsquo;s the &lsquo;done-for-you&rsquo; part.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Magnetic strength={0.18}>
-              <ButtonLink href="/waitlist" variant="primary">
-                Hire the Front Desk
-                <ArrowRight className="h-4 w-4" />
-              </ButtonLink>
-            </Magnetic>
-            <Magnetic strength={0.18}>
-              <ButtonLink href="/pricing" variant="secondary">
-                See pricing
-              </ButtonLink>
-            </Magnetic>
+            <ButtonLink href="/waitlist" variant="primary">
+              Hire the Front Desk
+              <ArrowRight className="h-4 w-4" />
+            </ButtonLink>
+            <ButtonLink href="/pricing" variant="secondary">
+              See pricing
+            </ButtonLink>
           </div>
         </Reveal>
       </Container>

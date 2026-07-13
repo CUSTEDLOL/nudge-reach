@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { useReducedMotionSafe } from "./motion-primitives";
 
 const SURFACE =
-  "relative h-full rounded-2xl border border-black/[0.04] bg-[#f4f6f5] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]";
+  "relative h-full rounded-2xl border border-emerald-950/[0.05] bg-[#edf7f1] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]";
 
 /**
  * The daylight card, made physical: spring-damped tilt toward the cursor,

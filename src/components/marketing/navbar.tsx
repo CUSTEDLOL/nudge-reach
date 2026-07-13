@@ -15,9 +15,12 @@ const NAV_LINKS = [
   { label: "FAQ", href: "/faq" },
 ];
 
-export function Navbar() {
+export function Navbar({ overDark = false }: { overDark?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // Light-on-dark treatment while the bar rides the hero photo; the scrolled
+  // white pill already works on any background.
+  const onPhoto = overDark && !scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -49,14 +52,19 @@ export function Navbar() {
             : "max-w-[110rem] border border-transparent"
         )}
       >
-        <Logo />
+        <Logo tone={onPhoto ? "dark" : "light"} />
 
         <ul className="hidden items-center gap-1 md:flex">
           {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <a
                 href={link.href}
-                className="rounded-full px-3.5 py-2 text-[14.5px] font-medium text-ink/70 transition-colors hover:bg-black/5 hover:text-ink night:text-white/70 night:hover:bg-white/10 night:hover:text-white"
+                className={cn(
+                  "rounded-full px-3.5 py-2 text-[14.5px] font-medium transition-colors",
+                  onPhoto
+                    ? "text-white/75 hover:bg-white/10 hover:text-white"
+                    : "text-ink/70 hover:bg-black/5 hover:text-ink night:text-white/70 night:hover:bg-white/10 night:hover:text-white"
+                )}
               >
                 {link.label}
               </a>
@@ -70,7 +78,10 @@ export function Navbar() {
               href="/waitlist"
               variant="ghost"
               size="sm"
-              className="whitespace-nowrap"
+              className={cn(
+                "whitespace-nowrap",
+                onPhoto && "text-white/85 hover:bg-white/10 hover:text-white"
+              )}
             >
               Book a demo
             </ButtonLink>
@@ -91,7 +102,12 @@ export function Navbar() {
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="grid h-10 w-10 place-items-center rounded-full text-ink transition-colors hover:bg-black/5 night:text-white night:hover:bg-white/10 md:hidden"
+          className={cn(
+            "grid h-10 w-10 place-items-center rounded-full transition-colors md:hidden",
+            onPhoto
+              ? "text-white hover:bg-white/10"
+              : "text-ink hover:bg-black/5 night:text-white night:hover:bg-white/10"
+          )}
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>

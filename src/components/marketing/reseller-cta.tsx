@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { Container, Section } from "./section";
 import { ButtonLink } from "./button";
-import { Magnetic, Reveal } from "./motion-primitives";
+import { Reveal } from "./motion-primitives";
 
 /** The future distribution channel: agencies/freelancers white-labelling the
  *  AI Front Desk at recurring margin. Quiet, centered, one idea. */
@@ -9,7 +9,7 @@ export function ResellerCTA() {
   return (
     <Section
       id="partners"
-      className="overflow-hidden border-y border-black/[0.05] bg-[#fafbfa]"
+      className="overflow-hidden border-y border-emerald-950/[0.05] bg-[#f3faf6]"
     >
       <div
         aria-hidden
@@ -30,12 +30,10 @@ export function ResellerCTA() {
             and let us handle the platform.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Magnetic strength={0.18}>
-              <ButtonLink href="/waitlist?ref=partner" variant="secondary">
-                Become a partner
-                <ArrowRight className="h-4 w-4" />
-              </ButtonLink>
-            </Magnetic>
+            <ButtonLink href="/waitlist?ref=partner" variant="secondary">
+              Become a partner
+              <ArrowRight className="h-4 w-4" />
+            </ButtonLink>
           </div>
         </Reveal>
       </Container>

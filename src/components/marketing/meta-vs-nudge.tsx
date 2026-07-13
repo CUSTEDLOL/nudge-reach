@@ -60,7 +60,7 @@ export function MetaVsNudge() {
 
         <Reveal className="mt-12">
           <div className="overflow-x-auto">
-            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border border-black/[0.05] bg-[#fafbfa] px-6 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_40px_80px_-52px_rgba(10,31,26,0.35)]">
+            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border border-emerald-950/[0.05] bg-[#f3faf6] px-6 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_40px_80px_-52px_rgba(10,31,26,0.35)]">
               {/* header row — a ruled ledger, not a card */}
               <div className={`${GRID} items-stretch border-b border-ink/15`}>
                 <div className="px-1 py-4" />

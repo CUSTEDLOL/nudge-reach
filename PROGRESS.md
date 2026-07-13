@@ -5,6 +5,39 @@ what's next.
 
 ---
 
+## Photo hero + de-grey pass (2026-07-14) ✅
+
+Founder direction with Manychat/Intercom references: the opening viewport
+should be a full-bleed photograph with type over it; kill the magnetic
+buttons; replace the light-grey card fill.
+
+### Done
+- **Hero rebuilt photo-first** (`v2/hero-v2.tsx`): full-bleed `next/image`
+  slot (`public/hero/front-desk.jpg`) over a deep-green night gradient that
+  IS the look until the photo ships (and the no-photo fallback — the image
+  hides itself on 404). Cinematic legibility grade (dark left third, bottom
+  and top vignettes), white display headline with brand-green second line,
+  trust row (official API / real calendar / payments), and the overnight
+  ledger reduced to a quiet glass chat toast riding the photo's lower right.
+  GSAP intro + scroll-drift preserved (same class hooks).
+- **Navbar over photo**: new `overDark` prop — light-on-dark links/logo/
+  toggle while the wide bar rides the hero, unchanged white pill on scroll.
+- **Magnetic buttons removed** everywhere (features, partners, final CTA);
+  buttons no longer chase the cursor.
+- **Card fill de-greyed**: `#f4f6f5`/`#fafbfa` replaced with soft brand
+  mint (`#edf7f1` cards, `#f3faf6` table/partners/footer) with emerald-
+  tinted hairlines — tilt/spotlight system untouched.
+
+### Blocked (founder decision)
+- The actual hero photograph: Higgsfield CLI account is on the free plan
+  (`job_minimum_basic_plan_required`), so generation is blocked. Options:
+  top up Higgsfield, approve a free-license stock photo, or drop any image
+  at `public/hero/front-desk.jpg` — the hero picks it up as-is.
+
+### Verification
+- Screenshots at 1440×900: hero (gradient fallback) and mint feature cards.
+- Full suite + lint + build + `git diff --check` — green.
+
 ## Daylight zone — physical depth pass (2026-07-13) ✅
 
 Founder verdict on the re-skin: too flat. Kept the minimal language, made the

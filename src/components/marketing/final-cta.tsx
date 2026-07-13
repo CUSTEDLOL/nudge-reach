@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Container } from "./section";
 import { ButtonLink } from "./button";
 import { LeadForm } from "./lead-form";
-import { Magnetic, Reveal, SpotlightCard } from "./motion-primitives";
+import { Reveal, SpotlightCard } from "./motion-primitives";
 
 const POINTS = [
   "Free plan — no credit card",
@@ -35,17 +35,13 @@ export function FinalCTA() {
             call.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Magnetic strength={0.18}>
-              <ButtonLink href="/login" variant="primary" size="lg">
-                Start free
-                <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
-              </ButtonLink>
-            </Magnetic>
-            <Magnetic strength={0.18}>
-              <ButtonLink href="/waitlist" variant="secondary" size="lg">
-                Book a demo
-              </ButtonLink>
-            </Magnetic>
+            <ButtonLink href="/login" variant="primary" size="lg">
+              Start free
+              <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+            </ButtonLink>
+            <ButtonLink href="/waitlist" variant="secondary" size="lg">
+              Book a demo
+            </ButtonLink>
           </div>
           <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {POINTS.map((p) => (
