@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { CHAPTERS } from "../progress";
 import { gsap, motionAllowed, useGSAP } from "../gsap";
-import { PhoneChat } from "./phone";
+import { Showcase } from "./showcase";
 
 /** DOM copy for the four night chapters, timed to the same story spans the
  *  3D scenes use, so words and world stay in lockstep. */
@@ -14,8 +14,8 @@ const BEATS = [
     body: (
       <>
         A customer writes at half past midnight. The Front Desk{" "}
-        <strong className="font-bold text-ink/90">replies in seconds</strong> —
-        your services, your prices, your tone. No &lsquo;we&rsquo;ll get back
+        <strong className="font-bold text-ink/90">replies in seconds</strong>{" "}
+        — your services, your prices, your tone. No &lsquo;we&rsquo;ll get back
         to you.&rsquo;
       </>
     ),
@@ -50,8 +50,8 @@ const BEATS = [
       <>
         Payment link sent, <strong className="font-bold text-ink/90">deposit in</strong>,
         reminder scheduled. The night&rsquo;s work is{" "}
-        <strong className="font-bold text-ink/90">already revenue</strong> before
-        you&rsquo;re awake.
+        <strong className="font-bold text-ink/90">already revenue</strong>{" "}
+        before you&rsquo;re awake.
       </>
     ),
   },
@@ -140,7 +140,7 @@ export function NightShift() {
           </div>
         </div>
 
-        <PhoneChat />
+        <Showcase />
       </div>
     </section>
   );

@@ -363,13 +363,43 @@ html {
   opacity: 0;
 }
 
-/* The phone: static fallback sits in normal flow with the whole transcript
-   visible and scrollable; under .jsm it pins beside the copy rail and the
-   scrub drives the conversation. */
-.ns-phone {
-  width: min(23.5rem, 92vw);
-  height: min(46rem, 150vw);
+/* The showcase box: static fallback is a stacked card in normal flow —
+   phone with the full scrollable transcript, companion panels below it,
+   everything visible. Under .jsm it pins beside the copy rail and the
+   scrub drives the phone's travel and the panel hand-offs. */
+.ns-box {
+  position: relative;
+  width: min(64rem, 94vw);
   margin: 3rem auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+  border: 1px solid rgba(10, 15, 13, 0.2);
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 24px 70px -34px rgba(10, 15, 13, 0.3);
+}
+.jsm .ns-box {
+  position: absolute;
+  z-index: 7;
+  right: 4vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48vw;
+  height: 80vh;
+  height: 80svh;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.ns-phone {
+  flex: none;
+  width: min(23.5rem, 88vw);
+  height: min(46rem, 150vw);
   padding: 10px;
   border-radius: 2.75rem;
   background: #0b0f0d;
@@ -379,15 +409,38 @@ html {
 }
 .jsm .ns-phone {
   position: absolute;
-  z-index: 7;
-  margin: 0;
-  right: 7vw;
-  top: 50%;
-  transform: translateY(-50%);
-  height: min(82vh, 46rem);
-  height: min(82svh, 46rem);
+  z-index: 2;
+  left: 16px;
+  top: 6%;
+  height: 88%;
   width: auto;
   aspect-ratio: 9 / 18.6;
+}
+
+/* Companion panels: one per chapter, on the side the phone vacated. */
+.ns-panel {
+  width: 100%;
+  max-width: 30rem;
+}
+.jsm .ns-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  max-width: none;
+  padding: 0 1.5rem;
+}
+.jsm .ns-panel-left {
+  left: 1.5%;
+}
+.jsm .ns-panel-right {
+  right: 1.5%;
+}
+.jsm .ns-panel:not(.is-first) {
+  opacity: 0;
+}
+.jsm .ns-pitem {
+  opacity: 0;
 }
 
 /* WhatsApp doodle wallpaper — subtle inline pattern over the beige base. */
@@ -476,6 +529,23 @@ html {
     -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
     mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
   }
+  /* The box dissolves on mobile: full-stage, no chrome; the phone rides
+     bottom-center below the copy and the companion panels sit out. */
+  .jsm .ns-box {
+    position: absolute;
+    inset: 0;
+    transform: none;
+    width: auto;
+    height: auto;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .jsm .ns-panel {
+    display: none;
+  }
   .jsm .ns-phone {
     left: 50%;
     right: auto;
@@ -484,6 +554,7 @@ html {
     transform: translateX(-50%);
     height: 52vh;
     height: 52svh;
+    width: auto;
     border-radius: 2rem;
     padding: 7px;
   }

@@ -5,6 +5,35 @@ what's next.
 
 ---
 
+## Night Shift — showcase box, alternating phone + companion panels (2026-07-14) ✅
+
+Founder direction: put a box around the phone, have it hop sides each
+chapter (L→R→L→R), and play a feature companion on the vacated side.
+
+### Done
+- New `chapters/showcase.tsx`: the bordered showcase box beside the copy
+  rail. One scrubbed timeline moves the phone between sides at chapter
+  boundaries and hands off four companion panels: floating customer
+  questions (answers), a straight-on July calendar where the 18th pops,
+  a "Saturday · 9:00 PM" pill lands and a tick draws (books), a lead
+  list whose "quiet Nd" badges flip to "follow-up sent ✓" one-by-one
+  (chases), and a "₹500 received" receipt + Razorpay/Stripe/WhatsApp
+  Pay/UPI brand chips (collects; simple-icons path data inline).
+- Desktop-only via `gsap.matchMedia`; mobile dissolves the box chrome
+  and keeps the phone bottom-center. No-JS/reduced-motion: everything
+  stacks in flow, fully visible (same `.jsm` gate pattern).
+- Fixed missing spaces after `</strong>` in two copy beats (compiler
+  strips the leading space of the following text node).
+
+### Verification
+- Headless-Chrome screenshots at 5 scroll depths, 1440×900 + 390×844:
+  phone side per chapter, mid-flight transition (header shows
+  "typing…"), calendar/tick beats, badge flips, payment chips; found
+  and fixed a stagger that outlived its panel's exit envelope.
+- Build + lint + 392 tests green.
+- NOT included: a concurrent local edit to `marketing/industries.tsx`
+  (not part of this task; left uncommitted).
+
 ## Night Shift — WhatsApp phone mock replaces the WebGL world (2026-07-14) ✅
 
 Founder verdict on the 3D chapter scenes: flying bubbles and the tilted
