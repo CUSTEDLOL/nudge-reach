@@ -18,6 +18,11 @@ const PUBLIC_PATHS = [
   "/faq",
   "/privacy",
   "/terms",
+  // SEO artifacts served by the app router
+  "/sitemap.xml",
+  "/robots.txt",
+  "/opengraph-image",
+  "/icon.svg",
 ];
 
 /**

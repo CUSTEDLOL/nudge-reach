@@ -37,9 +37,18 @@ export default function LoginPage() {
   }
 
   async function signUp() {
-    setBusy(true);
     setError(null);
     setMessage(null);
+    // The button is type="button", so the form's `required` never runs —
+    // an empty email would reach Supabase and come back as the baffling
+    // "Anonymous sign-ins are disabled". Validate here instead.
+    if (!email.trim() || password.length < 6) {
+      setError(
+        "Enter your email and a password (at least 6 characters) above, then tap Create a free account."
+      );
+      return;
+    }
+    setBusy(true);
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -50,7 +59,11 @@ export default function LoginPage() {
     });
     setBusy(false);
     if (error) {
-      setError(error.message);
+      setError(
+        error.message.toLowerCase().includes("invalid")
+          ? "That email address was rejected — use a real inbox you can open (fake/test domains don't work)."
+          : error.message
+      );
       return;
     }
     if (data.session) {
