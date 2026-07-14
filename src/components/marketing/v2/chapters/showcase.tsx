@@ -288,7 +288,10 @@ export function Showcase() {
               c.start + 0.02
             );
           }
-          tl.to(panel, { autoAlpha: 0, duration: 0.025, ease: "power2.in" }, c.end - 0.06);
+          // The last panel holds — the stage scrolls away with it still lit.
+          if (ORDER[i] !== "dawn") {
+            tl.to(panel, { autoAlpha: 0, duration: 0.025, ease: "power2.in" }, c.end - 0.06);
+          }
 
           gsap.utils.toArray<HTMLElement>(".ns-pitem", panel).forEach((el, j) => {
             gsap.set(el, { autoAlpha: 0, y: 18 });
