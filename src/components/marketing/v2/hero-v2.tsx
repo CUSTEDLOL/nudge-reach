@@ -82,26 +82,22 @@ export function HeroV2() {
           onError={() => setPhotoOk(false)}
         />
       )}
-      {/* Legibility grade: airy white left third for type, quiet top/bottom. */}
+      {/* Minimal grade: the image runs at full contrast. One narrow scrim
+          behind the type on desktop, a light wash on phones — nothing else. */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 hidden sm:block"
         aria-hidden
         style={{
           background:
-            "linear-gradient(90deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.68) 34%, rgba(255,255,255,0.10) 62%, rgba(255,255,255,0.22) 100%)",
+            "linear-gradient(90deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 28%, rgba(255,255,255,0) 52%)",
         }}
       />
       <div
-        className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-white/85 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/70 to-transparent"
         aria-hidden
       />
       <div
-        className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-white/70 to-transparent"
-        aria-hidden
-      />
-      {/* phones crop the image to its busy right side — wash the text zone */}
-      <div
-        className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/70 to-white/15 sm:hidden"
+        className="absolute inset-0 bg-gradient-to-b from-white/88 via-white/60 to-white/10 sm:hidden"
         aria-hidden
       />
 
@@ -112,21 +108,21 @@ export function HeroV2() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
             </span>
-            On shift now · 11:47 PM
+            Your AI sales employee · on shift 24/7
           </p>
 
           <h1 className="mt-7 font-display text-[clamp(2.6rem,6vw,5.6rem)] font-black leading-[0.95] tracking-[-0.045em] text-ink">
             <span className="block overflow-hidden pb-1">
-              <span className="hero-line block">Your front desk sleeps.</span>
+              <span className="hero-line block">Your WhatsApp,</span>
             </span>
             <span className="block overflow-hidden pb-3">
               <span className="hero-line block text-brand-600">
-                This one doesn&rsquo;t.
+                changed forever.
               </span>
             </span>
           </h1>
 
-          <p className="hero-sub mt-6 max-w-xl text-lg font-medium leading-relaxed text-ink/65 sm:text-xl">
+          <p className="hero-sub mt-6 max-w-lg text-lg font-medium leading-relaxed text-ink/70 sm:text-xl">
             Nudge answers customers,{" "}
             <strong className="font-bold text-ink/90">books your real calendar</strong>,
             chases quiet leads and{" "}
