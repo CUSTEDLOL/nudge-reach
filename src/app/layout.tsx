@@ -64,7 +64,11 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
+          cz-shortcut-listen) inject attributes onto <body> before React
+          hydrates. suppressHydrationWarning only covers one level, so the
+          <html> tag's own flag doesn't reach here. */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
         {/* Motion gate: adds `jsm` to <html> ONLY when JS runs AND the
             visitor doesn't prefer reduced motion. Inline in the LAYOUT so it
             executes during HTML parse (before first paint) and, because the
