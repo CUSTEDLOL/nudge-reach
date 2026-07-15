@@ -2,11 +2,11 @@ import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Stagger, StaggerItem } from "./motion-primitives";
 
-/** Solid-pop animated bento: five business categories on fully saturated
- * flat cards, each with a line illustration that plays a small loop (pure
+/** Soft-pastel animated bento: five business categories on quiet tinted
+ * cards, each with a line illustration that plays a small loop (pure
  * CSS — `.scene` is the reduced-motion kill switch; every frame is
- * default-visible without it). Line art inherits the card's text colour;
- * animated accents use `--c1` set per card. */
+ * default-visible without it). Line art inherits the card's ink colour;
+ * animated accents use `--c1` set per card (the category's vivid hue). */
 
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 const ACCENT = "var(--c1, currentColor)";
@@ -33,7 +33,7 @@ function ReminderClock() {
   const hourAngle = (8 * Math.PI) / 6; // 8 o'clock — the evening reminder
   return (
     <figure className="flex flex-col items-center gap-3">
-      <div className="rounded-2xl bg-white px-6 py-5 shadow-[0_6px_0_rgba(7,38,28,0.25)]">
+      <div className="rounded-2xl bg-white px-6 py-5 shadow-[0_12px_26px_-16px_rgba(10,31,26,0.22)] ring-1 ring-black/[0.04]">
         <svg
           viewBox="0 0 130 130"
           className="h-[104px] w-[104px] text-ink"
@@ -108,7 +108,7 @@ const BOOKED_SLOTS = [3, 9, 16];
 function BookingCalendar() {
   return (
     <figure className="flex flex-col items-center gap-3">
-      <div className="rounded-2xl bg-white px-5 py-5 shadow-[0_6px_0_rgba(7,38,28,0.25)]">
+      <div className="rounded-2xl bg-white px-5 py-5 shadow-[0_12px_26px_-16px_rgba(10,31,26,0.22)] ring-1 ring-black/[0.04]">
         <svg
           viewBox="0 0 210 124"
           className="h-[104px] w-[176px] text-ink"
@@ -450,8 +450,9 @@ const SCENES: Scene[] = [
     eyebrow: "Clinics, salons & spas",
     title: "Booked into your real calendar.",
     body: "The Front Desk checks real availability, holds the slot, and sends the reminder the evening before — no-shows drop before you open.",
-    color: "#06c167",
-    accent: "#02a258",
+    color: "#e3f4ea",
+    accent: "#06c167",
+    ink: true,
     art: (
       <div className="flex w-full flex-wrap items-end justify-center gap-x-10 gap-y-6">
         <ReminderClock />
@@ -464,24 +465,26 @@ const SCENES: Scene[] = [
     eyebrow: "Real estate",
     title: "Follow-ups that never go quiet.",
     body: "Portal enquiries answered in seconds, then chased through the weeks buyers take to decide — until the site visit lands.",
-    color: "#0ea5e9",
-    accent: "#ffffff",
+    color: "#e6f3fb",
+    accent: "#0ea5e9",
+    ink: true,
     art: <KeyOrbit />,
   },
   {
     eyebrow: "Restaurants & cafés",
     title: "Full tables, zero missed chats.",
     body: "Reservations taken, confirmed and reminded while the kitchen runs at full tilt.",
-    color: "#f97316",
-    accent: "#ffffff",
+    color: "#fdeee1",
+    accent: "#f97316",
+    ink: true,
     art: <TableFloor />,
   },
   {
     eyebrow: "Ecommerce & D2C",
     title: "Payments collected, not promised.",
     body: "COD confirmations and payment links sent the moment the customer says yes — abandoned carts nudged back.",
-    color: "#ffc51f",
-    accent: "#07261c",
+    color: "#fbf3d9",
+    accent: "#ca8a04",
     ink: true,
     art: <PaidCard />,
   },
@@ -489,8 +492,9 @@ const SCENES: Scene[] = [
     eyebrow: "Education & coaching",
     title: "First reply in seconds, not hours.",
     body: "Admission enquiries answered before parents call the next institute — fee reminders always on time.",
-    color: "#8b5cf6",
-    accent: "#ffffff",
+    color: "#f0ecfb",
+    accent: "#8b5cf6",
+    ink: true,
     art: <ReplyGauge />,
   },
 ];
@@ -505,7 +509,7 @@ export function FeatureScenes() {
         >
           <div
             className={cn(
-              "scene flex h-full flex-col overflow-hidden rounded-2xl p-7 shadow-[8px_8px_0_#07261c] transition-all duration-300 ease-out hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[12px_12px_0_#07261c] sm:p-8",
+              "scene flex h-full flex-col overflow-hidden rounded-2xl border border-black/[0.05] p-7 shadow-[0_16px_36px_-26px_rgba(10,31,26,0.2)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_26px_50px_-28px_rgba(10,31,26,0.25)] sm:p-8",
               ink ? "text-[#07261c]" : "text-white"
             )}
             style={{ backgroundColor: color, "--c1": accent } as CSSProperties}

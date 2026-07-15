@@ -7,7 +7,7 @@ import { Reveal } from "./motion-primitives";
  *  AI Front Desk at recurring margin. Quiet, centered, one idea. */
 export function ResellerCTA() {
   return (
-    <Section id="partners" className="overflow-hidden bg-[#ffcd1f]">
+    <Section id="partners" className="overflow-hidden border-y border-black/[0.05] bg-[#fbf3d9]">
       <Container className="relative">
         <Reveal className="mx-auto max-w-2xl text-center">
           <span className="text-[11.5px] font-bold uppercase tracking-[0.18em] text-[#07261c]/55">

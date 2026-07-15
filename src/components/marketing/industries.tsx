@@ -20,8 +20,10 @@ type Industry = {
   title: string;
   outcome: string;
   body: string;
-  /** Solid category colour (6-digit hex) — the visual panel + active marker. */
+  /** Vivid category accent (6-digit hex) — markers, ring, icon, check chip. */
   color: string;
+  /** Soft pastel of the same hue — the visual panel's surface. */
+  soft: string;
   chat: { inbound: string; reply: string; status: string };
 };
 
@@ -32,6 +34,7 @@ const INDUSTRIES: Industry[] = [
     outcome: "fewer no-shows, fuller chairs",
     body: "Appointments confirmed automatically, reminders the evening before, a rebooking nudge weeks later.",
     color: "#f43f5e",
+    soft: "#fdecef",
     chat: {
       inbound: "Any slot tomorrow evening?",
       reply: "4:30 PM with Priya is open — booked you in ✓",
@@ -44,6 +47,7 @@ const INDUSTRIES: Industry[] = [
     outcome: "fuller batches",
     body: "Admission enquiries answered before parents call the next institute. Fee reminders and demo follow-ups, on time.",
     color: "#8b5cf6",
+    soft: "#f0ecfb",
     chat: {
       inbound: "What are the fees for the NEET batch?",
       reply: "₹45,000/year — free demo class Sat 11 AM. Reserve a seat?",
@@ -56,6 +60,7 @@ const INDUSTRIES: Industry[] = [
     outcome: "fuller tables",
     body: "Reservations, pre-orders and feedback follow-ups handled while the kitchen runs at full tilt.",
     color: "#f97316",
+    soft: "#fdeee1",
     chat: {
       inbound: "Table for 4 tonight?",
       reply: "8 PM by the window — reserved for you 🎉",
@@ -68,6 +73,7 @@ const INDUSTRIES: Industry[] = [
     outcome: "warmer leads",
     body: "Portal enquiries answered in seconds, site-visit details on time, follow-ups through weeks of deciding.",
     color: "#0ea5e9",
+    soft: "#e6f3fb",
     chat: {
       inbound: "Is the 2BHK in Andheri still available?",
       reply: "Yes — site visit this Sunday 11 AM? I'll send the location.",
@@ -80,6 +86,7 @@ const INDUSTRIES: Industry[] = [
     outcome: "repeat bookings",
     body: "Quotes, confirmations and “reaching in 20 minutes” updates — big-brand polish from a two-person team.",
     color: "#14b8a6",
+    soft: "#e3f6f2",
     chat: {
       inbound: "How much for AC servicing?",
       reply: "₹599 — technician free tomorrow 10 AM. Book it?",
@@ -92,11 +99,11 @@ const SWAP = 5200; // ms the loader ring takes to fill before auto-advancing
 const RING_R = 46;
 const RING_CIRC = 2 * Math.PI * RING_R; // ≈ 289
 
-/** The colourful workspace panel for the active trade: a solid-colour canvas
- * where the Front Desk "works" — the incoming question floats in top-left, a
- * loader ring turns in the centre (and doubles as the auto-advance timer:
- * when it finishes it calls `onDone`), and the resolved outcome lands
- * bottom-right. */
+/** The workspace panel for the active trade: a soft pastel canvas where the
+ * Front Desk "works" — the incoming question floats in top-left, a loader
+ * ring in the trade's vivid accent turns in the centre (and doubles as the
+ * auto-advance timer: when it finishes it calls `onDone`), and the resolved
+ * outcome lands bottom-right. */
 function IndustryVisual({
   item,
   paused,
@@ -108,33 +115,33 @@ function IndustryVisual({
   reduce: boolean;
   onDone: () => void;
 }) {
-  const { icon: Icon, title, outcome, color, chat } = item;
+  const { icon: Icon, title, outcome, color, soft, chat } = item;
   return (
     <div
-      className="relative flex min-h-[480px] flex-col overflow-hidden rounded-3xl p-7 shadow-[14px_14px_0_#07261c] sm:min-h-[520px] sm:p-9"
-      style={{ backgroundColor: color }}
+      className="relative flex min-h-[480px] flex-col overflow-hidden rounded-3xl border border-black/[0.05] p-7 shadow-[0_26px_50px_-32px_rgba(10,31,26,0.25)] sm:min-h-[520px] sm:p-9"
+      style={{ backgroundColor: soft }}
     >
       {/* concentric ring texture, centred on the loader */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.12]">
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.14]">
         {[0, 1, 2, 3, 4].map((r) => (
           <span
             key={r}
-            className="absolute left-1/2 top-[56%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white"
-            style={{ width: 150 + r * 130, height: 150 + r * 130 }}
+            className="absolute left-1/2 top-[56%] -translate-x-1/2 -translate-y-1/2 rounded-full border"
+            style={{ width: 150 + r * 130, height: 150 + r * 130, borderColor: color }}
           />
         ))}
       </div>
 
       {/* header */}
       <div className="relative flex items-center gap-3">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/20 backdrop-blur-sm">
-          <Icon className="h-6 w-6 text-white" aria-hidden />
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04]">
+          <Icon className="h-6 w-6" style={{ color }} aria-hidden />
         </span>
         <div>
-          <h3 className="text-[1.15rem] font-bold leading-tight text-white">
+          <h3 className="text-[1.15rem] font-bold leading-tight text-ink">
             {title}
           </h3>
-          <p className="serif-display text-[15px] text-white/85">{outcome}</p>
+          <p className="serif-display text-[15px] text-ink/60">{outcome}</p>
         </div>
       </div>
 
@@ -142,7 +149,7 @@ function IndustryVisual({
       <div className="relative mt-6 flex flex-1 items-center justify-center">
         {/* incoming question — floats top-left */}
         <div
-          className="absolute left-0 top-1 max-w-[68%] rounded-2xl rounded-bl-md bg-white px-4 py-3 text-[13.5px] font-medium leading-snug text-ink shadow-[0_18px_40px_-20px_rgba(7,38,28,0.65)]"
+          className="absolute left-0 top-1 max-w-[68%] rounded-2xl rounded-bl-md bg-white px-4 py-3 text-[13.5px] font-medium leading-snug text-ink shadow-[0_14px_30px_-18px_rgba(10,31,26,0.3)] ring-1 ring-black/[0.04]"
           style={reduce ? undefined : { animation: "scene-float 7s ease-in-out infinite" }}
         >
           {chat.inbound}
@@ -157,8 +164,8 @@ function IndustryVisual({
                 cy="60"
                 r={RING_R}
                 fill="none"
-                stroke="#ffffff"
-                strokeOpacity="0.25"
+                stroke={color}
+                strokeOpacity="0.2"
                 strokeWidth="4"
               />
               <circle
@@ -166,7 +173,7 @@ function IndustryVisual({
                 cy="60"
                 r={RING_R}
                 fill="none"
-                stroke="#ffffff"
+                stroke={color}
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeDasharray={RING_CIRC}
@@ -184,18 +191,18 @@ function IndustryVisual({
                 }
               />
             </svg>
-            <span className="absolute grid h-[52px] w-[52px] place-items-center rounded-full bg-white/25 backdrop-blur-sm">
-              <Icon className="h-6 w-6 text-white" aria-hidden />
+            <span className="absolute grid h-[52px] w-[52px] place-items-center rounded-full bg-white shadow-sm ring-1 ring-black/[0.04]">
+              <Icon className="h-6 w-6" style={{ color }} aria-hidden />
             </span>
           </div>
-          <span className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+          <span className="flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-ink/70 ring-1 ring-black/[0.04]">
             Front Desk working
             <span className="flex gap-0.5" aria-hidden>
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="h-1 w-1 rounded-full bg-white/90 motion-safe:animate-pulse"
-                  style={{ animationDelay: `${i * 180}ms` }}
+                  className="h-1 w-1 rounded-full motion-safe:animate-pulse"
+                  style={{ animationDelay: `${i * 180}ms`, backgroundColor: color }}
                 />
               ))}
             </span>
@@ -204,7 +211,7 @@ function IndustryVisual({
 
         {/* resolved outcome — floats bottom-right */}
         <div
-          className="absolute bottom-1 right-0 max-w-[74%] rounded-2xl bg-white px-4 py-3 shadow-[0_18px_40px_-20px_rgba(7,38,28,0.65)]"
+          className="absolute bottom-1 right-0 max-w-[74%] rounded-2xl bg-white px-4 py-3 shadow-[0_14px_30px_-18px_rgba(10,31,26,0.3)] ring-1 ring-black/[0.04]"
           style={reduce ? undefined : { animation: "scene-float 8.5s ease-in-out infinite" }}
         >
           <div className="flex items-center gap-2">
