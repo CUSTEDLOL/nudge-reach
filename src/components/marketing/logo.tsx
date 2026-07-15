@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
-/** Nudge wordmark + mark. `tone="dark"` is for use on ink backgrounds. */
+/** Nudge wordmark + mark. `tone="dark"` is for use on ink backgrounds;
+ * `compact` renders the mark alone (navbar pill). */
 export function Logo({
   tone = "light",
+  compact = false,
   className,
 }: {
   tone?: "light" | "dark";
+  compact?: boolean;
   className?: string;
 }) {
   return (
@@ -15,8 +18,7 @@ export function Logo({
       aria-label="Nudge home"
       className={cn("group inline-flex items-center gap-2.5", className)}
     >
-      <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-[0_6px_16px_-6px_rgba(6,193,103,0.7)] transition-transform duration-300 group-hover:scale-105">
-        <span className="absolute inset-0 bg-[radial-gradient(80%_80%_at_30%_20%,rgba(255,255,255,0.45),transparent)]" />
+      <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-brand-500 shadow-[0_6px_16px_-6px_rgba(6,193,103,0.7)] transition-transform duration-300 group-hover:scale-105">
         {/* speech-bubble mark */}
         <svg
           viewBox="0 0 24 24"
@@ -33,14 +35,16 @@ export function Logo({
           <circle cx="16" cy="11.5" r="1.1" fill="#0b3d2e" />
         </svg>
       </span>
-      <span
-        className={cn(
-          "text-[19px] font-bold tracking-tight",
-          tone === "light" ? "text-ink night:text-white" : "text-white"
-        )}
-      >
-        Nudge
-      </span>
+      {!compact && (
+        <span
+          className={cn(
+            "font-logo text-[19px] font-bold tracking-tight",
+            tone === "light" ? "text-ink night:text-white" : "text-white"
+          )}
+        >
+          Nudge
+        </span>
+      )}
     </Link>
   );
 }

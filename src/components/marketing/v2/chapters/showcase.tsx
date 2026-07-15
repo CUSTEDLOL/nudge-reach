@@ -326,6 +326,10 @@ export function Showcase() {
 
   return (
     <div ref={ref} className="ns-box" aria-label="The Front Desk at work, feature by feature">
+      <span className="ns-box-cap">
+        <span className="ns-box-cap-dot" aria-hidden />
+        One WhatsApp number · a team of AI agents
+      </span>
       <PhoneChat />
       <AnswerPanel />
       <BookPanel />

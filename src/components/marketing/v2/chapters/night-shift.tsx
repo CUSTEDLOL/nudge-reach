@@ -5,55 +5,29 @@ import { CHAPTERS } from "../progress";
 import { gsap, motionAllowed, useGSAP } from "../gsap";
 import { Showcase } from "./showcase";
 
-/** DOM copy for the four night chapters, timed to the same story spans the
- *  3D scenes use, so words and world stay in lockstep. */
-const BEATS = [
+/** DOM copy for the four night chapters. One WhatsApp number, a team of AI
+ *  agents — each chapter is a different agent on shift, timed to the same
+ *  story spans the phone scene uses so words and conversation stay in step. */
+const AGENTS = [
   {
     time: "12:31 AM",
-    title: "It answers.",
-    body: (
-      <>
-        A customer writes at half past midnight. The Front Desk{" "}
-        <strong className="font-bold text-ink/90">replies in seconds</strong>{" "}
-        — your services, your prices, your tone. No &lsquo;we&rsquo;ll get back
-        to you.&rsquo;
-      </>
-    ),
+    name: "Sales agent",
+    line: "Answers every question in seconds — your prices, your tone.",
   },
   {
     time: "2:15 AM",
-    title: "It books.",
-    body: (
-      <>
-        Not &lsquo;we open at 10.&rsquo; It checks{" "}
-        <strong className="font-bold text-ink/90">your real calendar</strong>,
-        locks the slot, and sends the confirmation —{" "}
-        <strong className="font-bold text-ink/90">booked while you sleep</strong>.
-      </>
-    ),
+    name: "Booking agent",
+    line: "Checks your real calendar and locks the slot.",
   },
   {
     time: "4:40 AM",
-    title: "It chases.",
-    body: (
-      <>
-        The lead that went quiet on Tuesday gets a{" "}
-        <strong className="font-bold text-ink/90">follow-up worth answering</strong>.
-        Meta&rsquo;s free AI can&rsquo;t start that conversation. Yours can.
-      </>
-    ),
+    name: "Follow-up agent",
+    line: "Chases the leads that went quiet — on its own.",
   },
   {
     time: "6:48 AM",
-    title: "It collects.",
-    body: (
-      <>
-        Payment link sent, <strong className="font-bold text-ink/90">deposit in</strong>,
-        reminder scheduled. The night&rsquo;s work is{" "}
-        <strong className="font-bold text-ink/90">already revenue</strong>{" "}
-        before you&rsquo;re awake.
-      </>
-    ),
+    name: "Payment agent",
+    line: "Sends the link and collects the deposit.",
   },
 ];
 
@@ -121,20 +95,26 @@ export function NightShift() {
       <div className="ns-stage">
         <div className="ns-copy">
           <div className="ns-copy-rail">
-            {BEATS.map((b) => (
-              <article key={b.time} className="ns-beat max-w-lg py-6">
-              <div className="flex items-center gap-3">
-                <span className="h-2.5 w-2.5 bg-brand-500" aria-hidden />
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-700">
-                  {b.time}
+            {AGENTS.map((a) => (
+              <article key={a.time} className="ns-beat max-w-lg py-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand-700">
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-brand-500"
+                      aria-hidden
+                    />
+                    AI agent
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink/35">
+                    {a.time}
+                  </span>
+                </div>
+                <h2 className="mt-4 font-display text-[clamp(2.35rem,4.4vw,4rem)] font-black leading-[0.96] tracking-[-0.045em] text-ink">
+                  {a.name}
+                </h2>
+                <p className="mt-4 max-w-md text-lg font-medium leading-relaxed text-ink/60">
+                  {a.line}
                 </p>
-              </div>
-              <h2 className="mt-4 font-display text-[clamp(2.35rem,4.4vw,4rem)] font-black leading-[0.96] tracking-[-0.045em] text-ink">
-                {b.title}
-              </h2>
-              <p className="mt-5 max-w-md text-lg font-medium leading-relaxed text-ink/65">
-                {b.body}
-              </p>
               </article>
             ))}
           </div>

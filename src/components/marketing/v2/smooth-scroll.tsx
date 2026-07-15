@@ -16,8 +16,10 @@ export function SmoothScroll() {
   useEffect(() => {
     if (!motionAllowed()) return;
 
+    // Short duration: enough smoothing to keep the scrubbed sections silky,
+    // close enough to 1:1 that the native scrollbar doesn't read as custom.
     const lenis = new Lenis({
-      duration: 1.4,
+      duration: 0.8,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 

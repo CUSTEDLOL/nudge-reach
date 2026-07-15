@@ -15,21 +15,17 @@ export function FinalCTA() {
   return (
     <section
       id="get-started"
-      className="relative scroll-mt-24 overflow-hidden border-t border-black/[0.05] bg-white py-24 sm:py-28"
+      className="relative scroll-mt-24 overflow-hidden bg-[#07261c] py-24 sm:py-28"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(760px_circle_at_50%_-10%,rgba(6,193,103,0.06),transparent_70%)]"
-      />
       <Container className="relative">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-[2.2rem] font-black uppercase leading-[1.05] tracking-[-0.02em] text-ink sm:text-[3.1rem]">
+          <h2 className="font-display text-[2.2rem] font-black uppercase leading-[1.05] tracking-[-0.02em] text-white sm:text-[3.1rem]">
             Your customers are
-            <span className="serif-display mt-3 block text-[1.8rem] normal-case tracking-normal text-ink/85 sm:text-[2.5rem]">
+            <span className="serif-display mt-3 block text-[1.8rem] normal-case tracking-normal text-brand-300 sm:text-[2.5rem]">
               already on WhatsApp.
             </span>
           </h2>
-          <p className="mx-auto mt-6 max-w-xl text-[16px] leading-relaxed text-ink/55">
+          <p className="mx-auto mt-6 max-w-xl text-[16px] leading-relaxed text-white/65">
             Start free and try the whole product today — or book a setup call
             and we&rsquo;ll stand up your AI Front Desk with you, live on the
             call.
@@ -39,7 +35,7 @@ export function FinalCTA() {
               Start free
               <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
             </ButtonLink>
-            <ButtonLink href="/waitlist" variant="secondary" size="lg">
+            <ButtonLink href="/waitlist" variant="secondary-dark" size="lg">
               Book a demo
             </ButtonLink>
           </div>
@@ -47,9 +43,9 @@ export function FinalCTA() {
             {POINTS.map((p) => (
               <li
                 key={p}
-                className="flex items-center gap-1.5 text-[13.5px] text-ink/55"
+                className="flex items-center gap-1.5 text-[13.5px] text-white/60"
               >
-                <CheckCircle2 className="h-4 w-4 text-brand-600" aria-hidden />
+                <CheckCircle2 className="h-4 w-4 text-brand-400" aria-hidden />
                 {p}
               </li>
             ))}
@@ -59,7 +55,7 @@ export function FinalCTA() {
         <Reveal delay={0.1} className="mx-auto mt-14 max-w-xl">
           <SpotlightCard
             className="rounded-3xl"
-            spotlight="rgba(6,193,103,0.09)"
+            spotlight="rgba(6,193,103,0.14)"
           >
             <LeadForm surface="home" defaultIntent="demo" />
           </SpotlightCard>

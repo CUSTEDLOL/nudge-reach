@@ -60,7 +60,7 @@ export function MetaVsNudge() {
 
         <Reveal className="mt-12">
           <div className="overflow-x-auto">
-            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border border-emerald-950/[0.05] bg-[#f3faf6] px-6 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_40px_80px_-52px_rgba(10,31,26,0.35)]">
+            <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border-2 border-ink/10 bg-white px-6 py-2 shadow-[10px_10px_0_#d3f8e0]">
               {/* header row — a ruled ledger, not a card */}
               <div className={`${GRID} items-stretch border-b border-ink/15`}>
                 <div className="px-1 py-4" />
@@ -75,7 +75,7 @@ export function MetaVsNudge() {
                     <span className="text-[11px] text-ink/35">{col.sub}</span>
                   </div>
                 ))}
-                <div className="flex flex-col items-center justify-center rounded-t-xl bg-brand-600 px-2 py-4 text-center shadow-[0_18px_36px_-18px_rgba(5,150,105,0.6)]">
+                <div className="flex flex-col items-center justify-center rounded-t-xl bg-brand-500 px-2 py-4 text-center">
                   <span className="font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-white">
                     Nudge
                   </span>
@@ -97,7 +97,7 @@ export function MetaVsNudge() {
                     </div>
                   ))}
                   <div
-                    className={`flex justify-center self-stretch bg-brand-500/[0.07] py-3.5 ${
+                    className={`flex justify-center self-stretch bg-brand-50 py-3.5 ${
                       i === ROWS.length - 1 ? "rounded-b-xl" : ""
                     }`}
                   >

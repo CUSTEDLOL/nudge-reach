@@ -20,14 +20,14 @@ const sizes = {
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-brand-500 text-white shadow-[0_10px_30px_-10px_rgba(6,193,103,0.6)] hover:bg-brand-600 hover:shadow-glow hover:-translate-y-0.5 hover:scale-[1.02] before:absolute before:inset-0 before:-translate-x-[130%] before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:before:translate-x-[130%]",
+    "bg-brand-500 text-white shadow-[0_4px_0_#047f48] hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_6px_0_#047f48] active:translate-y-0 active:shadow-[0_2px_0_#047f48]",
   secondary:
-    "border border-black/10 bg-white text-ink shadow-soft hover:-translate-y-0.5 hover:scale-[1.02] hover:border-brand-500/40 hover:text-brand-700 hover:shadow-lift",
+    "border-2 border-ink/15 bg-white text-ink shadow-[0_4px_0_rgba(10,15,13,0.12)] hover:-translate-y-0.5 hover:border-brand-500 hover:text-brand-700 hover:shadow-[0_6px_0_rgba(6,193,103,0.35)]",
   ghost: "text-ink/70 hover:bg-black/5 hover:text-ink",
   "primary-dark":
-    "bg-brand-400 text-brand-950 shadow-[0_10px_30px_-10px_rgba(55,206,134,0.7)] hover:bg-brand-300 hover:-translate-y-0.5",
+    "bg-brand-400 text-brand-950 shadow-[0_4px_0_#047f48] hover:-translate-y-0.5 hover:bg-brand-300 hover:shadow-[0_6px_0_#047f48]",
   "secondary-dark":
-    "border border-white/15 bg-white/5 text-white backdrop-blur hover:bg-white/10 hover:-translate-y-0.5",
+    "border-2 border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/10 hover:-translate-y-0.5",
 };
 
 export function ButtonLink({

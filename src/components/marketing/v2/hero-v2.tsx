@@ -1,54 +1,54 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Image from "next/image";
-import {
-  ArrowDown,
-  ArrowRight,
-  CalendarCheck,
-  IndianRupee,
-  ShieldCheck,
-} from "lucide-react";
-import { ButtonLink } from "../button";
+import { useRef } from "react";
+import { ArrowDown } from "lucide-react";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
-
-const TRUST = [
-  { icon: ShieldCheck, label: "Official WhatsApp Cloud API" },
-  { icon: CalendarCheck, label: "Books your real calendar" },
-  { icon: IndianRupee, label: "Collects payments" },
-];
+import { PixelPark, PixelSkyline, Stars } from "./night-sky";
 
 /**
- * Hero — photo-first, in the site's own light world. A full-bleed stylized
- * illustration of an owner at ease carries the promise; the headline is
- * server HTML (it IS the LCP element) set against the image's airy left
- * half. Without the image the soft mint-morning gradient is the look.
+ * Hero — the night itself, one tall continuous scene. Viewport one: starfield,
+ * glowing serif nameplate, the city asleep on the horizon. Scrolling on, the
+ * scene keeps going — the park below the towers, a lake, a flower meadow and
+ * the glass promise card — before the page hands off to the next section.
+ * Everything is server-renderable DOM: the scene is procedural SVG (no image
+ * request), the headline is the LCP element.
  */
 export function HeroV2() {
   const sectionRef = useRef<HTMLElement>(null);
-  // The mint gradient IS the look until the image ships (or if it 404s).
-  const [photoOk, setPhotoOk] = useState(true);
 
   useGSAP(
     () => {
       if (!motionAllowed()) return;
-      const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
-      tl.from(".hero-eyebrow", { autoAlpha: 0, y: 14, duration: 0.7 }, 0.1)
-        .from(".hero-line", { yPercent: 112, duration: 1.1, stagger: 0.12 }, 0.15)
-        .from(".hero-sub", { autoAlpha: 0, y: 18, duration: 0.8 }, 0.55)
-        .from(".hero-ctas", { autoAlpha: 0, y: 16, duration: 0.8 }, 0.7)
-        .from(".hero-trust", { autoAlpha: 0, y: 12, duration: 0.8 }, 0.85)
-        .from(".hero-cue", { autoAlpha: 0, duration: 0.9 }, 1.0);
+      // Hold the intro while the brand splash is wiping off stage.
+      const splash = document.getElementById("nudge-splash");
+      const tl = gsap.timeline({
+        delay: splash ? 3.25 : 0,
+        defaults: { ease: "expo.out" },
+      });
+      tl.from(".hero-stars", { autoAlpha: 0, duration: 1.6 }, 0).from(
+        ".hero-line",
+        { yPercent: 112, duration: 1.15, stagger: 0.14 },
+        0.15
+      );
 
-      // Gentle drift as the hero scrolls away — depth without distraction.
+      // The card lives below the fold, over the meadow — reveal on arrival.
+      gsap.from(".hero-card", {
+        autoAlpha: 0,
+        y: 30,
+        duration: 0.9,
+        ease: "expo.out",
+        scrollTrigger: { trigger: ".hero-card", start: "top 88%" },
+      });
+
+      // Gentle drift as the nameplate scrolls away — depth without distraction.
       gsap.to(".hero-copy", {
-        yPercent: -14,
-        autoAlpha: 0.25,
+        yPercent: -16,
+        autoAlpha: 0.15,
         ease: "none",
         scrollTrigger: {
           trigger: sectionRef.current,
           start: "top top",
-          end: "bottom top",
+          end: "50% top",
           scrub: true,
         },
       });
@@ -59,107 +59,82 @@ export function HeroV2() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-[100svh] items-center overflow-hidden bg-white"
+      className="relative overflow-hidden bg-[#0d3f2b]"
       aria-label="Nudge — the AI Front Desk"
     >
-      {/* Soft mint-morning base: the designed look until/behind the photo. */}
-      <div
-        className="absolute inset-0"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(90% 90% at 74% 35%, #e3f3ea 0%, #f4faf7 52%, #ffffff 100%)",
-        }}
-      />
-      {photoOk && (
-        <Image
-          src="/hero/front-desk.jpg"
-          alt="A business owner relaxed after closing time while her WhatsApp keeps working"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[68%_center]"
-          onError={() => setPhotoOk(false)}
-        />
-      )}
-      {/* Minimal grade: the image runs at full contrast. One narrow scrim
-          behind the type on desktop, a light wash on phones — nothing else. */}
-      <div
-        className="absolute inset-0 hidden sm:block"
-        aria-hidden
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 28%, rgba(255,255,255,0) 52%)",
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/70 to-transparent"
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 bg-gradient-to-b from-white/88 via-white/60 to-white/10 sm:hidden"
-        aria-hidden
-      />
-
-      <div className="hero-copy relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-center px-5 pb-24 pt-32 sm:px-8">
-        <div className="max-w-3xl">
-          <p className="hero-eyebrow flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.16em] text-brand-700">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500" />
-            </span>
-            Your AI sales employee · on shift 24/7
-          </p>
-
-          <h1 className="mt-7 font-display text-[clamp(2.6rem,6vw,5.6rem)] font-black leading-[0.95] tracking-[-0.045em] text-ink">
-            <span className="block overflow-hidden pb-1">
-              <span className="hero-line block">Your WhatsApp,</span>
-            </span>
-            <span className="block overflow-hidden pb-3">
-              <span className="hero-line block text-brand-600">
-                changed forever.
-              </span>
-            </span>
-          </h1>
-
-          <p className="hero-sub mt-6 max-w-lg text-lg font-medium leading-relaxed text-ink/70 sm:text-xl">
-            Nudge answers customers,{" "}
-            <strong className="font-bold text-ink/90">books your real calendar</strong>,
-            chases quiet leads and{" "}
-            <strong className="font-bold text-ink/90">collects deposits</strong>{" "}
-            on WhatsApp — set up entirely for you.
-          </p>
-
-          <div className="hero-ctas mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <ButtonLink href="/waitlist" size="lg">
-              Hire your Front Desk
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-            </ButtonLink>
-            <ButtonLink href="#night-shift" variant="secondary" size="lg">
-              Watch one night
-              <ArrowDown className="h-4 w-4" />
-            </ButtonLink>
-          </div>
-
-          <ul className="hero-trust mt-12 flex flex-wrap items-center gap-x-7 gap-y-2.5">
-            {TRUST.map(({ icon: Icon, label }) => (
-              <li
-                key={label}
-                className="flex items-center gap-2 text-[13px] font-semibold text-ink/55"
-              >
-                <Icon className="h-4 w-4 text-brand-600" aria-hidden />
-                {label}
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div aria-hidden className="absolute inset-x-0 top-0 h-[100svh]">
+        <Stars className="hero-stars" />
       </div>
 
-      {/* scroll cue */}
-      <div className="hero-cue absolute bottom-7 left-1/2 z-10 -translate-x-1/2" aria-hidden>
-        <div className="flex h-9 w-5 items-start justify-center rounded-full border border-ink/20 p-1.5">
-          <span className="h-1.5 w-[3px] animate-bounce rounded-full bg-brand-600" />
+      {/* ---- viewport one: nameplate + skyline on the horizon ---- */}
+      <div className="relative flex h-[100svh] flex-col items-center justify-center">
+        {/* halo behind the nameplate */}
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-[42%] h-[42vh] w-[min(90vw,56rem)] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 50% 50%, rgba(111,227,168,0.18), transparent 70%)",
+          }}
+        />
+        <div className="hero-copy relative z-10 px-5 pb-24 text-center sm:px-8">
+          <h1
+            className="serif-display text-balance text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.08] tracking-[-0.015em] text-white"
+            style={{
+              textShadow:
+                "0 0 18px rgba(211,248,224,0.5), 0 0 64px rgba(6,193,103,0.4)",
+            }}
+          >
+            <span className="block overflow-hidden pb-1">
+              <span className="hero-line block">The AI Front Desk</span>
+            </span>
+            <span className="block overflow-hidden pb-2">
+              <span className="hero-line block">For Your WhatsApp</span>
+            </span>
+          </h1>
         </div>
+        {/* the sleeping city on the horizon */}
+        <PixelSkyline className="absolute inset-x-0 bottom-0 h-[44svh] min-h-[240px] w-full" />
+      </div>
+
+      {/* ---- the scene continues: the park below the towers ---- */}
+      <div className="relative h-[85svh] min-h-[520px]">
+        <PixelPark className="absolute inset-0 h-full w-full" />
+
+        {/* glass card — the promise, resting on the meadow */}
+        <div className="absolute inset-x-0 bottom-[10%] z-10">
+          <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+            <div className="hero-card max-w-md rounded-2xl border border-white/[0.12] bg-white/[0.08] p-7 shadow-[0_24px_60px_-20px_rgba(2,18,11,0.8)] backdrop-blur-xl">
+              <h2 className="serif-display text-[1.65rem] leading-snug text-white">
+                AI that runs your WhatsApp autonomously
+              </h2>
+              <p className="mt-3 text-[14.5px] leading-relaxed text-white/70">
+                Nudge is a done-for-you AI employee — it answers customers in
+                seconds, books your real calendar, chases quiet leads and
+                collects payments. All night, every night.
+              </p>
+              <p className="mt-4 text-[11.5px] font-medium tracking-wide text-white/45">
+                Official WhatsApp Cloud API · Real calendar bookings · Payments
+                collected
+              </p>
+              <a
+                href="#night-shift"
+                className="group/link mt-5 inline-flex items-center gap-2 text-[14px] font-semibold text-white underline decoration-white/40 underline-offset-4 transition-colors hover:decoration-white"
+              >
+                Watch one night
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-white/10 transition-transform duration-300 group-hover/link:translate-y-0.5">
+                  <ArrowDown className="h-3 w-3" aria-hidden />
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* hand-off into the daylight page below */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-white/90"
+        />
       </div>
     </section>
   );

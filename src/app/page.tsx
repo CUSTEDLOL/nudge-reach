@@ -8,6 +8,7 @@ import { ResellerCTA } from "@/components/marketing/reseller-cta";
 import { FinalCTA } from "@/components/marketing/final-cta";
 import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
+import { Preloader } from "@/components/marketing/v2/preloader";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
 
@@ -68,6 +69,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
+      <Preloader />
       <Navbar />
       <Experience />
       <main className="relative z-10 overflow-x-clip">
@@ -76,7 +78,7 @@ export default function Home() {
         <NightShift />
         {/* THE DAYLIGHT ZONE — features (the USP) → the honest comparison.
             The salary math lives on /pricing next to the plans. */}
-        <div id="daylight" className="pb-16">
+        <div id="daylight">
           <DaySection>
             <FeaturesBento />
           </DaySection>

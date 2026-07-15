@@ -41,12 +41,12 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-emerald-950/[0.06] bg-[#f3faf6]">
+    <footer className="border-t border-white/10 bg-[#0b3d2e]">
       <Container className="py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
-            <Logo />
-            <p className="mt-4 text-[14px] leading-relaxed text-ink/55">
+            <Logo tone="dark" />
+            <p className="mt-4 text-[14px] leading-relaxed text-white/60">
               The AI Front Desk that runs your WhatsApp — it books, chases and
               collects, and we set the whole thing up. Compliant by default.
             </p>
@@ -54,14 +54,14 @@ export function Footer() {
               <a
                 href="mailto:hello@nudge.so"
                 aria-label="Email Nudge"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-black/[0.07] bg-white text-ink/60 transition-colors hover:text-ink"
+                className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition-colors hover:bg-brand-500 hover:text-white"
               >
                 <Mail className="h-[18px] w-[18px]" />
               </a>
               <a
                 href="#get-started"
                 aria-label="Chat with us on WhatsApp"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-black/[0.07] bg-white text-ink/60 transition-colors hover:text-ink"
+                className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition-colors hover:bg-brand-500 hover:text-white"
               >
                 <MessageCircle className="h-[18px] w-[18px]" />
               </a>
@@ -70,7 +70,7 @@ export function Footer() {
 
           {COLUMNS.map((col) => (
             <div key={col.title}>
-              <h3 className="text-[12px] font-bold uppercase tracking-[0.15em] text-ink/40">
+              <h3 className="text-[12px] font-bold uppercase tracking-[0.15em] text-brand-300/80">
                 {col.title}
               </h3>
               <ul className="mt-4 space-y-2.5">
@@ -78,7 +78,7 @@ export function Footer() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-[14px] text-ink/60 transition-colors hover:text-ink"
+                      className="text-[14px] text-white/60 transition-colors hover:text-white"
                     >
                       {link.label}
                     </Link>
@@ -89,14 +89,14 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-black/[0.06] pt-8 sm:flex-row">
-          <p className="text-[13px] text-ink/45">
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+          <p className="text-[13px] text-white/45">
             © 2026 Nudge — the first product of the Nudge AI studio for Asian
             SME retail.
           </p>
-          <p className="flex items-center gap-2 text-[13px] text-ink/45">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-white px-3 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" /> All
+          <p className="flex items-center gap-2 text-[13px] text-white/45">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-400" /> All
               systems in simulation
             </span>
             Made in India 🇮🇳
