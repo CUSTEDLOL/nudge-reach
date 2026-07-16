@@ -162,21 +162,21 @@ html {
    Reusable premium helpers
    ============================================================ */
 
-/* Minimal-editorial display serif: the second line of section headlines
-   (bold caps sans + quiet serif is the daylight zone's type signature). */
+/* Second line of section headlines + the hero nameplate. Formerly a Georgia
+   serif; unified to the bold Geist display face so the whole site speaks one
+   type language (softer weight than the black caps first line for hierarchy). */
 .serif-display {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-/* Editorial serif accent — one word per headline, the "designed, not
-   templated" cue. System serif so no new font ships. */
+/* One-word headline accent. Unified to the Geist display face (heavier, so it
+   pops like the headings) — no separate serif ships anymore. */
 .accent-serif {
-  font-family: Georgia, "Times New Roman", serif;
-  font-style: italic;
-  font-weight: 450;
-  letter-spacing: -0.015em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 /* Emerald gradient text */
@@ -347,6 +347,12 @@ html {
 .jsm .splash-ch {
   opacity: 0;
 }
+/* Once a slot flips from icon to letter, it renders in the playful
+   caricature face (the wordmark reads NUDGE, all-caps). */
+.splash-ch.is-letter {
+  font-family: var(--font-playful);
+  font-weight: 800;
+}
 
 /* Film grain — pure CSS fallback (a4-grain.png replaces it when present). */
 .v2-grain {
@@ -392,12 +398,15 @@ html {
   flex-direction: column;
   align-items: center;
   gap: 2.5rem;
-  border: 1px solid rgba(10, 15, 13, 0.14);
+  border: 1px solid rgba(10, 15, 13, 0.18);
   border-radius: 1.5rem;
-  /* Quirky colourful box, matching the bento/industries surfaces: soft green
-     tint + the site's signature solid offset shadow. */
-  background: #eefaf3;
-  box-shadow: 14px 14px 0 #07261c;
+  /* Matches the site's daylight-card signature (.v2-daycard): a soft green
+     offset plus a large ambient shadow behind a thin, subtle border. The
+     background tint still glides across the four night chapters as you scroll
+     (driven by the Showcase GSAP timeline). */
+  background: #eafaf1;
+  box-shadow: 18px 18px 0 rgba(6, 193, 103, 0.16),
+    0 30px 80px -40px rgba(5, 13, 10, 0.35);
 }
 
 /* The one-line framing that names the concept: a team of agents on one number. */
@@ -755,13 +764,3 @@ html {
   }
 }
 
-/* Industries loader ring — fills once over the dwell time, then the
-   onAnimationEnd handler advances to the next trade. */
-@keyframes ind-ring {
-  from {
-    stroke-dashoffset: var(--circ, 289);
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}

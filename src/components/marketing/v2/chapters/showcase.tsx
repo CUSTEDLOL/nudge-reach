@@ -270,6 +270,28 @@ export function Showcase() {
         });
         tl.to({}, { duration: 1 });
 
+        // Caricature box: its background tint glides across the four chapters
+        // as the scrub advances — a gradual colour shift tied to the scroll,
+        // reaching each chapter's hue by the time that chapter opens.
+        const BOX_TINT: Record<ChapterName, string> = {
+          answer: "#eafaf1",
+          book: "#e6f2fc",
+          chase: "#fdeade",
+          dawn: "#fbf1d6",
+        };
+        gsap.set(box, { backgroundColor: BOX_TINT.answer });
+        tl.to(box, { backgroundColor: BOX_TINT.book, ease: "none", duration: CHAPTERS.book.start }, 0)
+          .to(
+            box,
+            { backgroundColor: BOX_TINT.chase, ease: "none", duration: CHAPTERS.chase.start - CHAPTERS.book.start },
+            CHAPTERS.book.start
+          )
+          .to(
+            box,
+            { backgroundColor: BOX_TINT.dawn, ease: "none", duration: CHAPTERS.dawn.start - CHAPTERS.chase.start },
+            CHAPTERS.chase.start
+          );
+
         // The phone's travel: left → right → left → right.
         PHONE_RIGHT.forEach((name) => {
           tl.to(phone, { x: () => rightX(), duration: 0.05, ease: "power2.inOut" }, CHAPTERS[name].start);

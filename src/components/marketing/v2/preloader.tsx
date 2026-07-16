@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
-const WORD = "Nudge";
+const WORD = "NUDGE";
 /** One brand glyph per letter slot — typed in first, then flipped into
  *  the letter. Text glyphs only, so the UI font renders them everywhere. */
 const ICONS = ["✳", "●", "✓", "₹", "✦"];
@@ -51,6 +51,9 @@ export function Preloader() {
         tl.call(
           () => {
             el.textContent = WORD[i];
+            // Icons render in the UI font (full glyph coverage); once a slot
+            // becomes a letter, flip it to the playful caricature face.
+            el.classList.add("is-letter");
           },
           undefined,
           at
@@ -78,9 +81,9 @@ export function Preloader() {
       className="ns-splash fixed inset-0 z-[200] items-center justify-center bg-brand-500"
       aria-hidden
     >
-      <p className="splash-word font-logo text-5xl font-extrabold tracking-[-0.02em] text-white sm:text-6xl">
+      <p className="splash-word font-logo text-4xl font-extrabold tracking-[0.01em] text-white sm:text-5xl">
         {ICONS.map((icon, i) => (
-          <span key={i} className="splash-ch inline-block w-[0.72em] text-center">
+          <span key={i} className="splash-ch inline-block w-[0.82em] text-center">
             {icon}
           </span>
         ))}

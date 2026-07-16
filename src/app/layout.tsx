@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Poppins } from "next/font/google";
+import { Geist, Geist_Mono, Poppins, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import "@/lib/env"; // validate environment at boot
 
@@ -13,9 +13,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Brand wordmark face (splash + logo): chunky geometric, Sunday-style.
+// Brand wordmark face (logo): chunky geometric, Sunday-style.
 const poppins = Poppins({
   variable: "--font-poppins",
+  weight: ["700", "800"],
+  subsets: ["latin"],
+});
+
+// Playful splash face — the caricature wordmark on the loading screen.
+const baloo = Baloo_2({
+  variable: "--font-playful",
   weight: ["700", "800"],
   subsets: ["latin"],
 });
@@ -62,7 +69,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${baloo.variable} h-full antialiased`}
     >
       {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
           cz-shortcut-listen) inject attributes onto <body> before React
