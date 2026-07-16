@@ -88,7 +88,8 @@ function CalendarCard() {
           <p className="text-[12px] font-semibold text-[#111b21]">Appointment confirmed</p>
         </div>
         <div className="flex items-center gap-3 pt-2.5">
-          <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-[#f0f2f5]">
+          {/* the date tile is a luxury the narrow mobile phone can't afford */}
+          <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-[#f0f2f5] max-lg:hidden">
             <span className="text-[9px] font-bold uppercase tracking-wide text-[#ea5455]">Sat</span>
             <span className="text-[19px] font-bold leading-none text-[#111b21]">18</span>
           </div>

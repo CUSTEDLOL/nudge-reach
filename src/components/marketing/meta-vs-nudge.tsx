@@ -59,6 +59,9 @@ export function MetaVsNudge() {
         </Reveal>
 
         <Reveal className="mt-12">
+          <p className="mb-3 text-center text-[12px] font-semibold text-ink/40 lg:hidden">
+            Swipe the table → the Nudge column is at the end
+          </p>
           <div className="overflow-x-auto">
             <div className="mx-auto min-w-[860px] max-w-6xl rounded-2xl border-2 border-ink/10 bg-white px-6 py-2 shadow-[10px_10px_0_#d3f8e0]">
               {/* header row — a ruled ledger, not a card */}

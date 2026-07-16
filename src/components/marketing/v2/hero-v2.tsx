@@ -72,7 +72,7 @@ export function HeroV2() {
       <div className="relative flex h-[100svh] flex-col items-center justify-center">
         <div className="hero-copy relative z-10 px-5 pb-32 text-center sm:px-8">
           <h1
-            className="serif-display text-balance text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.08] tracking-[-0.015em] text-white"
+            className="serif-display text-balance text-[clamp(2.1rem,6.5vw,5.2rem)] leading-[1.08] tracking-[-0.015em] text-white"
             style={{
               textShadow:
                 "0 2px 10px rgba(9,40,74,0.55), 0 10px 44px rgba(9,40,74,0.45)",
