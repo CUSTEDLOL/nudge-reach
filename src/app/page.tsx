@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
-import { Industries } from "@/components/marketing/industries";
-import { FeaturesBento } from "@/components/marketing/features-bento";
+import { EmployeeFile } from "@/components/marketing/employee-file";
 import { ResellerCTA } from "@/components/marketing/reseller-cta";
 import { FinalCTA } from "@/components/marketing/final-cta";
 import { Experience } from "@/components/marketing/v2/experience";
@@ -80,19 +79,16 @@ export default function Home() {
             The salary math lives on /pricing next to the plans. */}
         <div id="daylight">
           <DaySection>
-            <FeaturesBento />
+            <EmployeeFile />
           </DaySection>
           <DaySection>
             <MetaVsNudge />
           </DaySection>
           <DaySection>
-            <Industries />
-          </DaySection>
-          <DaySection>
             <ResellerCTA />
           </DaySection>
           {/* pricing and FAQ live on their own pages, via the navbar */}
-          {/* full-bleed dark closer — the page ends on the ask */}
+          {/* the page ends the way a hire ends — the offer letter */}
           <DaySection>
             <FinalCTA />
           </DaySection>
