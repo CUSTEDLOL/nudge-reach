@@ -763,18 +763,3 @@ html {
     animation: none !important;
   }
 }
-
-/* Bento scenes rest quiet: the line art only plays while its card is
-   hovered (touch devices, with no hover, play always). */
-.fs-card * {
-  animation-play-state: paused !important;
-}
-.fs-card:hover * {
-  animation-play-state: running !important;
-}
-@media (hover: none) {
-  .fs-card * {
-    animation-play-state: running !important;
-  }
-}
-
