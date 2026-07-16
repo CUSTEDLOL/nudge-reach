@@ -824,11 +824,11 @@ html {
 }
 .reb-roof { animation: reb-roof 10s ease-out infinite; }
 @keyframes reb-roof {
-  0%, 28% { transform: translateY(-140px); opacity: 0; }
+  0%, 28% { transform: translateY(-90px); opacity: 0; }
   33% { opacity: 1; }
-  36% { transform: translateY(7px); }
+  36% { transform: translateY(4px); }
   39%, 96% { transform: translateY(0); opacity: 1; }
-  99%, 100% { transform: translateY(-140px); opacity: 0; }
+  99%, 100% { transform: translateY(-90px); opacity: 0; }
 }
 .reb-win { animation: reb-win 10s steps(1) infinite; }
 .reb-win1 { animation-name: reb-win-a; }
@@ -869,11 +869,11 @@ html {
 }
 .reb-sold { transform-origin: center bottom; animation: reb-sold 10s cubic-bezier(0.34, 1.56, 0.64, 1) infinite; }
 @keyframes reb-sold {
-  0%, 72% { transform: scale(0) rotate(-18deg); opacity: 0; }
-  78% { transform: scale(1.12) rotate(4deg); opacity: 1; }
-  81% { transform: scale(1) rotate(-3deg); }
-  96% { transform: scale(1) rotate(-3deg); opacity: 1; }
-  99%, 100% { transform: scale(0) rotate(-18deg); opacity: 0; }
+  0%, 72% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  78% { transform: scale(1.05) rotate(2deg); opacity: 1; }
+  81% { transform: scale(1) rotate(-2deg); }
+  96% { transform: scale(1) rotate(-2deg); opacity: 1; }
+  99%, 100% { transform: scale(0) rotate(-10deg); opacity: 0; }
 }
 
 /* ---- Restaurants: dinner service ---------------------------------- */
@@ -888,30 +888,30 @@ html {
 .rst-pan { transform-origin: 70% 100%; animation: rst-pan 10s ease-in-out infinite; }
 @keyframes rst-pan {
   0%, 38% { transform: rotate(0deg) translateY(0); }
-  41% { transform: rotate(-9deg) translateY(-12px); }
-  44% { transform: rotate(4deg) translateY(0); }
+  41% { transform: rotate(-5deg) translateY(-7px); }
+  44% { transform: rotate(2deg) translateY(0); }
   47%, 100% { transform: rotate(0deg) translateY(0); }
 }
 .rst-ing1 { animation: rst-ing-a 10s cubic-bezier(0.34, 1.3, 0.64, 1) infinite; }
 .rst-ing2 { animation: rst-ing-b 10s cubic-bezier(0.34, 1.3, 0.64, 1) infinite; }
 .rst-ing3 { animation: rst-ing-c 10s cubic-bezier(0.34, 1.3, 0.64, 1) infinite; }
 @keyframes rst-ing-a {
-  0%, 8% { transform: translateY(-280px); opacity: 0; }
+  0%, 8% { transform: translateY(-120px); opacity: 0; }
   9% { opacity: 1; }
   15%, 96% { transform: translateY(0); opacity: 1; }
-  99%, 100% { transform: translateY(-280px); opacity: 0; }
+  99%, 100% { transform: translateY(-120px); opacity: 0; }
 }
 @keyframes rst-ing-b {
-  0%, 18% { transform: translateY(-280px); opacity: 0; }
+  0%, 18% { transform: translateY(-120px); opacity: 0; }
   19% { opacity: 1; }
   25%, 96% { transform: translateY(0); opacity: 1; }
-  99%, 100% { transform: translateY(-280px); opacity: 0; }
+  99%, 100% { transform: translateY(-120px); opacity: 0; }
 }
 @keyframes rst-ing-c {
-  0%, 28% { transform: translateY(-280px); opacity: 0; }
+  0%, 28% { transform: translateY(-120px); opacity: 0; }
   29% { opacity: 1; }
   35%, 96% { transform: translateY(0); opacity: 1; }
-  99%, 100% { transform: translateY(-280px); opacity: 0; }
+  99%, 100% { transform: translateY(-120px); opacity: 0; }
 }
 .rst-steam1 { animation: rst-steam 3s ease-out infinite; }
 .rst-steam2 { animation: rst-steam 3.6s ease-out infinite; }
@@ -928,11 +928,11 @@ html {
 }
 .rst-dish { animation: rst-dish 10s ease-in-out infinite; }
 @keyframes rst-dish {
-  0%, 60% { transform: translate(134px, 288px) scale(0); opacity: 0; }
-  63% { transform: translate(134px, 288px) scale(1); opacity: 1; }
-  67% { transform: translate(206px, 224px) scale(1); }
-  72%, 96% { transform: translate(278px, 320px) scale(1); opacity: 1; }
-  99%, 100% { transform: translate(278px, 320px) scale(0); opacity: 0; }
+  0%, 60% { transform: translate(133px, 293px) scale(0); opacity: 0; }
+  63% { transform: translate(133px, 293px) scale(1); opacity: 1; }
+  67% { transform: translate(202px, 248px) scale(1); }
+  72%, 96% { transform: translate(272px, 326px) scale(1); opacity: 1; }
+  99%, 100% { transform: translate(272px, 326px) scale(0); opacity: 0; }
 }
 .rst-spark { transform-origin: center; animation: rst-spark 10s ease-out infinite; }
 @keyframes rst-spark {
@@ -955,16 +955,16 @@ html {
 }
 .cli-brush { animation: cli-brush 10s ease-in-out infinite; }
 @keyframes cli-brush {
-  0%, 6% { transform: translate(-180px, 150px) rotate(-12deg); opacity: 0; }
-  10% { transform: translate(50px, 148px) rotate(-4deg); opacity: 1; }
-  14% { transform: translate(116px, 150px) rotate(0deg); }
-  18% { transform: translate(64px, 160px) rotate(-3deg); }
-  22% { transform: translate(122px, 168px) rotate(2deg); }
-  26% { transform: translate(70px, 176px) rotate(-3deg); }
-  30% { transform: translate(126px, 184px) rotate(2deg); }
-  34% { transform: translate(76px, 184px) rotate(-2deg); opacity: 1; }
-  40% { transform: translate(-200px, 176px) rotate(-14deg); opacity: 0; }
-  100% { transform: translate(-200px, 176px) rotate(-14deg); opacity: 0; }
+  0%, 6% { transform: translate(-40px, 170px) rotate(-10deg); opacity: 0; }
+  10% { transform: translate(96px, 168px) rotate(-3deg); opacity: 1; }
+  14% { transform: translate(148px, 170px) rotate(0deg); }
+  18% { transform: translate(106px, 178px) rotate(-2deg); }
+  22% { transform: translate(152px, 186px) rotate(1.5deg); }
+  26% { transform: translate(110px, 192px) rotate(-2deg); }
+  30% { transform: translate(156px, 198px) rotate(1.5deg); }
+  34% { transform: translate(114px, 198px) rotate(-1.5deg); opacity: 1; }
+  40% { transform: translate(-60px, 190px) rotate(-12deg); opacity: 0; }
+  100% { transform: translate(-60px, 190px) rotate(-12deg); opacity: 0; }
 }
 .cli-spark { transform-origin: center; }
 .cli-spark1 { animation: cli-spark-a 10s ease-out infinite; }
@@ -1014,12 +1014,12 @@ html {
 }
 .sch-pencil { animation: sch-pencil 10s ease-in-out infinite; }
 @keyframes sch-pencil {
-  0%, 12% { transform: translate(40px, 300px); opacity: 0; }
-  16% { transform: translate(84px, 210px); opacity: 1; }
-  26% { transform: translate(168px, 200px); }
-  30% { transform: translate(84px, 236px); }
-  40% { transform: translate(168px, 226px); opacity: 1; }
-  46%, 100% { transform: translate(240px, 300px); opacity: 0; }
+  0%, 12% { transform: translate(70px, 290px); opacity: 0; }
+  16% { transform: translate(100px, 218px); opacity: 1; }
+  26% { transform: translate(168px, 210px); }
+  30% { transform: translate(100px, 240px); }
+  40% { transform: translate(168px, 232px); opacity: 1; }
+  46%, 100% { transform: translate(230px, 290px); opacity: 0; }
 }
 .sch-line { stroke-dasharray: 1; animation: sch-line-a 10s ease-in-out infinite; }
 .sch-line2 { animation-name: sch-line-b; }
@@ -1035,20 +1035,20 @@ html {
 }
 .sch-grade { transform-origin: center; animation: sch-grade 10s cubic-bezier(0.34, 1.56, 0.64, 1) infinite; }
 @keyframes sch-grade {
-  0%, 48% { transform: scale(0) rotate(-28deg); opacity: 0; }
-  53% { transform: scale(1.25) rotate(6deg); opacity: 1; }
-  56% { transform: scale(1) rotate(-8deg); }
-  96% { transform: scale(1) rotate(-8deg); opacity: 1; }
-  99%, 100% { transform: scale(0) rotate(-28deg); opacity: 0; }
+  0%, 48% { transform: scale(0) rotate(-14deg); opacity: 0; }
+  53% { transform: scale(1.1) rotate(3deg); opacity: 1; }
+  56% { transform: scale(1) rotate(-5deg); }
+  96% { transform: scale(1) rotate(-5deg); opacity: 1; }
+  99%, 100% { transform: scale(0) rotate(-14deg); opacity: 0; }
 }
 .sch-cap { animation: sch-cap 10s ease-in-out infinite; }
 @keyframes sch-cap {
-  0%, 62% { transform: translateY(200px) rotate(-16deg); opacity: 0; }
+  0%, 62% { transform: translateY(120px) rotate(-10deg); opacity: 0; }
   66% { opacity: 1; }
-  70% { transform: translateY(-12px) rotate(7deg); }
-  74% { transform: translateY(6px) rotate(-3deg); }
+  70% { transform: translateY(-8px) rotate(4deg); }
+  74% { transform: translateY(4px) rotate(-2deg); }
   77%, 96% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  99%, 100% { transform: translateY(200px) rotate(-16deg); opacity: 0; }
+  99%, 100% { transform: translateY(120px) rotate(-10deg); opacity: 0; }
 }
 .sch-star { transform-origin: center; }
 .sch-star1 { animation: sch-star-a 10s ease-out infinite; }
@@ -1075,16 +1075,16 @@ html {
 }
 .sal-shine { animation: sal-shine 10s ease-in-out infinite; }
 @keyframes sal-shine {
-  0%, 46% { transform: rotate(24deg) translateX(-80px); opacity: 0; }
-  50% { opacity: 0.55; }
-  60%, 100% { transform: rotate(24deg) translateX(360px); opacity: 0; }
+  0%, 46% { transform: rotate(24deg) translateX(-60px); opacity: 0; }
+  50% { opacity: 0.4; }
+  60%, 100% { transform: rotate(24deg) translateX(300px); opacity: 0; }
 }
 .sal-scissors { animation: sal-scissors 10s ease-in-out infinite; }
 @keyframes sal-scissors {
-  0%, 8% { transform: translate(60px, 332px); opacity: 0; }
-  12% { transform: translate(92px, 332px); opacity: 1; }
-  38% { transform: translate(240px, 332px); opacity: 1; }
-  44%, 100% { transform: translate(290px, 332px); opacity: 0; }
+  0%, 8% { transform: translate(84px, 322px); opacity: 0; }
+  12% { transform: translate(110px, 322px); opacity: 1; }
+  38% { transform: translate(226px, 322px); opacity: 1; }
+  44%, 100% { transform: translate(262px, 322px); opacity: 0; }
 }
 .sal-blade { transform-origin: left center; }
 .sal-bladeA { animation: sal-snip-a 0.5s ease-in-out infinite; }
