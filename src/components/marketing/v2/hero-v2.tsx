@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import { ArrowDown } from "lucide-react";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
@@ -58,15 +57,18 @@ export function HeroV2() {
       className="relative overflow-hidden bg-[#7fb2e8]"
       aria-label="Nudge — the AI Front Desk"
     >
-      {/* the day scene — spans both hero viewports, sky up top, clover below */}
-      <Image
-        src="/hero/park-day.jpg"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover object-top"
-      />
+      {/* the day scene — a living loop; the still is the poster/fallback */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster="/hero/park-day.jpg"
+        aria-hidden
+        className="absolute inset-0 h-full w-full object-cover object-top"
+      >
+        <source src="/hero/park-day.mp4" type="video/mp4" />
+      </video>
 
       {/* ---- viewport one: nameplate in the sky ---- */}
       <div className="relative flex h-[100svh] flex-col items-center justify-center">
