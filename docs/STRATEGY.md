@@ -83,6 +83,11 @@ flagship's price look reasonable next to a ₹22,000/mo hire. **All marketing le
 with the flagship.** Ten currencies are supported (INR, USD, AED, SAR, SGD, MYR,
 IDR, BRL, MXN, GBP).
 
+Full mechanics — setup fee + monthly + annual, per-market price sheet, competitive
+analysis, and pricing guardrails — live in **`docs/PRICING.md`**. (Note: PRICING.md
+proposes moving the Singapore flagship S$599 → S$699; adopt there before updating
+this table.)
+
 ## 7. Positioning of the existing feature set
 
 The CRM / shared inbox / campaigns / templates / automations / analytics we
