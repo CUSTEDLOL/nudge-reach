@@ -1,41 +1,259 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import {
-  Building2,
-  Check,
-  GraduationCap,
-  Scissors,
-  Stethoscope,
-  UtensilsCrossed,
-  type LucideIcon,
-} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Stagger, StaggerItem, useReducedMotionSafe } from "./motion-primitives";
 
 /* ------------------------------------------------------------------ *
- * THE BENTO, staged. At rest each card is silent: quiet grey, one
- * giant hollow word (REAL ESTATE · SALONS · …). Hover raises the
- * curtain — the trade's theme floods in, floating light orbs drift,
- * the watermark tilts in, and a real WhatsApp exchange types itself
- * out with spring physics. Touch devices play without hover;
- * reduced-motion shows the finished scene.
+ * THE BENTO, animated. At rest each card is silent: grey with one
+ * giant hollow word. Hover floods the trade's colour in and mounts a
+ * 10-second looping SVG story that fills the card — a house being
+ * built, dinner service, a tooth getting brushed, a lesson, a
+ * makeover. Scenes remount on every hover so the story always starts
+ * from the beginning. Choreography lives in globals.css keyframes
+ * (percentage-timed on one 10s cycle); reduced-motion shows the
+ * finished scene.
  * ------------------------------------------------------------------ */
 
-type Msg = { kind: "in" | "out"; text: string };
+/* ---------- Scene 1 · REAL ESTATE — the house goes up ------------- */
+function HouseScene() {
+  return (
+    <svg viewBox="0 0 720 400" preserveAspectRatio="xMidYMax slice" className="h-full w-full" aria-hidden>
+      {/* sun */}
+      <g className="reb-sun">
+        <circle cx="614" cy="86" r="34" fill="#ffd968" />
+        {Array.from({ length: 8 }).map((_, i) => {
+          const a = (i * Math.PI) / 4;
+          return (
+            <line
+              key={i}
+              x1={614 + Math.cos(a) * 46} y1={86 + Math.sin(a) * 46}
+              x2={614 + Math.cos(a) * 58} y2={86 + Math.sin(a) * 58}
+              stroke="#ffd968" strokeWidth="5" strokeLinecap="round"
+            />
+          );
+        })}
+      </g>
+      {/* ground */}
+      <rect x="0" y="356" width="720" height="44" fill="#07261c" opacity=".85" />
+      {/* crane */}
+      <g className="reb-crane">
+        <rect x="96" y="120" width="10" height="236" rx="3" fill="#07261c" />
+        <rect x="60" y="112" width="150" height="10" rx="4" fill="#07261c" />
+        <line x1="180" y1="122" x2="180" y2="164" stroke="#07261c" strokeWidth="4" />
+        <rect x="168" y="164" width="24" height="18" rx="3" fill="#f59e0b" />
+      </g>
+      {/* foundation */}
+      <rect className="reb-slab" x="270" y="340" width="240" height="16" rx="4" fill="#07261c" />
+      {/* storey 1 */}
+      <g className="reb-wall1">
+        <rect x="282" y="272" width="216" height="68" fill="#ffffff" />
+        <rect className="reb-win reb-win1" x="300" y="288" width="34" height="34" rx="5" fill="#ffd968" />
+        <rect className="reb-win reb-win2" x="446" y="288" width="34" height="34" rx="5" fill="#ffd968" />
+        <rect className="reb-door" x="372" y="292" width="36" height="48" rx="4" fill="#0a643c" />
+      </g>
+      {/* storey 2 */}
+      <g className="reb-wall2">
+        <rect x="282" y="212" width="216" height="60" fill="#ecfdf3" />
+        <rect className="reb-win reb-win3" x="310" y="226" width="32" height="32" rx="5" fill="#ffd968" />
+        <rect className="reb-win reb-win4" x="438" y="226" width="32" height="32" rx="5" fill="#ffd968" />
+      </g>
+      {/* roof + chimney */}
+      <g className="reb-roof">
+        <path d="M266 212 L390 132 L514 212 Z" fill="#0a643c" />
+        <rect x="452" y="146" width="22" height="46" rx="3" fill="#07261c" />
+      </g>
+      {/* smoke */}
+      <circle className="reb-smoke reb-smoke1" cx="463" cy="136" r="9" fill="#ffffff" opacity=".8" />
+      <circle className="reb-smoke reb-smoke2" cx="470" cy="136" r="7" fill="#ffffff" opacity=".7" />
+      {/* SOLD sign */}
+      <g className="reb-sold">
+        <rect x="176" y="286" width="8" height="70" rx="3" fill="#07261c" />
+        <rect x="140" y="258" width="84" height="40" rx="8" fill="#06c167" />
+        <text x="182" y="285" textAnchor="middle" fontSize="19" fontWeight="800" fill="#ffffff" fontFamily="inherit" letterSpacing="1">
+          SOLD
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+/* ---------- Scene 2 · RESTAURANTS — dinner service ----------------- */
+function KitchenScene() {
+  return (
+    <svg viewBox="0 0 360 400" preserveAspectRatio="xMidYMax slice" className="h-full w-full" aria-hidden>
+      {/* counter */}
+      <rect x="0" y="330" width="360" height="70" fill="#7c2d12" opacity=".9" />
+      {/* stove */}
+      <rect x="60" y="318" width="130" height="14" rx="6" fill="#431407" />
+      {/* flames */}
+      <g className="rst-flame rst-flame1"><path d="M104 316 q6 -20 12 0 q-6 8 -12 0" fill="#f97316" /></g>
+      <g className="rst-flame rst-flame2"><path d="M126 316 q6 -24 12 0 q-6 8 -12 0" fill="#fb923c" /></g>
+      <g className="rst-flame rst-flame3"><path d="M148 316 q6 -18 12 0 q-6 8 -12 0" fill="#f97316" /></g>
+      {/* pan */}
+      <g className="rst-pan">
+        <path d="M78 296 h112 a10 10 0 0 1 -10 16 h-92 a10 10 0 0 1 -10 -16 Z" fill="#1c1917" />
+        <rect x="186" y="296" width="58" height="9" rx="4.5" fill="#44403c" />
+        {/* food in the pan */}
+        <circle className="rst-ing rst-ing1" cx="110" cy="290" r="10" fill="#ef4444" />
+        <circle className="rst-ing rst-ing2" cx="134" cy="290" r="9" fill="#fde68a" />
+        <circle className="rst-ing rst-ing3" cx="158" cy="290" r="9" fill="#84cc16" />
+      </g>
+      {/* steam */}
+      <path className="rst-steam rst-steam1" d="M118 268 q-8 -14 0 -26 q8 -12 0 -24" stroke="#ffffff" strokeWidth="6" strokeLinecap="round" fill="none" opacity=".7" />
+      <path className="rst-steam rst-steam2" d="M150 262 q8 -14 0 -26 q-8 -12 0 -24" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" fill="none" opacity=".55" />
+      {/* plate */}
+      <g className="rst-plate">
+        <ellipse cx="278" cy="336" rx="52" ry="12" fill="#ffffff" />
+        <ellipse cx="278" cy="332" rx="36" ry="8" fill="#f5f5f4" />
+      </g>
+      {/* the dish arcs to the plate */}
+      <g className="rst-dish">
+        <circle cx="0" cy="0" r="16" fill="#f97316" />
+        <circle cx="-6" cy="-4" r="5" fill="#ef4444" />
+        <circle cx="7" cy="-3" r="4" fill="#84cc16" />
+      </g>
+      {/* serve sparkle */}
+      <g className="rst-spark">
+        <path d="M278 268 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 Z" fill="#ffd968" />
+        <circle cx="308" cy="292" r="4" fill="#ffd968" />
+        <circle cx="248" cy="284" r="3" fill="#ffd968" />
+      </g>
+    </svg>
+  );
+}
+
+/* ---------- Scene 3 · CLINICS — the happy tooth -------------------- */
+function ToothScene() {
+  return (
+    <svg viewBox="0 0 360 400" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      {/* pulse line */}
+      <path
+        className="cli-pulse"
+        d="M20 122 h70 l16 -26 20 52 16 -26 h198"
+        stroke="#0369a1" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none"
+        pathLength="1"
+      />
+      {/* tooth */}
+      <g className="cli-tooth">
+        <path
+          d="M120 190 q0 -60 60 -60 q60 0 60 60 q0 34 -14 62 q-10 22 -18 58 q-4 16 -14 16 q-10 0 -12 -16 l-4 -34 q-2 -14 -8 -14 q-6 0 -8 14 l-4 34 q-2 16 -12 16 q-10 0 -14 -16 q-8 -36 -18 -58 q-14 -28 -14 -62 Z"
+          fill="#ffffff" stroke="#0c4a6e" strokeWidth="6" strokeLinejoin="round"
+        />
+        {/* eyes */}
+        <circle className="cli-eye" cx="160" cy="182" r="6" fill="#0c4a6e" />
+        <circle className="cli-eye" cx="200" cy="182" r="6" fill="#0c4a6e" />
+        {/* smile draws in */}
+        <path className="cli-smile" d="M154 208 q26 22 52 0" stroke="#0c4a6e" strokeWidth="6" strokeLinecap="round" fill="none" pathLength="1" />
+        {/* blush */}
+        <circle className="cli-blush" cx="140" cy="200" r="7" fill="#7dd3fc" opacity=".7" />
+        <circle className="cli-blush" cx="220" cy="200" r="7" fill="#7dd3fc" opacity=".7" />
+      </g>
+      {/* toothbrush */}
+      <g className="cli-brush">
+        <rect x="0" y="0" width="86" height="16" rx="8" fill="#0284c7" />
+        <rect x="78" y="-10" width="34" height="26" rx="6" fill="#ffffff" stroke="#0284c7" strokeWidth="4" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <line key={i} x1={84 + i * 7} y1="-10" x2={84 + i * 7} y2="16" stroke="#bae6fd" strokeWidth="3" />
+        ))}
+      </g>
+      {/* sparkles */}
+      <g className="cli-spark cli-spark1"><path d="M120 130 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 Z" fill="#38bdf8" /></g>
+      <g className="cli-spark cli-spark2"><path d="M236 122 l3.5 9 9 3.5 -9 3.5 -3.5 9 -3.5 -9 -9 -3.5 9 -3.5 Z" fill="#7dd3fc" /></g>
+      <g className="cli-spark cli-spark3"><circle cx="250" cy="168" r="5" fill="#38bdf8" /></g>
+    </svg>
+  );
+}
+
+/* ---------- Scene 4 · SCHOOLS — the lesson ------------------------- */
+function LessonScene() {
+  return (
+    <svg viewBox="0 0 360 400" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      {/* desk */}
+      <rect x="30" y="300" width="300" height="12" rx="6" fill="#4c1d95" opacity=".85" />
+      {/* book */}
+      <g className="sch-book">
+        <path d="M60 296 q60 -22 120 0 l0 -132 q-60 -22 -120 0 Z" fill="#ffffff" stroke="#6d28d9" strokeWidth="5" strokeLinejoin="round" />
+        <path d="M300 296 q-60 -22 -120 0 l0 -132 q60 -22 120 0 Z" fill="#f5f3ff" stroke="#6d28d9" strokeWidth="5" strokeLinejoin="round" />
+        {/* the written line draws as the pencil moves */}
+        <path className="sch-line" d="M84 210 q40 -12 84 -2" stroke="#8b5cf6" strokeWidth="5" strokeLinecap="round" fill="none" pathLength="1" />
+        <path className="sch-line sch-line2" d="M84 236 q40 -12 84 -2" stroke="#c4b5fd" strokeWidth="5" strokeLinecap="round" fill="none" pathLength="1" />
+      </g>
+      {/* pencil */}
+      <g className="sch-pencil">
+        <rect x="-8" y="-52" width="14" height="44" rx="4" fill="#f59e0b" transform="rotate(32)" />
+        <path d="M0 0 l10 -14 4 12 Z" transform="rotate(32)" fill="#7c2d12" />
+      </g>
+      {/* A+ stamp */}
+      <g className="sch-grade">
+        <circle cx="262" cy="196" r="34" fill="#8b5cf6" />
+        <text x="262" y="208" textAnchor="middle" fontSize="32" fontWeight="800" fill="#ffffff" fontFamily="inherit">A+</text>
+      </g>
+      {/* graduation cap */}
+      <g className="sch-cap">
+        <path d="M130 118 l60 -24 60 24 -60 24 Z" fill="#1e1b4b" />
+        <path d="M162 132 l0 26 q28 14 56 0 l0 -26" fill="none" stroke="#1e1b4b" strokeWidth="10" />
+        <line x1="250" y1="118" x2="250" y2="150" stroke="#f59e0b" strokeWidth="4" />
+        <circle cx="250" cy="154" r="5" fill="#f59e0b" />
+      </g>
+      {/* stars */}
+      <g className="sch-star sch-star1"><path d="M84 120 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5 Z" fill="#a78bfa" /></g>
+      <g className="sch-star sch-star2"><path d="M292 96 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 Z" fill="#c4b5fd" /></g>
+    </svg>
+  );
+}
+
+/* ---------- Scene 5 · SALONS — the makeover ------------------------ */
+function SalonScene() {
+  return (
+    <svg viewBox="0 0 360 400" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      {/* mirror */}
+      <g className="sal-mirror">
+        <ellipse cx="180" cy="180" rx="104" ry="128" fill="#fffbeb" stroke="#b45309" strokeWidth="7" />
+        <ellipse cx="180" cy="180" rx="86" ry="110" fill="#fef3c7" />
+        {/* shine sweep */}
+        <rect className="sal-shine" x="-40" y="40" width="34" height="300" fill="#ffffff" opacity=".55" transform="rotate(24 180 180)" />
+      </g>
+      {/* dotted cut line */}
+      <line x1="92" y1="332" x2="268" y2="332" stroke="#b45309" strokeWidth="3" strokeDasharray="2 10" strokeLinecap="round" />
+      {/* falling hair strands */}
+      <path className="sal-hair sal-hair1" d="M120 336 q6 10 -2 20" stroke="#78350f" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <path className="sal-hair sal-hair2" d="M170 336 q-6 10 2 20" stroke="#92400e" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <path className="sal-hair sal-hair3" d="M220 336 q6 10 -2 18" stroke="#78350f" strokeWidth="4" strokeLinecap="round" fill="none" />
+      {/* scissors travel the line */}
+      <g className="sal-scissors">
+        <g className="sal-blade sal-bladeA">
+          <path d="M0 0 L44 -12" stroke="#57534e" strokeWidth="7" strokeLinecap="round" />
+        </g>
+        <g className="sal-blade sal-bladeB">
+          <path d="M0 0 L44 12" stroke="#78716c" strokeWidth="7" strokeLinecap="round" />
+        </g>
+        <circle cx="-8" cy="-9" r="8" fill="none" stroke="#b45309" strokeWidth="5" />
+        <circle cx="-8" cy="9" r="8" fill="none" stroke="#b45309" strokeWidth="5" />
+      </g>
+      {/* sparkles in the mirror */}
+      <g className="sal-spark sal-spark1"><path d="M150 150 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5 Z" fill="#f59e0b" /></g>
+      <g className="sal-spark sal-spark2"><path d="M212 128 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 Z" fill="#fbbf24" /></g>
+      <g className="sal-spark sal-spark3"><circle cx="222" cy="212" r="6" fill="#fbbf24" /></g>
+      {/* bloom heart */}
+      <path
+        className="sal-heart"
+        d="M180 232 q-4 -12 -16 -12 q-16 0 -16 16 q0 18 32 34 q32 -16 32 -34 q0 -16 -16 -16 q-12 0 -16 12 Z"
+        fill="#f43f5e"
+      />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 
 type Scene = {
   word: string;
   eyebrow: string;
   title: string;
-  sub: string;
-  icon: LucideIcon;
-  /** Hover wash. */
   theme: string;
   accent: string;
-  thread: Msg[];
-  chip: string;
+  art: React.ReactNode;
   wide?: boolean;
 };
 
@@ -43,80 +261,45 @@ const SCENES: Scene[] = [
   {
     word: "REAL ESTATE",
     eyebrow: "Real estate",
-    title: "Chases every lead.",
-    sub: "Until the site visit lands.",
-    icon: Building2,
-    theme: "linear-gradient(150deg, #dcf3e7 0%, #edf8f1 55%, #f4faf6 100%)",
-    accent: "#06c167",
-    thread: [
-      { kind: "in", text: "Is the 2BHK in Andheri still available?" },
-      { kind: "out", text: "Yes — site visit Sunday 11 AM? I'll send the pin." },
-      { kind: "in", text: "Sunday works 👍" },
-      { kind: "out", text: "Locked ✓ Pin coming Saturday evening." },
-    ],
-    chip: "Site visit scheduled",
+    title: "Chases every lead until the deal closes.",
+    theme: "linear-gradient(160deg, #aee6c9 0%, #7fd8ab 60%, #5ecc97 100%)",
+    accent: "#047f48",
+    art: <HouseScene />,
     wide: true,
   },
   {
     word: "SCHOOLS",
     eyebrow: "Schools & institutions",
-    title: "Replies in seconds.",
-    sub: "Before the next place does.",
-    icon: GraduationCap,
-    theme: "linear-gradient(150deg, #eae3fa 0%, #f2eefb 55%, #f6f4fa 100%)",
-    accent: "#8b5cf6",
-    thread: [
-      { kind: "in", text: "Fees for the NEET batch?" },
-      { kind: "out", text: "₹45,000/year — free demo Saturday 11 AM. Reserve a seat?" },
-    ],
-    chip: "Demo reserved",
+    title: "Replies before the next place does.",
+    theme: "linear-gradient(160deg, #d5c8f7 0%, #b9a3f2 60%, #a488ee 100%)",
+    accent: "#5b21b6",
+    art: <LessonScene />,
   },
   {
     word: "CLINICS",
     eyebrow: "Dental, clinics & hospitals",
     title: "Cuts the no-shows.",
-    sub: "A reminder the evening before.",
-    icon: Stethoscope,
-    theme: "linear-gradient(150deg, #dcedfa 0%, #eaf3fb 55%, #f2f7fb 100%)",
-    accent: "#0ea5e9",
-    thread: [
-      { kind: "in", text: "Can I move my cleaning to Thursday?" },
-      { kind: "out", text: "Done — Thursday 6 PM ✓ I'll remind you the evening before." },
-    ],
-    chip: "No-show avoided",
+    theme: "linear-gradient(160deg, #bfe0f7 0%, #93cdf3 60%, #6fbdf0 100%)",
+    accent: "#075985",
+    art: <ToothScene />,
   },
   {
     word: "RESTAURANTS",
     eyebrow: "Restaurants & cafés",
     title: "Fills every table.",
-    sub: "Even at full tilt.",
-    icon: UtensilsCrossed,
-    theme: "linear-gradient(150deg, #fbe7d5 0%, #fdf1e6 55%, #fbf5ef 100%)",
-    accent: "#f97316",
-    thread: [
-      { kind: "in", text: "Table for 4 tonight?" },
-      { kind: "out", text: "8 PM by the window — reserved for you 🎉" },
-    ],
-    chip: "Table confirmed",
+    theme: "linear-gradient(160deg, #fbd3a4 0%, #f8bd7d 60%, #f5aa5c 100%)",
+    accent: "#9a3412",
+    art: <KitchenScene />,
   },
   {
     word: "SALONS",
     eyebrow: "Salons & spas",
-    title: "Takes the deposit.",
-    sub: "Locks the chair, cuts no-shows.",
-    icon: Scissors,
-    theme: "linear-gradient(150deg, #f9eecb 0%, #fbf4de 55%, #faf7ec 100%)",
-    accent: "#ca8a04",
-    thread: [
-      { kind: "in", text: "Any slot tomorrow evening?" },
-      { kind: "out", text: "4:30 PM with Priya — ₹200 deposit link sent 🔒" },
-    ],
-    chip: "₹200 collected",
+    title: "Takes the deposit, locks the chair.",
+    theme: "linear-gradient(160deg, #f7e3a1 0%, #f2d478 60%, #edc457 100%)",
+    accent: "#92400e",
+    art: <SalonScene />,
   },
 ];
-
-const STEP_MS = 800;
-const TYPING_MS = 900;
 
 /** Shared "(hover: none)" subscription — phones play without a cursor. */
 function useCoarsePointer() {
@@ -131,180 +314,41 @@ function useCoarsePointer() {
   return coarse;
 }
 
-function Typing({ accent }: { accent: string }) {
-  return (
-    <div className="flex items-center gap-1 self-end rounded-2xl rounded-br-md bg-[#d9fdd3] px-3.5 py-2.5 shadow-[0_1px_2px_rgba(11,20,26,0.08)]">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-1.5 w-1.5 animate-bounce rounded-full"
-          style={{ animationDelay: `${i * 150}ms`, backgroundColor: `${accent}77` }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** The exchange, typed out while `playing`; `instant` renders it finished. */
-function Thread({
-  scene,
-  playing,
-  instant,
-}: {
-  scene: Scene;
-  playing: boolean;
-  instant: boolean;
-}) {
-  const [shown, setShown] = useState(0);
-  const [typing, setTyping] = useState(false);
-  const visible = instant ? scene.thread.length : shown;
-  const done = visible >= scene.thread.length;
-
-  useEffect(() => {
-    if (instant) return;
-    let alive = true;
-    let t: ReturnType<typeof setTimeout>;
-    if (!playing) {
-      t = setTimeout(() => {
-        if (!alive) return;
-        setShown(0);
-        setTyping(false);
-      }, 0);
-      return () => {
-        alive = false;
-        clearTimeout(t);
-      };
-    }
-    const step = (i: number) => {
-      if (!alive || i >= scene.thread.length) return;
-      if (scene.thread[i].kind === "out") {
-        setTyping(true);
-        t = setTimeout(() => {
-          if (!alive) return;
-          setTyping(false);
-          setShown(i + 1);
-          t = setTimeout(() => step(i + 1), STEP_MS);
-        }, TYPING_MS);
-      } else {
-        setShown(i + 1);
-        t = setTimeout(() => step(i + 1), STEP_MS);
-      }
-    };
-    t = setTimeout(() => step(0), 350);
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [playing, scene, instant]);
-
-  return (
-    <div className="flex flex-col justify-end gap-2">
-      {scene.thread.slice(0, visible).map((m, i) => (
-        <motion.div
-          key={i}
-          layout
-          initial={instant ? false : { opacity: 0, y: 12, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 440, damping: 30 }}
-          className={cn(
-            "max-w-[88%] rounded-2xl px-3.5 py-2 text-[12.5px] leading-snug shadow-[0_1px_2px_rgba(11,20,26,0.08)]",
-            m.kind === "out"
-              ? "self-end rounded-br-md bg-[#d9fdd3] text-[#111b21]"
-              : "self-start rounded-bl-md bg-white text-ink/85"
-          )}
-        >
-          {m.text}
-        </motion.div>
-      ))}
-      <AnimatePresence>
-        {typing && (
-          <motion.div
-            layout
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85 }}
-            transition={{ duration: 0.16 }}
-            className="flex flex-col"
-          >
-            <Typing accent={scene.accent} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {done && (
-          <motion.div
-            layout
-            initial={instant ? false : { opacity: 0, y: 8, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 380, damping: 26, delay: 0.2 }}
-            className="mt-0.5 flex items-center gap-1.5 self-start pl-0.5 text-[11.5px] font-semibold text-ink/60"
-          >
-            <span
-              className="grid h-4 w-4 place-items-center rounded-full"
-              style={{ backgroundColor: "var(--c1)" }}
-            >
-              <Check className="h-2.5 w-2.5 text-white" aria-hidden />
-            </span>
-            {scene.chip}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 function SceneCard({ scene }: { scene: Scene }) {
   const [hov, setHov] = useState(false);
   const coarse = useCoarsePointer();
   const reduce = useReducedMotionSafe();
   const engaged = hov || coarse || reduce;
-  const Icon = scene.icon;
 
   return (
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      className="relative h-full min-h-[23rem] overflow-hidden rounded-3xl border border-black/[0.05] bg-[#f5f5f7] transition-shadow duration-500"
+      className="relative h-full min-h-[24rem] overflow-hidden rounded-3xl border border-black/[0.05] bg-[#f5f5f7] transition-shadow duration-500"
       style={
         {
           "--c1": scene.accent,
           boxShadow: engaged
-            ? "0 30px 60px -34px rgba(10,31,26,0.3)"
+            ? "0 34px 64px -34px rgba(10,31,26,0.38)"
             : "0 16px 36px -30px rgba(10,31,26,0.18)",
         } as CSSProperties
       }
     >
-      {/* theme wash */}
+      {/* theme flood */}
       <div
         aria-hidden
-        className="absolute inset-0 transition-opacity duration-700"
+        className="absolute inset-0 transition-opacity duration-500"
         style={{ background: scene.theme, opacity: engaged ? 1 : 0 }}
       />
-      {/* drifting light orbs */}
-      <div
-        aria-hidden
-        className="absolute -left-10 top-8 h-44 w-44 rounded-full blur-3xl transition-opacity duration-700 motion-safe:animate-float"
-        style={{ backgroundColor: `${scene.accent}2e`, opacity: engaged ? 1 : 0 }}
-      />
-      <div
-        aria-hidden
-        className="absolute -bottom-12 right-6 h-52 w-52 rounded-full blur-3xl transition-opacity duration-700 motion-safe:animate-float-slow"
-        style={{ backgroundColor: `${scene.accent}24`, opacity: engaged ? 1 : 0 }}
-      />
-      {/* watermark */}
-      <Icon
-        aria-hidden
-        className="pointer-events-none absolute -bottom-8 -right-8 h-48 w-48 transition-all duration-700"
-        style={{
-          color: scene.accent,
-          opacity: engaged ? 0.1 : 0,
-          transform: engaged
-            ? "rotate(-10deg) scale(1)"
-            : "rotate(4deg) scale(0.85)",
-        }}
-      />
 
-      {/* the resting word — a giant hollow nameplate */}
+      {/* the story — remounts on every hover so it plays from the top */}
+      {engaged && (
+        <div className={cn("story-scene absolute inset-0", reduce && "story-done")}>
+          {scene.art}
+        </div>
+      )}
+
+      {/* resting nameplate */}
       <div
         aria-hidden
         className="absolute inset-0 grid place-items-center px-6 transition-all duration-500"
@@ -326,32 +370,25 @@ function SceneCard({ scene }: { scene: Scene }) {
         </span>
       </div>
 
-      {/* the staged scene */}
+      {/* title overlay */}
       <div
         className={cn(
-          "relative flex h-full flex-col p-6 transition-all duration-500 sm:p-7",
-          engaged ? "opacity-100" : "pointer-events-none opacity-0",
-          !engaged && "translate-y-3"
+          "pointer-events-none absolute inset-x-0 top-0 p-5 transition-all duration-500 sm:p-6",
+          engaged ? "opacity-100" : "translate-y-2 opacity-0"
         )}
       >
         <span
-          className="self-start rounded-full px-3 py-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.18em] text-white"
+          className="rounded-full px-3 py-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.18em] text-white"
           style={{ backgroundColor: scene.accent }}
         >
           {scene.eyebrow}
         </span>
-        <h3 className="mt-3 font-display text-[1.5rem] font-black leading-tight tracking-[-0.02em] text-ink sm:text-[1.7rem]">
+        <h3
+          className="mt-2.5 max-w-xs font-display text-[1.35rem] font-black leading-tight tracking-[-0.02em] sm:text-[1.5rem]"
+          style={{ color: scene.accent }}
+        >
           {scene.title}
         </h3>
-        <p className="mt-1 text-[13px] font-medium text-ink/55">{scene.sub}</p>
-        <div
-          className={cn(
-            "mt-auto pt-5",
-            scene.wide && "sm:max-w-md sm:self-end sm:pr-2"
-          )}
-        >
-          <Thread scene={scene} playing={engaged} instant={reduce} />
-        </div>
       </div>
     </div>
   );
