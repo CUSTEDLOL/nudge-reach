@@ -2,78 +2,139 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  GraduationCap,
+  HeartPulse,
+  Scissors,
+  UtensilsCrossed,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Container, Section } from "./section";
 import { Reveal, useReducedMotionSafe } from "./motion-primitives";
 
 /* ------------------------------------------------------------------ *
- * THE SHIFT RAIL — Apple-gallery treatment: a rolling verb in the
- * headline, then a horizontal snap rail of quiet grey cards (one per
- * trade, one WhatsApp moment each), segmented autoplay bars, chevrons.
- * Minimal: #f5f5f7 cards, ink type, one green accent.
+ * THE SHIFT STAGE — one big card, centre stage, big arrows either
+ * side. At rest the card is quiet grey; on hover the trade's theme
+ * washes in and the WhatsApp exchange types itself out. Each trade has
+ * its own palette and watermark. Touch/reduced-motion visitors get the
+ * theme and thread without needing hover.
  * ------------------------------------------------------------------ */
 
 const VERBS = ["answers.", "books.", "chases.", "collects."];
 
-type Card = {
+type Msg = { kind: "in" | "out"; text: string };
+
+type Trade = {
   label: string;
   line: string;
-  chat: { inbound: string; reply: string; chip: string };
+  icon: LucideIcon;
+  /** Soft wash the card fades to on hover. */
+  theme: string;
+  /** The trade's accent (chips, watermark, active bar). */
+  accent: string;
+  thread: Msg[];
+  chip: string;
 };
 
-const CARDS: Card[] = [
+const TRADES: Trade[] = [
   {
     label: "Clinics",
     line: "Every ₹40,000 lead answered in seconds.",
-    chat: {
-      inbound: "How much is a hair transplant?",
-      reply: "Most cases ₹35–60k. Dr. Mehta has a free consult Thursday 6 PM — hold it?",
-      chip: "Consult booked",
-    },
+    icon: HeartPulse,
+    theme: "linear-gradient(150deg, #fdf0f3 0%, #faf6f7 55%, #f5f5f7 100%)",
+    accent: "#e11d48",
+    thread: [
+      { kind: "in", text: "How much is a hair transplant? Saw your ad." },
+      { kind: "out", text: "Most cases ₹35–60k depending on grafts. Dr. Mehta has a free consult Thursday 6 PM — hold it for you?" },
+      { kind: "in", text: "Yes please" },
+      { kind: "out", text: "Done — Thursday 6 PM ✓ I'll remind you the evening before." },
+    ],
+    chip: "Consult booked · reminder set",
+  },
+  {
+    label: "Restaurants & cafés",
+    line: "Full tables. Zero missed chats.",
+    icon: UtensilsCrossed,
+    theme: "linear-gradient(150deg, #fdf3ea 0%, #fbf7f2 55%, #f5f5f7 100%)",
+    accent: "#ea770c",
+    thread: [
+      { kind: "in", text: "Table for 4 tonight?" },
+      { kind: "out", text: "8 PM by the window is free — shall I reserve it?" },
+      { kind: "in", text: "Perfect 🎉" },
+      { kind: "out", text: "Reserved ✓ See you at 8 — I'll send a reminder at 6." },
+    ],
+    chip: "Reservation confirmed",
   },
   {
     label: "Salons & spas",
     line: "Chairs stay full. The phone stays down.",
-    chat: {
-      inbound: "Any slot tomorrow evening?",
-      reply: "4:30 PM with Priya is open — booked you in ✓",
-      chip: "Reminder set · 9 AM",
-    },
+    icon: Scissors,
+    theme: "linear-gradient(150deg, #f6f0fb 0%, #f8f5fa 55%, #f5f5f7 100%)",
+    accent: "#8b5cf6",
+    thread: [
+      { kind: "in", text: "Any slot tomorrow evening?" },
+      { kind: "out", text: "4:30 PM with Priya is open — book you in?" },
+      { kind: "in", text: "Yes 💇‍♀️" },
+      { kind: "out", text: "Booked ✓ Reminder coming tomorrow morning." },
+    ],
+    chip: "Reminder set · 9 AM",
   },
   {
     label: "Real estate",
     line: "Leads chased for weeks, not hours.",
-    chat: {
-      inbound: "Is the 2BHK in Andheri still available?",
-      reply: "Yes — site visit Sunday 11 AM? I'll send the pin.",
-      chip: "Site visit scheduled",
-    },
+    icon: Building2,
+    theme: "linear-gradient(150deg, #ecf4fb 0%, #f2f6fa 55%, #f5f5f7 100%)",
+    accent: "#0284c7",
+    thread: [
+      { kind: "in", text: "Is the 2BHK in Andheri still available?" },
+      { kind: "out", text: "Yes — ₹1.4Cr, ready to move. Site visit Sunday 11 AM? I'll send the pin." },
+      { kind: "in", text: "Sunday works" },
+      { kind: "out", text: "Locked ✓ Pin and parking details coming Saturday evening." },
+    ],
+    chip: "Site visit scheduled",
   },
   {
     label: "Coaching",
     line: "Answered before parents dial the next institute.",
-    chat: {
-      inbound: "Fees for the NEET batch?",
-      reply: "₹45,000/year — free demo Saturday 11 AM. Reserve a seat?",
-      chip: "Demo reserved",
-    },
+    icon: GraduationCap,
+    theme: "linear-gradient(150deg, #fdf6e7 0%, #fbf8f0 55%, #f5f5f7 100%)",
+    accent: "#d97706",
+    thread: [
+      { kind: "in", text: "What are the fees for the NEET batch?" },
+      { kind: "out", text: "₹45,000/year, weekday evenings. Free demo Saturday 11 AM — reserve a seat?" },
+      { kind: "in", text: "Yes, for my daughter" },
+      { kind: "out", text: "Reserved ✓ Classroom details coming Friday." },
+    ],
+    chip: "Demo class reserved",
   },
   {
-    label: "Local services",
+    label: "Gyms & services",
     line: "Quotes in seconds. Deposits upfront.",
-    chat: {
-      inbound: "How much for AC servicing?",
-      reply: "₹599 — technician free tomorrow 10 AM. Book it?",
-      chip: "₹200 collected",
-    },
+    icon: Dumbbell,
+    theme: "linear-gradient(150deg, #eaf7f1 0%, #f1f8f4 55%, #f5f5f7 100%)",
+    accent: "#0d9488",
+    thread: [
+      { kind: "in", text: "How much for AC servicing?" },
+      { kind: "out", text: "₹599 full service. Technician free tomorrow 10 AM — book with a ₹200 deposit?" },
+      { kind: "in", text: "Booking it" },
+      { kind: "out", text: "Done ✓ Tomorrow 10 AM — deposit link sent." },
+    ],
+    chip: "₹200 collected",
   },
 ];
 
-const ADVANCE_MS = 3600;
+const STEP_MS = 850;
+const TYPING_MS = 950;
 
-/** Vertical word roller — one verb visible, the next rolls up into place. */
+/** Vertical word roller for the headline. */
 function Roller() {
   const reduce = useReducedMotionSafe();
   const [i, setI] = useState(0);
@@ -86,207 +147,290 @@ function Roller() {
 
   if (reduce) return <span className="text-brand-600">answers.</span>;
 
+  // A slot-machine column: every verb is stacked inside the clipped window
+  // and the whole column translates — nothing ever animates out of the clip.
   return (
-    <span className="relative inline-block h-[1.18em] w-[4.6em] overflow-hidden align-bottom [clip-path:inset(0)]">
-      <AnimatePresence initial={false}>
-        <motion.span
-          key={VERBS[i]}
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "-100%" }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute left-0 top-0 text-brand-600"
-        >
-          {VERBS[i]}
-        </motion.span>
-      </AnimatePresence>
+    <span className="relative inline-block h-[1.15em] w-[4.6em] overflow-hidden align-bottom">
+      <motion.span
+        className="absolute left-0 top-0 flex flex-col"
+        animate={{ y: `${-i * 1.15}em` }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {VERBS.map((v) => (
+          <span key={v} className="h-[1.15em] leading-[1.15] text-brand-600">
+            {v}
+          </span>
+        ))}
+      </motion.span>
     </span>
   );
 }
 
-function TradeCard({ card }: { card: Card }) {
+function Typing({ accent }: { accent: string }) {
   return (
-    <article className="flex h-[24rem] w-[19rem] shrink-0 snap-center flex-col rounded-[28px] bg-[#f5f5f7] p-7 sm:h-[26rem] sm:w-[21rem] sm:snap-start">
-      <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-ink/40">
-        {card.label}
-      </p>
-      <h3 className="serif-display mt-3 text-[1.45rem] leading-[1.2] text-ink sm:text-[1.6rem]">
-        {card.line}
-      </h3>
+    <div className="flex items-center gap-1 self-end rounded-2xl rounded-br-md bg-[#d9fdd3] px-4 py-3 shadow-[0_1px_2px_rgba(11,20,26,0.06)]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-1.5 w-1.5 animate-bounce rounded-full"
+          style={{ animationDelay: `${i * 150}ms`, backgroundColor: `${accent}66` }}
+        />
+      ))}
+    </div>
+  );
+}
 
-      {/* one WhatsApp moment */}
-      <div className="mt-auto flex flex-col gap-2">
-        <div className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-[12.5px] leading-snug text-ink/85 shadow-[0_1px_2px_rgba(11,20,26,0.06)]">
-          {card.chat.inbound}
-        </div>
-        <div className="max-w-[92%] self-end rounded-2xl rounded-br-md bg-[#d9fdd3] px-3.5 py-2.5 text-[12.5px] leading-snug text-[#111b21] shadow-[0_1px_2px_rgba(11,20,26,0.06)]">
-          {card.chat.reply}
-        </div>
-        <div className="mt-1 flex items-center gap-1.5 self-start pl-1 text-[11.5px] font-semibold text-ink/55">
-          <span className="grid h-4 w-4 place-items-center rounded-full bg-brand-500">
-            <Check className="h-2.5 w-2.5 text-white" aria-hidden />
-          </span>
-          {card.chat.chip}
-        </div>
-      </div>
-    </article>
+/** The conversation, typed out while `playing`; resets when it stops.
+ * The reset happens in the scheduled tick (never synchronously in the
+ * effect body) so pausing simply lets the pipeline drain. */
+function Thread({ trade, playing }: { trade: Trade; playing: boolean }) {
+  const [shown, setShown] = useState(0);
+  const [typing, setTyping] = useState(false);
+  const done = shown >= trade.thread.length;
+
+  useEffect(() => {
+    let alive = true;
+    let t: ReturnType<typeof setTimeout>;
+    if (!playing) {
+      t = setTimeout(() => {
+        if (!alive) return;
+        setShown(0);
+        setTyping(false);
+      }, 0);
+      return () => {
+        alive = false;
+        clearTimeout(t);
+      };
+    }
+    const step = (i: number) => {
+      if (!alive || i >= trade.thread.length) return;
+      if (trade.thread[i].kind === "out") {
+        setTyping(true);
+        t = setTimeout(() => {
+          if (!alive) return;
+          setTyping(false);
+          setShown(i + 1);
+          t = setTimeout(() => step(i + 1), STEP_MS);
+        }, TYPING_MS);
+      } else {
+        setShown(i + 1);
+        t = setTimeout(() => step(i + 1), STEP_MS);
+      }
+    };
+    t = setTimeout(() => step(0), 300);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [playing, trade]);
+
+  return (
+    <div className="flex min-h-[13.5rem] flex-col justify-end gap-2 sm:min-h-[14.5rem]">
+      {trade.thread.slice(0, shown).map((m, i) => (
+        <motion.div
+          key={i}
+          layout
+          initial={{ opacity: 0, y: 10, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className={cn(
+            "max-w-[85%] rounded-2xl px-4 py-2.5 text-[13.5px] leading-snug shadow-[0_1px_2px_rgba(11,20,26,0.06)]",
+            m.kind === "out"
+              ? "self-end rounded-br-md bg-[#d9fdd3] text-[#111b21]"
+              : "self-start rounded-bl-md bg-white text-ink/85"
+          )}
+        >
+          {m.text}
+        </motion.div>
+      ))}
+      <AnimatePresence>
+        {typing && (
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.18 }}
+            className="flex flex-col"
+          >
+            <Typing accent={trade.accent} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {done && (
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.25 }}
+            className="mt-1 flex items-center gap-1.5 self-start pl-1 text-[12px] font-semibold text-ink/60"
+          >
+            <span
+              className="grid h-4.5 w-4.5 place-items-center rounded-full"
+              style={{ backgroundColor: trade.accent }}
+            >
+              <Check className="h-2.5 w-2.5 text-white" aria-hidden />
+            </span>
+            {trade.chip}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
 export function DeskDemo() {
-  const railRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-  const [held, setHeld] = useState(false); // user took the wheel
+  const [idx, setIdx] = useState(0);
+  const [hovered, setHovered] = useState(false);
+  const [coarse, setCoarse] = useState(false); // touch devices: no hover
   const reduce = useReducedMotionSafe();
+  const liveRef = useRef<HTMLDivElement>(null);
 
-  const cardStep = () => {
-    const rail = railRef.current;
-    if (!rail) return 360;
-    const card = rail.querySelector("article");
-    return (card?.getBoundingClientRect().width ?? 336) + 20;
-  };
-
-  const goTo = (i: number, smooth = true) => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const clamped = Math.max(0, Math.min(CARDS.length - 1, i));
-    rail.scrollTo({
-      left: clamped * cardStep(),
-      behavior: smooth && !reduce ? "smooth" : "auto",
-    });
-  };
-
-  // Track the active card from real scroll position (drag, wheel, buttons).
+  // Subscribe to the hover-capability media query (fires once on mount too).
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const onScroll = () => {
-      setActive(Math.max(0, Math.min(CARDS.length - 1, Math.round(rail.scrollLeft / cardStep()))));
-    };
-    rail.addEventListener("scroll", onScroll, { passive: true });
-    return () => rail.removeEventListener("scroll", onScroll);
+    const mq = window.matchMedia("(hover: none)");
+    const update = () => setCoarse(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
-  // Gentle autoplay until the visitor interacts with the rail.
-  useEffect(() => {
-    if (reduce || held) return;
-    const t = setInterval(() => {
-      const rail = railRef.current;
-      if (!rail) return;
-      const next = (Math.round(rail.scrollLeft / cardStep()) + 1) % CARDS.length;
-      goTo(next);
-    }, ADVANCE_MS);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduce, held]);
+  const trade = TRADES[idx];
+  const Icon = trade.icon;
+  // Touch and reduced-motion visitors shouldn't need a cursor.
+  const engaged = hovered || coarse || reduce;
+
+  const go = (d: number) =>
+    setIdx((v) => (v + d + TRADES.length) % TRADES.length);
 
   return (
     <Section id="features" className="overflow-hidden border-t border-ink/[0.06] bg-white">
       <span id="industries" className="absolute" aria-hidden />
       <Container>
-        <Reveal className="max-w-3xl">
+        <Reveal className="mx-auto max-w-3xl text-center">
           <h2 className="font-display text-[clamp(2.4rem,5vw,4.2rem)] font-black leading-[1.04] tracking-[-0.035em] text-ink">
             While you sleep,
             <br />
             it <Roller />
           </h2>
-          <p className="mt-6 max-w-md text-[16.5px] leading-relaxed text-ink/50">
-            One employee, every kind of front desk — a real moment from each.
+          <p className="mx-auto mt-5 max-w-md text-[16px] leading-relaxed text-ink/50">
+            One employee, every kind of front desk — hover the card and watch
+            a shift.
           </p>
         </Reveal>
-      </Container>
 
-      {/* the rail — bleeds off the right edge like a product gallery */}
-      <div
-        className="mt-12"
-        onPointerDown={() => setHeld(true)}
-        onWheel={() => setHeld(true)}
-      >
-        <div
-          ref={railRef}
-          className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-[max(1.25rem,calc((100vw-80rem)/2+2rem))] [&::-webkit-scrollbar]:hidden"
-        >
-          {CARDS.map((c) => (
-            <TradeCard key={c.label} card={c} />
-          ))}
-          {/* the closing card */}
-          <article className="flex h-[24rem] w-[19rem] shrink-0 snap-center flex-col justify-between rounded-[28px] bg-ink p-7 sm:h-[26rem] sm:w-[21rem] sm:snap-start">
-            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-white/40">
-              Your business
-            </p>
-            <div>
-              <h3 className="serif-display text-[1.9rem] leading-[1.15] text-white">
-                …and yours.
-              </h3>
-              <p className="mt-3 text-[14px] leading-relaxed text-white/60">
-                If customers message you, it fits the way you already work.
-              </p>
-              <Link
-                href="/waitlist"
-                className="group mt-6 inline-flex items-center gap-2 text-[14.5px] font-semibold text-brand-400 transition-colors hover:text-brand-300"
+        {/* stage: arrow · card · arrow */}
+        <div className="mx-auto mt-12 flex max-w-5xl items-center gap-3 sm:gap-6">
+          <button
+            type="button"
+            aria-label="Previous trade"
+            onClick={() => go(-1)}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f5f5f7] text-ink/60 transition-all duration-200 hover:bg-ink hover:text-white sm:h-14 sm:w-14"
+          >
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
+          </button>
+
+          <div
+            ref={liveRef}
+            className="min-w-0 flex-1"
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.article
+                key={trade.label}
+                initial={reduce ? false : { opacity: 0, x: 36, scale: 0.985 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={reduce ? undefined : { opacity: 0, x: -36, scale: 0.985 }}
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                className="relative overflow-hidden rounded-[32px] p-7 transition-shadow duration-500 sm:p-10"
+                style={{
+                  background: engaged ? trade.theme : "#f5f5f7",
+                  transition: "background 600ms ease",
+                  boxShadow: engaged
+                    ? "0 30px 60px -36px rgba(10,31,26,0.28)"
+                    : "0 0 0 rgba(0,0,0,0)",
+                }}
               >
-                Hire the Front Desk
-                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-              </Link>
-            </div>
-          </article>
-          {/* breathing room at the end of the scroll */}
-          <div className="w-1 shrink-0" aria-hidden />
-        </div>
-      </div>
+                {/* trade watermark — sets in with the theme */}
+                <Icon
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-10 -right-10 h-56 w-56 transition-all duration-700"
+                  style={{
+                    color: trade.accent,
+                    opacity: engaged ? 0.08 : 0,
+                    transform: engaged ? "rotate(-8deg)" : "rotate(0deg) scale(0.9)",
+                  }}
+                />
 
-      {/* controls: segmented bars + chevrons */}
-      <Container>
-        <div className="mt-6 flex items-center justify-between">
-          <div className="flex items-center gap-1.5" role="tablist" aria-label="Cards">
-            {CARDS.map((c, i) => (
+                <div className="relative grid gap-8 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:items-end">
+                  <div>
+                    <p
+                      className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] transition-colors duration-500"
+                      style={{ color: engaged ? trade.accent : "rgba(10,31,26,0.4)" }}
+                    >
+                      {trade.label}
+                    </p>
+                    <h3 className="serif-display mt-3 max-w-sm text-[1.6rem] leading-[1.18] text-ink sm:text-[2rem]">
+                      {trade.line}
+                    </h3>
+                    <p
+                      className={cn(
+                        "mt-4 hidden text-[13px] font-medium text-ink/35 transition-opacity duration-300 sm:block",
+                        engaged ? "opacity-0" : "opacity-100"
+                      )}
+                    >
+                      Hover to watch the shift →
+                    </p>
+                  </div>
+                  <Thread trade={trade} playing={engaged} />
+                </div>
+              </motion.article>
+            </AnimatePresence>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Next trade"
+            onClick={() => go(1)}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f5f5f7] text-ink/60 transition-all duration-200 hover:bg-ink hover:text-white sm:h-14 sm:w-14"
+          >
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
+          </button>
+        </div>
+
+        {/* segmented bars + the ask */}
+        <div className="mt-8 flex flex-col items-center gap-8">
+          <div className="flex items-center gap-1.5" role="tablist" aria-label="Trades">
+            {TRADES.map((t, i) => (
               <button
-                key={c.label}
+                key={t.label}
                 type="button"
                 role="tab"
-                aria-selected={i === active}
-                aria-label={c.label}
-                onClick={() => {
-                  setHeld(true);
-                  goTo(i);
-                }}
+                aria-selected={i === idx}
+                aria-label={t.label}
+                onClick={() => setIdx(i)}
                 className="group py-2"
               >
                 <span
-                  className={cn(
-                    "block h-[3px] rounded-full transition-all duration-500",
-                    i === active
-                      ? "w-8 bg-ink"
-                      : "w-4 bg-ink/15 group-hover:bg-ink/30"
-                  )}
+                  className="block h-[3px] rounded-full transition-all duration-500"
+                  style={{
+                    width: i === idx ? 32 : 16,
+                    backgroundColor:
+                      i === idx ? trade.accent : "rgba(10,31,26,0.15)",
+                  }}
                 />
               </button>
             ))}
           </div>
-          <div className="hidden gap-2.5 sm:flex">
-            <button
-              type="button"
-              aria-label="Previous"
-              onClick={() => {
-                setHeld(true);
-                goTo(active - 1);
-              }}
-              className="grid h-10 w-10 place-items-center rounded-full bg-[#f5f5f7] text-ink/70 transition-colors hover:bg-ink/10 hover:text-ink"
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden />
-            </button>
-            <button
-              type="button"
-              aria-label="Next"
-              onClick={() => {
-                setHeld(true);
-                goTo(active + 1);
-              }}
-              className="grid h-10 w-10 place-items-center rounded-full bg-[#f5f5f7] text-ink/70 transition-colors hover:bg-ink/10 hover:text-ink"
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden />
-            </button>
-          </div>
+          <Link
+            href="/waitlist"
+            className="group inline-flex items-center gap-2 text-[15px] font-semibold text-ink transition-colors hover:text-brand-700"
+          >
+            …and yours — hire the Front Desk
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+          </Link>
         </div>
       </Container>
     </Section>
