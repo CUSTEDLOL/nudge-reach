@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
+  BookOpen,
   CalendarCheck,
   Check,
   CheckCheck,
   Eye,
+  HelpCircle,
   IndianRupee,
   Megaphone,
   MessagesSquare,
@@ -13,8 +16,6 @@ import {
   Send,
   UserPlus,
   Users,
-  Workflow,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -48,9 +49,14 @@ export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
   const data = await getDashboardData(org.id);
   const recovery = await getRecoveryMetrics(org.id);
-  const pendingQuestions = await prisma.ownerQuestion.count({
-    where: { orgId: org.id, status: "pending" },
-  });
+  const [pendingQuestions, handoffCount] = await Promise.all([
+    prisma.ownerQuestion.count({
+      where: { orgId: org.id, status: "pending" },
+    }),
+    prisma.conversation.count({
+      where: { orgId: org.id, status: "handoff" },
+    }),
+  ]);
 
   // First visit with an empty workspace → guided setup (spec §M1).
   if (!org.onboardedAt && data.contactCount === 0) {
@@ -84,103 +90,65 @@ export default async function DashboardPage() {
         }
       />
 
-      {pendingQuestions > 0 && (
-        <Link
-          href="/knowledge"
-          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm transition-colors hover:bg-amber-100"
-        >
-          <span className="font-medium text-amber-900">
-            Your AI has {pendingQuestions} customer question
-            {pendingQuestions === 1 ? "" : "s"} it needs your answer on — each
-            answer makes it permanently smarter.
-          </span>
-          <ArrowRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
-        </Link>
+      {(handoffCount > 0 || pendingQuestions > 0) && (
+        <section aria-label="Needs you" className="grid gap-3 sm:grid-cols-2">
+          {handoffCount > 0 && (
+            <NeedsYouCard
+              href="/inbox"
+              icon={<MessagesSquare className="h-4 w-4" aria-hidden />}
+              count={handoffCount}
+              title={`chat${handoffCount === 1 ? "" : "s"} waiting for a human`}
+              description="Your AI handed these over — jump in when you can."
+            />
+          )}
+          {pendingQuestions > 0 && (
+            <NeedsYouCard
+              href="/knowledge"
+              icon={<HelpCircle className="h-4 w-4" aria-hidden />}
+              count={pendingQuestions}
+              title={`question${pendingQuestions === 1 ? "" : "s"} your AI couldn't answer`}
+              description="Answer once and it learns the answer forever."
+            />
+          )}
+        </section>
       )}
 
       {!data.checklist.allDone && (
         <ChecklistCard checklist={data.checklist} orgName={org.name} />
       )}
 
+      {/* This month — the outcomes an owner actually cares about. */}
       <section
-        aria-label="Key metrics"
+        aria-label="This month"
         className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
       >
         <StatCard
-          label="Contacts"
-          value={formatCount(data.contactCount)}
-          icon={<Users className="h-4 w-4" aria-hidden />}
-          hint={`${formatCount(data.optedInContactCount)} opted in`}
+          label="Bookings"
+          value={formatCount(recovery.bookingsThisMonth)}
+          icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
+          hint="Booked this month"
         />
         <StatCard
-          label="Open conversations"
-          value={formatCount(data.openConversationCount)}
-          icon={<MessagesSquare className="h-4 w-4" aria-hidden />}
-          hint={
-            data.unreadMessageCount > 0
-              ? `${formatCount(data.unreadMessageCount)} unread`
-              : "All caught up"
-          }
-        />
-        <StatCard
-          label="Campaigns sent"
-          value={formatCount(data.campaignsSentCount)}
-          icon={<Megaphone className="h-4 w-4" aria-hidden />}
-          hint={
-            data.scheduledCampaignCount > 0
-              ? `${formatCount(data.scheduledCampaignCount)} scheduled`
-              : "Broadcasts so far"
-          }
+          label="Leads chased"
+          value={formatCount(recovery.followUpsThisMonth)}
+          icon={<Send className="h-4 w-4" aria-hidden />}
+          hint={recovery.enabled ? "Follow-ups sent" : "Turn on Revenue Recovery"}
         />
         <StatCard
           label="Revenue influenced"
           value={formatMajorAmount(revenueInr, org.currency)}
           icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-          hint={`Estimate · ${formatCount(data.wonContactCount)} won × ${formatMajorAmount(avgOrderValueInr, org.currency)}`}
+          hint={`${formatCount(data.wonContactCount)} won × ${formatMajorAmount(avgOrderValueInr, org.currency)}`}
         />
         <StatCard
-          label="Bookings this month"
-          value={formatCount(recovery.bookingsThisMonth)}
-          icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
-          hint={
-            recovery.enabled
-              ? `${formatCount(recovery.followUpsThisMonth)} follow-ups sent`
-              : "Turn on Revenue Recovery"
-          }
-        />
-        <StatCard
-          label="Messages sent"
-          value={formatCount(data.rates.sentTotal)}
-          icon={<Send className="h-4 w-4" aria-hidden />}
-          hint="Across all campaigns"
-        />
-        <StatCard
-          label="Delivered rate"
-          value={formatPercent(data.rates.deliveredRate)}
-          icon={<CheckCheck className="h-4 w-4" aria-hidden />}
-          hint={
-            data.rates.sentTotal > 0
-              ? `${formatCount(data.rates.deliveredCount)} of ${formatCount(data.rates.sentTotal)} sent`
-              : "No sends yet"
-          }
-        />
-        <StatCard
-          label="Read rate"
-          value={formatPercent(data.rates.readRate)}
-          icon={<Eye className="h-4 w-4" aria-hidden />}
-          hint={
-            data.rates.sentTotal > 0
-              ? `${formatCount(data.rates.readCount)} of ${formatCount(data.rates.sentTotal)} sent`
-              : "No sends yet"
-          }
-        />
-        <StatCard
-          label="Active automations"
-          value={formatCount(data.enabledAutomationCount)}
-          icon={<Workflow className="h-4 w-4" aria-hidden />}
-          hint={`${formatCount(data.automationCount)} total`}
+          label="Opted-in contacts"
+          value={formatCount(data.optedInContactCount)}
+          icon={<Users className="h-4 w-4" aria-hidden />}
+          hint={`${formatCount(data.contactCount)} total`}
         />
       </section>
+
+      <MessageHealthCard rates={data.rates} />
 
       <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <RecentConversationsCard
@@ -193,6 +161,99 @@ export default async function DashboardPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Needs you — the single attention area                               */
+/* ------------------------------------------------------------------ */
+
+function NeedsYouCard({
+  href,
+  icon,
+  count,
+  title,
+  description,
+}: {
+  href: string;
+  icon: ReactNode;
+  count: number;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 transition-colors hover:bg-amber-100"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-amber-900">
+          {count} {title}
+        </p>
+        <p className="mt-0.5 text-xs text-amber-800/80">{description}</p>
+      </div>
+      <ArrowRight
+        className="h-4 w-4 shrink-0 text-amber-700 transition-transform group-hover:translate-x-0.5"
+        aria-hidden
+      />
+    </Link>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Message health — the analytics summary, folded onto the dashboard   */
+/* ------------------------------------------------------------------ */
+
+function MessageHealthCard({
+  rates,
+}: {
+  rates: {
+    sentTotal: number;
+    deliveredRate: number | null;
+    readRate: number | null;
+  };
+}) {
+  const metrics = [
+    { label: "Sent", value: formatCount(rates.sentTotal), icon: Send },
+    { label: "Delivered", value: formatPercent(rates.deliveredRate), icon: CheckCheck },
+    { label: "Read", value: formatPercent(rates.readRate), icon: Eye },
+  ];
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <CardTitle>Message health</CardTitle>
+          <CardDescription className="mt-0.5">
+            How your broadcasts and follow-ups are landing.
+          </CardDescription>
+        </div>
+        <Link
+          href="/analytics"
+          className="shrink-0 text-xs font-medium text-brand-700 transition-colors duration-150 hover:text-brand-800"
+        >
+          View details →
+        </Link>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {metrics.map((m) => (
+          <div
+            key={m.label}
+            className="rounded-xl border border-neutral-200 p-3"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <m.icon className="h-3.5 w-3.5" aria-hidden />
+            </span>
+            <p className="mt-2 text-lg font-semibold text-neutral-900">
+              {m.value}
+            </p>
+            <p className="text-xs text-neutral-500">{m.label}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -297,16 +358,16 @@ function RecentConversationsCard({
     <Card className={className}>
       <div className="flex items-center justify-between p-5 pb-0">
         <div>
-          <CardTitle>Recent conversations</CardTitle>
+          <CardTitle>Recent chats</CardTitle>
           <CardDescription className="mt-0.5">
-            The latest customer chats across your inbox.
+            The latest customer chats your Front Desk handled.
           </CardDescription>
         </div>
         <Link
           href="/inbox"
           className="shrink-0 text-xs font-medium text-brand-700 transition-colors duration-150 hover:text-brand-800"
         >
-          View inbox →
+          View all →
         </Link>
       </div>
 
@@ -394,10 +455,10 @@ const QUICK_ACTIONS: {
     icon: UserPlus,
   },
   {
-    label: "New automation",
-    description: "Reply & route automatically",
-    href: "/automations/new",
-    icon: Zap,
+    label: "Train your AI",
+    description: "Teach it a new answer",
+    href: "/knowledge",
+    icon: BookOpen,
   },
   {
     label: "Connect WhatsApp",

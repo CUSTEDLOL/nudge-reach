@@ -54,8 +54,8 @@ export default async function KnowledgePage() {
   return (
     <section>
       <PageHeader
-        title="Knowledge"
-        description="Everything your AI knows about this business — it grows every time you answer a question."
+        title="Train your AI"
+        description="What your AI knows, and the questions it's waiting for you to answer. It gets smarter every time you teach it."
         actions={
           <Link
             href="/knowledge/questionnaire"

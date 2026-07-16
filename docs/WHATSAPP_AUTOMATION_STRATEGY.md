@@ -112,14 +112,27 @@ or sheet if booking is needed. No code, no training.
 - **Tier 3 (deprioritize): US & Western Europe** — SMS/iMessage/email dominate
   the US; Western Europe is mixed (Spain/Italy higher, UK/Germany lower).
   Not worth building *for* initially; revisit only for specific niches.
-- **Best verticals (high WhatsApp ROI in Tier-1 markets):**
-  - **Retail / e-commerce / D2C** — catalogues, order updates, re-engagement
-    (our current product extends here naturally).
-  - **Clinics / dentists / salons / spas** — appointment booking + reminders
-    (huge no-show reduction; strong willingness to pay).
-  - **Real estate** — lead qualification + listing lookup + site-visit booking.
-  - **Restaurants / cloud kitchens** — reservations, orders, specials.
-  - **Coaching / education / local services** — lead capture + FAQ.
+- **Beachhead verticals (canonical ranking in `STRATEGY.md` §5a).** The customer
+  who *really* needs this is high-ticket, lead-driven, appointment-based, and
+  owner-operated — where WhatsApp is the sales counter and slow replies + no-shows
+  cost real money:
+  1. **Hair-transplant clinics** — highest ticket, ~100% WhatsApp-lead-driven,
+     brutal multi-week ghosting. Cleanest ROI.
+  2. **Aesthetic / derma / skin clinics** — best scale × ticket × DM-first.
+  3. **Cosmetic-focused dental** (implants/aligners/ortho) — biggest owner-
+     operated base, best-documented no-show pain.
+  4. **IVF / fertility** — highest LTV, best outbound-nurture fit (sequence
+     after the top three).
+  - **Alt-vertical pilot:** study-abroad consultants (purest test of the *chase*
+    moat — first-to-reply wins).
+- **Expansion / later tiers (NOT the beachhead):**
+  - **Retail / e-commerce / D2C** — catalogues, order updates, re-engagement.
+  - **Real estate** — lead qualification + site-visit booking (strong chase fit,
+    but partly broadcast-driven).
+  - **Restaurants / cloud kitchens** — reservations, orders.
+  - ⚠️ **Salons / spas / gyms** — deprioritize as targets: their WhatsApp value
+    is **promotional broadcasts** (built last) on low tickets → weak
+    receptionist-replacement ROI. Self-serve lower tiers, not founder-sold.
 - **Competitors (for positioning/pricing):** AiSensy, WATI, Interakt, Gallabox,
   DoubleTick — typically ~₹999–2,500+/mo tiers plus per-message markup on top of
   Meta's rate (consolidated billing is a major revenue stream). Our wedge stays

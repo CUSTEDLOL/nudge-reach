@@ -31,18 +31,28 @@ what Meta's free agent does NOT cover):
    integrations (concierge onboarding). SMBs at this price buy an outcome.
 
 **Positioning of the existing feature set:** the CRM / inbox / campaigns /
-automations are **KEPT** as the self-serve lower tiers (Free / Starter / Growth /
-Pro) — their job is feature parity + making the flagship's price look reasonable.
-The flagship is **AI Front Desk** (₹14,999/mo India; ~S$599 / RM1,199 / $179;
-priced in all 10 currencies). Marketing leads with the flagship.
+automations are **KEPT** — as self-serve lower tiers (Free / Starter / Growth /
+Pro) for parity + price-anchoring, AND as the outbound-campaign capability
+**bundled inside** the flagship (the "chases every lead" moat). The flagship is
+**AI Front Desk** (₹14,999/mo India; ~S$599 / RM1,199 / $179; priced in all 10
+currencies). Marketing leads with the flagship; campaigns ride inside it, never
+as the headline. **Marketing is compliant only to opted-in recipients** — a
+client's own first-party list, no paid ads required; cold lists are banned by
+invariant #2. See `docs/META_COMPLIANCE_MARKETING.md`.
 
 **Business model:** Meta "Model A" Tech Provider (client's WABA connects to us;
-Meta bills the client for conversations; we earn the subscription). Founder-led
-direct sales in ONE vertical first (clinics/salons), then a reseller/white-label
-channel. Markets: India → Malaysia → Singapore → UAE.
+Meta bills the client for conversations; we earn the subscription). Access path:
+start **per-client manual** (first ~1–10 clients), then become a **Tech
+Provider** (incorporate + Meta Business Verification + App Review + Embedded
+Signup) for scale. Founder-led direct sales into the sharpened beachhead —
+**high-ticket lead-gen clinics** (hair-transplant / aesthetic-derma /
+cosmetic-dental; NOT generic salons/gyms, which are blast-first + low-ticket) —
+then a reseller/white-label channel. Markets: India → Malaysia → Singapore → UAE.
 
-Full detail + competitive analysis: **`docs/STRATEGY.md`**. Do not re-open these
-decisions; do not slide back to "WhatsApp CRM" copy or campaign-blast-first framing.
+Full detail + competitive analysis: **`docs/STRATEGY.md`** (beachhead in §5a);
+go-live compliance in **`docs/META_COMPLIANCE_INBOUND.md`** +
+**`docs/META_COMPLIANCE_MARKETING.md`**. Do not re-open these decisions; do not
+slide back to "WhatsApp CRM" copy or campaign-blast-first framing.
 
 ## The 7 protected invariants (NEVER break, in any change)
 

@@ -4,14 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  BookOpen,
   Bot,
   Building2,
   CreditCard,
   Database,
+  Blocks,
   Phone,
   ScrollText,
   Users,
   Wand2,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -19,6 +22,9 @@ const items = [
   { href: "/settings/general", label: "General", icon: Building2 },
   { href: "/settings/team", label: "Team", icon: Users },
   { href: "/settings/agent", label: "AI Agent", icon: Bot },
+  { href: "/knowledge", label: "Train your AI", icon: BookOpen },
+  { href: "/automations", label: "Auto-replies", icon: Workflow },
+  { href: "/integrations", label: "Integrations", icon: Blocks },
   { href: "/settings/concierge", label: "Concierge", icon: Wand2 },
   { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone },
   { href: "/settings/notifications", label: "Notifications", icon: Bell },

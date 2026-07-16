@@ -74,10 +74,18 @@ export default async function CampaignsPage() {
         title="Campaigns"
         description="Broadcasts to your opted-in customers — from a photo, a template, or scratch."
         actions={
-          <Link href="/campaigns/new" className={buttonVariants()}>
-            <Plus className="h-4 w-4" aria-hidden />
-            New broadcast
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/templates"
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              Message templates
+            </Link>
+            <Link href="/campaigns/new" className={buttonVariants()}>
+              <Plus className="h-4 w-4" aria-hidden />
+              New broadcast
+            </Link>
+          </div>
         }
       />
       <CampaignsTable

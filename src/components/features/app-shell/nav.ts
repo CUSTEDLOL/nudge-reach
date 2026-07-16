@@ -1,14 +1,9 @@
 import {
-  BarChart3,
-  Blocks,
-  BookOpen,
   Inbox,
   LayoutDashboard,
-  LayoutTemplate,
   Megaphone,
   Settings,
   Users,
-  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,17 +19,15 @@ export type NavItem = {
   hideForAgent?: boolean;
 };
 
-/** Single source of truth for the app sidebar (exact order per spec §3.6). */
+/** Single source of truth for the app sidebar. Deliberately short: the
+ *  flagship owner needs five things, not a cockpit. The power tools
+ *  (Train your AI, Integrations, Auto-replies, Templates) live under
+ *  Settings/Campaigns; Analytics is folded into the Dashboard. */
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Inbox", href: "/inbox", icon: Inbox },
+  { label: "Chats", href: "/inbox", icon: Inbox },
   { label: "Contacts", href: "/contacts", icon: Users },
   { label: "Campaigns", href: "/campaigns", icon: Megaphone },
-  { label: "Templates", href: "/templates", icon: LayoutTemplate, hideForAgent: true },
-  { label: "Automations", href: "/automations", icon: Workflow, hideForAgent: true },
-  { label: "Knowledge", href: "/knowledge", icon: BookOpen },
-  { label: "Analytics", href: "/analytics", icon: BarChart3, hideForAgent: true },
-  { label: "Integrations", href: "/integrations", icon: Blocks, hideForAgent: true },
   { label: "Settings", href: "/settings", icon: Settings, hideForAgent: true },
 ];
 

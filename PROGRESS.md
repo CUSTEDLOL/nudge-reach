@@ -5,6 +5,46 @@ what's next.
 
 ---
 
+## Strategy pass — trajectory sharpened + Meta compliance documented (2026-07-16) ✅
+
+Founder direction across a research + planning session. No code changed; planning
+docs rewritten to match the current trajectory.
+
+### Decisions locked
+- **Number-ownership constraint.** A WABA connects to one provider at a time —
+  we cannot be a "replies bolt-on" beside AiSensy. We must **own the number
+  end-to-end**, so the ICP is a business where WhatsApp IS the sales counter.
+- **Beachhead sharpened** from generic "clinics/salons" → **high-ticket lead-gen
+  clinics**: hair-transplant, aesthetic/derma, cosmetic-focused dental, IVF.
+  Study-abroad consultants = chase-moat pilot. **Salons/spas/gyms dropped as
+  targets** (blast-first, low-ticket). Grounded in speed-to-lead + no-show
+  economics + India vertical data.
+- **Marketing is IN — opt-in only.** WhatsApp marketing is a real revenue lever;
+  the sole hard rule is recipients opted in. Bans come from consent, not volume;
+  cold-drip "warming" does not work. Audience = the client's own first-party
+  list; **no paid ads required.** Legit "warming" = earning Meta tier upgrades
+  (250 → 1k → 10k …) via quality.
+- **Access path:** per-client manual (first ~1–10) → Tech Provider (incorporate +
+  Meta Business Verification + App Review + Embedded Signup). Solution Partner /
+  Model B later. Client's own verification controls the 250→1,000 limit.
+
+### Docs written / rewritten
+- New: `docs/META_COMPLIANCE_INBOUND.md`, `docs/META_COMPLIANCE_MARKETING.md`.
+- Rewritten: `docs/STRATEGY.md` (§2 number-ownership, §5 access path, new §5a
+  beachhead, §7 opt-in marketing, §9 drift test), `AGENTS.md` (positioning +
+  beachhead lines; invariants untouched), `docs/PRD.md` (reframed from the
+  one-way "Nudge Reach" marketing tool to the two-sided AI Front Desk),
+  `docs/WHATSAPP_AUTOMATION_STRATEGY.md` §4 (vertical ranking).
+
+### Next (build implications, not yet started)
+- Opt-in **source + timestamp** record in onboarding/import; audience picker
+  hard-gated to `optedIn` with consent source shown at send time.
+- Embedded Signup (self-serve WABA connect).
+- Messaging-tier + quality-rating display in the dashboard.
+- Migration-consent checkpoint (client acknowledges losing app access + chat
+  history before migrating a number to Cloud API).
+- App Review submission (gates scale; slowest step — start early).
+
 ## Night Shift — showcase box, alternating phone + companion panels (2026-07-14) ✅
 
 Founder direction: put a box around the phone, have it hop sides each
