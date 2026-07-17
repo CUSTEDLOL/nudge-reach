@@ -5,12 +5,14 @@ what's next.
 
 ---
 
-## Landing bento — stronger resting state (2026-07-18) ✅
+## Landing bento — stronger resting state + color themes (2026-07-18) ✅
 
-- Replaced the five faint outline-only resting labels with bold, solid dark
-  display type so every feature reads before hover.
+- Kept the original outlined display labels, but strengthened their stroke so
+  every feature reads before hover without losing the distinctive type style.
 - Darkened each bento card boundary and strengthened the resting shadow while
   preserving the existing hover reveal, dimensions, and responsive behavior.
+- Replaced the near-identical pale-green hover tints with richer individual
+  themes: mint, warm sand, sky blue, lilac, and sage.
 
 ## Strategy pass — trajectory sharpened + Meta compliance documented (2026-07-16) ✅
 

@@ -7,7 +7,7 @@ import { Stagger, StaggerItem, useReducedMotionSafe } from "./motion-primitives"
 
 /* ------------------------------------------------------------------ *
  * THE BENTO, product edition. Five features; at rest each card shows
- * its name as giant, solid display type on a quiet tint. Hover
+ * its name as giant outlined display type on a quiet tint. Hover
  * deepens the tint, fades the nameplate, reveals the label/headline/
  * line up top and the feature illustration below — a slow, polished
  * product reveal (opacity + scale 0.94→1 + 20px rise + 6px deblur,
@@ -36,7 +36,7 @@ const FEATURES: Feature[] = [
     body: "An intelligent WhatsApp agent that remembers preferences, responds instantly and follows up automatically.",
     img: "/features/ai-agent.webp",
     tint: "#f6f8f7",
-    hoverTint: "#eef6f1",
+    hoverTint: "#cee4d5",
     wide: true,
   },
   {
@@ -46,7 +46,7 @@ const FEATURES: Feature[] = [
     body: "Create targeted WhatsApp campaigns, segment audiences and track delivery and engagement.",
     img: "/features/broadcast.webp",
     tint: "#f6f8f7",
-    hoverTint: "#edf5ef",
+    hoverTint: "#ead7b8",
   },
   {
     word: "ANALYTICS",
@@ -55,7 +55,7 @@ const FEATURES: Feature[] = [
     body: "Track conversations, response times, leads, conversions and revenue as they change.",
     img: "/features/analytics.webp",
     tint: "#f6f8f7",
-    hoverTint: "#eef5f4",
+    hoverTint: "#ccdfeb",
   },
   {
     word: "INTEGRATIONS",
@@ -64,7 +64,7 @@ const FEATURES: Feature[] = [
     body: "Sync Nudge with calendars, payment systems, CRMs, spreadsheets and commerce platforms.",
     img: "/features/integrations.webp",
     tint: "#f6f8f7",
-    hoverTint: "#f0f4f7",
+    hoverTint: "#d9d2e8",
   },
   {
     word: "GREEN TICK",
@@ -73,7 +73,7 @@ const FEATURES: Feature[] = [
     body: "Get guidance for WhatsApp business verification and strengthen customer confidence.",
     img: "/features/green-tick.webp",
     tint: "#f6f8f7",
-    hoverTint: "#eef6f0",
+    hoverTint: "#c9e1ce",
   },
 ];
 
@@ -126,12 +126,12 @@ function FeatureCard({ f }: { f: Feature }) {
       >
         <span
           className={cn(
-            "select-none text-center font-display font-black uppercase leading-[0.9] tracking-[-0.035em] text-ink/85",
+            "select-none text-center font-display font-black uppercase leading-[0.95] tracking-[-0.02em] text-transparent",
             f.wide
               ? "text-[clamp(2.2rem,4.8vw,3.6rem)]"
               : "text-[clamp(1.5rem,2.4vw,2.2rem)]"
           )}
-          style={{ textShadow: "0 1px 0 rgba(255,255,255,0.7)" }}
+          style={{ WebkitTextStroke: "1.8px rgba(10,31,26,0.58)" }}
         >
           {f.word}
         </span>
