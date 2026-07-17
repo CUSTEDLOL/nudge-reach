@@ -57,11 +57,11 @@ export function HeroV2() {
         muted
         loop
         playsInline
-        poster="/hero/park-day.jpg"
+        poster="/hero/park-cta-v2.jpg"
         aria-hidden
         className="absolute inset-0 h-full w-full object-cover object-top"
       >
-        <source src="/hero/park-day.mp4" type="video/mp4" />
+        <source src="/hero/park-cta-v2.mp4" type="video/mp4" />
       </video>
 
       {/* copy — top-left of the frame, under the navbar */}
