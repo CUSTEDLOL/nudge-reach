@@ -9,8 +9,8 @@ import { Stagger, StaggerItem, useReducedMotionSafe } from "./motion-primitives"
  * THE BENTO, product edition. Five features; at rest each card shows
  * its name as giant outlined display type on a quiet tint. Hover
  * deepens the tint, fades the nameplate, builds the real feature name
- * word-by-word, then assembles the illustration from a deterministic
- * mosaic. Only the hovered card moves; dimensions never change.
+ * word-by-word, then resolves the illustration through an editorial strip
+ * sequence. Only the hovered card moves; dimensions never change.
  * Touch/reduced-motion show the completed state directly.
  * ------------------------------------------------------------------ */
 
@@ -76,8 +76,7 @@ const FEATURES: Feature[] = [
 ];
 
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
-const TILE_COLS = 6;
-const TILE_ROWS = 4;
+const IMAGE_STRIPS = 12;
 
 /** Shared "(hover: none)" subscription — touch devices skip hover. */
 function useCoarsePointer() {
@@ -146,8 +145,8 @@ function FeatureCard({ f }: { f: Feature }) {
             className={cn(
               "flex max-w-xl flex-wrap gap-x-[0.24em] overflow-hidden font-display font-black uppercase leading-[0.92] tracking-[-0.035em] text-ink",
               f.wide
-                ? "text-[clamp(2rem,4vw,3.35rem)]"
-                : "text-[clamp(1.55rem,2.3vw,2.15rem)]"
+                ? "text-[clamp(1.1rem,2vw,1.7rem)]"
+                : "text-[clamp(0.95rem,1.25vw,1.15rem)]"
             )}
           >
             {f.label.split(" ").map((word, index) => (
@@ -160,12 +159,12 @@ function FeatureCard({ f }: { f: Feature }) {
                     ? "translateY(0) rotate(0deg)"
                     : "translateY(115%) rotate(2deg)",
                   filter: revealed ? "blur(0px)" : "blur(5px)",
-                  transition: `opacity 420ms ${EASE} ${
-                    revealed ? 55 + index * 65 : 0
-                  }ms, transform 520ms ${EASE} ${
-                    revealed ? 55 + index * 65 : 0
-                  }ms, filter 420ms ${EASE} ${
-                    revealed ? 55 + index * 65 : 0
+                  transition: `opacity 900ms ${EASE} ${
+                    revealed ? 180 + index * 420 : 0
+                  }ms, transform 1050ms ${EASE} ${
+                    revealed ? 180 + index * 420 : 0
+                  }ms, filter 900ms ${EASE} ${
+                    revealed ? 180 + index * 420 : 0
                   }ms`,
                 }}
               >
@@ -178,7 +177,7 @@ function FeatureCard({ f }: { f: Feature }) {
             style={{
               opacity: revealed ? 1 : 0,
               transform: revealed ? "translateY(0)" : "translateY(8px)",
-              transition: `opacity 420ms ${EASE} ${revealed ? 245 : 0}ms, transform 480ms ${EASE} ${revealed ? 245 : 0}ms`,
+              transition: `opacity 800ms ${EASE} ${revealed ? 2050 : 0}ms, transform 900ms ${EASE} ${revealed ? 2050 : 0}ms`,
             }}
           >
             {f.headline}
@@ -191,22 +190,26 @@ function FeatureCard({ f }: { f: Feature }) {
             style={{
               opacity: revealed ? 1 : 0,
               transform: revealed ? "translateY(0)" : "translateY(8px)",
-              transition: `opacity 420ms ${EASE} ${revealed ? 315 : 0}ms, transform 480ms ${EASE} ${revealed ? 315 : 0}ms`,
+              transition: `opacity 850ms ${EASE} ${revealed ? 2550 : 0}ms, transform 950ms ${EASE} ${revealed ? 2550 : 0}ms`,
             }}
           >
             {f.body}
           </p>
         </div>
 
-        <MosaicImage feature={f} revealed={revealed} animate={animatedReveal} />
+        <EditorialImageReveal
+          feature={f}
+          revealed={revealed}
+          animate={animatedReveal}
+        />
       </div>
     </div>
   );
 }
 
-/** A grid of image fragments flies into place, then hands off to one crisp
- * Next Image. No runtime randomness means SSR/hydration always agree. */
-function MosaicImage({
+/** Alternating editorial strips resolve into one crisp Next Image over a
+ * deliberate 4.6-second sequence. Static fallbacks skip the choreography. */
+function EditorialImageReveal({
   feature,
   revealed,
   animate,
@@ -215,40 +218,35 @@ function MosaicImage({
   revealed: boolean;
   animate: boolean;
 }) {
-  const tiles = Array.from({ length: TILE_COLS * TILE_ROWS }, (_, index) => {
-    const col = index % TILE_COLS;
-    const row = Math.floor(index / TILE_COLS);
-    const jitter = (index * 37) % 11;
-    const delay = 270 + (row + col) * 24 + jitter * 7;
-    const x = (col - (TILE_COLS - 1) / 2) * 10 + (jitter - 5) * 2;
-    const y = 20 + row * 8 + ((index * 19) % 13);
-    const rotate = ((index * 29) % 15) - 7;
-
-    return { index, col, row, delay, x, y, rotate };
-  });
+  const strips = Array.from({ length: IMAGE_STRIPS }, (_, index) => ({
+    index,
+    delay: 500 + index * 135,
+    x: ((index * 17) % 9) - 4,
+    y: (index % 2 === 0 ? -1 : 1) * (24 + ((index * 11) % 17)),
+    rotate: (index % 2 === 0 ? -1 : 1) * (0.5 + (index % 3) * 0.35),
+  }));
 
   return (
     <div className="relative mt-3 min-h-0 flex-1" aria-hidden={!revealed}>
       {animate && (
         <div className="pointer-events-none absolute inset-0">
-          {tiles.map((tile) => (
+          {strips.map((strip) => (
             <span
-              key={tile.index}
+              key={strip.index}
               className="absolute inset-0 bg-contain bg-bottom bg-no-repeat"
               style={{
                 backgroundImage: `url(${feature.img})`,
-                clipPath: `inset(${(tile.row / TILE_ROWS) * 100}% ${
-                  ((TILE_COLS - tile.col - 1) / TILE_COLS) * 100
-                }% ${((TILE_ROWS - tile.row - 1) / TILE_ROWS) * 100}% ${
-                  (tile.col / TILE_COLS) * 100
-                }%)`,
-                transform: `translate(${tile.x}px, ${tile.y}px) rotate(${tile.rotate}deg) scale(0.72)`,
-                filter: "blur(5px)",
+                clipPath: `inset(0 ${
+                  ((IMAGE_STRIPS - strip.index - 1) / IMAGE_STRIPS) * 100
+                }% 0 ${(strip.index / IMAGE_STRIPS) * 100}%)`,
+                transform: `translate(${strip.x}px, ${strip.y}px) rotate(${strip.rotate}deg) scale(0.96)`,
+                filter: "blur(7px) saturate(0.72)",
                 opacity: 0,
-                animation: `bento-tile-assemble 720ms ${EASE} ${tile.delay}ms both`,
+                animation: `bento-strip-resolve 2600ms ${EASE} ${strip.delay}ms both`,
               }}
             />
           ))}
+          <span className="bento-image-scan absolute inset-y-[4%] -left-[28%] w-[24%]" />
         </div>
       )}
 
@@ -259,7 +257,7 @@ function MosaicImage({
           transform: revealed ? "translateY(0) scale(1)" : "translateY(18px) scale(0.94)",
           filter: revealed ? "blur(0px)" : "blur(6px)",
           transition: animate
-            ? `opacity 300ms ${EASE} 720ms, transform 650ms ${EASE} 500ms, filter 350ms ${EASE} 650ms`
+            ? `opacity 800ms ${EASE} 3650ms, transform 1100ms ${EASE} 3300ms, filter 900ms ${EASE} 3450ms`
             : `opacity 240ms ${EASE}, transform 420ms ${EASE}, filter 300ms ${EASE}`,
         }}
       >

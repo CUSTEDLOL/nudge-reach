@@ -790,27 +790,61 @@ html {
    Feature scenes — grayscale animated line illustrations
    (GTE-style looping bento cards; default-visible without motion)
    ============================================================ */
-@keyframes bento-tile-assemble {
+@keyframes bento-strip-resolve {
   0% {
     opacity: 0;
   }
-  18% {
-    opacity: 0.92;
+  14% {
+    opacity: 0.65;
   }
-  72% {
+  58% {
     opacity: 1;
-    transform: translate(0, 0) rotate(0deg) scale(1.025);
-    filter: blur(0);
+    transform: translate(0, 0) rotate(0deg) scale(1.012);
+    filter: blur(1px) saturate(0.92);
   }
-  88% {
+  82% {
     opacity: 1;
     transform: translate(0, 0) rotate(0deg) scale(1);
-    filter: blur(0);
+    filter: blur(0) saturate(1);
   }
   100% {
     opacity: 0;
     transform: translate(0, 0) rotate(0deg) scale(1);
     filter: blur(0);
+  }
+}
+
+.bento-image-scan {
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.75),
+    rgba(6, 193, 103, 0.2),
+    transparent
+  );
+  filter: blur(16px);
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  animation: bento-scan-sweep 4.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bento-scan-sweep {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  22% {
+    opacity: 0.8;
+  }
+  78% {
+    opacity: 0.65;
+    transform: translateX(560%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(620%);
   }
 }
 @keyframes scene-spin {

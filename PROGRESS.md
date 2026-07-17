@@ -5,6 +5,15 @@ what's next.
 
 ---
 
+## Landing bento — 4.6s editorial hover sequence (2026-07-18) ✅
+
+- Halved the revealed feature-heading scale after founder review while keeping
+  it as the boldest element in the card.
+- Replaced the fast fragment burst with a deliberate 4.6-second sequence:
+  staggered title words, calm supporting copy, alternating vertical image
+  strips, a soft scan pass, and a final sharp-image resolve.
+- Kept hover exit immediate and preserved static touch/reduced-motion fallbacks.
+
 ## Landing bento — cinematic hover assembly (2026-07-18) ✅
 
 - Rebuilt hover hierarchy around the actual feature name: large, black display
