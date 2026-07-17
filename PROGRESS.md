@@ -5,6 +5,16 @@ what's next.
 
 ---
 
+## Landing bento — five finite signature reveals (2026-07-18) ✅
+
+- Replaced the shared strip treatment with a different finite reveal for every
+  card: AI pixel storm/core collapse, broadcast signal rings, analytics data
+  columns, integrations orbital wedges, and green-tick verification slashes.
+- Gave each feature a matching title entrance instead of replaying the same
+  word motion five times.
+- Added an explicit 4.7-second settled state: effect layers unmount after the
+  crisp image resolves, so nothing loops or keeps moving under a held hover.
+
 ## Landing bento — 4.6s editorial hover sequence (2026-07-18) ✅
 
 - Halved the revealed feature-heading scale after founder review while keeping
