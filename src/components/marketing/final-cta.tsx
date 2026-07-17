@@ -12,17 +12,33 @@ const POINTS = [
   "Cancel anytime",
 ];
 
-/** The closer — light, direct, form in reach. No gimmicks: the page has
- * already shown the shift; this just asks for the hire. */
+/** The closer — the page ends where it began: back in the park. The loop
+ * plays behind a white legibility wash; the ask sits on top. */
 export function FinalCTA() {
   return (
     <section
       id="get-started"
-      className="relative scroll-mt-24 overflow-hidden border-t border-ink/10 bg-white py-24 sm:py-28"
+      className="relative scroll-mt-24 overflow-hidden border-t border-ink/10 bg-[#eaf3ee] py-24 sm:py-28"
     >
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster="/hero/park-cta-poster.jpg"
+        aria-hidden
+        className="absolute inset-0 h-full w-full object-cover"
+      >
+        <source src="/hero/park-cta.mp4" type="video/mp4" />
+      </video>
+      {/* legibility grade: airy wash for the ink copy, clear lower ground */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(760px_circle_at_50%_-10%,rgba(6,193,103,0.07),transparent_70%)]"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.82) 34%, rgba(255,255,255,0.55) 62%, rgba(255,255,255,0.25) 100%)",
+        }}
       />
       <Container className="relative">
         <Reveal className="mx-auto max-w-3xl text-center">
