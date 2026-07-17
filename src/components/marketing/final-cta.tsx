@@ -25,11 +25,11 @@ export function FinalCTA() {
         muted
         loop
         playsInline
-        poster="/hero/park-cta-poster.jpg"
+        poster="/hero/park-cta-v2.jpg"
         aria-hidden
         className="absolute inset-0 h-full w-full object-cover"
       >
-        <source src="/hero/park-cta.mp4" type="video/mp4" />
+        <source src="/hero/park-cta-v2.mp4" type="video/mp4" />
       </video>
       {/* legibility grade: airy wash for the ink copy, clear lower ground */}
       <div
