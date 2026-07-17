@@ -790,6 +790,29 @@ html {
    Feature scenes — grayscale animated line illustrations
    (GTE-style looping bento cards; default-visible without motion)
    ============================================================ */
+@keyframes bento-tile-assemble {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.92;
+  }
+  72% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1.025);
+    filter: blur(0);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+}
 @keyframes scene-spin {
   to {
     transform: rotate(360deg);

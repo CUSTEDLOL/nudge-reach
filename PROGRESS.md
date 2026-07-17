@@ -5,6 +5,16 @@ what's next.
 
 ---
 
+## Landing bento — cinematic hover assembly (2026-07-18) ✅
+
+- Rebuilt hover hierarchy around the actual feature name: large, black display
+  type enters word-by-word; the supporting promise and description stay quiet.
+- Each product illustration now assembles from 24 deterministic image fragments
+  before resolving into the crisp source image, with no canvas/runtime random
+  cost and static fallbacks for touch and reduced-motion users.
+- Deepened the five individual hover themes slightly while preserving the
+  outlined resting labels, dark boundaries, fixed card geometry, and layout.
+
 ## Landing bento — stronger resting state + color themes (2026-07-18) ✅
 
 - Kept the original outlined display labels, but strengthened their stroke so
