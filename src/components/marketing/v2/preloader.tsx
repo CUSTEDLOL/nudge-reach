@@ -8,6 +8,23 @@ const WORD = "NUDGE";
  *  the letter. Text glyphs only, so the UI font renders them everywhere. */
 const ICONS = ["✳", "●", "✓", "₹", "✦"];
 
+function renderLogoGlyph(el: HTMLElement, letter: string) {
+  if (letter !== "U") {
+    el.textContent = letter;
+    return;
+  }
+
+  el.innerHTML = `
+    <span class="relative inline-flex w-[0.82em] -translate-y-[0.03em] items-center justify-center overflow-visible leading-none font-logo">
+      U
+      <span aria-hidden="true" class="absolute left-1/2 top-[0.73em] flex -translate-x-1/2 gap-[0.16em]">
+        <span class="h-[0.13em] w-[0.34em] rounded-full bg-current"></span>
+        <span class="h-[0.13em] w-[0.34em] rounded-full bg-current"></span>
+      </span>
+    </span>
+  `;
+}
+
 const TYPE_START = 0.3; // first icon lands
 const TYPE_STEP = 0.18; // one icon at a time, metronome rhythm
 const SWAP_START = 1.5; // first icon changes into its letter
@@ -50,7 +67,7 @@ export function Preloader() {
         const at = SWAP_START + i * SWAP_STEP;
         tl.call(
           () => {
-            el.textContent = WORD[i];
+            renderLogoGlyph(el, WORD[i]);
             // Icons render in the UI font (full glyph coverage); once a slot
             // becomes a letter, flip it to the playful caricature face.
             el.classList.add("is-letter");
@@ -83,7 +100,7 @@ export function Preloader() {
     >
       <p className="splash-word font-logo text-4xl font-extrabold tracking-[0.01em] text-white sm:text-5xl">
         {ICONS.map((icon, i) => (
-          <span key={i} className="splash-ch inline-block w-[0.82em] text-center">
+          <span key={i} className="splash-ch inline-flex w-[0.82em] items-center justify-center text-center leading-none">
             {icon}
           </span>
         ))}

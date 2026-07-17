@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Mail, MessageCircle } from "lucide-react";
 import { Container } from "./section";
 import { Logo } from "./logo";
+import { BookDemoButton } from "./book-demo";
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+type FooterLink = { label: string; href?: string; demo?: boolean };
+
+const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Product",
     links: [
@@ -17,7 +20,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Company",
     links: [
       { label: "For partners", href: "/#partners" },
-      { label: "Book a setup call", href: "/waitlist" },
+      { label: "Book a setup call", demo: true },
       { label: "Contact", href: "mailto:hello@nudge.so" },
     ],
   },
@@ -26,7 +29,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: "FAQ", href: "/faq" },
       { label: "Start free", href: "/login" },
-      { label: "Book a demo", href: "/waitlist" },
+      { label: "Book a demo", demo: true },
     ],
   },
   {
@@ -75,12 +78,18 @@ export function Footer() {
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-[14px] text-white/60 transition-colors hover:text-white"
-                    >
-                      {link.label}
-                    </Link>
+                    {link.demo ? (
+                      <BookDemoButton className="text-[14px] text-white/60 transition-colors hover:text-white">
+                        {link.label}
+                      </BookDemoButton>
+                    ) : (
+                      <Link
+                        href={link.href ?? "#"}
+                        className="text-[14px] text-white/60 transition-colors hover:text-white"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

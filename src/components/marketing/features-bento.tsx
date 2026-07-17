@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "./button";
+import { BookDemoButton } from "./book-demo";
 import { Container, Section } from "./section";
 import { Reveal } from "./motion-primitives";
 import { FeatureScenes } from "./feature-scenes";
@@ -34,10 +35,10 @@ export function FeaturesBento() {
             for you — that&rsquo;s the &lsquo;done-for-you&rsquo; part.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/waitlist" variant="primary">
-              Hire the Front Desk
+            <BookDemoButton variant="primary">
+              Book a Demo
               <ArrowRight className="h-4 w-4" />
-            </ButtonLink>
+            </BookDemoButton>
             <ButtonLink href="/pricing" variant="secondary">
               See pricing
             </ButtonLink>

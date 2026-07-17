@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
+import { IndustryWordSearch } from "@/components/marketing/industry-word-search";
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { ResellerCTA } from "@/components/marketing/reseller-cta";
 import { FinalCTA } from "@/components/marketing/final-cta";
@@ -80,6 +81,9 @@ export default function Home() {
         <div id="daylight">
           <DaySection>
             <FeaturesBento />
+          </DaySection>
+          <DaySection>
+            <IndustryWordSearch />
           </DaySection>
           <DaySection>
             <MetaVsNudge />

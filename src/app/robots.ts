@@ -16,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         "/campaigns",
         "/templates",
         "/automations",
-        "/knowledge",
+        "/agent",
         "/analytics",
         "/integrations",
         "/settings",

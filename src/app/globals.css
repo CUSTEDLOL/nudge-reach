@@ -141,6 +141,171 @@
   }
 }
 
+/* Word-search highlighter: each word draws in on its own turn, chasing
+   top→bottom, and then STAYS highlighted for good (no per-word clear, no
+   loop-back) — a one-shot, 15s cumulative build-up (see `.hl-bar` below:
+   `1 forwards`, not `infinite`) that ends with the whole grid lit and holds
+   there. Each word gets its own @keyframes (its turn-on point is a fixed
+   percentage, i * 100/7, of the shared 15s timeline) — the count is baked in
+   here, so update these seven rules if WORDS.length in
+   industry-word-search.tsx ever changes. */
+@keyframes hl-chase-0 {
+  0% {
+    transform: scaleX(0);
+  }
+  1.5%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes hl-chase-1 {
+  0%,
+  14.29% {
+    transform: scaleX(0);
+  }
+  15.79%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes hl-chase-2 {
+  0%,
+  28.57% {
+    transform: scaleX(0);
+  }
+  30.07%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes hl-chase-3 {
+  0%,
+  42.86% {
+    transform: scaleX(0);
+  }
+  44.36%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes hl-chase-4 {
+  0%,
+  57.14% {
+    transform: scaleX(0);
+  }
+  58.64%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes hl-chase-5 {
+  0%,
+  71.43% {
+    transform: scaleX(0);
+  }
+  72.93%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+@keyframes hl-chase-6 {
+  0%,
+  85.71% {
+    transform: scaleX(0);
+  }
+  87.21%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+/* Vertical counterparts (same turn-on timing, scaleY instead of scaleX) —
+   used by the 1-2 words that run down a column instead of across a row.
+   transform-origin for these is set inline per-bar (center top). */
+@keyframes hl-chase-0v {
+  0% {
+    transform: scaleY(0);
+  }
+  1.5%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hl-chase-1v {
+  0%,
+  14.29% {
+    transform: scaleY(0);
+  }
+  15.79%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hl-chase-2v {
+  0%,
+  28.57% {
+    transform: scaleY(0);
+  }
+  30.07%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hl-chase-3v {
+  0%,
+  42.86% {
+    transform: scaleY(0);
+  }
+  44.36%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hl-chase-4v {
+  0%,
+  57.14% {
+    transform: scaleY(0);
+  }
+  58.64%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hl-chase-5v {
+  0%,
+  71.43% {
+    transform: scaleY(0);
+  }
+  72.93%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes hl-chase-6v {
+  0%,
+  85.71% {
+    transform: scaleY(0);
+  }
+  87.21%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+.hl-bar {
+  transform-origin: left center;
+  /* Plays ONCE over 15s (not infinite) and holds its final frame
+     (fully highlighted, via `forwards`) — the build-up never vanishes or
+     resets; the turn-on percentages just stretch to fill 15s instead of the
+     previous shorter loop. */
+  animation: hl-chase-0 15s ease-in-out 1 forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No chase for reduced-motion — every word stays fully highlighted. */
+  .hl-bar {
+    animation: none;
+    transform: none;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -590,11 +755,6 @@ html {
     font-size: 0.95rem;
     line-height: 1.55;
   }
-}
-
-/* Kinetic lines + generic scroll reveals: same rule — only .jsm hides. */
-.jsm .v2-reveal {
-  opacity: 0;
 }
 
 /* Static night→day gradient behind everything: THE page background for

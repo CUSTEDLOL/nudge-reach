@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Container, Section } from "./section";
-import { ButtonLink } from "./button";
+import { BookDemoButton } from "./book-demo";
 import { Reveal } from "./motion-primitives";
 
 /** The future distribution channel: agencies/freelancers white-labelling the
@@ -25,10 +25,10 @@ export function ResellerCTA() {
             , and let us handle the platform.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/waitlist?ref=partner" variant="secondary">
+            <BookDemoButton variant="secondary">
               Become a partner
               <ArrowRight className="h-4 w-4" />
-            </ButtonLink>
+            </BookDemoButton>
           </div>
         </Reveal>
       </Container>

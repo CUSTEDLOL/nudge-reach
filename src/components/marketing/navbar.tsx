@@ -1,8 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import Link from "next/link";
-import { ChevronRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
@@ -16,18 +15,68 @@ const NAV_LINKS = [
   { label: "FAQ", href: "/faq" },
 ];
 
-/** Reference layout: wordmark far left in its own glass pill; on the right a
- * segmented cluster — links pill, then the flagship CTA as a solid white
- * button on the far edge. */
+const MERGE = { duration: 0.38, ease: [0.22, 1, 0.36, 1] as const };
+
+// One light glass skin, everywhere — no dark/green mode.
+const glass =
+  "border border-black/[0.06] bg-white/90 backdrop-blur-xl shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)]";
+
+function NavLinks() {
+  return (
+    <ul className="flex items-center gap-0.5">
+      {NAV_LINKS.map((link) => (
+        <li key={link.href}>
+          <a
+            href={link.href}
+            className="block rounded-lg px-3 py-2 text-[14px] font-medium text-ink/65 transition-all duration-200 hover:-translate-y-px hover:bg-ink/[0.06] hover:text-ink"
+          >
+            {link.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Sleek solid CTA — ink, always. The arrow slides on hover. Opens the Cal modal. */
+function NavCta() {
+  return (
+    <BookDemoButton className="group/cta hidden items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-[#1b241f] md:inline-flex">
+      Book a Demo
+      <ArrowRight
+        className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
+        aria-hidden
+      />
+    </BookDemoButton>
+  );
+}
+
+/**
+ * Two-mode navbar, one light glass skin. Over the dark hero it's two
+ * separate boxes (logo, then links+CTA) at opposite ends of the bar; past
+ * the hero they physically slide together into one seamless pill — a quick
+ * layout-driven merge, not a crossfade. `layout` on both boxes + the outer
+ * row lets Framer compute the FLIP; the inner corners square off and flatten
+ * via a plain CSS radius/border transition timed to match.
+ */
 export function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
+  const [separated, setSeparated] = useState(true);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    // Separated while the dark hero is still behind the bar; merged once its
+    // top passes (the night-shift section — and everything after — is light).
+    const onScroll = () => {
+      const hero = document.getElementById("night-shift");
+      setSeparated(hero ? hero.getBoundingClientRect().top > 80 : false);
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   // Lock body scroll while the mobile menu is open.
@@ -38,72 +87,59 @@ export function Navbar() {
     };
   }, [open]);
 
-  const glass = cn(
-    "rounded-2xl border border-white/10 shadow-[0_16px_50px_-12px_rgba(2,18,11,0.6)] backdrop-blur-xl transition-colors duration-300",
-    scrolled ? "bg-[#07261c]/85" : "bg-[#0b3d2e]/60"
-  );
-
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 sm:pt-5">
+    <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:px-6 sm:pt-5">
       <motion.div
-        initial={{ y: -24, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="mx-auto flex max-w-[110rem] items-center justify-between gap-3"
+        layout
+        transition={MERGE}
+        className={cn(
+          "flex w-full items-center justify-between gap-3",
+          !separated && "md:w-fit md:justify-start md:gap-0"
+        )}
       >
-        {/* brand — far left, its own pill */}
-        <div className={cn(glass, "flex items-center px-3.5 py-1.5")}>
-          <Logo tone="dark" />
-        </div>
+        {/* Logo box — squares off its right edge and drops the border once merged */}
+        <motion.div
+          layout
+          transition={MERGE}
+          className={cn(
+            glass,
+            "flex items-center px-4 py-2 transition-[border-radius] duration-300",
+            !separated && "md:rounded-r-none md:border-r-0"
+          )}
+        >
+          <Logo tone="light" />
+        </motion.div>
 
-        {/* right cluster — segmented pills, then the white CTA on the edge */}
-        <div className="flex items-center gap-2">
-          <nav className={cn(glass, "hidden p-1.5 md:block")}>
-            <ul className="flex items-center">
-              {NAV_LINKS.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className="rounded-xl px-3.5 py-2 text-[14px] font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-              <li>
-                <BookDemoButton className="whitespace-nowrap rounded-xl px-3.5 py-2 text-[14px] font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white">
-                  Book a Demo
-                </BookDemoButton>
-              </li>
-            </ul>
-          </nav>
-
-          <Link
-            href="/waitlist"
-            className="group/cta hidden items-center gap-2.5 whitespace-nowrap rounded-2xl bg-white py-2.5 pl-5 pr-2.5 text-[14px] font-semibold text-ink shadow-[0_16px_50px_-12px_rgba(2,18,11,0.45)] transition-colors hover:bg-white/90 md:inline-flex"
-          >
-            Hire the Front Desk
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-ink/10 transition-transform duration-300 group-hover/cta:translate-x-0.5">
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-            </span>
-          </Link>
-
-          {/* Mobile toggle */}
+        {/* Right box — mobile: hamburger only. Desktop: links + divider + CTA.
+            Squares off its left edge and drops the border once merged. */}
+        <motion.div
+          layout
+          transition={MERGE}
+          className={cn(
+            glass,
+            "flex items-center p-1.5 transition-[border-radius] duration-300",
+            !separated && "md:rounded-l-none md:border-l-0"
+          )}
+        >
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className={cn(
-              glass,
-              "grid h-11 w-11 place-items-center text-white md:hidden"
-            )}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink transition-colors hover:bg-ink/[0.06] md:hidden"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-        </div>
+
+          <div className="hidden items-center gap-2 md:flex">
+            <NavLinks />
+            <span className="mx-1 h-6 w-px bg-ink/10" aria-hidden />
+            <NavCta />
+          </div>
+        </motion.div>
       </motion.div>
 
+      {/* Mobile menu */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -114,7 +150,7 @@ export function Navbar() {
             className="fixed inset-0 top-0 z-40 md:hidden"
           >
             <div
-              className="absolute inset-0 bg-[#03150e]/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
               onClick={() => setOpen(false)}
             />
             <motion.div
@@ -122,7 +158,7 @@ export function Navbar() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-x-4 top-20 rounded-3xl border border-white/10 bg-[#07261c]/95 p-3 shadow-[0_30px_80px_-20px_rgba(2,12,8,0.85)] backdrop-blur-xl"
+              className="absolute inset-x-4 top-24 rounded-2xl border border-black/[0.06] bg-white/95 p-3 shadow-[0_30px_80px_-20px_rgba(10,31,26,0.35)] backdrop-blur-xl"
             >
               <ul className="flex flex-col">
                 {NAV_LINKS.map((link) => (
@@ -130,28 +166,20 @@ export function Navbar() {
                     <a
                       href={link.href}
                       onClick={() => setOpen(false)}
-                      className="block rounded-2xl px-4 py-3 text-base font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                      className="block rounded-xl px-4 py-3 text-base font-medium text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink"
                     >
                       {link.label}
                     </a>
                   </li>
                 ))}
               </ul>
-              <div className="mt-2 flex flex-col gap-2 border-t border-white/10 p-2 pt-3">
-                <ButtonLink
-                  href="/waitlist"
-                  variant="primary-dark"
-                  className="w-full"
-                  onClick={() => setOpen(false)}
-                >
-                  Hire the Front Desk
-                </ButtonLink>
-                <BookDemoButton variant="secondary-dark" className="w-full">
+              <div className="mt-2 flex flex-col gap-2 border-t border-black/[0.06] p-2 pt-3">
+                <BookDemoButton variant="primary" className="w-full">
                   Book a Demo
                 </BookDemoButton>
                 <ButtonLink
                   href="/login"
-                  variant="secondary-dark"
+                  variant="secondary"
                   className="w-full"
                   onClick={() => setOpen(false)}
                 >

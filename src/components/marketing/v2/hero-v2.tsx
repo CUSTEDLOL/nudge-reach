@@ -13,6 +13,24 @@ import { gsap, motionAllowed, useGSAP } from "./gsap";
  */
 export function HeroV2() {
   const sectionRef = useRef<HTMLElement>(null);
+  const leafStrip = [
+    { x: 24, y: 92, size: 24, rotate: -14, color: "#6d8f42" },
+    { x: 72, y: 100, size: 18, rotate: 18, color: "#86a94f" },
+    { x: 124, y: 90, size: 30, rotate: -22, color: "#557238" },
+    { x: 176, y: 102, size: 20, rotate: 12, color: "#93b95e" },
+    { x: 232, y: 94, size: 28, rotate: -18, color: "#62803f" },
+    { x: 286, y: 103, size: 19, rotate: 20, color: "#7ea34d" },
+    { x: 342, y: 88, size: 32, rotate: -10, color: "#5a7539" },
+    { x: 408, y: 101, size: 22, rotate: 16, color: "#92b95a" },
+    { x: 474, y: 95, size: 27, rotate: -16, color: "#6c8d41" },
+    { x: 538, y: 103, size: 18, rotate: 24, color: "#84a850" },
+    { x: 604, y: 90, size: 30, rotate: -20, color: "#5b7739" },
+    { x: 670, y: 102, size: 21, rotate: 14, color: "#88ad54" },
+    { x: 736, y: 94, size: 28, rotate: -12, color: "#668344" },
+    { x: 800, y: 103, size: 19, rotate: 20, color: "#9bba66" },
+    { x: 864, y: 91, size: 31, rotate: -16, color: "#557038" },
+    { x: 928, y: 100, size: 20, rotate: 18, color: "#89ad54" },
+  ];
 
   useGSAP(
     () => {
@@ -29,10 +47,10 @@ export function HeroV2() {
         0.8
       );
 
-      // Gentle drift as the hero scrolls away — depth without distraction.
+      // Gentle parallax drift as the hero scrolls away — no fade; the copy
+      // stays solid until the frame itself leaves.
       gsap.to(".hero-copy", {
         yPercent: -16,
-        autoAlpha: 0.15,
         ease: "none",
         scrollTrigger: {
           trigger: sectionRef.current,
@@ -106,11 +124,48 @@ export function HeroV2() {
           </div>
         </div>
 
-        {/* hand-off into the page below */}
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-white/80"
-        />
+        {/* leaf fringe — replaces the hard white glow at the bottom edge */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 overflow-hidden">
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-b from-transparent via-[#4f7a31]/16 to-transparent" />
+          <div className="absolute inset-x-[-4%] bottom-[-2px] h-16 bg-gradient-to-b from-transparent via-[#6b8d40]/18 to-transparent blur-[1px]" />
+          <svg
+            viewBox="0 0 1000 120"
+            preserveAspectRatio="none"
+            className="absolute inset-x-0 bottom-0 h-16 w-full"
+          >
+            <defs>
+              <linearGradient id="leafFade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(35,62,28,0.0)" />
+                <stop offset="40%" stopColor="rgba(35,62,28,0.14)" />
+                <stop offset="100%" stopColor="rgba(35,62,28,0.34)" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0 78 C 60 56, 120 112, 180 78 S 300 40, 360 76 S 480 110, 540 78 S 660 40, 720 74 S 840 108, 900 78 S 960 44, 1000 76 L 1000 120 L 0 120 Z"
+              fill="url(#leafFade)"
+            />
+            {leafStrip.map((leaf, index) => (
+              <g key={`${leaf.x}-${index}`} transform={`translate(${leaf.x}, ${leaf.y}) rotate(${leaf.rotate})`}>
+                <ellipse
+                  cx="0"
+                  cy="0"
+                  rx={leaf.size * 0.55}
+                  ry={leaf.size * 0.34}
+                  fill={leaf.color}
+                  opacity="0.98"
+                />
+                <path
+                  d={`M ${-leaf.size * 0.38} 0 C ${-leaf.size * 0.12} ${-leaf.size * 0.12}, ${leaf.size * 0.12} ${-leaf.size * 0.12}, ${leaf.size * 0.38} 0`}
+                  fill="none"
+                  stroke="rgba(28,46,18,0.35)"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
+                <circle cx="0" cy="0" r={Math.max(1.5, leaf.size * 0.06)} fill="rgba(28,46,18,0.3)" />
+              </g>
+            ))}
+          </svg>
+        </div>
       </div>
     </section>
   );

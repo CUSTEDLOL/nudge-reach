@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { ButtonLink } from "./button";
+import { BookDemoButton } from "./book-demo";
 import { Reveal } from "./motion-primitives";
 import { RoiCalculator } from "./roi-calculator";
 import { getPlan, planPrice } from "@/modules/billing/plans";
@@ -150,14 +151,9 @@ export function PricingTiers() {
                 </span>
                 <span className="mb-1 text-[13px] text-brand-100/60">per month</span>
               </div>
-              <ButtonLink
-                href="/waitlist"
-                variant="primary-dark"
-                size="lg"
-                className="mt-6"
-              >
+              <BookDemoButton variant="primary-dark" size="lg" className="mt-6">
                 Book a setup call
-              </ButtonLink>
+              </BookDemoButton>
             </div>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               {getPlan("front_desk").features.map((f) => (

@@ -8,7 +8,6 @@ import {
   useMotionValue,
   useReducedMotion,
   useSpring,
-  type Variants,
 } from "motion/react";
 import {
   useEffect,
@@ -44,15 +43,15 @@ export function useReducedMotionSafe() {
 }
 
 /* ------------------------------------------------------------------ *
- * Reveal — fades + lifts content into view on scroll.
+ * Reveal / Stagger / StaggerItem — RETIRED as animations, kept as API.
+ * The site is fully present on load: no scroll-in fades, lifts or blurs
+ * (bold > subtle — see the maximalist direction). These render static
+ * wrappers so the many call sites keep working; the extra props are
+ * accepted and ignored.
  * ------------------------------------------------------------------ */
 export function Reveal({
   children,
   className,
-  delay = 0,
-  y = 22,
-  blur = true,
-  once = true,
 }: {
   children: ReactNode;
   className?: string;
@@ -61,64 +60,18 @@ export function Reveal({
   blur?: boolean;
   once?: boolean;
 }) {
-  const reduce = useReducedMotionSafe();
-
-  if (reduce) {
-    return <div className={className}>{children}</div>;
-  }
-
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y, filter: blur ? "blur(8px)" : "blur(0px)" }}
-      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      viewport={{ once, margin: "-12% 0px -12% 0px" }}
-      transition={{ duration: 0.75, delay, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }
-
-/* ------------------------------------------------------------------ *
- * Stagger — orchestrates a cascade of <StaggerItem> children.
- * ------------------------------------------------------------------ */
-const containerVariants: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
-};
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20, filter: "blur(6px)" },
-  show: {
-    opacity: 1,
-    y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.65, ease: EASE },
-  },
-};
 
 export function Stagger({
   children,
   className,
-  once = true,
 }: {
   children: ReactNode;
   className?: string;
   once?: boolean;
 }) {
-  const reduce = useReducedMotionSafe();
-  if (reduce) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      variants={containerVariants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, margin: "-8% 0px -8% 0px" }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }
 
 export function StaggerItem({
@@ -128,13 +81,7 @@ export function StaggerItem({
   children: ReactNode;
   className?: string;
 }) {
-  const reduce = useReducedMotionSafe();
-  if (reduce) return <div className={className}>{children}</div>;
-  return (
-    <motion.div className={className} variants={itemVariants}>
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }
 
 /* ------------------------------------------------------------------ *
