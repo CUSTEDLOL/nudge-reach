@@ -2,12 +2,14 @@
 
 import { useRef } from "react";
 import { ArrowDown } from "lucide-react";
+import { BookDemoButton } from "@/components/marketing/book-demo";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
 /**
- * Hero — exactly one viewport. The pixel-park loop plays behind the serif
- * nameplate; the glass promise card rests at the bottom of the same frame.
- * The still is the poster/fallback; the headline stays server HTML (LCP).
+ * Hero — exactly one viewport. The pixel-park loop plays behind the copy,
+ * which sits top-left (reference layout): serif headline, one-line promise,
+ * then the demo CTA pair. The still is the poster/fallback; the headline
+ * stays server HTML (LCP).
  */
 export function HeroV2() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -22,8 +24,8 @@ export function HeroV2() {
         defaults: { ease: "expo.out" },
       });
       tl.from(".hero-line", { yPercent: 112, duration: 1.15, stagger: 0.14 }, 0.15).from(
-        ".hero-card",
-        { autoAlpha: 0, y: 24, duration: 0.9 },
+        [".hero-sub", ".hero-cta"],
+        { autoAlpha: 0, y: 24, duration: 0.9, stagger: 0.12 },
         0.8
       );
 
@@ -62,11 +64,11 @@ export function HeroV2() {
         <source src="/hero/park-day.mp4" type="video/mp4" />
       </video>
 
-      {/* nameplate */}
-      <div className="relative flex h-full flex-col items-center justify-center">
-        <div className="hero-copy relative z-10 px-5 pb-28 text-center sm:px-8 sm:pb-24">
+      {/* copy — top-left of the frame, under the navbar */}
+      <div className="relative flex h-full flex-col">
+        <div className="hero-copy relative z-10 mx-auto w-full max-w-[110rem] px-5 pt-32 sm:px-6 sm:pt-36 lg:pt-40">
           <h1
-            className="serif-display text-balance text-[clamp(2.1rem,6.5vw,5.2rem)] leading-[1.08] tracking-[-0.015em] text-white"
+            className="serif-display max-w-4xl text-[clamp(2.2rem,5vw,4.6rem)] leading-[1.08] tracking-[-0.015em] text-white"
             style={{
               textShadow:
                 "0 2px 10px rgba(9,40,74,0.55), 0 10px 44px rgba(9,40,74,0.45)",
@@ -79,30 +81,28 @@ export function HeroV2() {
               <span className="hero-line block">For Your WhatsApp</span>
             </span>
           </h1>
-        </div>
-
-        {/* glass promise card — inside the same viewport */}
-        <div className="absolute inset-x-5 bottom-6 z-10 sm:inset-x-8 sm:bottom-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <div className="hero-card max-w-md rounded-2xl border border-white/50 bg-white/70 p-5 shadow-[0_24px_60px_-24px_rgba(7,38,28,0.45)] backdrop-blur-xl sm:p-6">
-              <h2 className="serif-display text-[1.25rem] leading-snug text-ink sm:text-[1.45rem]">
-                AI that runs your WhatsApp autonomously
-              </h2>
-              <p className="mt-2 hidden text-[13.5px] leading-relaxed text-ink/70 sm:block">
-                A done-for-you AI employee — it answers customers in seconds,
-                books your real calendar, chases quiet leads and collects
-                payments. All night, every night.
-              </p>
-              <a
-                href="#night-shift"
-                className="group/link mt-3 inline-flex items-center gap-2 text-[13.5px] font-semibold text-ink underline decoration-ink/30 underline-offset-4 transition-colors hover:decoration-ink sm:mt-4"
-              >
-                Watch one night
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-ink/10 transition-transform duration-300 group-hover/link:translate-y-0.5">
-                  <ArrowDown className="h-3 w-3" aria-hidden />
-                </span>
-              </a>
-            </div>
+          <p
+            className="hero-sub mt-4 max-w-xl text-[15.5px] leading-relaxed text-white/95 sm:text-[17px]"
+            style={{ textShadow: "0 2px 12px rgba(9,40,74,0.6)" }}
+          >
+            A done-for-you AI employee — it answers customers in seconds,
+            books your real calendar, chases quiet leads and collects
+            payments. All night, every night.
+          </p>
+          <div className="hero-cta mt-7 flex flex-wrap items-center gap-3">
+            <BookDemoButton className="rounded-xl bg-white px-6 py-3 text-[15px] font-semibold text-ink shadow-[0_16px_40px_-14px_rgba(7,38,28,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/90">
+              Book a Demo
+            </BookDemoButton>
+            <a
+              href="#night-shift"
+              className="group/link inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3 text-[15px] font-semibold text-white backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20"
+            >
+              Watch one night
+              <ArrowDown
+                className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-y-0.5"
+                aria-hidden
+              />
+            </a>
           </div>
         </div>
 

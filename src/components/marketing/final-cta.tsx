@@ -1,6 +1,7 @@
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Container } from "./section";
 import { ButtonLink } from "./button";
+import { BookDemoButton } from "./book-demo";
 import { LeadForm } from "./lead-form";
 import { Reveal } from "./motion-primitives";
 
@@ -38,9 +39,9 @@ export function FinalCTA() {
               Start free
               <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
             </ButtonLink>
-            <ButtonLink href="/waitlist" variant="secondary" size="lg">
-              Book a demo
-            </ButtonLink>
+            <BookDemoButton variant="secondary" size="lg">
+              Book a Demo
+            </BookDemoButton>
           </div>
           <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {POINTS.map((p) => (

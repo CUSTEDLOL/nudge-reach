@@ -274,10 +274,10 @@ export function Showcase() {
         // as the scrub advances — a gradual colour shift tied to the scroll,
         // reaching each chapter's hue by the time that chapter opens.
         const BOX_TINT: Record<ChapterName, string> = {
-          answer: "#eafaf1",
-          book: "#e6f2fc",
-          chase: "#fdeade",
-          dawn: "#fbf1d6",
+          answer: "#a6e3bd", // fresh green
+          book: "#aed4f7", // sky blue
+          chase: "#f9c39a", // warm peach
+          dawn: "#f4d97f", // golden dawn
         };
         gsap.set(box, { backgroundColor: BOX_TINT.answer });
         tl.to(box, { backgroundColor: BOX_TINT.book, ease: "none", duration: CHAPTERS.book.start }, 0)
@@ -348,10 +348,6 @@ export function Showcase() {
 
   return (
     <div ref={ref} className="ns-box" aria-label="The Front Desk at work, feature by feature">
-      <span className="ns-box-cap">
-        <span className="ns-box-cap-dot" aria-hidden />
-        One WhatsApp number · a team of AI agents
-      </span>
       <PhoneChat />
       <AnswerPanel />
       <BookPanel />

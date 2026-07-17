@@ -400,49 +400,13 @@ html {
   gap: 2.5rem;
   border: 1px solid rgba(10, 15, 13, 0.18);
   border-radius: 1.5rem;
-  /* Matches the site's daylight-card signature (.v2-daycard): a soft green
-     offset plus a large ambient shadow behind a thin, subtle border. The
-     background tint still glides across the four night chapters as you scroll
-     (driven by the Showcase GSAP timeline). */
-  background: #eafaf1;
-  box-shadow: 18px 18px 0 rgba(6, 193, 103, 0.16),
-    0 30px 80px -40px rgba(5, 13, 10, 0.35);
+  /* Matches the site's daylight-card signature (.v2-daycard): flat, no
+     shadow, just a thin subtle border. The background tint still glides
+     across the four night chapters as you scroll (driven by the Showcase
+     GSAP timeline). */
+  background: #a6e3bd;
 }
 
-/* The one-line framing that names the concept: a team of agents on one number. */
-.ns-box-cap {
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  z-index: 6;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  transform: translateX(-50%);
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  background: #07261c;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.ns-box-cap-dot {
-  height: 6px;
-  width: 6px;
-  border-radius: 999px;
-  background: #37ce86;
-  box-shadow: 0 0 0 3px rgba(55, 206, 134, 0.25);
-}
-@media (max-width: 1023px) {
-  .ns-box-cap {
-    position: static;
-    transform: none;
-    margin-bottom: 0.25rem;
-  }
-}
 .jsm .ns-box {
   position: absolute;
   z-index: 7;

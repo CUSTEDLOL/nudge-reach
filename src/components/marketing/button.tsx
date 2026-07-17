@@ -30,6 +30,19 @@ const variants: Record<Variant, string> = {
     "border-2 border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/10 hover:-translate-y-0.5",
 };
 
+export type ButtonVariant = Variant;
+export type ButtonSize = keyof typeof sizes;
+
+/** The button skin without the Link — for non-navigation triggers
+ * (e.g. the Cal.com Book-a-Demo modal). */
+export function buttonCn(
+  variant: Variant,
+  size: ButtonSize = "md",
+  className?: string
+) {
+  return cn(base, sizes[size], variants[variant], className);
+}
+
 export function ButtonLink({
   children,
   href,
