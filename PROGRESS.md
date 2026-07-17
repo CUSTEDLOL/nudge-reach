@@ -5,6 +5,13 @@ what's next.
 
 ---
 
+## Landing bento — stronger resting state (2026-07-18) ✅
+
+- Replaced the five faint outline-only resting labels with bold, solid dark
+  display type so every feature reads before hover.
+- Darkened each bento card boundary and strengthened the resting shadow while
+  preserving the existing hover reveal, dimensions, and responsive behavior.
+
 ## Strategy pass — trajectory sharpened + Meta compliance documented (2026-07-16) ✅
 
 Founder direction across a research + planning session. No code changed; planning

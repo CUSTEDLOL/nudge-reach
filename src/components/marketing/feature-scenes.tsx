@@ -7,7 +7,7 @@ import { Stagger, StaggerItem, useReducedMotionSafe } from "./motion-primitives"
 
 /* ------------------------------------------------------------------ *
  * THE BENTO, product edition. Five features; at rest each card shows
- * only its name as giant outlined type on a whisper of tint. Hover
+ * its name as giant, solid display type on a quiet tint. Hover
  * deepens the tint, fades the nameplate, reveals the label/headline/
  * line up top and the feature illustration below — a slow, polished
  * product reveal (opacity + scale 0.94→1 + 20px rise + 6px deblur,
@@ -104,13 +104,13 @@ function FeatureCard({ f }: { f: Feature }) {
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      className="relative h-full min-h-[24rem] overflow-hidden rounded-3xl border border-black/[0.05]"
+      className="relative h-full min-h-[24rem] overflow-hidden rounded-3xl border border-ink/25"
       style={{
         backgroundColor: revealed ? f.hoverTint : f.tint,
         transform: lifted ? "translateY(-4px)" : "translateY(0)",
         boxShadow: lifted
           ? "0 30px 56px -32px rgba(10,31,26,0.28)"
-          : "0 16px 36px -30px rgba(10,31,26,0.16)",
+          : "0 16px 36px -28px rgba(10,31,26,0.24)",
         transition: `background-color 500ms ${EASE}, transform 500ms ${EASE}, box-shadow 500ms ${EASE}`,
       }}
     >
@@ -126,12 +126,12 @@ function FeatureCard({ f }: { f: Feature }) {
       >
         <span
           className={cn(
-            "select-none text-center font-display font-black uppercase leading-[0.95] tracking-[-0.02em] text-transparent",
+            "select-none text-center font-display font-black uppercase leading-[0.9] tracking-[-0.035em] text-ink/85",
             f.wide
               ? "text-[clamp(2.2rem,4.8vw,3.6rem)]"
               : "text-[clamp(1.5rem,2.4vw,2.2rem)]"
           )}
-          style={{ WebkitTextStroke: "1.5px rgba(10,15,13,0.2)" }}
+          style={{ textShadow: "0 1px 0 rgba(255,255,255,0.7)" }}
         >
           {f.word}
         </span>
