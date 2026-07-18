@@ -46,9 +46,7 @@ export function FinalCTA() {
             Your front desk can start tonight.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-ink/55">
-            Start free and try the whole product today — or book a setup call
-            and we&rsquo;ll stand up your AI Front Desk with you, live on the
-            call.
+            The Easiest WhatsApp Agent You&rsquo;ve Ever Used.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/login" variant="primary" size="lg">

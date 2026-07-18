@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import Link from "next/link";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -15,20 +16,19 @@ const NAV_LINKS = [
   { label: "FAQ", href: "/faq" },
 ];
 
-const MERGE = { duration: 0.38, ease: [0.22, 1, 0.36, 1] as const };
-
-// One light glass skin, everywhere — no dark/green mode.
-const glass =
-  "border border-black/[0.06] bg-white/90 backdrop-blur-xl shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)]";
-
-function NavLinks() {
+function NavLinks({ overHero }: { overHero: boolean }) {
   return (
     <ul className="flex items-center gap-0.5">
       {NAV_LINKS.map((link) => (
         <li key={link.href}>
           <a
             href={link.href}
-            className="block rounded-lg px-3 py-2 text-[14px] font-medium text-ink/65 transition-all duration-200 hover:-translate-y-px hover:bg-ink/[0.06] hover:text-ink"
+            className={cn(
+              "block rounded-lg px-3 py-2 text-[14px] font-medium transition-all duration-200 hover:-translate-y-px",
+              overHero
+                ? "text-white/85 hover:bg-white/10 hover:text-white"
+                : "text-ink/65 hover:bg-ink/[0.06] hover:text-ink"
+            )}
           >
             {link.label}
           </a>
@@ -38,38 +38,59 @@ function NavLinks() {
   );
 }
 
-/** Sleek solid CTA — ink, always. The arrow slides on hover. Opens the Cal modal. */
+/** The solid CTA — ink pill with a glossy sweep + brand-glow lift on hover.
+ * The arrow slides, the shine sweeps across, the whole button lifts. Opens
+ * the Cal modal. */
 function NavCta() {
   return (
-    <BookDemoButton className="group/cta hidden items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-[#1b241f] md:inline-flex">
-      Book a Demo
+    <BookDemoButton
+      className="group/cta relative hidden items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-inset ring-white/[0.06] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] md:inline-flex"
+    >
+      {/* glossy sweep */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover/cta:translate-x-[320%]"
+      />
+      <span className="relative">Book a Demo</span>
       <ArrowRight
-        className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
+        className="relative h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
         aria-hidden
       />
     </BookDemoButton>
   );
 }
 
+/** The quiet second action — routes to /login (handles both sign-up and
+ * sign-in already). Text-only so "Book a Demo" stays the one solid pill. */
+function SignUpLink({ overHero }: { overHero: boolean }) {
+  return (
+    <Link
+      href="/login"
+      className={cn(
+        "hidden whitespace-nowrap rounded-xl px-3.5 py-2.5 text-[14px] font-semibold transition-all duration-200 md:inline-flex",
+        overHero
+          ? "text-white/90 hover:bg-white/10 hover:text-white"
+          : "text-ink/70 hover:bg-ink/[0.06] hover:text-ink"
+      )}
+    >
+      Sign Up
+    </Link>
+  );
+}
+
 /**
- * Two-mode navbar, one light glass skin. Over the dark hero it's two
- * separate boxes (logo, then links+CTA) at opposite ends of the bar; past
- * the hero they physically slide together into one seamless pill — a quick
- * layout-driven merge, not a crossfade. `layout` on both boxes + the outer
- * row lets Framer compute the FLIP; the inner corners square off and flatten
- * via a plain CSS radius/border transition timed to match.
+ * One centered navbar pill that stays the same across the whole page.
  */
 export function Navbar() {
-  const [separated, setSeparated] = useState(true);
   const [open, setOpen] = useState(false);
+  const [overHero, setOverHero] = useState(true);
 
   useEffect(() => {
-    // Separated while the dark hero is still behind the bar; merged once its
-    // top passes (the night-shift section — and everything after — is light).
     const onScroll = () => {
       const hero = document.getElementById("night-shift");
-      setSeparated(hero ? hero.getBoundingClientRect().top > 80 : false);
+      setOverHero(hero ? hero.getBoundingClientRect().top > 80 : false);
     };
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
@@ -88,50 +109,49 @@ export function Navbar() {
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:px-6 sm:pt-5">
-      <motion.div
-        layout
-        transition={MERGE}
-        className={cn(
-          "flex w-full items-center justify-between gap-3",
-          !separated && "md:w-fit md:justify-start md:gap-0"
-        )}
-      >
-        {/* Logo — bare, no pill/box behind it; just the mark floating over
-            the page. `layout` keeps it animating smoothly alongside the
-            right box as the two slide together on merge. */}
-        <motion.div layout transition={MERGE} className="flex items-center">
-          <Logo tone="light" id="nav-logo-target" />
-        </motion.div>
-
-        {/* Right box — mobile: hamburger only. Desktop: links + divider + CTA.
-            Squares off its left edge and drops the border once merged. */}
-        <motion.div
-          layout
-          transition={MERGE}
+    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 sm:pt-5">
+      <div className="mx-auto flex w-full max-w-[110rem] justify-center">
+        <div
           className={cn(
-            glass,
-            "flex items-center p-1.5 transition-[border-radius] duration-300",
-            !separated && "md:rounded-l-none md:border-l-0"
+            "flex w-full max-w-5xl items-center justify-between gap-3 rounded-2xl px-4 py-2.5 sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6",
+            overHero
+              ? "border border-white/25 bg-white/[0.16] text-white shadow-[0_8px_32px_-12px_rgba(3,10,7,0.35)] backdrop-blur-xl"
+              : "border border-black/[0.06] bg-white/92 text-ink shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)] backdrop-blur-xl"
           )}
         >
-          <button
-            type="button"
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink transition-colors hover:bg-ink/[0.06] md:hidden"
-          >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* left — logo, always visible */}
+          <div className="flex items-center md:justify-self-start">
+            <Logo tone="light" id="nav-logo-target" />
+          </div>
 
-          <div className="hidden items-center gap-2 md:flex">
-            <NavLinks />
-            <span className="mx-1 h-6 w-px bg-ink/10" aria-hidden />
+          {/* center — nav links, true-centered in the pill (desktop only) */}
+          <div className="hidden md:flex md:justify-self-center">
+            <NavLinks overHero={overHero} />
+          </div>
+
+          {/* right — sign up + the one solid CTA (desktop only) */}
+          <div className="hidden items-center gap-1 md:flex md:justify-self-end">
+            <SignUpLink overHero={overHero} />
             <NavCta />
           </div>
-        </motion.div>
-      </motion.div>
+
+          {/* mobile hamburger */}
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              type="button"
+              aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+              className={cn(
+                "grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors",
+                overHero ? "text-white hover:bg-white/10" : "text-ink hover:bg-ink/[0.06]"
+              )}
+            >
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Mobile menu */}
       <AnimatePresence>
@@ -177,7 +197,7 @@ export function Navbar() {
                   className="w-full"
                   onClick={() => setOpen(false)}
                 >
-                  Sign in
+                  Sign Up
                 </ButtonLink>
               </div>
             </motion.div>
