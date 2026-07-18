@@ -5,6 +5,37 @@ what's next.
 
 ---
 
+## Comparison becomes a game roster (2026-07-18) ✅
+
+Founder review: the kinetic market map read as "very AI" — a sterile
+scatter chart. References supplied (Fibery's biased hand-drawn
+comparison, beehiiv's bold block, Surfshark's elevated winner column)
+plus a brief: gamified, colourful, matching the bento.
+
+### Done
+- `meta-vs-nudge.tsx` rebuilt as **THE SCORECARD** — a player roster.
+  Every contender is a game card in the bento's exact language (2px ink
+  border, hard 7-9px offset shadow, saturated gradient, giant ghost
+  score bleeding off the corner). Five stats — Answers / Books / Chases
+  / Collects / Runs itself — render as chunky 3-segment power bars.
+- Scores are the retired capability ledger translated 0-3 (empty =
+  doesn't, half = only once you wire it, full = does it), so the playful
+  framing sits on the same defensible data: Meta 4/15, the three CRMs
+  6/15, a hire 10/15, Haptik 11/15, Nudge 15/15.
+- Ranked leaderboard: Nudge is the full-width champion card (crown,
+  RANK 01, stat sheet on frosted glass); the other six follow as
+  numbered cards, sorted by score.
+- Honesty device borrowed from Fibery — a rotated "BIASED SCORECARD ·
+  HONEST DATA" stamp up top and a footnote owning the bias.
+- Static by design: the only motion is a 1px hover lift. Deleted the
+  187-line market-map CSS block (nodes, impact keyframes, axis labels,
+  grid, responsive overrides) — zero orphaned references.
+
+### Verification
+- Screenshots at 1440 and 390: full roster reads correctly, ghost
+  scores legible, no mobile horizontal overflow.
+- 418 tests, lint, build, `git diff --check` — green.
+
 ## Landing hero video + permanently open color bento (2026-07-18) ✅
 
 - Replaced the hero loop with the founder-supplied `Finale.mp4` and generated a
