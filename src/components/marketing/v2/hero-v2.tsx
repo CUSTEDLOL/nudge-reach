@@ -42,7 +42,7 @@ export function HeroV2() {
         defaults: { ease: "expo.out" },
       });
       tl.from(".hero-line", { yPercent: 112, duration: 1.15, stagger: 0.14 }, 0.15).from(
-        [".hero-sub", ".hero-cta"],
+        ".hero-cta",
         { autoAlpha: 0, y: 24, duration: 0.9, stagger: 0.12 },
         0.8
       );
@@ -67,7 +67,7 @@ export function HeroV2() {
     <section
       ref={sectionRef}
       className="relative h-[100svh] overflow-hidden bg-[#7fb2e8]"
-      aria-label="Nudge — the AI Front Desk"
+      aria-label="Nudge: the AI Front Desk"
     >
       {/* the day scene — one page only; the still is the poster/fallback */}
       <video
@@ -84,7 +84,7 @@ export function HeroV2() {
 
       {/* copy — top-left of the frame, under the navbar */}
       <div className="relative flex h-full flex-col">
-        <div className="hero-copy relative z-10 mx-auto w-full max-w-[110rem] px-5 pt-32 sm:px-6 sm:pt-36 lg:pt-40">
+        <div className="hero-copy relative z-10 mx-auto w-full max-w-[110rem] px-5 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
           <h1
             className="serif-display max-w-4xl text-[clamp(2.2rem,5vw,4.6rem)] leading-[1.08] tracking-[-0.015em] text-white"
             style={{
@@ -99,15 +99,7 @@ export function HeroV2() {
               <span className="hero-line block">For Your WhatsApp</span>
             </span>
           </h1>
-          <p
-            className="hero-sub mt-4 max-w-xl text-[15.5px] leading-relaxed text-white/95 sm:text-[17px]"
-            style={{ textShadow: "0 2px 12px rgba(9,40,74,0.6)" }}
-          >
-            A done-for-you AI employee — it answers customers in seconds,
-            books your real calendar, chases quiet leads and collects
-            payments. All night, every night.
-          </p>
-          <div className="hero-cta mt-7 flex flex-wrap items-center gap-3">
+          <div className="hero-cta mt-5 flex flex-wrap items-center gap-3">
             <BookDemoButton className="rounded-xl bg-white px-6 py-3 text-[15px] font-semibold text-ink shadow-[0_16px_40px_-14px_rgba(7,38,28,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/90">
               Book a Demo
             </BookDemoButton>

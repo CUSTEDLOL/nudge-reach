@@ -4,7 +4,6 @@ import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
 import { IndustryWordSearch } from "@/components/marketing/industry-word-search";
 import { FeaturesBento } from "@/components/marketing/features-bento";
-import { ResellerCTA } from "@/components/marketing/reseller-cta";
 import { FinalCTA } from "@/components/marketing/final-cta";
 import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
@@ -13,14 +12,14 @@ import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
 
 export const metadata: Metadata = {
-  title: "Nudge — the AI Front Desk that runs your WhatsApp",
+  title: "Nudge: the AI Front Desk that runs your WhatsApp",
   description:
-    "Meta's free AI answers your WhatsApp. Nudge's AI Front Desk runs it — books into your real calendar, chases every lead that goes quiet, collects payments, and we set the whole thing up. It's not software. It's your best employee, for a third of the salary.",
+    "Meta's free AI answers your WhatsApp. Nudge's AI Front Desk runs it: books into your real calendar, chases every lead that goes quiet, collects payments, and we set the whole thing up. It's not software. It's your best employee, for a third of the salary.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Nudge — your AI Front Desk on WhatsApp",
+    title: "Nudge: your AI Front Desk on WhatsApp",
     description:
-      "It books real appointments, chases quiet leads and collects payments on WhatsApp — set up for you. A third of a front-desk salary, and it never sleeps.",
+      "It books real appointments, chases quiet leads and collects payments on WhatsApp, set up for you. A third of a front-desk salary, and it never sleeps.",
     type: "website",
   },
 };
@@ -87,9 +86,6 @@ export default function Home() {
           </DaySection>
           <DaySection>
             <MetaVsNudge />
-          </DaySection>
-          <DaySection>
-            <ResellerCTA />
           </DaySection>
           {/* pricing and FAQ live on their own pages, via the navbar */}
           {/* the page ends the way a hire ends — the offer letter */}

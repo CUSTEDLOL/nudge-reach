@@ -98,7 +98,7 @@ export function LegalDoc({
             This document uses placeholders in [brackets] for the operating
             legal entity&apos;s registered details. Replace them with your
             registered company name, address and jurisdiction before publishing,
-            and have a lawyer review it for your market — this is a strong
+            and have a lawyer review it for your market. This is a strong
             starting draft, not legal advice.
           </p>
         </Container>

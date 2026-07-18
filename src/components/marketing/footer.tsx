@@ -19,7 +19,6 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Company",
     links: [
-      { label: "For partners", href: "/#partners" },
       { label: "Book a setup call", demo: true },
       { label: "Contact", href: "mailto:hello@nudge.so" },
     ],
@@ -49,7 +48,7 @@ export function Footer() {
           <div className="max-w-xs">
             <Logo tone="dark" />
             <p className="mt-4 text-[14px] leading-relaxed text-white/60">
-              The AI Front Desk that runs your WhatsApp — it books, chases and
+              The AI Front Desk that runs your WhatsApp: it books, chases and
               collects, and we set the whole thing up. Compliant by default.
             </p>
             <div className="mt-5 flex gap-2.5">
@@ -99,7 +98,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
           <p className="text-[13px] text-white/45">
-            © 2026 Nudge — the first product of the Nudge AI studio for Asian
+            © 2026 Nudge, the first product of the Nudge AI studio for Asian
             SME retail.
           </p>
           <p className="flex items-center gap-2 text-[13px] text-white/45">

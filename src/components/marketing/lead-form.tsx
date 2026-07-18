@@ -80,8 +80,8 @@ export function LeadForm({
         <h3 className="mt-4 text-xl font-semibold text-ink">You&apos;re in! 🎉</h3>
         <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-ink/60">
           {intent === "demo"
-            ? "We'll WhatsApp you within one business day to schedule your demo and set up your first campaign — free."
-            : "You're on the waitlist. We'll WhatsApp you shortly to set up your first campaign — free."}
+            ? "We'll WhatsApp you within one business day to schedule your demo and set up your first campaign, free."
+            : "You're on the waitlist. We'll WhatsApp you shortly to set up your first campaign, free."}
         </p>
       </motion.div>
     );
@@ -163,7 +163,7 @@ export function LeadForm({
             </>
           ) : (
             <>
-              Join the waitlist — first campaign free
+              Join the waitlist: first campaign free
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </>
           )}
@@ -173,7 +173,7 @@ export function LeadForm({
           <p className="text-center text-[13px] font-medium text-red-600">{error}</p>
         ) : (
           <p className="text-center text-[12.5px] text-ink/45">
-            We onboard businesses one by one. No spam, no credit card — we&apos;ll
+            We onboard businesses one by one. No spam, no credit card. We&apos;ll
             WhatsApp you to set things up.
           </p>
         )}

@@ -1,6 +1,3 @@
-import { ArrowRight } from "lucide-react";
-import { ButtonLink } from "./button";
-import { BookDemoButton } from "./book-demo";
 import { Container, Section } from "./section";
 import { FeatureScenes } from "./feature-scenes";
 
@@ -18,31 +15,12 @@ export function FeaturesBento() {
             </span>
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-[16px] leading-relaxed text-ink/55">
-            The full toolkit behind the Front Desk — the agent, the outreach,
+            The full toolkit behind the Front Desk: the agent, the outreach,
             the numbers and the plumbing.
           </p>
         </div>
 
         <FeatureScenes />
-
-        <div className="mt-12 flex flex-col items-center gap-5 text-center">
-          <p className="max-w-xl text-[15px] text-ink/60">
-            We configure the{" "}
-            <strong className="font-bold text-ink">
-              knowledge, flows, templates and integrations
-            </strong>{" "}
-            for you — that&rsquo;s the &lsquo;done-for-you&rsquo; part.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <BookDemoButton variant="primary">
-              Book a Demo
-              <ArrowRight className="h-4 w-4" />
-            </BookDemoButton>
-            <ButtonLink href="/pricing" variant="secondary">
-              See pricing
-            </ButtonLink>
-          </div>
-        </div>
       </Container>
     </Section>
   );

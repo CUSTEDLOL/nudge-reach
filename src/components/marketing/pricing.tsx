@@ -12,7 +12,7 @@ export function Pricing() {
               Priced for shops, <span className="text-gradient">not enterprises</span>
             </>
           }
-          subtitle="Start free and upgrade inside the app the day you hit a limit. Meta's per-conversation charges are passed through at cost — shown clearly before every send."
+          subtitle="Start free and upgrade inside the app the day you hit a limit. Meta's per-conversation charges are passed through at cost, shown clearly before every send."
         />
         {/* Tier grid + ROI calculator share one ₹/$ toggle (client component). */}
         <PricingTiers />

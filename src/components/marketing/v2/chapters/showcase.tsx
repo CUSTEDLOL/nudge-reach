@@ -28,24 +28,41 @@ const QUESTIONS = [
   "Can I move my 11 AM?",
 ];
 
+/** The giant bento backdrop word — one per panel, riding the panel's own
+ * fade so the scrub timeline never has to know about it. Decorative and
+ * desktop-only (panels are hidden on mobile anyway). */
+function BackdropWord({ word, side }: { word: string; side: "left" | "right" }) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute -bottom-2 -z-10 hidden select-none whitespace-nowrap font-display text-[clamp(3.5rem,6vw,5.5rem)] font-black uppercase leading-none tracking-[-0.08em] text-white/25 lg:block ${
+        side === "left" ? "-left-1" : "-right-1"
+      }`}
+    >
+      {word}
+    </div>
+  );
+}
+
 function AnswerPanel() {
   return (
     <div className="ns-panel ns-panel-right is-first flex flex-col justify-center gap-3">
+      <BackdropWord word="Answers" side="right" />
       {QUESTIONS.map((q, i) => (
         <div
           key={q}
-          className={`ns-pitem w-fit max-w-[90%] rounded-2xl border border-ink/10 bg-white px-4 py-2.5 text-[14px] font-medium text-ink/75 shadow-[0_12px_32px_-20px_rgba(10,15,13,0.4)] ${
+          className={`ns-pitem w-fit max-w-[90%] rounded-2xl border-2 border-ink/70 bg-white px-4 py-2.5 text-[14px] font-semibold text-ink/80 shadow-[4px_4px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[7px_7px_0_rgba(10,15,13,0.82)] ${
             i % 2 ? "self-end rounded-br-md" : "self-start rounded-bl-md"
           }`}
         >
           {q}
         </div>
       ))}
-      <div className="ns-pitem mt-2 flex w-fit items-center gap-1.5 self-center rounded-full bg-brand-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-brand-700">
+      <div className="ns-pitem mt-2 flex w-fit items-center gap-1.5 self-center rounded-full border-2 border-ink/70 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-brand-700 shadow-[3px_3px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[5px_5px_0_rgba(10,15,13,0.82)]">
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden>
           <path d="M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2z" />
         </svg>
-        Every question — answered in seconds
+        Every question, answered in seconds
       </div>
     </div>
   );
@@ -80,7 +97,8 @@ function DrawnTick({ ring, check, size }: { ring: string; check: string; size: s
 function BookPanel() {
   return (
     <div className="ns-panel ns-panel-left flex flex-col items-center justify-center gap-4">
-      <div className="ns-pitem w-full max-w-[21rem] rounded-2xl border border-ink/10 bg-white p-5 shadow-[0_18px_50px_-28px_rgba(10,15,13,0.45)]">
+      <BackdropWord word="Books" side="left" />
+      <div className="ns-pitem w-full max-w-[21rem] rounded-2xl border-2 border-ink/70 bg-white p-5 shadow-[6px_6px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[9px_9px_0_rgba(10,15,13,0.82)]">
         <div className="flex items-baseline justify-between pb-3">
           <p className="text-[15px] font-black tracking-tight text-ink">July</p>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/40">2026</p>
@@ -107,7 +125,7 @@ function BookPanel() {
           })}
         </div>
       </div>
-      <div className="ns-time-pill rounded-full bg-ink px-5 py-2 text-[13.5px] font-bold text-white shadow-lg">
+      <div className="ns-time-pill rounded-full bg-ink px-5 py-2 text-[13.5px] font-bold text-white shadow-[4px_4px_0_rgba(255,255,255,0.55)]">
         Saturday · 9:00 PM
       </div>
       <DrawnTick ring="ns-cal2-ring" check="ns-cal2-check" size="h-11 w-11" />
@@ -128,13 +146,14 @@ const LEADS = [
 function ChasePanel() {
   return (
     <div className="ns-panel ns-panel-right flex flex-col justify-center gap-2.5">
-      <p className="ns-pitem pb-1 text-[11px] font-black uppercase tracking-[0.16em] text-ink/40">
+      <BackdropWord word="Chases" side="right" />
+      <p className="ns-pitem pb-1 text-[11px] font-black uppercase tracking-[0.16em] text-ink/55">
         Tonight&rsquo;s quiet leads
       </p>
       {LEADS.map((l) => (
         <div
           key={l.name}
-          className="ns-pitem flex items-center gap-3 rounded-xl border border-ink/10 bg-white px-4 py-3 shadow-[0_12px_32px_-22px_rgba(10,15,13,0.4)]"
+          className="ns-pitem flex items-center gap-3 rounded-xl border-2 border-ink/70 bg-white px-4 py-3 shadow-[4px_4px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[7px_7px_0_rgba(10,15,13,0.82)]"
         >
           <span
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
@@ -188,21 +207,22 @@ const RAILS: { name: string; color: string; path: string }[] = [
 function CollectPanel() {
   return (
     <div className="ns-panel ns-panel-left flex flex-col items-center justify-center gap-4">
-      <div className="ns-pitem flex w-full max-w-[21rem] items-center gap-4 rounded-2xl border border-ink/10 bg-white p-5 shadow-[0_18px_50px_-28px_rgba(10,15,13,0.45)]">
+      <BackdropWord word="Collects" side="left" />
+      <div className="ns-pitem flex w-full max-w-[21rem] items-center gap-4 rounded-2xl border-2 border-ink/70 bg-white p-5 shadow-[6px_6px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[9px_9px_0_rgba(10,15,13,0.82)]">
         <DrawnTick ring="ns-pay-ring" check="ns-pay-check" size="h-11 w-11 shrink-0" />
         <div className="min-w-0">
           <p className="text-[17px] font-black tracking-tight text-ink">₹500 received</p>
           <p className="text-[12px] text-ink/50">Deposit · UPI · 6:49 AM</p>
         </div>
       </div>
-      <p className="ns-pitem pt-1 text-[10.5px] font-black uppercase tracking-[0.18em] text-ink/35">
+      <p className="ns-pitem pt-1 text-[10.5px] font-black uppercase tracking-[0.18em] text-ink/55">
         Works with
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2.5">
         {RAILS.map((r) => (
           <span
             key={r.name}
-            className="ns-pitem inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink/80 shadow-sm"
+            className="ns-pitem inline-flex items-center gap-2 rounded-full border-2 border-ink/70 bg-white px-3.5 py-2 text-[12.5px] font-bold text-ink/80 shadow-[3px_3px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[5px_5px_0_rgba(10,15,13,0.82)]"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill={r.color} aria-hidden>
               <path d={r.path} />
@@ -210,7 +230,7 @@ function CollectPanel() {
             {r.name}
           </span>
         ))}
-        <span className="ns-pitem inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink/80 shadow-sm">
+        <span className="ns-pitem inline-flex items-center gap-2 rounded-full border-2 border-ink/70 bg-white px-3.5 py-2 text-[12.5px] font-bold text-ink/80 shadow-[3px_3px_0_rgba(10,15,13,0.82)] transition-shadow duration-200 hover:shadow-[5px_5px_0_rgba(10,15,13,0.82)]">
           <span className="flex flex-col gap-[2px]" aria-hidden>
             <span className="h-[3px] w-3.5 skew-x-[-18deg] rounded-sm bg-[#f4761f]" />
             <span className="h-[3px] w-3.5 skew-x-[-18deg] rounded-sm bg-[#0b8f47]" />
@@ -273,11 +293,12 @@ export function Showcase() {
         // Caricature box: its background tint glides across the four chapters
         // as the scrub advances — a gradual colour shift tied to the scroll,
         // reaching each chapter's hue by the time that chapter opens.
+        // Bento-saturated chapter hues (same tween, richer values).
         const BOX_TINT: Record<ChapterName, string> = {
-          answer: "#a6e3bd", // fresh green
-          book: "#aed4f7", // sky blue
-          chase: "#f9c39a", // warm peach
-          dawn: "#f4d97f", // golden dawn
+          answer: "#7ee2a8", // fresh green
+          book: "#8ecdf9", // sky blue
+          chase: "#ffb37c", // warm peach
+          dawn: "#ffd95e", // golden dawn
         };
         gsap.set(box, { backgroundColor: BOX_TINT.answer });
         tl.to(box, { backgroundColor: BOX_TINT.book, ease: "none", duration: CHAPTERS.book.start }, 0)

@@ -337,27 +337,60 @@ html {
 .ns-splash {
   display: none;
 }
+/* Centres the wordmark. Must set display here (not via a utility class) —
+   this selector outranks Tailwind's single-class `grid`. */
 .jsm .ns-splash {
-  display: block;
+  display: grid;
+  place-items: center;
 }
-/* Liquid fill: a soft-edged mask reveals the white logo bottom→top as
-   `--fill` (0→100, animated by GSAP) climbs. The ~14%-tall transition band
+/* The empty vessel: the brand-green wordmark PNG knocked to solid black,
+   alpha (the letterforms) preserved. */
+.splash-logo-outline {
+  filter: brightness(0);
+}
+
+/* Liquid fill: a soft-edged mask reveals the green logo bottom→top as
+   `--fill` (0→100, animated by GSAP) climbs. The ~9%-tall transition band
    (rather than a hard line) is what reads as a liquid edge, not a wipe. */
-.splash-logo-white {
+.splash-logo-fill {
   -webkit-mask-image: linear-gradient(
     to top,
     #000 0%,
     #000 calc(var(--fill, 0) * 1%),
-    transparent calc(var(--fill, 0) * 1% + 14%),
+    transparent calc(var(--fill, 0) * 1% + 9%),
     transparent 100%
   );
   mask-image: linear-gradient(
     to top,
     #000 0%,
     #000 calc(var(--fill, 0) * 1%),
-    transparent calc(var(--fill, 0) * 1% + 14%),
+    transparent calc(var(--fill, 0) * 1% + 9%),
     transparent 100%
   );
+}
+
+/* Clips the surface glow to the letterforms, so the waterline only shows
+   INSIDE the wordmark instead of striking through the whole bounding box. */
+.splash-logo-mask {
+  -webkit-mask-image: url("/logo-mark.png");
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-image: url("/logo-mark.png");
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+}
+
+/* The surface wave drifts sideways so the rising line reads as liquid. */
+@keyframes water-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.splash-wave {
+  animation: water-drift 1.6s linear infinite;
 }
 
 /* Film grain — pure CSS fallback (a4-grain.png replaces it when present). */
@@ -404,13 +437,13 @@ html {
   flex-direction: column;
   align-items: center;
   gap: 2.5rem;
-  border: 1px solid rgba(10, 15, 13, 0.18);
-  border-radius: 1.5rem;
-  /* Matches the site's daylight-card signature (.v2-daycard): flat, no
-     shadow, just a thin subtle border. The background tint still glides
-     across the four night chapters as you scroll (driven by the Showcase
-     GSAP timeline). */
-  background: #a6e3bd;
+  /* Bento signature (matches the feature cards): thick ink border + hard
+     offset shadow. The background tint still glides across the four night
+     chapters as you scroll (driven by the Showcase GSAP timeline). */
+  border: 2px solid rgba(10, 15, 13, 0.7);
+  border-radius: 1.75rem;
+  box-shadow: 9px 9px 0 rgba(10, 15, 13, 0.82);
+  background: #7ee2a8;
 }
 
 .jsm .ns-box {

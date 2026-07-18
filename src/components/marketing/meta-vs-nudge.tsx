@@ -31,7 +31,7 @@ const ROSTER: Player[] = [
     klass: "AI Front Desk",
     scores: [3, 3, 3, 3, 3],
     verdict:
-      "Trained on your business, takes the real actions, chases the revenue — and we set the whole thing up.",
+      "Trained on your business, takes the real actions, chases the revenue, and we set the whole thing up.",
     card: "linear-gradient(135deg, #54e58b 0%, #8eec72 48%, #c9f34f 100%)",
     accent: "#075c35",
   },
@@ -39,7 +39,7 @@ const ROSTER: Player[] = [
     name: "Haptik",
     klass: "Enterprise",
     scores: [3, 2, 2, 2, 2],
-    verdict: "Can do it all — with enterprise scope, timelines and price tag.",
+    verdict: "Can do it all, with enterprise scope, timelines and price tag.",
     card: "linear-gradient(145deg, #8ba4ff 0%, #a99bf5 100%)",
     accent: "#2c2f7a",
   },
@@ -47,7 +47,7 @@ const ROSTER: Player[] = [
     name: "A hire",
     klass: "Human desk",
     scores: [2, 3, 1, 3, 1],
-    verdict: "Does the job properly — for nine hours, then goes home.",
+    verdict: "Does the job properly, for nine hours, then goes home.",
     card: "linear-gradient(145deg, #ffb37a 0%, #ffd06a 100%)",
     accent: "#7a3d0e",
   },
@@ -63,7 +63,7 @@ const ROSTER: Player[] = [
     name: "WATI",
     klass: "CRM tool",
     scores: [3, 1, 1, 1, 0],
-    verdict: "Broad platform, deep settings — all driven by your team.",
+    verdict: "Broad platform, deep settings, all driven by your team.",
     card: "linear-gradient(145deg, #9fd8f0 0%, #b8e6e0 100%)",
     accent: "#0d5170",
   },
@@ -155,7 +155,7 @@ export function MetaVsNudge() {
             whole roster.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-[15.5px] leading-relaxed text-ink/60">
-            Five things a front desk actually does. Everyone answers now —
+            Five things a front desk actually does. Everyone answers now,
             that&rsquo;s one stat out of five. Here&rsquo;s the rest of the
             sheet.
           </p>
@@ -247,13 +247,13 @@ export function MetaVsNudge() {
         <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] leading-relaxed text-ink/50">
           Scored on what each one does without you: full bar = does it, half =
           only once you wire it up, empty = it doesn&rsquo;t. We built this, so
-          of course we win our own scorecard — the stats underneath are the
+          of course we win our own scorecard. The stats underneath are the
           honest part.
         </p>
 
         <div className="mt-8 flex justify-center">
           <BookDemoButton variant="primary">
-            Book a Demo — see it run yours
+            Book a Demo: see it run yours
           </BookDemoButton>
         </div>
       </Container>

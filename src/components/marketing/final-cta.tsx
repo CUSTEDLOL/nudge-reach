@@ -6,7 +6,7 @@ import { LeadForm } from "./lead-form";
 import { Reveal } from "./motion-primitives";
 
 const POINTS = [
-  "Free plan — no credit card",
+  "Free plan, no credit card",
   "Official WhatsApp Cloud API",
   "Live the same day",
   "Cancel anytime",

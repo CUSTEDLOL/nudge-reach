@@ -12,7 +12,7 @@ const AGENTS = [
   {
     time: "12:31 AM",
     name: "Sales agent",
-    line: "Answers every question in seconds — your prices, your tone.",
+    line: "Answers every question in seconds: your prices, your tone.",
   },
   {
     time: "2:15 AM",
@@ -22,7 +22,7 @@ const AGENTS = [
   {
     time: "4:40 AM",
     name: "Follow-up agent",
-    line: "Chases the leads that went quiet — on its own.",
+    line: "Chases the leads that went quiet, on its own.",
   },
   {
     time: "6:48 AM",
@@ -98,18 +98,18 @@ export function NightShift() {
             {AGENTS.map((a) => (
               <article key={a.time} className="ns-beat max-w-lg py-6">
                 <div className="flex items-center gap-2.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/70 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand-700 shadow-[3px_3px_0_rgba(10,15,13,0.82)]">
                     <span
                       className="h-1.5 w-1.5 rounded-full bg-brand-500"
                       aria-hidden
                     />
                     AI agent
                   </span>
-                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink/35">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink/40">
                     {a.time}
                   </span>
                 </div>
-                <h2 className="mt-4 font-display text-[clamp(2.35rem,4.4vw,4rem)] font-black leading-[0.96] tracking-[-0.045em] text-ink">
+                <h2 className="mt-4 font-display text-[clamp(2.35rem,4.4vw,4rem)] font-black uppercase leading-[0.96] tracking-[-0.045em] text-ink">
                   {a.name}
                 </h2>
                 <p className="mt-4 max-w-md text-lg font-medium leading-relaxed text-ink/60">

@@ -25,7 +25,7 @@ const TIERS: Tier[] = [
   {
     planId: "free",
     name: "Free",
-    tagline: "Run WhatsApp properly from day one — no card, no expiry.",
+    tagline: "Run WhatsApp properly from day one, no card, no expiry.",
     priceNote: "free forever",
     features: [
       "1 WhatsApp number",
@@ -141,7 +141,7 @@ export function PricingTiers() {
                 AI Front Desk
               </h3>
               <p className="mt-3 max-w-md text-[15px] leading-relaxed text-brand-100/80">
-                Your AI employee — it books, chases and collects, and we set the
+                Your AI employee: it books, chases and collects, and we set the
                 whole thing up. Priced against the hire it replaces, not against
                 software.
               </p>

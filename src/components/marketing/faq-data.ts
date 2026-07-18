@@ -3,15 +3,15 @@
 export const FAQS: { q: string; a: string }[] = [
   {
     q: "Do I need a WhatsApp Business account to start?",
-    a: "No — you can explore the entire product in simulation mode with no account at all. When you're ready to send real messages, you connect a WhatsApp Business number through the official Cloud API, and we walk you through every step.",
+    a: "No. You can explore the entire product in simulation mode with no account at all. When you're ready to send real messages, you connect a WhatsApp Business number through the official Cloud API, and we walk you through every step.",
   },
   {
     q: "Is this compliant with WhatsApp's rules?",
-    a: "Yes, by design. Nudge only messages contacts who have opted in, uses Meta-approved templates, and handles STOP requests automatically. Compliance is baked into every broadcast and automation — not bolted on.",
+    a: "Yes, by design. Nudge only messages contacts who have opted in, uses Meta-approved templates, and handles STOP requests automatically. Compliance is baked into every broadcast and automation, not bolted on.",
   },
   {
     q: "How much do messages actually cost?",
-    a: "Meta charges per conversation. We pass that through at cost with no markup, and show you the exact ₹ estimate before you hit send — so there are never any surprises on your bill.",
+    a: "Meta charges per conversation. We pass that through at cost with no markup, and show you the exact ₹ estimate before you hit send, so there are never any surprises on your bill.",
   },
   {
     q: "Can my whole team work from it?",
@@ -19,7 +19,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Will it work for my type of business?",
-    a: "Nudge is built for SME retail and D2C — apparel, jewellery, food, décor, electronics, services and more. If your customers reach you on WhatsApp, it fits.",
+    a: "Nudge is built for SME retail and D2C: apparel, jewellery, food, décor, electronics, services and more. If your customers reach you on WhatsApp, it fits.",
   },
   {
     q: "How long does setup take?",
@@ -31,6 +31,6 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Can I really start free?",
-    a: "Yes — the Free plan gives you a WhatsApp number, 250 contacts, 500 campaign messages a month, the shared inbox with AI drafts, 2 automations and 2 seats. No card, no expiry. Upgrade inside the app only when you hit a limit.",
+    a: "Yes. The Free plan gives you a WhatsApp number, 250 contacts, 500 campaign messages a month, the shared inbox with AI drafts, 2 automations and 2 seats. No card, no expiry. Upgrade inside the app only when you hit a limit.",
   },
 ];

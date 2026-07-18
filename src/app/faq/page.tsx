@@ -8,7 +8,7 @@ import { Footer } from "@/components/marketing/footer";
 export const metadata: Metadata = {
   title: "FAQ",
   description:
-    "Common questions about the AI Front Desk — setup, WhatsApp compliance, calendars, payments and what happens when the AI doesn't know.",
+    "Common questions about the AI Front Desk: setup, WhatsApp compliance, calendars, payments and what happens when the AI doesn't know.",
   alternates: { canonical: "/faq" },
 };
 

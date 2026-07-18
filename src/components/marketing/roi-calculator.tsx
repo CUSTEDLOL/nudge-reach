@@ -179,7 +179,7 @@ export function RoiCalculator({
             </div>
 
             <p className="mt-6 text-[12.5px] leading-relaxed text-brand-100/50">
-              An estimate, not a promise — actual recovery depends on your list
+              An estimate, not a promise: actual recovery depends on your list
               quality, your offer and how fast you follow up. That last part is
               the bit Nudge fixes.
             </p>

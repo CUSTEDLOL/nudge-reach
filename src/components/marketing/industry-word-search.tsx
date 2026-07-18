@@ -1,71 +1,60 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { Container, Section, SectionHeading } from "./section";
+import { MousePointerClick } from "lucide-react";
+import { Container, Section } from "./section";
 
 /**
- * Industries as a word-search: a monospace letter grid where the verticals
- * we serve are hidden until found. The grid starts fully blank — no marker
- * colour anywhere — and hovering (or focusing/tapping) a word draws its bar
- * in and leaves it highlighted for good; words already found stay found
- * regardless of where the cursor goes next. Two entries (Hotels, Salons)
- * run DOWN a column instead of across a row, so it reads as a real
- * crossword rather than a flat word search. Every letter shares the exact
- * same font/weight/colour — the coloured bar is the only thing that marks a
- * find, never bold text. Filler rows/columns hide legible texture words
- * (WHATSAPP, SPAS, GYMS…) that never highlight. Layout is two CSS vars
- * (--cell / --cellh) so every box positions with pure calc() — no measuring.
+ * Industries as a word-search, wearing the bento theme (ink border, hard
+ * offset shadow, gradient fill, backdrop word). The grid starts fully blank —
+ * no marker colour anywhere — and hovering (or focusing/tapping) a word draws
+ * its bar in and leaves it highlighted for good; words already found stay
+ * found regardless of where the cursor goes next. Every word reads left→right
+ * so it scans instantly. Every letter shares the exact same
+ * font/weight/colour — the coloured bar is the only thing that marks a find.
+ * Filler rows hide legible texture words (WHATSAPP, SPAS, GYMS…) that never
+ * highlight. Layout is two CSS vars (--cell / --cellh) so every box positions
+ * with pure calc() — no measuring.
  */
 
+// Every row is exactly 16 columns.
 // prettier-ignore
 const ROWS = [
   "QWEWHATSAPPKTIAZ",
   "ARREALESTATEVHXQ",
-  "YSPASTVIBEGYMOKJ",
+  "YSPASTVIBEGYMSKJ",
   "SERCLINICSIDETYM",
   "AINCAFESTERFIEMB",
-  "LGBTINGFIRKDVLMN",
+  "LGHOTELSTINGFIRK",
   "OCONSCHOOLSERSOI",
   "NCOLLEGESULTINGQ",
   "SSTRSALONSGENTVX",
   "LRUYADGROWTHENCY",
 ];
 
-/** The findable words — row, start column, length, marker colour, and
- * orientation (default horizontal). Hotels runs down column 13 (rows 1-6);
- * Salons runs down column 0 (rows 3-8) — both through filler cells, so the
- * five horizontal words are unaffected. */
+/** The findable words — row, start column, length, marker colour. All
+ * horizontal, so the box maths stays a single case. */
 const WORDS: {
   label: string;
   row: number;
   col: number;
   len: number;
   color: string;
-  orientation?: "horizontal" | "vertical";
 }[] = [
-  { label: "Real estate", row: 1, col: 2, len: 10, color: "rgba(250,204,21,0.55)" }, // yellow
-  { label: "Hotels", row: 1, col: 13, len: 6, color: "rgba(56,189,248,0.55)", orientation: "vertical" }, // sky
-  { label: "Clinics", row: 3, col: 3, len: 7, color: "rgba(52,211,153,0.55)" }, // green
-  { label: "Salons", row: 3, col: 0, len: 6, color: "rgba(45,212,191,0.55)", orientation: "vertical" }, // teal
-  { label: "Cafes", row: 4, col: 3, len: 5, color: "rgba(251,146,60,0.55)" }, // orange
-  { label: "Schools", row: 6, col: 4, len: 7, color: "rgba(244,114,182,0.55)" }, // pink
-  { label: "Colleges", row: 7, col: 1, len: 8, color: "rgba(167,139,250,0.6)" }, // violet
+  { label: "Real estate", row: 1, col: 2, len: 10, color: "rgba(250,204,21,0.85)" }, // yellow
+  { label: "Clinics", row: 3, col: 3, len: 7, color: "rgba(52,211,153,0.85)" }, // green
+  { label: "Cafes", row: 4, col: 3, len: 5, color: "rgba(251,146,60,0.85)" }, // orange
+  { label: "Hotels", row: 5, col: 2, len: 6, color: "rgba(56,189,248,0.85)" }, // sky
+  { label: "Schools", row: 6, col: 4, len: 7, color: "rgba(244,114,182,0.85)" }, // pink
+  { label: "Colleges", row: 7, col: 1, len: 8, color: "rgba(167,139,250,0.9)" }, // violet
+  { label: "Salons", row: 8, col: 4, len: 6, color: "rgba(45,212,191,0.85)" }, // teal
 ];
 
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-/** The shared box every word occupies — bar, and hover/focus hit target,
- * both use this so they always line up exactly. */
+/** The shared box every word occupies — the bar and the hover hit target both
+ * use this, so they always line up exactly. */
 function wordBox(w: (typeof WORDS)[number]): CSSProperties {
-  const vertical = w.orientation === "vertical";
-  if (vertical) {
-    return {
-      top: `calc(${w.row} * var(--cellh) - var(--cellh) * 0.22)`,
-      left: `calc(${w.col} * var(--cell) + var(--cell) * 0.13)`,
-      width: "calc(var(--cell) * 0.74)",
-      height: `calc(${w.len} * var(--cellh) + var(--cellh) * 0.44)`,
-    };
-  }
   return {
     top: `calc(${w.row} * var(--cellh) + var(--cellh) * 0.13)`,
     left: `calc(${w.col} * var(--cell) - var(--cell) * 0.22)`,
@@ -78,94 +67,128 @@ export function IndustryWordSearch() {
   // Once found, a word never un-highlights — hovering elsewhere doesn't
   // clear it, and re-hovering it is a harmless no-op.
   const [found, setFound] = useState<ReadonlySet<number>>(new Set());
+  const allFound = found.size === WORDS.length;
 
   function reveal(i: number) {
     setFound((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
   }
 
   return (
-    <Section id="industries" className="bg-[#faf9f5]">
+    <Section id="industries" className="bg-white">
       <Container>
-        <SectionHeading
-          eyebrow="Works across industries"
-          title="Find your business."
-          subtitle="Site visits for real estate, appointments for clinics, tables for cafes, rooms for hotels, admissions for schools and colleges — one Front Desk, trained for the counter it runs. Hover a word to find it."
-        />
-
-        <div className="mt-14 sm:mt-16">
-          <p className="sr-only">
-            Nudge works for real estate, clinics, cafes, hotels, schools,
-            colleges and salons.
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="font-display text-[2.1rem] font-black uppercase leading-[1.06] tracking-[-0.02em] text-ink sm:text-[2.9rem]">
+            Built for your business.
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-[16px] leading-relaxed text-ink/55">
+            Site visits for real estate, appointments for clinics, tables for
+            cafes, rooms for hotels, admissions for schools and colleges: one
+            Front Desk, trained for the counter it runs.
           </p>
-          <div
-            className="relative isolate mx-auto w-fit select-none font-mono"
-            style={
-              {
-                "--cell": "clamp(1.15rem, 5.2vw, 3.1rem)",
-                "--cellh": "clamp(1.7rem, 7vw, 4rem)",
-              } as CSSProperties
-            }
-          >
-            {/* marker fills — behind the letters, blank until found. */}
-            {WORDS.map((w, i) => {
-              const vertical = w.orientation === "vertical";
-              const isFound = found.has(i);
-              return (
-                <span
-                  key={w.label}
-                  aria-hidden
-                  className="absolute rounded-[0.4em]"
-                  style={{
-                    ...wordBox(w),
-                    backgroundColor: w.color,
-                    transformOrigin: vertical ? "center top" : "left center",
-                    transform: isFound
-                      ? vertical
-                        ? "scaleY(1)"
-                        : "scaleX(1)"
-                      : vertical
-                        ? "scaleY(0)"
-                        : "scaleX(0)",
-                    opacity: isFound ? 1 : 0,
-                    transition: `transform 650ms ${EASE}, opacity 300ms ${EASE}`,
-                  }}
-                />
-              );
-            })}
+        </div>
 
-            {/* letters — on top of the marker layer. Every letter is styled
-                identically; only the marker bar behind it marks a find. */}
-            {ROWS.map((row, r) => (
-              <div key={r} className="relative z-10 flex">
-                {row.split("").map((ch, c) => (
+        <div className="mx-auto mt-14 max-w-5xl">
+          <article
+            className="relative overflow-hidden rounded-[1.75rem] border-2 border-ink/70 p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-8"
+            style={{
+              background:
+                "linear-gradient(135deg, #a9f0c9 0%, #d8f5a6 52%, #fdefb4 100%)",
+            }}
+          >
+            <div
+              aria-hidden
+              className="absolute -bottom-5 -right-2 select-none whitespace-nowrap font-display text-[clamp(4.5rem,10vw,9rem)] font-black uppercase leading-none tracking-[-0.08em] text-white/25"
+            >
+              Fits
+            </div>
+            <div
+              aria-hidden
+              className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full border-[38px] border-white/15"
+            />
+
+            {/* the affordance — tells people the grid is playable, then
+                doubles as a progress counter once they start finding */}
+            <div className="relative z-10 flex justify-center">
+              <span
+                aria-live="polite"
+                className="inline-flex items-center gap-2 rounded-full border-2 border-ink/70 bg-white/85 px-4 py-1.5 text-center text-[11.5px] font-black uppercase tracking-[0.08em] text-ink sm:text-[12.5px]"
+              >
+                <MousePointerClick className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {found.size === 0
+                  ? "Hover the grid to find your industry"
+                  : allFound
+                    ? "All 7 found: that's your desk"
+                    : `${found.size} of ${WORDS.length} found`}
+              </span>
+            </div>
+
+            <p className="sr-only">
+              Nudge works for real estate, clinics, cafes, hotels, schools,
+              colleges and salons.
+            </p>
+
+            <div className="relative z-10 mt-7 flex justify-center overflow-x-auto">
+              <div
+                className="relative isolate w-fit cursor-crosshair select-none font-mono"
+                style={
+                  {
+                    "--cell": "clamp(1.05rem, 4.6vw, 2.6rem)",
+                    "--cellh": "clamp(1.55rem, 6vw, 3.3rem)",
+                  } as CSSProperties
+                }
+              >
+                {/* marker fills — behind the letters, blank until found. */}
+                {WORDS.map((w, i) => (
                   <span
-                    key={c}
-                    className="grid h-[var(--cellh)] w-[var(--cell)] place-items-center text-[calc(var(--cell)*0.62)] font-semibold tracking-tight text-ink"
-                  >
-                    {ch}
-                  </span>
+                    key={w.label}
+                    aria-hidden
+                    className="absolute rounded-[0.4em]"
+                    style={{
+                      ...wordBox(w),
+                      backgroundColor: w.color,
+                      transformOrigin: "left center",
+                      transform: found.has(i) ? "scaleX(1)" : "scaleX(0)",
+                      opacity: found.has(i) ? 1 : 0,
+                      transition: `transform 650ms ${EASE}, opacity 300ms ${EASE}`,
+                    }}
+                  />
+                ))}
+
+                {/* letters — on top of the marker layer. Every letter is
+                    styled identically; only the bar behind it marks a find. */}
+                {ROWS.map((row, r) => (
+                  <div key={r} className="relative z-10 flex">
+                    {row.split("").map((ch, c) => (
+                      <span
+                        key={c}
+                        className="grid h-[var(--cellh)] w-[var(--cell)] place-items-center text-[calc(var(--cell)*0.62)] font-bold tracking-tight text-ink"
+                      >
+                        {ch}
+                      </span>
+                    ))}
+                  </div>
+                ))}
+
+                {/* hover / focus / tap targets — transparent, above the
+                    letters so the whole word is one hit area regardless of
+                    which cell the cursor lands on. */}
+                {WORDS.map((w, i) => (
+                  <div
+                    key={w.label}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Reveal ${w.label}`}
+                    aria-pressed={found.has(i)}
+                    className="absolute z-20 cursor-crosshair rounded-[0.4em] outline-none focus-visible:ring-2 focus-visible:ring-ink/50"
+                    style={wordBox(w)}
+                    onMouseEnter={() => reveal(i)}
+                    onFocus={() => reveal(i)}
+                    onClick={() => reveal(i)}
+                  />
                 ))}
               </div>
-            ))}
-
-            {/* hover / focus / tap targets — transparent, sit above the
-                letters so the whole word is one hit area regardless of
-                which cell the cursor lands on. */}
-            {WORDS.map((w, i) => (
-              <div
-                key={w.label}
-                role="button"
-                tabIndex={0}
-                aria-label={`Reveal ${w.label}`}
-                aria-pressed={found.has(i)}
-                className="absolute z-20 cursor-pointer rounded-[0.4em] outline-none focus-visible:ring-2 focus-visible:ring-ink/40"
-                style={wordBox(w)}
-                onMouseEnter={() => reveal(i)}
-                onFocus={() => reveal(i)}
-                onClick={() => reveal(i)}
-              />
-            ))}
-          </div>
+            </div>
+          </article>
         </div>
       </Container>
     </Section>

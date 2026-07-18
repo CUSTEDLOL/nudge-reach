@@ -24,7 +24,7 @@ function NavLinks({ overHero }: { overHero: boolean }) {
           <a
             href={link.href}
             className={cn(
-              "block rounded-lg px-3 py-2 text-[14px] font-medium transition-all duration-200 hover:-translate-y-px",
+              "block rounded-lg px-3.5 py-2 text-[16px] font-bold transition-all duration-200 hover:-translate-y-px",
               overHero
                 ? "text-white/85 hover:bg-white/10 hover:text-white"
                 : "text-ink/65 hover:bg-ink/[0.06] hover:text-ink"
@@ -110,24 +110,31 @@ const PIXEL_DUST = [
 ];
 const DUST_PX = 8;
 
-/** Hero-only: a white slab under the logo so the green wordmark reads on
- * white, dissolving to the right in blocky Minecraft-style steps. Sits
- * behind the pill's content; the pill's own overflow clips the rounded
- * corners. */
-function PixelSlab() {
+/** A slab under the logo, dissolving to the right in blocky Minecraft-style
+ * steps. Over the hero it's white so the green wordmark reads on white;
+ * once the navbar leaves the hero it recolors to ink to match the solid
+ * pill instead of just vanishing. Sits behind the pill's content; the
+ * pill's own overflow clips the rounded corners. */
+function PixelSlab({ overHero }: { overHero: boolean }) {
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-y-0 left-0 z-0 w-[52%] sm:w-[40%] md:w-[27%]"
     >
       <div
-        className="absolute inset-0 bg-white/95"
+        className={cn(
+          "absolute inset-0 transition-colors duration-500 ease-out",
+          overHero ? "bg-white/95" : "bg-ink/90"
+        )}
         style={{ clipPath: EDGE_POLYGON }}
       />
       {PIXEL_DUST.map((b, i) => (
         <span
           key={i}
-          className="absolute bg-white"
+          className={cn(
+            "absolute transition-colors duration-500 ease-out",
+            overHero ? "bg-white" : "bg-ink/90"
+          )}
           style={{
             left: `${b.x}%`,
             top: `${b.y}%`,
@@ -182,7 +189,7 @@ export function Navbar() {
               : "border border-black/[0.06] bg-white/92 text-ink shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)] backdrop-blur-xl"
           )}
         >
-          {overHero && <PixelSlab />}
+          <PixelSlab overHero={overHero} />
 
           {/* left — logo, always visible */}
           <div className="relative z-10 flex items-center md:justify-self-start">

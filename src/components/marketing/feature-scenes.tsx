@@ -25,8 +25,8 @@ const FEATURES: Feature[] = [
       "linear-gradient(135deg, #54e58b 0%, #8eec72 48%, #c9f34f 100%)",
     accent: "#075c35",
     backdropWord: "THINKS",
-    mediaClassName: "mt-1 lg:mt-0 lg:min-h-[25rem]",
-    imageClassName: "scale-[1.03] lg:scale-[1.08] lg:-translate-y-2",
+    mediaClassName: "mt-1 lg:mt-0 lg:min-h-[26rem]",
+    imageClassName: "scale-[1.12] lg:scale-[1.18]",
     imagePosition: "object-center",
     wide: true,
   },
@@ -39,9 +39,9 @@ const FEATURES: Feature[] = [
       "linear-gradient(145deg, #ff7b5b 0%, #ff9f55 48%, #ffd34e 100%)",
     accent: "#7a240e",
     backdropWord: "REACH",
-    mediaClassName: "mt-3 min-h-[17rem]",
-    imageClassName: "scale-[1.05]",
-    imagePosition: "object-top",
+    mediaClassName: "mt-3 min-h-[18rem]",
+    imageClassName: "scale-[1.15]",
+    imagePosition: "object-center",
   },
   {
     label: "Real-Time Analytics",
@@ -52,9 +52,9 @@ const FEATURES: Feature[] = [
       "linear-gradient(145deg, #3299ff 0%, #51c9f3 50%, #63e3dc 100%)",
     accent: "#073d72",
     backdropWord: "KNOW",
-    mediaClassName: "mt-1 min-h-[18rem]",
-    imageClassName: "scale-[1.03] -translate-y-2",
-    imagePosition: "object-top",
+    mediaClassName: "mt-1 min-h-[19rem]",
+    imageClassName: "scale-[1.14]",
+    imagePosition: "object-center",
   },
   {
     label: "Integrations",
@@ -65,9 +65,9 @@ const FEATURES: Feature[] = [
       "linear-gradient(145deg, #866cff 0%, #b477f1 48%, #ef79cc 100%)",
     accent: "#35206f",
     backdropWord: "SYNC",
-    mediaClassName: "mt-2 min-h-[17rem]",
-    imageClassName: "scale-[0.98]",
-    imagePosition: "object-top",
+    mediaClassName: "mt-2 min-h-[18rem]",
+    imageClassName: "scale-[1.1]",
+    imagePosition: "object-center",
   },
   {
     label: "Green Tick Verification",
@@ -78,9 +78,9 @@ const FEATURES: Feature[] = [
       "linear-gradient(145deg, #00b967 0%, #27d674 48%, #87ed7d 100%)",
     accent: "#064b2d",
     backdropWord: "TRUST",
-    mediaClassName: "mt-2 min-h-[17rem]",
-    imageClassName: "scale-[0.98]",
-    imagePosition: "object-top",
+    mediaClassName: "mt-2 min-h-[18rem]",
+    imageClassName: "scale-[1.1]",
+    imagePosition: "object-center",
   },
 ];
 
@@ -88,7 +88,10 @@ function FeatureCard({ feature }: { feature: Feature }) {
   return (
     <article
       className={cn(
-        "relative flex min-h-[29rem] h-full flex-col overflow-hidden rounded-[1.75rem] border-2 border-ink/70 p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-7",
+        // The "picked up off the page" hover: the card lifts toward the
+        // cursor's corner, tilts a hair, and its hard shadow stretches —
+        // like lifting a sticker. Everything inside reacts in its own way.
+        "group relative flex min-h-[29rem] h-full flex-col overflow-hidden rounded-[1.75rem] border-2 border-ink/70 p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] transition-all duration-300 ease-out hover:-translate-x-1.5 hover:-translate-y-1.5 hover:rotate-[-0.5deg] hover:shadow-[15px_15px_0_rgba(10,15,13,0.82)] sm:p-7",
         feature.wide && "md:col-span-2 lg:flex-row lg:gap-8"
       )}
       style={{ background: feature.background }}
@@ -96,7 +99,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
       <div
         aria-hidden
         className={cn(
-          "absolute select-none whitespace-nowrap font-display font-black uppercase leading-none tracking-[-0.08em] text-white/20",
+          "absolute select-none whitespace-nowrap font-display font-black uppercase leading-none tracking-[-0.08em] text-white/20 transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:text-white/45",
           feature.wide
             ? "-bottom-5 -left-2 text-[clamp(5rem,12vw,10rem)]"
             : "-bottom-3 -right-1 text-[clamp(4.5rem,8vw,7.5rem)]"
@@ -106,7 +109,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
       </div>
       <div
         aria-hidden
-        className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full border-[38px] border-white/15"
+        className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full border-[38px] border-white/15 transition-transform duration-700 ease-out group-hover:rotate-45 group-hover:scale-110"
       />
 
       <div
@@ -131,13 +134,13 @@ function FeatureCard({ feature }: { feature: Feature }) {
 
       <div
         className={cn(
-          "relative z-10 min-h-0 flex-1",
+          "relative z-10 min-h-0 flex-1 transition-transform duration-500 ease-out group-hover:-rotate-1 group-hover:scale-[1.045]",
           feature.mediaClassName
         )}
       >
         <div
           aria-hidden
-          className="absolute bottom-[-18%] left-1/2 h-[90%] w-[90%] -translate-x-1/2 rounded-full bg-white/24 blur-3xl"
+          className="absolute bottom-[-18%] left-1/2 h-[90%] w-[90%] -translate-x-1/2 rounded-full bg-white/24 blur-3xl transition-opacity duration-500 group-hover:opacity-70"
         />
         <Image
           src={feature.img}

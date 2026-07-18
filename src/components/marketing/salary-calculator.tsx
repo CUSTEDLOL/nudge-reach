@@ -45,7 +45,7 @@ export function SalaryCalculator() {
               Pay for the work. Not another salary.
             </>
           }
-          subtitle="Two numbers about your business today — and what changes the day the AI Front Desk clocks in."
+          subtitle="Two numbers about your business today, and what changes the day the AI Front Desk clocks in."
         />
 
         <Reveal className="mt-12">
@@ -156,7 +156,7 @@ export function SalaryCalculator() {
                   <span className="text-lg font-normal text-white/40"> /mo</span>
                 </p>
                 <p className="mt-4 border-t border-white/10 pt-4 text-sm text-brand-100/70">
-                  {formatPlanPrice(annualSaving, m.currency)} over a year —{" "}
+                  {formatPlanPrice(annualSaving, m.currency)} over a year:{" "}
                   <span className="font-bold text-white">every year it doesn&rsquo;t sleep.</span>
                 </p>
               </div>

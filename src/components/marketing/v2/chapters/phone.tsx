@@ -28,21 +28,21 @@ const ITEMS: Item[] = [
   // It answers — 12:31 AM
   { kind: "chip", at: t(A, 0.16), text: "12:31 AM" },
   { kind: "in", at: t(A, 0.26), text: "Hi! Do you have anything tomorrow evening?", time: "12:31 AM" },
-  { kind: "out", at: t(A, 0.44), text: "Hi Priya! ✨ Yes — we're open till 10 PM tomorrow.", time: "12:31 AM" },
+  { kind: "out", at: t(A, 0.44), text: "Hi Priya! ✨ Yes, we're open till 10 PM tomorrow.", time: "12:31 AM" },
   { kind: "in", at: t(A, 0.62), text: "How much is a classic facial?", time: "12:32 AM" },
-  { kind: "out", at: t(A, 0.8), text: "₹1,800 for 50 minutes — cleanup and massage included.", time: "12:32 AM" },
+  { kind: "out", at: t(A, 0.8), text: "₹1,800 for 50 minutes, cleanup and massage included.", time: "12:32 AM" },
 
   // It books — 2:15 AM
   { kind: "chip", at: t(B, 0.08), text: "2:15 AM" },
-  { kind: "in", at: t(B, 0.18), text: "Okay — can you book me for 9 PM?", time: "2:15 AM" },
+  { kind: "in", at: t(B, 0.18), text: "Okay, can you book me for 9 PM?", time: "2:15 AM" },
   { kind: "out", at: t(B, 0.38), text: "Done! Tomorrow at 9:00 PM with Ritu ✓", time: "2:15 AM" },
   { kind: "calendar", at: t(B, 0.56) },
 
   // It chases — 4:40 AM
   { kind: "chip", at: t(C, 0.08), text: "4:40 AM" },
-  { kind: "out", at: t(C, 0.2), text: "PS — you asked about a bridal trial last week 💛 One Saturday slot left. Want it?", time: "4:40 AM" },
+  { kind: "out", at: t(C, 0.2), text: "PS: you asked about a bridal trial last week 💛 One Saturday slot left. Want it?", time: "4:40 AM" },
   { kind: "in", at: t(C, 0.5), text: "omg yes please, book it!", time: "4:52 AM" },
-  { kind: "out", at: t(C, 0.68), text: "Booked — Saturday, 11:00 AM 🎉", time: "4:52 AM" },
+  { kind: "out", at: t(C, 0.68), text: "Booked: Saturday, 11:00 AM 🎉", time: "4:52 AM" },
 
   // It collects — 6:48 AM
   { kind: "chip", at: t(D, 0.08), text: "6:48 AM" },
@@ -94,7 +94,7 @@ function CalendarCard() {
             <span className="text-[19px] font-bold leading-none text-[#111b21]">18</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-medium text-[#111b21]">9:00 PM — Classic Facial</p>
+            <p className="text-[12.5px] font-medium text-[#111b21]">9:00 PM: Classic Facial</p>
             <p className="text-[11px] text-[#667781]">with Ritu · 50 min</p>
           </div>
           <svg viewBox="0 0 36 36" className="h-8 w-8 shrink-0" aria-hidden>
