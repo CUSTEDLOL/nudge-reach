@@ -78,9 +78,9 @@ const FEATURES: Feature[] = [
       "linear-gradient(145deg, #00b967 0%, #27d674 48%, #87ed7d 100%)",
     accent: "#064b2d",
     backdropWord: "TRUST",
-    mediaClassName: "mt-5 min-h-[15rem]",
-    imageClassName: "scale-[1.18] translate-y-5",
-    imagePosition: "object-bottom",
+    mediaClassName: "mt-2 min-h-[17rem]",
+    imageClassName: "scale-[0.98]",
+    imagePosition: "object-top",
   },
 ];
 
