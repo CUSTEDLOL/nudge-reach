@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Queue, type QueueItem } from "./queue";
 import { Library, type LibraryFact } from "./library";
+import { ImportPanel } from "./import-panel";
 import { AgentForm, type AgentFormValues } from "./agent-form";
 import { AgentTabs } from "./agent-tabs";
 import { parseWaiting } from "@/modules/knowledge/questions";
@@ -27,7 +28,7 @@ export default async function AgentPage({
   const [ctx, { tab }] = await Promise.all([requireOrgContext(), searchParams]);
   const canEdit = hasRole(ctx.role, "ADMIN");
 
-  const [questions, facts, profile] = await Promise.all([
+  const [questions, facts, drafts, profile] = await Promise.all([
     prisma.ownerQuestion.findMany({
       where: { orgId: ctx.org.id, status: "pending" },
       orderBy: { askedAt: "asc" },
@@ -37,6 +38,11 @@ export default async function AgentPage({
       where: { orgId: ctx.org.id, status: "active" },
       orderBy: { createdAt: "desc" },
       take: 500,
+    }),
+    prisma.knowledgeEntry.findMany({
+      where: { orgId: ctx.org.id, status: "draft" },
+      orderBy: { createdAt: "asc" },
+      take: 100,
     }),
     prisma.agentProfile.findUnique({ where: { orgId: ctx.org.id } }),
   ]);
@@ -90,6 +96,15 @@ export default async function AgentPage({
         pendingCount={queueItems.length}
         training={
           <div className="flex flex-col gap-8">
+            <ImportPanel
+              canEdit={canEdit}
+              drafts={drafts.map((d) => ({
+                id: d.id,
+                category: d.category,
+                fact: d.fact,
+                condition: d.condition,
+              }))}
+            />
             <div>
               <h2 className="mb-3 text-sm font-semibold text-neutral-900">
                 Needs your answer

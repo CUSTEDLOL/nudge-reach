@@ -17,7 +17,7 @@ export interface DistilledFact {
   condition?: string;
 }
 
-const factSchema = z.object({
+export const factSchema = z.object({
   category: z.enum(KNOWLEDGE_CATEGORIES),
   fact: z.string().min(3).max(300),
   condition: z.string().min(2).max(120).optional(),

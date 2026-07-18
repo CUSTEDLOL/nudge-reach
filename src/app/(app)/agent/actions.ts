@@ -13,6 +13,7 @@ import {
   dismissOwnerQuestion,
 } from "@/modules/knowledge/questions";
 import { distillAnswer } from "@/modules/knowledge/distill";
+import { ingestWebsite } from "@/modules/knowledge/ingest";
 
 export interface ActionResult {
   ok: boolean;
@@ -135,6 +136,94 @@ export async function archiveFactAction(id: string): Promise<ActionResult> {
     recordAudit(ctx, "knowledge.entry_archived", id);
     revalidatePath("/agent");
     return { ok: true, message: "Fact archived." };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Import-first onboarding: crawl the business website into DRAFT facts the
+ * owner reviews below. Drafts never reach the agent until approved.
+ */
+export async function importWebsiteAction(url: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const trimmed = url.trim();
+    if (!trimmed) return { ok: false, message: "Enter your website address." };
+    const result = await ingestWebsite(ctx.org.id, trimmed);
+    recordAudit(ctx, "knowledge.website_imported", trimmed);
+    revalidatePath("/agent");
+    if (result.drafts === 0) {
+      return {
+        ok: true,
+        message: `Read ${result.pages} page${
+          result.pages === 1 ? "" : "s"
+        } but found nothing new to import.`,
+      };
+    }
+    return {
+      ok: true,
+      message: `Found ${result.drafts} fact${
+        result.drafts === 1 ? "" : "s"
+      } across ${result.pages} page${
+        result.pages === 1 ? "" : "s"
+      } — review them below.`,
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** Approve one imported draft → it becomes live agent knowledge. */
+export async function approveDraftAction(id: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const updated = await prisma.knowledgeEntry.updateMany({
+      where: { id, orgId: ctx.org.id, status: "draft" },
+      data: { status: "active" },
+    });
+    if (updated.count === 0) return { ok: false, message: "Draft not found." };
+    revalidatePath("/agent");
+    return { ok: true, message: "Fact approved." };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** Discard one imported draft (kept as archived for the audit trail). */
+export async function discardDraftAction(id: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const updated = await prisma.knowledgeEntry.updateMany({
+      where: { id, orgId: ctx.org.id, status: "draft" },
+      data: { status: "archived" },
+    });
+    if (updated.count === 0) return { ok: false, message: "Draft not found." };
+    revalidatePath("/agent");
+    return { ok: true, message: "Draft discarded." };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** Approve every pending draft in one tap. */
+export async function approveAllDraftsAction(): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const updated = await prisma.knowledgeEntry.updateMany({
+      where: { orgId: ctx.org.id, status: "draft" },
+      data: { status: "active" },
+    });
+    recordAudit(ctx, "knowledge.drafts_approved", String(updated.count));
+    revalidatePath("/agent");
+    return {
+      ok: true,
+      message: `Approved ${updated.count} fact${updated.count === 1 ? "" : "s"}.`,
+    };
   } catch (err) {
     return fail(err);
   }

@@ -673,7 +673,7 @@ model KnowledgeEntry {
   fact      String
   condition String?  // plain-language applicability, e.g. "weekends only"
   source    String   // owner_answer | questionnaire | manual | import
-  status    String   @default("active") // active | archived
+  status    String   @default("active") // active | draft (imported, awaiting review) | archived
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
