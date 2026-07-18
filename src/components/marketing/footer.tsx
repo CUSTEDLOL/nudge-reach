@@ -42,8 +42,12 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-[#0b3d2e]">
-      <Container className="py-16">
+    <footer className="relative overflow-hidden border-t-2 border-white/10 bg-[#0b3d2e]">
+      <div
+        aria-hidden
+        className="v2-grain pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
+      />
+      <Container className="relative py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
             <Logo tone="dark" />
@@ -55,14 +59,14 @@ export function Footer() {
               <a
                 href="mailto:hello@nudge.so"
                 aria-label="Email Nudge"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition-colors hover:bg-brand-500 hover:text-white"
+                className="grid h-10 w-10 place-items-center rounded-xl border-2 border-white/15 bg-white/5 text-white/70 transition-all hover:-translate-y-0.5 hover:border-brand-400 hover:bg-brand-500 hover:text-white hover:shadow-[3px_3px_0_rgba(0,0,0,0.35)]"
               >
                 <Mail className="h-[18px] w-[18px]" />
               </a>
               <a
                 href="#get-started"
                 aria-label="Chat with us on WhatsApp"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition-colors hover:bg-brand-500 hover:text-white"
+                className="grid h-10 w-10 place-items-center rounded-xl border-2 border-white/15 bg-white/5 text-white/70 transition-all hover:-translate-y-0.5 hover:border-brand-400 hover:bg-brand-500 hover:text-white hover:shadow-[3px_3px_0_rgba(0,0,0,0.35)]"
               >
                 <MessageCircle className="h-[18px] w-[18px]" />
               </a>
@@ -96,13 +100,13 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t-2 border-white/10 pt-8 sm:flex-row">
           <p className="text-[13px] text-white/45">
             © 2026 Nudge, the first product of the Nudge AI studio for Asian
             SME retail.
           </p>
           <p className="flex items-center gap-2 text-[13px] text-white/45">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/15 bg-white/5 px-3 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400" /> All
               systems in simulation
             </span>

@@ -42,11 +42,18 @@ export function FinalCTA() {
       />
       <Container className="relative">
         <Reveal className="mx-auto max-w-3xl text-center">
-          <h2 className="serif-display text-balance text-[2.4rem] leading-[1.08] text-ink sm:text-[3.4rem]">
-            Your front desk can start tonight.
+          <span className="inline-block -rotate-2 rounded-full border-2 border-ink/70 bg-white px-4 py-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink shadow-[3px_3px_0_rgba(10,15,13,0.82)]">
+            Ready when you are
+          </span>
+          <h2 className="mt-5 font-display text-[2.3rem] font-black uppercase leading-[1.06] tracking-[-0.02em] text-ink sm:text-[3.3rem]">
+            Your front desk
+            <span className="serif-display mt-2 block text-[1.7rem] normal-case tracking-normal text-ink/85 sm:text-[2.3rem]">
+              can start tonight.
+            </span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-ink/55">
-            The Easiest WhatsApp Agent You&rsquo;ve Ever Used.
+            No sales calls, no setup fees. WhatsApp that runs itself, live the
+            same day.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/login" variant="primary" size="lg">
@@ -57,13 +64,13 @@ export function FinalCTA() {
               Book a Demo
             </BookDemoButton>
           </div>
-          <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          <ul className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
             {POINTS.map((p) => (
               <li
                 key={p}
-                className="flex items-center gap-1.5 text-[13.5px] text-ink/55"
+                className="flex items-center gap-1.5 rounded-full border-2 border-ink/70 bg-white px-3 py-1.5 text-[12.5px] font-bold text-ink shadow-[2px_2px_0_rgba(10,15,13,0.82)]"
               >
-                <CheckCircle2 className="h-4 w-4 text-brand-600" aria-hidden />
+                <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" aria-hidden />
                 {p}
               </li>
             ))}

@@ -1,22 +1,98 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, LogIn, Mail, UserRoundPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/marketing/logo";
+import { cn } from "@/lib/cn";
+
+/* ------------------------------------------------------------------ */
+/* The left panel's rotating shift report — one card per night agent,  */
+/* same cast as the landing page's Night Shift chapters.               */
+/* ------------------------------------------------------------------ */
+const SLIDES = [
+  {
+    agent: "Sales agent",
+    time: "12:31 AM",
+    headline: "It answers while you sleep.",
+    line: "Every question, in seconds — your prices, your tone.",
+  },
+  {
+    agent: "Booking agent",
+    time: "2:15 AM",
+    headline: "It books the real calendar.",
+    line: "Checks availability, locks the slot, sends the reminder.",
+  },
+  {
+    agent: "Follow-up agent",
+    time: "4:40 AM",
+    headline: "It chases the quiet leads.",
+    line: "The ones who read your message and vanished — recovered.",
+  },
+  {
+    agent: "Payment agent",
+    time: "6:48 AM",
+    headline: "It collects the deposit.",
+    line: "Payment link sent, ₹500 received before breakfast.",
+  },
+];
+
+const SLIDE_MS = 4500;
+
+type Mode = "signin" | "signup";
 
 const inputClass =
-  "mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-[15px] text-ink shadow-sm outline-none transition-colors placeholder:text-ink/35 focus:border-brand-400 focus:ring-4 focus:ring-brand-100";
+  "mt-1.5 w-full rounded-xl border-2 border-ink/15 bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-brand-500 focus:ring-4 focus:ring-brand-100";
+
+/** Official multicolour Google "G". */
+function GoogleG() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M23.52 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3c-1.07.72-2.45 1.15-4.06 1.15-3.13 0-5.78-2.11-6.72-4.95H1.27v3.1A12 12 0 0 0 12 24Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.29a7.2 7.2 0 0 1 0-4.58v-3.1H1.27a12 12 0 0 0 0 10.78l4.01-3.1Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.77c1.76 0 3.34.6 4.59 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.61l4.01 3.1C6.22 6.87 8.87 4.77 12 4.77Z"
+      />
+    </svg>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [slide, setSlide] = useState(0);
+
+  // The shift report rotates on its own; the dots let you jump.
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSlide((s) => (s + 1) % SLIDES.length);
+    }, SLIDE_MS);
+    return () => clearInterval(id);
+  }, [slide]);
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setMessage(null);
+  }
 
   async function signIn() {
     setBusy(true);
@@ -39,12 +115,9 @@ export default function LoginPage() {
   async function signUp() {
     setError(null);
     setMessage(null);
-    // The button is type="button", so the form's `required` never runs —
-    // an empty email would reach Supabase and come back as the baffling
-    // "Anonymous sign-ins are disabled". Validate here instead.
     if (!email.trim() || password.length < 6) {
       setError(
-        "Enter your email and a password (at least 6 characters) above, then tap Create a free account."
+        "Enter your email and a password (at least 6 characters), then tap Create free account."
       );
       return;
     }
@@ -71,7 +144,9 @@ export default function LoginPage() {
       router.refresh();
       return;
     }
-    setMessage("Almost there! Check your email and click the link to finish signing up.");
+    setMessage(
+      "Almost there! Check your email and click the link to finish signing up."
+    );
   }
 
   async function signInWithGoogle() {
@@ -90,109 +165,228 @@ export default function LoginPage() {
     }
   }
 
+  const active = SLIDES[slide];
+
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-cream px-4 py-10">
+    <main className="relative min-h-screen overflow-hidden bg-[#faf9f5]">
       <div className="bg-dotgrid pointer-events-none absolute inset-0 opacity-40" />
 
-      <div className="relative w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-between">
-          <Logo />
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink/55 transition-colors hover:text-ink"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to home
-          </Link>
-        </div>
-
-        <div className="rounded-3xl border border-black/5 bg-white p-6 shadow-lift sm:p-8">
-          <h1 className="text-[1.65rem] font-semibold tracking-tight text-ink">
-            Sign in to Nudge
-          </h1>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink/55">
-            Your inbox, campaigns and automations — one workspace. New here?
-            Create an account free.
-          </p>
-
-          <form
-            className="mt-6 flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void signIn();
-            }}
-          >
-            <label className="block text-[13px] font-semibold text-ink/60">
-              Email
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputClass}
-                placeholder="you@business.com"
-              />
-            </label>
-            <label className="block text-[13px] font-semibold text-ink/60">
-              Password
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={busy}
-              className="mt-1 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 text-[15px] font-semibold text-white shadow-[0_10px_26px_-10px_rgba(6,193,103,0.65)] transition-all duration-300 hover:bg-brand-600 disabled:opacity-60"
+      <div className="relative mx-auto grid min-h-screen w-full max-w-[110rem] lg:grid-cols-[1.15fr_1fr]">
+        {/* ---- left: the park, framed like a bento card ---- */}
+        <aside className="hidden p-6 lg:block lg:p-8" aria-hidden>
+          <div className="relative h-full overflow-hidden rounded-[2rem] border-2 border-ink/70 shadow-[9px_9px_0_rgba(10,15,13,0.82)]">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="/hero/park-cta-v2.jpg"
+              className="absolute inset-0 h-full w-full object-cover"
             >
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              Sign in
-            </button>
+              <source src="/hero/park-cta-v2.mp4" type="video/mp4" />
+            </video>
+            {/* legibility grade — sky-deep at the top, clear ground below */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(9,40,74,0.55) 0%, rgba(9,40,74,0.28) 34%, rgba(9,40,74,0.05) 60%, rgba(9,40,74,0.25) 100%)",
+              }}
+            />
+
+            {/* the rotating shift report */}
+            <div className="absolute inset-x-0 top-0 flex flex-col items-center px-10 pt-14 text-center">
+              <span
+                key={`chip-${slide}`}
+                className="inline-flex animate-rise items-center gap-2 rounded-full border-2 border-ink/70 bg-white px-3 py-1 text-[10.5px] font-black uppercase tracking-[0.14em] text-brand-700 shadow-[3px_3px_0_rgba(10,15,13,0.82)]"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+                {active.agent} · {active.time}
+              </span>
+              <h2
+                key={`head-${slide}`}
+                className="mt-5 max-w-lg animate-rise font-display text-[clamp(1.9rem,2.6vw,2.7rem)] font-black leading-[1.04] tracking-[-0.03em] text-white [animation-delay:60ms]"
+                style={{
+                  textShadow: "0 2px 10px rgba(9,40,74,0.55), 0 10px 44px rgba(9,40,74,0.45)",
+                }}
+              >
+                {active.headline}
+              </h2>
+              <p
+                key={`line-${slide}`}
+                className="mt-3 max-w-md animate-rise text-[15.5px] font-medium leading-relaxed text-white/90 [animation-delay:120ms]"
+                style={{ textShadow: "0 2px 12px rgba(9,40,74,0.6)" }}
+              >
+                {active.line}
+              </p>
+            </div>
+
+            {/* dots */}
+            <div className="absolute inset-x-0 bottom-7 flex justify-center gap-2.5">
+              {SLIDES.map((s, i) => (
+                <button
+                  key={s.time}
+                  type="button"
+                  aria-label={`Show ${s.agent}`}
+                  onClick={() => setSlide(i)}
+                  className={cn(
+                    "h-2.5 rounded-full border border-ink/40 transition-all duration-300",
+                    i === slide ? "w-7 bg-white" : "w-2.5 bg-white/55 hover:bg-white/80"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* ---- right: the door in ---- */}
+        <section className="relative flex flex-col px-6 py-8 sm:px-10 lg:px-14">
+          <div className="flex items-center justify-between">
+            <Logo />
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink/55 transition-colors hover:text-ink"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to home
+            </Link>
+          </div>
+
+          <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
+            <h1 className="text-center font-display text-[1.9rem] font-black tracking-[-0.02em] text-ink">
+              {mode === "signin" ? "Welcome back." : "Let's run your WhatsApp."}
+            </h1>
+            <p className="mt-2 text-center text-[14.5px] leading-relaxed text-ink/55">
+              {mode === "signin"
+                ? "Your front desk kept the seat warm."
+                : "Free plan, no card — live the same day."}
+            </p>
+
+            {/* Sign In / Sign Up segmented toggle */}
+            <div
+              role="tablist"
+              aria-label="Sign in or sign up"
+              className="mx-auto mt-7 inline-flex items-center rounded-full border-2 border-ink/15 bg-white p-1"
+            >
+              {(
+                [
+                  { value: "signin", label: "Sign In", icon: LogIn },
+                  { value: "signup", label: "Sign Up", icon: UserRoundPlus },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === opt.value}
+                  onClick={() => switchMode(opt.value)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13.5px] font-bold transition-all duration-200",
+                    mode === opt.value
+                      ? "bg-ink text-white shadow-[2px_2px_0_rgba(10,15,13,0.25)]"
+                      : "text-ink/50 hover:text-ink"
+                  )}
+                >
+                  <opt.icon className="h-3.5 w-3.5" aria-hidden />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Google first — the fastest door */}
             <button
               type="button"
               disabled={busy}
-              onClick={() => void signUp()}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-black/10 bg-white px-4 text-[15px] font-semibold text-ink shadow-sm transition-colors hover:border-black/20 hover:bg-black/[0.02] disabled:opacity-60"
+              onClick={() => void signInWithGoogle()}
+              className="mt-7 inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-full border-2 border-ink/70 bg-ink text-[15px] font-bold text-white shadow-[4px_4px_0_rgba(10,15,13,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(10,15,13,0.35)] active:translate-y-0 active:shadow-[2px_2px_0_rgba(10,15,13,0.35)] disabled:opacity-60"
             >
-              Create a free account
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-white">
+                <GoogleG />
+              </span>
+              {mode === "signin" ? "Sign in with Google" : "Sign up with Google"}
             </button>
-          </form>
 
-          <div className="my-5 flex items-center gap-3 text-xs font-medium text-ink/35">
-            <div className="h-px flex-1 bg-black/8" />
-            or
-            <div className="h-px flex-1 bg-black/8" />
+            <div className="my-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.14em] text-ink/35">
+              <div className="h-px flex-1 bg-ink/10" />
+              or
+              <div className="h-px flex-1 bg-ink/10" />
+            </div>
+
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void (mode === "signin" ? signIn() : signUp());
+              }}
+            >
+              <label className="block text-[13px] font-bold text-ink/60">
+                Email
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="you@business.com"
+                />
+              </label>
+              <label className="block text-[13px] font-bold text-ink/60">
+                Password
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputClass}
+                  placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-4 text-[15px] font-bold text-white shadow-[0_4px_0_#047f48] transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_6px_0_#047f48] active:translate-y-0 active:shadow-[0_2px_0_#047f48] disabled:pointer-events-none disabled:opacity-60"
+              >
+                {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+                {mode === "signin" ? (
+                  "Sign in"
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4" aria-hidden />
+                    Create free account
+                  </>
+                )}
+              </button>
+            </form>
+
+            {error && (
+              <p className="mt-4 rounded-xl border-2 border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p className="mt-4 rounded-xl border-2 border-brand-200 bg-brand-50 px-3.5 py-2.5 text-sm text-brand-800">
+                {message}
+              </p>
+            )}
+
+            <p className="mt-7 text-center text-[12.5px] leading-relaxed text-ink/45">
+              By continuing you agree to our{" "}
+              <Link href="/privacy" className="font-semibold underline underline-offset-2 hover:text-ink">
+                Privacy Policy
+              </Link>{" "}
+              and{" "}
+              <Link href="/terms" className="font-semibold underline underline-offset-2 hover:text-ink">
+                Terms of Service
+              </Link>
+              .
+            </p>
           </div>
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void signInWithGoogle()}
-            className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-black/10 bg-white px-4 text-[15px] font-semibold text-ink shadow-sm transition-colors hover:border-black/20 hover:bg-black/[0.02] disabled:opacity-60"
-          >
-            Continue with Google
-          </button>
-
-          {error && (
-            <p className="mt-4 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-          {message && (
-            <p className="mt-4 rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm text-brand-800">
-              {message}
-            </p>
-          )}
-        </div>
-
-        <p className="mt-5 text-center text-[13px] text-ink/45">
-          Free plan · No credit card · Official WhatsApp Cloud API
-        </p>
+          <p className="text-center text-[12.5px] text-ink/40">
+            Free plan · No credit card · Official WhatsApp Cloud API
+          </p>
+        </section>
       </div>
     </main>
   );

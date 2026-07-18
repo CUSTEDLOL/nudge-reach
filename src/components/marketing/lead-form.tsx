@@ -20,7 +20,7 @@ const CATEGORIES = [
 ];
 
 const inputClass =
-  "w-full rounded-xl border border-black/10 bg-white px-3.5 py-3 text-[15px] text-ink shadow-sm outline-none transition-colors placeholder:text-ink/35 focus:border-brand-400 focus:ring-4 focus:ring-brand-100";
+  "w-full rounded-xl border-2 border-ink/15 bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition-all placeholder:text-ink/35 focus:border-ink focus:shadow-[3px_3px_0_rgba(10,15,13,0.15)]";
 
 export function LeadForm({
   surface = "home",
@@ -72,12 +72,12 @@ export function LeadForm({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="flex flex-col items-center rounded-3xl border border-brand-200 bg-white p-8 text-center shadow-lift"
+        className="flex flex-col items-center rounded-[1.75rem] border-2 border-ink/70 bg-white p-8 text-center shadow-[9px_9px_0_rgba(10,15,13,0.82)]"
       >
-        <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-100 text-brand-600">
+        <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-ink/70 bg-brand-100 text-brand-700">
           <CheckCircle2 className="h-7 w-7" />
         </span>
-        <h3 className="mt-4 text-xl font-semibold text-ink">You&apos;re in! 🎉</h3>
+        <h3 className="mt-4 font-display text-xl font-black text-ink">You&apos;re in! 🎉</h3>
         <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-ink/60">
           {intent === "demo"
             ? "We'll WhatsApp you within one business day to schedule your demo and set up your first campaign, free."
@@ -88,9 +88,9 @@ export function LeadForm({
   }
 
   return (
-    <div className="rounded-3xl border border-black/5 bg-white p-6 shadow-lift sm:p-7">
+    <div className="rounded-[1.75rem] border-2 border-ink/70 bg-white p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-8">
       {/* intent toggle */}
-      <div className="mb-5 inline-flex rounded-full border border-black/5 bg-brand-50/70 p-1">
+      <div className="mb-5 inline-flex rounded-full border-2 border-ink/70 bg-white p-1">
         {(["demo", "waitlist"] as Intent[]).map((it) => (
           <button
             key={it}
@@ -104,7 +104,7 @@ export function LeadForm({
             {intent === it && (
               <motion.span
                 layoutId={`intent-${surface}`}
-                className="absolute inset-0 rounded-full bg-brand-500 shadow-soft"
+                className="absolute inset-0 rounded-full bg-brand-500 shadow-[2px_2px_0_rgba(10,15,13,0.3)]"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />
             )}
@@ -151,7 +151,7 @@ export function LeadForm({
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="group mt-1 inline-flex h-[3.35rem] items-center justify-center gap-2 rounded-xl bg-brand-500 text-base font-semibold text-white shadow-[0_12px_30px_-10px_rgba(6,193,103,0.7)] transition-all duration-300 hover:bg-brand-600 hover:shadow-glow disabled:opacity-70"
+          className="group mt-1 inline-flex h-[3.35rem] items-center justify-center gap-2 rounded-full bg-brand-500 text-base font-semibold text-white shadow-[0_4px_0_#047f48] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_6px_0_#047f48] active:translate-y-0 active:shadow-[0_2px_0_#047f48] disabled:pointer-events-none disabled:opacity-70"
         >
           {status === "submitting" ? (
             <>
