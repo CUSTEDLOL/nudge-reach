@@ -56,6 +56,11 @@ export const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     GOOGLE_OAUTH_REDIRECT_URI: z.string().optional(),
 
+    // Google Places API key (optional) — powers the Google Business Profile
+    // knowledge import. Left empty, the import runs in simulation with a
+    // demo profile so onboarding demos keyless (invariant #4).
+    GOOGLE_MAPS_API_KEY: z.string().optional(),
+
     // Cron protection (optional): when set, /api/cron/* requires
     // "Authorization: Bearer <CRON_SECRET>" (Vercel Cron sends it natively).
     CRON_SECRET: z.string().optional(),

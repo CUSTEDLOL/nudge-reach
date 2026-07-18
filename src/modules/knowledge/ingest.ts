@@ -265,6 +265,145 @@ export async function ingestWebsite(
 }
 
 /* ------------------------------------------------------------------ */
+/* Google Business Profile import — the zero-effort source. Most       */
+/* Indian SMBs have a GBP listing even with no website: name, address, */
+/* hours, phone in one search. Structured data → deterministic facts   */
+/* (no LLM). Keyless → a demo profile so onboarding demos end-to-end   */
+/* (invariant #4). When the listing has a website, we chain-crawl it.  */
+/* ------------------------------------------------------------------ */
+
+export interface GbpPlace {
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  nationalPhoneNumber?: string;
+  websiteUri?: string;
+  rating?: number;
+  userRatingCount?: number;
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+}
+
+const FACT_MAX = 280;
+
+/** Deterministic GBP → facts (pure; no model call). */
+export function gbpFacts(place: GbpPlace): DistilledFact[] {
+  const facts: DistilledFact[] = [];
+  if (place.formattedAddress) {
+    facts.push({
+      category: "location",
+      fact: `Address: ${place.formattedAddress}`.slice(0, 300),
+    });
+  }
+  // Hours: pack the per-day lines into as few review cards as fit.
+  const days = place.regularOpeningHours?.weekdayDescriptions ?? [];
+  let bucket = "";
+  for (const day of days) {
+    const next = bucket ? `${bucket}; ${day}` : day;
+    if (next.length > FACT_MAX && bucket) {
+      facts.push({ category: "hours", fact: bucket });
+      bucket = day;
+    } else {
+      bucket = next;
+    }
+  }
+  if (bucket) facts.push({ category: "hours", fact: bucket });
+
+  if (place.nationalPhoneNumber) {
+    facts.push({
+      category: "other",
+      fact: `Phone: ${place.nationalPhoneNumber}`,
+    });
+  }
+  if (place.rating && place.userRatingCount) {
+    facts.push({
+      category: "faq",
+      fact: `Rated ${place.rating}/5 on Google from ${place.userRatingCount} reviews`,
+    });
+  }
+  return facts;
+}
+
+/** Keyless demo listing — keeps the GBP flow demoable with zero keys. */
+const SIMULATED_PLACE: GbpPlace = {
+  displayName: { text: "Glow Beauty Studio (demo listing)" },
+  formattedAddress: "2nd Floor, Green Plaza, MG Road, Bengaluru 560001",
+  nationalPhoneNumber: "+91 98765 43210",
+  rating: 4.7,
+  userRatingCount: 214,
+  regularOpeningHours: {
+    weekdayDescriptions: [
+      "Monday: 10:00 AM – 8:00 PM",
+      "Tuesday: 10:00 AM – 8:00 PM",
+      "Wednesday: 10:00 AM – 8:00 PM",
+      "Thursday: 10:00 AM – 8:00 PM",
+      "Friday: 10:00 AM – 8:00 PM",
+      "Saturday: 9:00 AM – 9:00 PM",
+      "Sunday: Closed",
+    ],
+  },
+};
+
+async function searchGbp(query: string): Promise<GbpPlace | null> {
+  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": env.GOOGLE_MAPS_API_KEY ?? "",
+      "X-Goog-FieldMask":
+        "places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.regularOpeningHours",
+    },
+    body: JSON.stringify({ textQuery: query, maxResultCount: 1 }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error(`Google Places lookup failed (HTTP ${res.status}).`);
+  }
+  const body = (await res.json().catch(() => null)) as {
+    places?: GbpPlace[];
+  } | null;
+  return body?.places?.[0] ?? null;
+}
+
+export interface GbpImportResult {
+  name: string;
+  drafts: number;
+  websiteCrawled: boolean;
+}
+
+export async function ingestGbp(
+  orgId: string,
+  query: string
+): Promise<GbpImportResult> {
+  const place = env.GOOGLE_MAPS_API_KEY
+    ? await searchGbp(query)
+    : SIMULATED_PLACE;
+  if (!place) {
+    throw new Error(
+      `Couldn't find "${query}" on Google. Try the business name plus the city.`
+    );
+  }
+
+  let drafts = await storeDraftFacts(orgId, gbpFacts(place));
+
+  // Bonus: the listing knows the website — crawl it in the same run.
+  let websiteCrawled = false;
+  if (place.websiteUri) {
+    try {
+      const site = await ingestWebsite(orgId, place.websiteUri);
+      drafts += site.drafts;
+      websiteCrawled = true;
+    } catch {
+      // The GBP facts alone are still a win; never fail the run on this.
+    }
+  }
+
+  return {
+    name: place.displayName?.text ?? query,
+    drafts,
+    websiteCrawled,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* File ingestion — PDFs (document blocks) + menu/rate-card photos     */
 /* (vision), both through the Haiku router. Requires the AI key: with  */
 /* zero keys the caller gets a friendly pointer at the website import, */

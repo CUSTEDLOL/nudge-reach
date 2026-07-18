@@ -17,6 +17,7 @@ import {
   FILE_MEDIA_TYPES,
   MAX_FILE_BYTES,
   ingestFile,
+  ingestGbp,
   ingestWebsite,
   type FileMediaType,
 } from "@/modules/knowledge/ingest";
@@ -174,6 +175,41 @@ export async function importWebsiteAction(url: string): Promise<ActionResult> {
         result.drafts === 1 ? "" : "s"
       } across ${result.pages} page${
         result.pages === 1 ? "" : "s"
+      } — review them below.`,
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Import from the Google Business Profile listing: name+city search →
+ * address/hours/phone as DRAFT facts; chains into the website crawl when
+ * the listing has one. Simulation profile when no Places key.
+ */
+export async function importGbpAction(query: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return { ok: false, message: "Type your business name and city." };
+    }
+    const result = await ingestGbp(ctx.org.id, trimmed);
+    recordAudit(ctx, "knowledge.gbp_imported", trimmed);
+    revalidatePath("/agent");
+    if (result.drafts === 0) {
+      return {
+        ok: true,
+        message: `Found ${result.name} but nothing new to import.`,
+      };
+    }
+    return {
+      ok: true,
+      message: `Imported ${result.drafts} fact${
+        result.drafts === 1 ? "" : "s"
+      } from ${result.name}${
+        result.websiteCrawled ? " (including their website)" : ""
       } — review them below.`,
     };
   } catch (err) {

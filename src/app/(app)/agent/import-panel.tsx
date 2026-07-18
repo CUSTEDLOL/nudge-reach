@@ -11,6 +11,7 @@ import {
   approveDraftAction,
   discardDraftAction,
   importFileAction,
+  importGbpAction,
   importWebsiteAction,
 } from "./actions";
 
@@ -34,6 +35,7 @@ export function ImportPanel({
   canEdit: boolean;
 }) {
   const [url, setUrl] = useState("");
+  const [gbpQuery, setGbpQuery] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +69,28 @@ export function ImportPanel({
         </p>
         <form
           className="mt-3 flex flex-wrap gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (gbpQuery.trim()) run(() => importGbpAction(gbpQuery));
+          }}
+        >
+          <Input
+            value={gbpQuery}
+            onChange={(e) => setGbpQuery(e.target.value)}
+            placeholder="Your business name + city (finds your Google listing)"
+            className="min-w-0 flex-1"
+            disabled={!canEdit || pending}
+          />
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!canEdit || pending || !gbpQuery.trim()}
+          >
+            {pending ? "Searching…" : "Find my listing"}
+          </Button>
+        </form>
+        <form
+          className="mt-2 flex flex-wrap gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             if (url.trim()) run(() => importWebsiteAction(url));
