@@ -271,13 +271,13 @@ function FeatureImageReveal({
       {animate && <EffectLayer feature={feature} />}
 
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 z-10"
         style={{
           opacity: revealed ? 1 : 0,
           transform: revealed ? "translateY(0) scale(1)" : "translateY(18px) scale(0.94)",
           filter: revealed ? "blur(0px)" : "blur(6px)",
           transition: animate
-            ? `opacity 850ms ${EASE} 3600ms, transform 1100ms ${EASE} 3250ms, filter 900ms ${EASE} 3450ms`
+            ? `opacity 700ms ${EASE} 3150ms, transform 900ms ${EASE} 2950ms, filter 700ms ${EASE} 3100ms`
             : `opacity 240ms ${EASE}, transform 420ms ${EASE}, filter 300ms ${EASE}`,
         }}
       >
@@ -300,7 +300,7 @@ function FeatureImageReveal({
 
 function EffectLayer({ feature }: { feature: Feature }) {
   return (
-    <div className="pointer-events-none absolute inset-0">
+    <div className="pointer-events-none absolute inset-0 z-0">
       {feature.effect === "pixel" && <PixelStorm feature={feature} />}
       {feature.effect === "signal" && <SignalBurst feature={feature} />}
       {feature.effect === "bars" && <DataBuild feature={feature} />}

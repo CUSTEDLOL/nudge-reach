@@ -14,6 +14,9 @@ what's next.
   word motion five times.
 - Added an explicit 4.7-second settled state: effect layers unmount after the
   crisp image resolves, so nothing loops or keeps moving under a held hover.
+- Hardened the final handoff: assembled image layers now hold at full opacity,
+  the crisp source resolves above them with an 850ms safety margin, and layer
+  removal is visually identical instead of causing a partial-image flash.
 
 ## Landing bento — 4.6s editorial hover sequence (2026-07-18) ✅
 

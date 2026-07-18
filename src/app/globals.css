@@ -809,7 +809,7 @@ html {
     filter: blur(0) saturate(1);
   }
   100% {
-    opacity: 0;
+    opacity: 1;
     transform: translate(0, 0) rotate(0deg) scale(1);
     filter: blur(0);
   }
@@ -870,7 +870,7 @@ html {
     filter: blur(0) saturate(1);
   }
   100% {
-    opacity: 0;
+    opacity: 1;
     clip-path: circle(90% at 50% 62%);
     filter: blur(0) saturate(1);
   }
@@ -940,7 +940,7 @@ html {
     filter: blur(0) contrast(1);
   }
   100% {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(0) scaleY(1);
     filter: blur(0) contrast(1);
   }
@@ -1017,7 +1017,7 @@ html {
     filter: blur(0) hue-rotate(0deg);
   }
   100% {
-    opacity: 0;
+    opacity: 1;
     transform: rotate(0deg) scale(1);
     filter: blur(0) hue-rotate(0deg);
   }
@@ -1072,7 +1072,7 @@ html {
     filter: blur(0) saturate(1);
   }
   100% {
-    opacity: 0;
+    opacity: 1;
     transform: translateX(0) skewX(0deg) scale(1);
     filter: blur(0) saturate(1);
   }
