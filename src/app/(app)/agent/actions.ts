@@ -13,7 +13,13 @@ import {
   dismissOwnerQuestion,
 } from "@/modules/knowledge/questions";
 import { distillAnswer } from "@/modules/knowledge/distill";
-import { ingestWebsite } from "@/modules/knowledge/ingest";
+import {
+  FILE_MEDIA_TYPES,
+  MAX_FILE_BYTES,
+  ingestFile,
+  ingestWebsite,
+  type FileMediaType,
+} from "@/modules/knowledge/ingest";
 
 export interface ActionResult {
   ok: boolean;
@@ -169,6 +175,48 @@ export async function importWebsiteAction(url: string): Promise<ActionResult> {
       } across ${result.pages} page${
         result.pages === 1 ? "" : "s"
       } — review them below.`,
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Import a menu / price list / brochure — PDF (document block) or photo
+ * (vision) — into DRAFT facts. Same review flow as the website import.
+ */
+export async function importFileAction(formData: FormData): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      return { ok: false, message: "Choose a file to import." };
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      return { ok: false, message: "That file is too large — 5 MB max." };
+    }
+    if (!(FILE_MEDIA_TYPES as readonly string[]).includes(file.type)) {
+      return {
+        ok: false,
+        message: "Upload a PDF or a JPG/PNG/WebP photo of your menu or rate card.",
+      };
+    }
+    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    const result = await ingestFile(ctx.org.id, {
+      base64,
+      mediaType: file.type as FileMediaType,
+    });
+    recordAudit(ctx, "knowledge.file_imported", file.name);
+    revalidatePath("/agent");
+    if (result.drafts === 0) {
+      return { ok: true, message: "Read the file but found nothing new to import." };
+    }
+    return {
+      ok: true,
+      message: `Found ${result.drafts} fact${
+        result.drafts === 1 ? "" : "s"
+      } in ${file.name} — review them below.`,
     };
   } catch (err) {
     return fail(err);

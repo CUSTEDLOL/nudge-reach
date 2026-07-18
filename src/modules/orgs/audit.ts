@@ -30,6 +30,7 @@ export type AuditAction =
   | "knowledge.dismissed"
   | "knowledge.entry_archived"
   | "knowledge.website_imported"
+  | "knowledge.file_imported"
   | "knowledge.drafts_approved";
 
 /** Human labels for the viewer. */
@@ -56,6 +57,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "knowledge.dismissed": "Agent question dismissed",
   "knowledge.entry_archived": "Knowledge fact archived",
   "knowledge.website_imported": "Website imported into knowledge drafts",
+  "knowledge.file_imported": "File imported into knowledge drafts",
   "knowledge.drafts_approved": "Imported knowledge drafts approved",
 };
 

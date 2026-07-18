@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
-import { chat } from "@/lib/model-router";
+import { chat, generate } from "@/lib/model-router";
 import { assertPublicHttpsUrl } from "@/modules/integrations/outbound-webhooks";
 import { factSchema, type DistilledFact } from "./distill";
 
@@ -122,6 +122,22 @@ const INGEST_SYSTEM = [
   "Return [] if the text contains nothing factual.",
 ].join("\n");
 
+/** Parse the model's JSON-array reply into validated facts ([] on any failure). */
+function parseFactsArray(raw: string): DistilledFact[] {
+  try {
+    const cleaned = raw.replace(/```(?:json)?/gi, "");
+    const start = cleaned.indexOf("[");
+    const end = cleaned.lastIndexOf("]");
+    if (start === -1 || end <= start) return [];
+    const parsed = pageFactsSchema.safeParse(
+      JSON.parse(cleaned.slice(start, end + 1)).slice(0, 10)
+    );
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+}
+
 async function modelFacts(pageText: string): Promise<DistilledFact[]> {
   const facts: DistilledFact[] = [];
   const chunks: string[] = [];
@@ -139,19 +155,48 @@ async function modelFacts(pageText: string): Promise<DistilledFact[]> {
         messages: [{ role: "user", text: chunk }],
         maxTokens: 700,
       });
-      const cleaned = (raw ?? "").replace(/```(?:json)?/gi, "");
-      const start = cleaned.indexOf("[");
-      const end = cleaned.lastIndexOf("]");
-      if (start === -1 || end <= start) continue;
-      const parsed = pageFactsSchema.safeParse(
-        JSON.parse(cleaned.slice(start, end + 1)).slice(0, 10)
-      );
-      if (parsed.success) facts.push(...parsed.data);
+      facts.push(...parseFactsArray(raw ?? ""));
     } catch {
       // One bad chunk never sinks the page.
     }
   }
   return facts;
+}
+
+/**
+ * Dedupe against the org's existing facts and store as drafts. Shared by
+ * every ingestion source (website, PDF, photo, GBP…). Returns stored count.
+ */
+async function storeDraftFacts(
+  orgId: string,
+  facts: DistilledFact[],
+  cap = MAX_DRAFTS_PER_RUN
+): Promise<number> {
+  if (!facts.length) return 0;
+  const existing = await prisma.knowledgeEntry.findMany({
+    where: { orgId },
+    select: { fact: true },
+  });
+  const known = new Set(existing.map((e) => e.fact.trim().toLowerCase()));
+
+  let stored = 0;
+  for (const fact of facts) {
+    const key = fact.fact.trim().toLowerCase();
+    if (known.has(key) || stored >= cap) continue;
+    known.add(key);
+    await prisma.knowledgeEntry.create({
+      data: {
+        orgId,
+        category: fact.category,
+        fact: fact.fact.trim(),
+        condition: fact.condition?.trim() || null,
+        source: "import",
+        status: "draft",
+      },
+    });
+    stored += 1;
+  }
+  return stored;
 }
 
 /* ------------------------------------------------------------------ */
@@ -206,38 +251,60 @@ export async function ingestWebsite(
     })
   );
 
-  // Existing fact texts (any status) — never re-import a duplicate.
-  const existing = await prisma.knowledgeEntry.findMany({
-    where: { orgId },
-    select: { fact: true },
-  });
-  const known = new Set(existing.map((e) => e.fact.trim().toLowerCase()));
-
-  let drafts = 0;
+  const collected: DistilledFact[] = [];
   for (const [, html] of htmls) {
-    if (drafts >= MAX_DRAFTS_PER_RUN) break;
     const text = stripHtml(html);
     if (text.length < 40) continue;
-    const facts = env.ANTHROPIC_API_KEY
-      ? await modelFacts(text)
-      : heuristicFacts(text);
-    for (const fact of facts) {
-      const key = fact.fact.trim().toLowerCase();
-      if (known.has(key) || drafts >= MAX_DRAFTS_PER_RUN) continue;
-      known.add(key);
-      await prisma.knowledgeEntry.create({
-        data: {
-          orgId,
-          category: fact.category,
-          fact: fact.fact.trim(),
-          condition: fact.condition?.trim() || null,
-          source: "import",
-          status: "draft",
-        },
-      });
-      drafts += 1;
-    }
+    collected.push(
+      ...(env.ANTHROPIC_API_KEY ? await modelFacts(text) : heuristicFacts(text))
+    );
   }
+  const drafts = await storeDraftFacts(orgId, collected);
 
   return { pages: htmls.size, drafts };
+}
+
+/* ------------------------------------------------------------------ */
+/* File ingestion — PDFs (document blocks) + menu/rate-card photos     */
+/* (vision), both through the Haiku router. Requires the AI key: with  */
+/* zero keys the caller gets a friendly pointer at the website import, */
+/* which stays fully keyless (invariant #4).                           */
+/* ------------------------------------------------------------------ */
+
+export const FILE_MEDIA_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+export type FileMediaType = (typeof FILE_MEDIA_TYPES)[number];
+
+export const MAX_FILE_BYTES = 5 * 1024 * 1024; // stays inside the 6mb action cap
+
+const FILE_PROMPT =
+  "Extract knowledge-base facts about the business from this file (a menu, price list, rate card, brochure or similar). Follow the system instructions.";
+
+export async function ingestFile(
+  orgId: string,
+  input: { base64: string; mediaType: FileMediaType }
+): Promise<{ drafts: number }> {
+  if (!env.ANTHROPIC_API_KEY) {
+    throw new Error(
+      "Reading files needs the AI key. In demo mode, import from your website instead — that works without keys."
+    );
+  }
+
+  const raw = await generate({
+    system: INGEST_SYSTEM,
+    prompt: FILE_PROMPT,
+    ...(input.mediaType === "application/pdf"
+      ? { document: { data: input.base64 } }
+      : {
+          image: { data: input.base64, mediaType: input.mediaType },
+        }),
+    maxTokens: 1500,
+  });
+
+  const drafts = await storeDraftFacts(orgId, parseFactsArray(raw));
+  return { drafts };
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, Globe, X } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { Check, Globe, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import {
   approveAllDraftsAction,
   approveDraftAction,
   discardDraftAction,
+  importFileAction,
   importWebsiteAction,
 } from "./actions";
 
@@ -35,6 +36,7 @@ export function ImportPanel({
   const [url, setUrl] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const run = (fn: () => Promise<{ ok: boolean; message: string }>) =>
     startTransition(async () => {
@@ -42,16 +44,25 @@ export function ImportPanel({
       setMessage(r.message);
     });
 
+  function onFilePicked(file: File | undefined) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.set("file", file);
+    run(() => importFileAction(fd));
+    // Allow re-picking the same file after a failure.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
           <Globe className="h-4 w-4 text-brand-600" aria-hidden />
-          Import from your website
+          Teach it from what you already have
         </div>
         <p className="mt-1 text-[13.5px] text-neutral-500">
-          Paste your site and we&rsquo;ll read the menu, prices, hours and
-          policies into facts you approve below — nothing goes live until you
+          Paste your website, or upload a menu, price list or brochure — we
+          read it into facts you approve below. Nothing goes live until you
           say so.
         </p>
         <form
@@ -71,6 +82,23 @@ export function ImportPanel({
           <Button type="submit" size="sm" disabled={!canEdit || pending || !url.trim()}>
             {pending ? "Reading…" : "Import"}
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={!canEdit || pending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4" aria-hidden />
+            Upload menu / PDF
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => onFilePicked(e.target.files?.[0])}
+          />
         </form>
         {message && (
           <p className="mt-2 text-[13px] font-medium text-neutral-600">{message}</p>

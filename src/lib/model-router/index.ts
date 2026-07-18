@@ -18,6 +18,11 @@ export interface GenerateInput {
     data: string;
     mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
   };
+  /** Base64-encoded PDF (document content block — supported on Haiku,
+   * no beta header; 100-page cap on 200K-context models). */
+  document?: {
+    data: string;
+  };
   maxTokens?: number;
 }
 
@@ -39,6 +44,7 @@ export async function generate({
   system,
   prompt,
   image,
+  document,
   maxTokens = 1024, // campaigns are short; keep the cap low to control cost
 }: GenerateInput): Promise<string> {
   const model = env.RUNTIME_MODEL || "claude-haiku-4-5";
@@ -52,6 +58,16 @@ export async function generate({
         type: "base64",
         media_type: image.mediaType,
         data: image.data,
+      },
+    });
+  }
+  if (document) {
+    content.push({
+      type: "document",
+      source: {
+        type: "base64",
+        media_type: "application/pdf",
+        data: document.data,
       },
     });
   }
