@@ -5,6 +5,14 @@ what's next.
 
 ---
 
+## Navbar restored after pull (2026-07-18) ✅
+
+- Restored `src/components/marketing/navbar.tsx` to the pre-pull local version
+  from commit `57ba352` so the navbar keeps Vishesh's pixel-slab treatment
+  instead of the newer sweep animation introduced by the merge.
+- Preserved the intended scroll handoff: the slab starts white over the hero
+  and recolors to ink as the navbar transitions into the solid scrolled state.
+
 ## Comparison becomes a game roster (2026-07-18) ✅
 
 Founder review: the kinetic market map read as "very AI" — a sterile
