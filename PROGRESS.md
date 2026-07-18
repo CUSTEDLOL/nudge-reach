@@ -5,6 +5,50 @@ what's next.
 
 ---
 
+## Bento signature reveals — five finite acts, provable stillness (2026-07-18) ✅
+
+Founder brief: the five experimental bento iterations felt cheap or
+chaotic (image-fragment effects read as broken loading), revealed titles
+were oversized, and cards had to be perfectly still once settled.
+Replaced the animation system cleanly.
+
+### Done
+- Rest state keeps the outlined AI AGENT / BROADCAST / ANALYTICS /
+  INTEGRATIONS / GREEN TICK nameplates (stroke 1.8px, visible ink/25
+  borders, quiet tints); hover tints are mid-strength, not pastel.
+- One finite ~4.2s sequence per card, each expressing its feature:
+  - **AI Agent** — a thought coming into focus: synapse lines draw and
+    converge while the image sharpens from a 16px blur (title: focus-in).
+  - **Broadcast** — one transmission: three rings emit from the tablet as
+    the image reveals in a radial wipe from that point (title: letter-
+    spacing collapse).
+  - **Analytics** — measured into existence: a baseline draws, a
+    measuring rule climbs, the image builds bottom-up behind it (title:
+    left-to-right wipe).
+  - **Integrations** — the connection completes: two ports pop, the link
+    draws across, a pulse confirms, the image docks (title: dock from
+    above).
+  - **Green Tick** — reviewed → approved: the image arrives desaturated,
+    a badge ring + check draw, approval restores full colour with a
+    subtle press (title: stamp).
+- Titles at roughly half the previous size (≤1.35rem); headline/body
+  normal-sized with staggered calm entrances.
+- Stillness is architectural: every keyframe runs once with `both` fill,
+  decor layers end at opacity 0 AND unmount at 4.6s; leaving a card
+  unmounts the revealed layer so replays start from zero.
+- Deleted the old fragment system (24-tile pixel storm, wedge orbit,
+  slash bands — ~330 lines of CSS + the per-word scatter code).
+
+### Verification (screenshotted, inspected)
+- Desktop 1440×900: rest, early/mid/settled for all five, replay after
+  exit, rapid 7-hop card sweep with a clean landing.
+- Stillness proof: two full-page screenshots 1.5s apart on a settled
+  card are byte-identical.
+- Mobile 390×844: completed states shown directly, no horizontal
+  overflow. Reduced-motion: completed states, no animation. No clipping
+  or text collisions in any captured frame.
+- `npm run lint`, 392 tests, `npm run build`, `git diff --check` — green.
+
 ## Landing bento — five finite signature reveals (2026-07-18) ✅
 
 - Replaced the shared strip treatment with a different finite reveal for every
