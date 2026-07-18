@@ -786,6 +786,332 @@ html {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+/* ============================================================
+   Feature scenes — grayscale animated line illustrations
+   (GTE-style looping bento cards; default-visible without motion)
+   ============================================================ */
+/* AI agent — fragments collapse into a neural core, then lock. */
+@keyframes bento-pixel-lock {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.85;
+  }
+  64% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1.035);
+    filter: blur(0) saturate(1.15);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    filter: blur(0) saturate(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+}
+
+.bento-ai-core {
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95),
+    rgba(6, 193, 103, 0.45) 28%,
+    transparent 72%
+  );
+  filter: blur(10px);
+  opacity: 0;
+  animation: bento-core-collapse 4.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bento-core-collapse {
+  0%,
+  18% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  46% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(2.8);
+  }
+  72% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.65);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.05);
+  }
+}
+
+/* Broadcast — the image arrives like a transmitted signal. */
+.bento-signal-image {
+  clip-path: circle(0% at 50% 62%);
+  filter: blur(9px) saturate(1.4);
+  opacity: 0;
+  animation: bento-signal-open 4.35s cubic-bezier(0.22, 1, 0.36, 1) 260ms both;
+}
+
+@keyframes bento-signal-open {
+  0%,
+  10% {
+    opacity: 0;
+    clip-path: circle(0% at 50% 62%);
+  }
+  28% {
+    opacity: 0.75;
+  }
+  76% {
+    opacity: 1;
+    clip-path: circle(78% at 50% 62%);
+    filter: blur(0) saturate(1);
+  }
+  100% {
+    opacity: 0;
+    clip-path: circle(90% at 50% 62%);
+    filter: blur(0) saturate(1);
+  }
+}
+
+.bento-signal-ring {
+  opacity: 0;
+  animation: bento-signal-ring 2.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bento-signal-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.08);
+  }
+  22% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(4.2);
+  }
+}
+
+.bento-signal-beam {
+  box-shadow: 0 0 22px 4px rgba(255, 255, 255, 0.75);
+  opacity: 0;
+  transform-origin: bottom;
+  animation: bento-signal-beam 4.2s cubic-bezier(0.22, 1, 0.36, 1) 340ms both;
+}
+
+@keyframes bento-signal-beam {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0);
+  }
+  38% {
+    opacity: 0.85;
+    transform: translateX(-50%) scaleY(1);
+  }
+  76% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(1);
+  }
+}
+
+/* Analytics — columns become the image, with one finite data scan. */
+@keyframes bento-data-rise {
+  0% {
+    opacity: 0;
+  }
+  16% {
+    opacity: 0.85;
+  }
+  66% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1.035);
+    filter: blur(0) contrast(1.08);
+  }
+  84% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    filter: blur(0) contrast(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0) scaleY(1);
+    filter: blur(0) contrast(1);
+  }
+}
+
+.bento-data-grid {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: 0;
+  animation: bento-data-grid 4.45s ease both;
+}
+
+@keyframes bento-data-grid {
+  0%,
+  12% {
+    opacity: 0;
+    transform: perspective(280px) rotateX(62deg) scale(0.7);
+  }
+  42% {
+    opacity: 0.55;
+  }
+  78% {
+    opacity: 0.2;
+    transform: perspective(280px) rotateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(280px) rotateX(0) scale(1);
+  }
+}
+
+.bento-data-cursor {
+  box-shadow: 0 0 18px 3px rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  animation: bento-data-cursor 4.35s cubic-bezier(0.22, 1, 0.36, 1) 260ms both;
+}
+
+@keyframes bento-data-cursor {
+  0%,
+  14% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  28% {
+    opacity: 0.95;
+  }
+  82% {
+    opacity: 0.55;
+    transform: translateY(-260px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-280px);
+  }
+}
+
+/* Integrations — radial wedges orbit, synchronize, and lock. */
+@keyframes bento-orbit-lock {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1.025);
+    filter: blur(0) hue-rotate(0deg);
+  }
+  86% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+    filter: blur(0) hue-rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(0deg) scale(1);
+    filter: blur(0) hue-rotate(0deg);
+  }
+}
+
+.bento-orbit-ring {
+  opacity: 0;
+  animation: bento-orbit-ring 4.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bento-orbit-ring-b {
+  animation-delay: 360ms;
+  animation-direction: reverse;
+}
+
+@keyframes bento-orbit-ring {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-210deg) scale(0.4);
+    border-style: dashed;
+  }
+  42% {
+    opacity: 0.8;
+  }
+  78% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) rotate(35deg) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+}
+
+/* Green Tick — diagonal verification slashes + one hand-drawn approval. */
+@keyframes bento-slash-lock {
+  0% {
+    opacity: 0;
+  }
+  16% {
+    opacity: 0.85;
+  }
+  68% {
+    opacity: 1;
+    transform: translateX(0) skewX(0deg) scale(1.025);
+    filter: blur(0) saturate(1.05);
+  }
+  84% {
+    opacity: 1;
+    transform: translateX(0) skewX(0deg) scale(1);
+    filter: blur(0) saturate(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(0) skewX(0deg) scale(1);
+    filter: blur(0) saturate(1);
+  }
+}
+
+.bento-verify-mark {
+  filter: drop-shadow(0 8px 18px rgba(10, 31, 26, 0.22));
+  opacity: 0;
+  animation: bento-verify-mark 4.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bento-verify-mark path {
+  stroke-dasharray: 190;
+  stroke-dashoffset: 190;
+  animation: bento-verify-stroke 2.25s cubic-bezier(0.22, 1, 0.36, 1) 1550ms both;
+}
+
+@keyframes bento-verify-mark {
+  0%,
+  28% {
+    opacity: 0;
+    transform: scale(0.78) rotate(-8deg);
+  }
+  42%,
+  78% {
+    opacity: 0.95;
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06) rotate(0deg);
+  }
+}
+
+@keyframes bento-verify-stroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 @keyframes scene-spin {
   to {
     transform: rotate(360deg);
@@ -882,106 +1208,4 @@ html {
   .scene * {
     animation: none !important;
   }
-}
-
-/* ============================================================
-   Bento signature reveals — five finite, per-feature sequences.
-   Every animation below runs ONCE with `both` fill: decor layers
-   end at opacity 0, the image ends at identity, so a settled card
-   is pixel-for-pixel the crisp product image with zero motion.
-   The component unmounts the decor layer after the sequence as a
-   hard guarantee. Namespace: fsig-.
-   ============================================================ */
-
-/* ---- shared title entrances (one per card, ~0.6-0.8s) ------------- */
-@keyframes fsig-title-focus {
-  from { opacity: 0; transform: translateY(12px); filter: blur(6px); }
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
-}
-@keyframes fsig-title-track {
-  from { opacity: 0; letter-spacing: 0.3em; }
-  to { opacity: 1; letter-spacing: -0.02em; }
-}
-@keyframes fsig-title-wipe {
-  from { opacity: 1; clip-path: inset(0 100% 0 0); }
-  to { opacity: 1; clip-path: inset(0 0 0 0); }
-}
-@keyframes fsig-title-dock {
-  0% { opacity: 0; transform: translateY(-14px); }
-  70% { opacity: 1; transform: translateY(2px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-@keyframes fsig-title-stamp {
-  from { opacity: 0; transform: scale(1.14); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* ---- shared copy + decor plumbing --------------------------------- */
-@keyframes fsig-copy-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fsig-gone {
-  to { opacity: 0; }
-}
-@keyframes fsig-draw {
-  to { stroke-dashoffset: 0; }
-}
-@keyframes fsig-pop {
-  0% { opacity: 0; transform: scale(0); }
-  60% { opacity: 1; transform: scale(1.25); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-/* ---- AI Agent: a thought coming into focus ------------------------ */
-@keyframes fsig-img-focus {
-  from { opacity: 0; transform: scale(1.02); filter: blur(16px) grayscale(0.7); }
-  to { opacity: 1; transform: scale(1); filter: blur(0) grayscale(0); }
-}
-
-/* ---- Broadcast: one transmission, radial wipe from the tablet ----- */
-@keyframes fsig-ring {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.15); }
-  22% { opacity: 0.55; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-}
-@keyframes fsig-img-radial {
-  0% { opacity: 0; clip-path: circle(5% at 63% 55%); }
-  18% { opacity: 1; }
-  100% { opacity: 1; clip-path: circle(150% at 63% 55%); }
-}
-
-/* ---- Analytics: measured into existence, bottom-up ---------------- */
-@keyframes fsig-baseline {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-@keyframes fsig-rule-climb {
-  0% { opacity: 0; top: 100%; }
-  12% { opacity: 0.7; }
-  82% { opacity: 0.7; }
-  100% { opacity: 0; top: 0%; }
-}
-@keyframes fsig-img-rise-clip {
-  from { opacity: 1; clip-path: inset(100% 0 0 0); }
-  to { opacity: 1; clip-path: inset(0 0 0 0); }
-}
-
-/* ---- Integrations: the connection completes, then the image lands - */
-@keyframes fsig-img-dock {
-  from { opacity: 0; transform: translateY(18px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* ---- Green Tick: reviewed, then approved --------------------------
-   Two animations share the element, so they own disjoint properties:
-   review = opacity/translate, approve = scale/filter. */
-@keyframes fsig-img-review {
-  from { opacity: 0; translate: 0 12px; }
-  to { opacity: 1; translate: 0 0; }
-}
-@keyframes fsig-img-approve {
-  0% { scale: 1; filter: brightness(0.96) saturate(0.85); }
-  55% { scale: 1.008; filter: brightness(1) saturate(1); }
-  100% { scale: 1; filter: brightness(1) saturate(1); }
 }
