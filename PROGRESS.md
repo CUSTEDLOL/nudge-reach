@@ -5,7 +5,20 @@ what's next.
 
 ---
 
-<<<<<<< HEAD
+## Landing comparison — kinetic market map (2026-07-18) ✅
+
+- Replaced the dense capability ledger with a two-axis qualitative market map:
+  answer depth → revenue actions, and owner-operated → runs for you.
+- Positioned Meta AI, AiSensy, WATI, Interakt, Haptik, a human hire, and Nudge
+  as selectable brand nodes; each opens a concise evidence panel rather than
+  forcing visitors to scan a spreadsheet.
+- Added a one-shot kinetic sequence with staggered node impacts, shock rings,
+  a diagonal software ceiling, Nudge breakthrough debris, and chart recoil.
+  Nodes are permanent DOM end states, so interrupted animation can never hide
+  or partially erase them.
+- Added dedicated narrow-screen coordinates, reduced-motion fallbacks, keyboard
+  selection, responsive evidence cards, and desktop/mobile visual verification.
+
 ## Landing bento — five finite signature reveals (2026-07-18) ✅
 
 - Replaced the shared strip treatment with a different finite reveal for every
@@ -46,7 +59,7 @@ what's next.
   preserving the existing hover reveal, dimensions, and responsive behavior.
 - Replaced the near-identical pale-green hover tints with richer individual
   themes: mint, warm sand, sky blue, lilac, and sage.
-=======
+
 ## Payments in chat + AI Agent page (2026-07-18) ✅
 
 Feature 1 of the competitive build-out (payments → ingestion → reschedule →
@@ -66,7 +79,6 @@ multi-language → tool-calling → catalog → staff booking).
 - Ingestion suite: website crawl / PDF / menu-photo / Google Business Profile
   → draft facts the owner confirms card-by-card (replaces questionnaire-first
   onboarding).
->>>>>>> e73f3d8 (feat(agent): send_payment_link tool — the agent can finally collect money)
 
 ## Strategy pass — trajectory sharpened + Meta compliance documented (2026-07-16) ✅
 
