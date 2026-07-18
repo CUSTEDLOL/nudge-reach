@@ -37,7 +37,7 @@ export async function answerQuestionAction(
   const ctx = await requireOrgContext();
   try {
     const r = await answerOwnerQuestion(ctx, questionId, answerText);
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     revalidatePath("/dashboard");
     return {
       ok: true,
@@ -60,7 +60,7 @@ export async function dismissQuestionAction(
   const ctx = await requireOrgContext();
   try {
     await dismissOwnerQuestion(ctx, questionId);
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     revalidatePath("/dashboard");
     return { ok: true, message: "Question dismissed." };
   } catch (err) {
@@ -89,7 +89,7 @@ export async function addFactAction(input: {
         source: "manual",
       },
     });
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     return { ok: true, message: "Fact added." };
   } catch (err) {
     return fail(err);
@@ -116,7 +116,7 @@ export async function updateFactAction(
       },
     });
     if (updated.count === 0) return { ok: false, message: "Fact not found." };
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     return { ok: true, message: "Fact updated." };
   } catch (err) {
     return fail(err);
@@ -133,7 +133,7 @@ export async function archiveFactAction(id: string): Promise<ActionResult> {
     });
     if (updated.count === 0) return { ok: false, message: "Fact not found." };
     recordAudit(ctx, "knowledge.entry_archived", id);
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     return { ok: true, message: "Fact archived." };
   } catch (err) {
     return fail(err);
@@ -172,7 +172,7 @@ export async function structureExistingInfoAction(): Promise<ActionResult> {
       });
       count += facts.length;
     }
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     return {
       ok: true,
       message: `Structured ${count} fact${count === 1 ? "" : "s"} from your existing info.`,

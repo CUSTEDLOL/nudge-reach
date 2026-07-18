@@ -86,7 +86,7 @@ function FormMode({ script }: { script: QItem[] }) {
                   .map((q) => ({ id: q.id, answer: answers[q.id] }))
               );
               setMessage(r.message);
-              if (r.ok) router.push("/knowledge");
+              if (r.ok) router.push("/agent");
             })
           }
         >
@@ -123,7 +123,7 @@ function InterviewMode({ script }: { script: QItem[] }) {
           Your AI learned {learned} fact{learned === 1 ? "" : "s"}. It keeps
           learning from every question you answer in the queue.
         </p>
-        <Button className="mt-5" onClick={() => router.push("/knowledge")}>
+        <Button className="mt-5" onClick={() => router.push("/agent")}>
           See what it knows
           <ArrowRight className="ml-1.5 h-4 w-4" />
         </Button>

@@ -1,4 +1,5 @@
 import {
+  Bot,
   Inbox,
   LayoutDashboard,
   Megaphone,
@@ -20,12 +21,14 @@ export type NavItem = {
 };
 
 /** Single source of truth for the app sidebar. Deliberately short: the
- *  flagship owner needs five things, not a cockpit. The power tools
- *  (Train your AI, Integrations, Auto-replies, Templates) live under
- *  Settings/Campaigns; Analytics is folded into the Dashboard. */
+ *  flagship owner needs six things, not a cockpit. The AI Agent (training +
+ *  setup, /agent) is top-level — it IS the product. The power tools
+ *  (Integrations, Auto-replies, Templates) live under Settings/Campaigns;
+ *  Analytics is folded into the Dashboard. */
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Chats", href: "/inbox", icon: Inbox },
+  { label: "AI Agent", href: "/agent", icon: Bot },
   { label: "Contacts", href: "/contacts", icon: Users },
   { label: "Campaigns", href: "/campaigns", icon: Megaphone },
   { label: "Settings", href: "/settings", icon: Settings, hideForAgent: true },

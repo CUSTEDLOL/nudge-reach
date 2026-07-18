@@ -45,7 +45,7 @@ export async function saveAgentProfileAction(
       update: { vertical, businessName, businessInfo, tone, doNots, enabled },
     });
 
-    revalidatePath("/settings/agent");
+    revalidatePath("/agent");
     return {
       ok: true,
       message: enabled

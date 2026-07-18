@@ -30,7 +30,7 @@ vi.mock("@/modules/orgs/auth", () => {
   };
 });
 
-import { saveAgentProfileAction } from "@/app/(app)/settings/agent/actions";
+import { saveAgentProfileAction } from "@/app/(app)/agent/setup-actions";
 
 const form = (fields: Record<string, string>) => {
   const fd = new FormData();

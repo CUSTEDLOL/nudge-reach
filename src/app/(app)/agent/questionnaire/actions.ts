@@ -63,7 +63,7 @@ export async function submitQuestionnaireAnswerAction(
       id,
       answer
     );
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     return {
       ok: true,
       facts,
@@ -89,7 +89,7 @@ export async function submitQuestionnaireAction(
     for (const a of answers.slice(0, 40)) {
       facts += await distillOne(ctx.org.id, v, a.id, a.answer);
     }
-    revalidatePath("/knowledge");
+    revalidatePath("/agent");
     return {
       ok: true,
       facts,

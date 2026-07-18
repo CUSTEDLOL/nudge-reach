@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  BookOpen,
-  Bot,
+  BellRing,
   Building2,
   CreditCard,
   Database,
@@ -14,16 +13,15 @@ import {
   ScrollText,
   Users,
   Wand2,
-  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
+// The AI Agent (setup + training) is top-level in the main sidebar (/agent) —
+// it no longer lives under Settings.
 const items = [
   { href: "/settings/general", label: "General", icon: Building2 },
   { href: "/settings/team", label: "Team", icon: Users },
-  { href: "/settings/agent", label: "AI Agent", icon: Bot },
-  { href: "/knowledge", label: "Train your AI", icon: BookOpen },
-  { href: "/automations", label: "Auto-replies", icon: Workflow },
+  { href: "/automations", label: "Follow-ups", icon: BellRing },
   { href: "/integrations", label: "Integrations", icon: Blocks },
   { href: "/settings/concierge", label: "Concierge", icon: Wand2 },
   { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone },

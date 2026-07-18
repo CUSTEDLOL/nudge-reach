@@ -8,7 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
-import { saveAgentProfileAction, type ActionResult } from "./actions";
+import { saveAgentProfileAction, type ActionResult } from "./setup-actions";
 
 export interface AgentFormValues {
   enabled: boolean;
