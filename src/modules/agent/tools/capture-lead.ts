@@ -16,7 +16,8 @@ export const captureLeadTool = defineTool({
       },
       details: {
         type: "string",
-        description: "Specifics if given: budget, size, timing, preferences.",
+        description:
+          "Key specifics if the customer gave them, as short phrases separated by periods: budget, quantity or size, timing or date, urgency, and how close they are to deciding.",
       },
     },
     required: ["interest"],
@@ -34,6 +35,8 @@ export const captureLeadTool = defineTool({
       where: { id: ctx.contactId },
       data: { leadStage: "QUALIFIED", ...(knownName ? { name: knownName } : {}) },
     });
+    const interest = input.interest.trim().replace(/[.。]\s*$/, "");
+    const detail = input.details?.trim();
     await prisma.note.create({
       data: {
         orgId: ctx.orgId,
@@ -41,7 +44,7 @@ export const captureLeadTool = defineTool({
         conversationId: ctx.conversationId,
         authorUserId: "ai-agent",
         authorName: "AI Assistant",
-        body: `Lead: ${input.interest}${input.details ? ` — ${input.details}` : ""}`,
+        body: detail ? `${interest}. ${detail}` : interest,
       },
     });
     return "Lead captured and marked qualified for the sales team.";

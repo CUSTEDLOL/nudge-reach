@@ -97,17 +97,11 @@ export function Navbar() {
           !separated && "md:w-fit md:justify-start md:gap-0"
         )}
       >
-        {/* Logo box — squares off its right edge and drops the border once merged */}
-        <motion.div
-          layout
-          transition={MERGE}
-          className={cn(
-            glass,
-            "flex items-center px-4 py-2 transition-[border-radius] duration-300",
-            !separated && "md:rounded-r-none md:border-r-0"
-          )}
-        >
-          <Logo tone="light" />
+        {/* Logo — bare, no pill/box behind it; just the mark floating over
+            the page. `layout` keeps it animating smoothly alongside the
+            right box as the two slide together on merge. */}
+        <motion.div layout transition={MERGE} className="flex items-center">
+          <Logo tone="light" id="nav-logo-target" />
         </motion.div>
 
         {/* Right box — mobile: hamburger only. Desktop: links + divider + CTA.

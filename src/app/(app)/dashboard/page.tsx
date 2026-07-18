@@ -4,18 +4,12 @@ import type { ReactNode } from "react";
 import {
   ArrowRight,
   BookOpen,
-  CalendarCheck,
   Check,
-  CheckCheck,
-  Eye,
   HelpCircle,
-  IndianRupee,
   Megaphone,
   MessagesSquare,
   Plug,
-  Send,
   UserPlus,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -25,7 +19,6 @@ import { getRecoveryMetrics } from "@/modules/followup/metrics";
 import type { RecentCampaign, RecentConversation } from "@/modules/dashboard/queries";
 import {
   estimateRevenueInfluencedInr,
-  parseAvgOrderValueInr,
   type Checklist,
 } from "@/modules/dashboard/stats";
 import {
@@ -39,7 +32,6 @@ import {
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/ui/stat-card";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -65,7 +57,6 @@ export default async function DashboardPage() {
 
   const firstName =
     (membership.displayName || email.split("@")[0] || "there").split(/\s+/)[0];
-  const avgOrderValueInr = parseAvgOrderValueInr(org.settings);
   const revenueInr = estimateRevenueInfluencedInr(
     data.wonContactCount,
     org.settings
@@ -78,32 +69,38 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        className="mb-0"
-        title={`${greetingForHour(hourInTimezone(org.timezone))}, ${firstName}`}
-        description={`${today} · Here's how ${org.name} is doing.`}
-        actions={
-          <Link href="/campaigns/new" className={buttonVariants()}>
-            <Megaphone className="h-4 w-4" aria-hidden />
-            New broadcast
-          </Link>
-        }
-      />
+      <div className="animate-rise" style={{ animationDelay: "0ms" }}>
+        <PageHeader
+          className="mb-0"
+          title={`${greetingForHour(hourInTimezone(org.timezone))}, ${firstName}`}
+          description={`${today}. Here's how ${org.name} is doing.`}
+          actions={
+            <Link href="/campaigns/new" className={buttonVariants()}>
+              <Megaphone className="h-4 w-4" aria-hidden />
+              New broadcast
+            </Link>
+          }
+        />
+      </div>
 
       {(handoffCount > 0 || pendingQuestions > 0) && (
-        <section aria-label="Needs you" className="grid gap-3 sm:grid-cols-2">
+        <section
+          aria-label="Needs you"
+          className="animate-rise grid gap-3 sm:grid-cols-2"
+          style={{ animationDelay: "60ms" }}
+        >
           {handoffCount > 0 && (
             <NeedsYouCard
               href="/inbox"
               icon={<MessagesSquare className="h-4 w-4" aria-hidden />}
               count={handoffCount}
               title={`chat${handoffCount === 1 ? "" : "s"} waiting for a human`}
-              description="Your AI handed these over — jump in when you can."
+              description="Your AI handed these over. Jump in when you can."
             />
           )}
           {pendingQuestions > 0 && (
             <NeedsYouCard
-              href="/knowledge"
+              href="/agent"
               icon={<HelpCircle className="h-4 w-4" aria-hidden />}
               count={pendingQuestions}
               title={`question${pendingQuestions === 1 ? "" : "s"} your AI couldn't answer`}
@@ -114,43 +111,48 @@ export default async function DashboardPage() {
       )}
 
       {!data.checklist.allDone && (
-        <ChecklistCard checklist={data.checklist} orgName={org.name} />
+        <div className="animate-rise" style={{ animationDelay: "100ms" }}>
+          <ChecklistCard checklist={data.checklist} orgName={org.name} />
+        </div>
       )}
 
-      {/* This month — the outcomes an owner actually cares about. */}
+      {/* This month: the outcomes an owner actually cares about. */}
       <section
         aria-label="This month"
-        className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+        className="animate-rise grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+        style={{ animationDelay: "140ms" }}
       >
-        <StatCard
+        <WinTile
           label="Bookings"
           value={formatCount(recovery.bookingsThisMonth)}
-          icon={<CalendarCheck className="h-4 w-4" aria-hidden />}
           hint="Booked this month"
+          accent
         />
-        <StatCard
+        <WinTile
           label="Leads chased"
           value={formatCount(recovery.followUpsThisMonth)}
-          icon={<Send className="h-4 w-4" aria-hidden />}
           hint={recovery.enabled ? "Follow-ups sent" : "Turn on Revenue Recovery"}
         />
-        <StatCard
+        <WinTile
           label="Revenue influenced"
           value={formatMajorAmount(revenueInr, org.currency)}
-          icon={<IndianRupee className="h-4 w-4" aria-hidden />}
-          hint={`${formatCount(data.wonContactCount)} won × ${formatMajorAmount(avgOrderValueInr, org.currency)}`}
+          hint={`${formatCount(data.wonContactCount)} won`}
         />
-        <StatCard
+        <WinTile
           label="Opted-in contacts"
           value={formatCount(data.optedInContactCount)}
-          icon={<Users className="h-4 w-4" aria-hidden />}
           hint={`${formatCount(data.contactCount)} total`}
         />
       </section>
 
-      <MessageHealthCard rates={data.rates} />
+      <div className="animate-rise" style={{ animationDelay: "180ms" }}>
+        <MessageHealthCard rates={data.rates} />
+      </div>
 
-      <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <section
+        className="animate-rise grid grid-cols-1 items-start gap-6 lg:grid-cols-3"
+        style={{ animationDelay: "220ms" }}
+      >
         <RecentConversationsCard
           conversations={data.recentConversations}
           className="lg:col-span-2"
@@ -165,7 +167,7 @@ export default async function DashboardPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Needs you — the single attention area                               */
+/* Needs you: the single attention area                                */
 /* ------------------------------------------------------------------ */
 
 function NeedsYouCard({
@@ -184,19 +186,19 @@ function NeedsYouCard({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 transition-colors hover:bg-amber-100"
+      className="group flex items-center gap-3.5 rounded-2xl border border-neutral-200 bg-white px-5 py-4 transition-colors duration-150 hover:border-neutral-300"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-amber-900">
+        <p className="text-[15px] font-semibold text-neutral-900">
           {count} {title}
         </p>
-        <p className="mt-0.5 text-xs text-amber-800/80">{description}</p>
+        <p className="mt-0.5 text-xs text-neutral-500">{description}</p>
       </div>
       <ArrowRight
-        className="h-4 w-4 shrink-0 text-amber-700 transition-transform group-hover:translate-x-0.5"
+        className="h-4 w-4 shrink-0 text-neutral-400 transition-colors group-hover:text-brand-600"
         aria-hidden
       />
     </Link>
@@ -204,7 +206,38 @@ function NeedsYouCard({
 }
 
 /* ------------------------------------------------------------------ */
-/* Message health — the analytics summary, folded onto the dashboard   */
+/* Win tile: one quiet outcome number, green accent on the primary     */
+/* ------------------------------------------------------------------ */
+
+function WinTile({
+  label,
+  value,
+  hint,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+      <p className="text-sm font-medium text-neutral-500">{label}</p>
+      <p
+        className={cn(
+          "mt-2 text-[2rem] font-bold leading-none tracking-tight",
+          accent ? "text-brand-600" : "text-neutral-900"
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-2 text-xs text-neutral-400">{hint}</p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Message health: the analytics summary, folded onto the dashboard    */
 /* ------------------------------------------------------------------ */
 
 function MessageHealthCard({
@@ -217,9 +250,9 @@ function MessageHealthCard({
   };
 }) {
   const metrics = [
-    { label: "Sent", value: formatCount(rates.sentTotal), icon: Send },
-    { label: "Delivered", value: formatPercent(rates.deliveredRate), icon: CheckCheck },
-    { label: "Read", value: formatPercent(rates.readRate), icon: Eye },
+    { label: "Sent", value: formatCount(rates.sentTotal) },
+    { label: "Delivered", value: formatPercent(rates.deliveredRate) },
+    { label: "Read", value: formatPercent(rates.readRate) },
   ];
   return (
     <Card className="p-5">
@@ -241,15 +274,12 @@ function MessageHealthCard({
         {metrics.map((m) => (
           <div
             key={m.label}
-            className="rounded-xl border border-neutral-200 p-3"
+            className="rounded-xl border border-neutral-200 p-3.5"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-              <m.icon className="h-3.5 w-3.5" aria-hidden />
-            </span>
-            <p className="mt-2 text-lg font-semibold text-neutral-900">
+            <p className="text-xl font-semibold text-neutral-900">
               {m.value}
             </p>
-            <p className="text-xs text-neutral-500">{m.label}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">{m.label}</p>
           </div>
         ))}
       </div>
@@ -274,8 +304,7 @@ function ChecklistCard({
         <div>
           <CardTitle>Finish setting up {orgName}</CardTitle>
           <CardDescription className="mt-0.5">
-            {checklist.completed} of {checklist.total} steps done — you&apos;re
-            close to your first campaign.
+            {`${checklist.completed} of ${checklist.total} steps done. You're close to your first campaign.`}
           </CardDescription>
         </div>
         <div className="flex w-44 items-center gap-2">
@@ -457,7 +486,7 @@ const QUICK_ACTIONS: {
   {
     label: "Train your AI",
     description: "Teach it a new answer",
-    href: "/knowledge",
+    href: "/agent",
     icon: BookOpen,
   },
   {
@@ -477,9 +506,9 @@ function QuickActionsCard() {
           <Link
             key={action.href}
             href={action.href}
-            className="group flex flex-col rounded-xl border border-neutral-200 p-3 outline-none transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50/40 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+            className="group flex flex-col rounded-xl border border-neutral-200 p-3 outline-none transition-colors duration-150 hover:border-neutral-300 focus-visible:ring-2 focus-visible:ring-brand-400/50"
           >
-            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 transition-colors group-hover:text-brand-600">
               <action.icon className="h-4 w-4" aria-hidden />
             </span>
             <span className="text-sm font-medium text-neutral-900">

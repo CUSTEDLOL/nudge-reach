@@ -332,12 +332,18 @@ export function ContextPanel({
           {notes.map((n) => (
             <li
               key={n.id}
-              className="rounded-xl border border-amber-100 bg-amber-50/60 p-2.5"
+              className="rounded-xl border border-neutral-200 bg-white p-2.5"
             >
               <p className="whitespace-pre-wrap break-words text-xs text-neutral-800">
                 {n.body}
               </p>
-              <p className="mt-1.5 text-[11px] text-neutral-400">
+              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-neutral-400">
+                {n.authorName === "AI Assistant" && (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-brand-500"
+                    aria-hidden
+                  />
+                )}
                 {n.authorName} ·{" "}
                 <span suppressHydrationWarning>
                   {formatRelativeTime(n.createdAt)}

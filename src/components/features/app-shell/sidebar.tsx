@@ -56,12 +56,15 @@ export function Sidebar({
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-brand-950 lg:flex">
-      <div className="flex h-full flex-col px-3 py-5">
-        <div className="px-3">
+      <div className="flex h-full flex-col px-2.5 py-5">
+        <div className="px-2">
           <BrandMark />
         </div>
 
-        <nav aria-label="Main navigation" className="mt-6 flex-1 space-y-0.5">
+        <nav
+          aria-label="Main navigation"
+          className="mt-5 flex flex-1 flex-col divide-y-2 divide-white/15 border-y-2 border-white/15"
+        >
           {items.map((item) => {
             const active = isNavItemActive(pathname, item.href);
             const Icon = item.icon;
@@ -71,21 +74,29 @@ export function Sidebar({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors duration-150",
-                  "focus-visible:ring-2 focus-visible:ring-brand-400/60",
+                  "group flex flex-1 items-center justify-center gap-2.5 px-3 outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400/60",
                   active
-                    ? "bg-white/10 text-white"
-                    : "text-brand-100/70 hover:bg-white/5 hover:text-white"
+                    ? "bg-brand-500/[0.16]"
+                    : "hover:bg-white/[0.06] active:bg-white/[0.11]"
                 )}
               >
-                {active && (
-                  <span
-                    aria-hidden
-                    className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-brand-400"
-                  />
-                )}
-                <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                {item.label}
+                <Icon
+                  className={cn(
+                    "h-[22px] w-[22px] shrink-0 transition-colors duration-100",
+                    active
+                      ? "text-brand-300"
+                      : "text-brand-100/80 group-hover:text-white"
+                  )}
+                  aria-hidden
+                />
+                <span
+                  className={cn(
+                    "text-[17px] font-semibold transition-colors duration-100",
+                    active ? "text-white" : "text-brand-50/90 group-hover:text-white"
+                  )}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}

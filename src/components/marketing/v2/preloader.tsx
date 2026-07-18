@@ -1,46 +1,32 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
+import Image from "next/image";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
-const WORD = "NUDGE";
-/** One brand glyph per letter slot — typed in first, then flipped into
- *  the letter. Text glyphs only, so the UI font renders them everywhere. */
-const ICONS = ["✳", "●", "✓", "₹", "✦"];
+const LOGO_W = 1570;
+const LOGO_H = 334;
 
-function renderLogoGlyph(el: HTMLElement, letter: string) {
-  if (letter !== "U") {
-    el.textContent = letter;
-    return;
-  }
-
-  el.innerHTML = `
-    <span class="relative inline-flex w-[0.82em] -translate-y-[0.03em] items-center justify-center overflow-visible leading-none font-logo">
-      U
-      <span aria-hidden="true" class="absolute left-1/2 top-[0.73em] flex -translate-x-1/2 gap-[0.16em]">
-        <span class="h-[0.13em] w-[0.34em] rounded-full bg-current"></span>
-        <span class="h-[0.13em] w-[0.34em] rounded-full bg-current"></span>
-      </span>
-    </span>
-  `;
-}
-
-const TYPE_START = 0.3; // first icon lands
-const TYPE_STEP = 0.18; // one icon at a time, metronome rhythm
-const SWAP_START = 1.5; // first icon changes into its letter
-const SWAP_STEP = 0.24; // strictly one conversion after another
-const WIPE_AT = 3.1; // panel leaves
+const FILL_START = 0.15;
+const FILL_DURATION = 1.1;
+const HOLD_UNTIL = FILL_START + FILL_DURATION + 0.3; // ~1.55s
+const COLOR_DURATION = 0.4;
+const MOVE_DURATION = 0.75;
 
 /**
- * Brand splash on hard loads of the landing page (the Sunday-style
- * opener, in green): one icon per letter slot types in left-to-right,
- * each icon flips into its letter of the wordmark, then the panel
- * wipes upward to reveal the hero. Gated to `.jsm` — no JS or reduced
- * motion means it never covers the content at all. The hero delays its
- * own intro while this is on stage (it checks #nudge-splash).
+ * Brand splash on hard loads of the landing page: the big white logo mark,
+ * off-centre (not a hero headline), fills bottom→top like liquid rising
+ * (a soft-edged mask + a travelling waterline glow) — then it turns from
+ * white to the brand green, and shrinks/slides into the EXACT spot of the
+ * real navbar logo (measured via getBoundingClientRect, a shared-element
+ * hand-off — the splash logo visibly becomes the navbar logo, not a separate
+ * fade). Gated to `.jsm` — no JS or reduced motion means it never covers the
+ * content at all. The hero delays its own intro while this is on stage (it
+ * checks #nudge-splash).
  */
 export function Preloader() {
   const ref = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [done, setDone] = useState(false);
 
   useGSAP(
@@ -49,42 +35,46 @@ export function Preloader() {
         setDone(true);
         return;
       }
-      const chars = gsap.utils.toArray<HTMLElement>(".splash-ch");
+      const wrapper = wrapRef.current;
+      const whiteImg = wrapper?.querySelector<HTMLElement>(".splash-logo-white");
+      const greenImg = wrapper?.querySelector<HTMLElement>(".splash-logo-green");
+      const waterline = wrapper?.querySelector<HTMLElement>(".splash-waterline");
+      const target = document.querySelector<HTMLElement>("#nav-logo-target img");
+      if (!wrapper || !whiteImg || !greenImg || !waterline || !target) {
+        setDone(true);
+        return;
+      }
+
+      // Measure now, before anything moves — the shared-element target.
+      const startRect = wrapper.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const scale = targetRect.width / startRect.width;
+      const dx = targetRect.left - startRect.left;
+      const dy = targetRect.top - startRect.top;
+      gsap.set(wrapper, { transformOrigin: "top left" });
+
       const tl = gsap.timeline({ onComplete: () => setDone(true) });
 
-      chars.forEach((el, i) => {
-        // Typed in: one icon at a time — a crisp mechanical tick, no bounce.
-        tl.fromTo(
-          el,
-          { autoAlpha: 0, scale: 0.7, y: 10 },
-          { autoAlpha: 1, scale: 1, y: 0, duration: 0.14, ease: "power4.out" },
-          TYPE_START + i * TYPE_STEP
-        );
+      // Liquid fill, bottom → top (mask reveal + a travelling glow riding
+      // the waterline).
+      tl.to(whiteImg, { "--fill": 100, duration: FILL_DURATION, ease: "power2.inOut" }, FILL_START)
+        .fromTo(
+          waterline,
+          { bottom: "0%", autoAlpha: 1 },
+          { bottom: "100%", duration: FILL_DURATION, ease: "power2.inOut" },
+          FILL_START
+        )
+        .to(waterline, { autoAlpha: 0, duration: 0.2 }, FILL_START + FILL_DURATION - 0.15);
 
-        // The conversion: once every icon is on stage, each slot plainly
-        // CHANGES into its letter, one by one — a hard mechanical swap
-        // with only a micro-tick so it reads as intent, not a glitch.
-        const at = SWAP_START + i * SWAP_STEP;
-        tl.call(
-          () => {
-            renderLogoGlyph(el, WORD[i]);
-            // Icons render in the UI font (full glyph coverage); once a slot
-            // becomes a letter, flip it to the playful caricature face.
-            el.classList.add("is-letter");
-          },
-          undefined,
-          at
-        ).fromTo(
-          el,
-          { scale: 0.9 },
-          { scale: 1, duration: 0.12, ease: "power3.out" },
-          at
-        );
-      });
-
-      // Hold the settled wordmark a beat, then the wipe.
-      tl.to(".splash-word", { autoAlpha: 0, y: -30, duration: 0.3, ease: "power2.in" }, WIPE_AT - 0.08)
-        .to(ref.current, { yPercent: -100, duration: 0.85, ease: "power4.inOut" }, WIPE_AT);
+      // White → green, then shrink/slide into the real navbar logo's spot.
+      tl.to(greenImg, { autoAlpha: 1, duration: COLOR_DURATION, ease: "power1.inOut" }, HOLD_UNTIL)
+        .to(whiteImg, { autoAlpha: 0, duration: COLOR_DURATION, ease: "power1.inOut" }, HOLD_UNTIL)
+        .to(
+          wrapper,
+          { x: dx, y: dy, scale, duration: MOVE_DURATION, ease: "power3.inOut" },
+          HOLD_UNTIL
+        )
+        .to(ref.current, { autoAlpha: 0, duration: 0.45, ease: "power2.in" }, HOLD_UNTIL + MOVE_DURATION - 0.35);
     },
     { scope: ref }
   );
@@ -92,19 +82,36 @@ export function Preloader() {
   if (done) return null;
 
   return (
-    <div
-      id="nudge-splash"
-      ref={ref}
-      className="ns-splash fixed inset-0 z-[200] items-center justify-center bg-brand-500"
-      aria-hidden
-    >
-      <p className="splash-word font-logo text-4xl font-extrabold tracking-[0.01em] text-white sm:text-5xl">
-        {ICONS.map((icon, i) => (
-          <span key={i} className="splash-ch inline-flex w-[0.82em] items-center justify-center text-center leading-none">
-            {icon}
-          </span>
-        ))}
-      </p>
+    <div id="nudge-splash" ref={ref} className="ns-splash fixed inset-0 z-[200] bg-night" aria-hidden>
+      <div
+        ref={wrapRef}
+        className="absolute left-6 top-[34%] w-[min(72vw,42rem)] sm:left-10"
+      >
+        <div className="relative">
+          <Image
+            src="/logo-mark-white.png"
+            alt=""
+            width={LOGO_W}
+            height={LOGO_H}
+            priority
+            className="splash-logo-white block h-auto w-full"
+            style={{ "--fill": 0 } as CSSProperties}
+          />
+          <Image
+            src="/logo-mark.png"
+            alt="Nudge"
+            width={LOGO_W}
+            height={LOGO_H}
+            priority
+            className="splash-logo-green absolute inset-0 block h-auto w-full opacity-0"
+          />
+          {/* the "water surface" — a soft glow riding the fill line */}
+          <span
+            className="splash-waterline pointer-events-none absolute inset-x-0 h-6 -translate-y-1/2 bg-white/70 blur-md"
+            aria-hidden
+          />
+        </div>
+      </div>
     </div>
   );
 }

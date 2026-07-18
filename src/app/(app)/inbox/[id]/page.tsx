@@ -31,27 +31,27 @@ export default async function InboxThreadPage({
   const filter = parseInboxFilter(sp.filter);
   const q = sp.q ?? "";
 
-  // Opening a thread marks it read — server-side, before the list is built,
-  // so the unread dot clears everywhere at once.
-  await prisma.conversation.updateMany({
-    where: { id, orgId: org.id },
-    data: { unreadCount: 0 },
-  });
-
-  const conversation = await prisma.conversation.findFirst({
-    where: { id, orgId: org.id },
-    include: {
-      contact: { include: { tags: { include: { tag: true } } } },
-      notes: { orderBy: { createdAt: "desc" }, take: 50 },
-      tags: { include: { tag: true } },
-    },
-  });
-  if (!conversation) notFound();
-
-  const [summaries, snapshot, orgTags, memberships, templates] =
+  // One parallel batch instead of three serial round-trips to the DB — the
+  // thread snapshot and list are keyed off `id`/`org.id`, so nothing here
+  // depends on another query's result. Marking the thread read rides along
+  // (the active thread is highlighted regardless, so any list staleness is
+  // invisible). This is the main win for slow chat opens.
+  const [, conversation, summaries, snapshot, orgTags, memberships, templates] =
     await Promise.all([
+      prisma.conversation.updateMany({
+        where: { id, orgId: org.id },
+        data: { unreadCount: 0 },
+      }),
+      prisma.conversation.findFirst({
+        where: { id, orgId: org.id },
+        include: {
+          contact: { include: { tags: { include: { tag: true } } } },
+          notes: { orderBy: { createdAt: "desc" }, take: 50 },
+          tags: { include: { tag: true } },
+        },
+      }),
       listConversationSummaries(org.id, filter, q, userId),
-      getThreadSnapshot(conversation.id, org.id),
+      getThreadSnapshot(id, org.id),
       prisma.tag.findMany({ where: { orgId: org.id }, orderBy: { name: "asc" } }),
       prisma.membership.findMany({
         where: { orgId: org.id },
@@ -59,6 +59,7 @@ export default async function InboxThreadPage({
       }),
       getApprovedTemplates(org.id),
     ]);
+  if (!conversation) notFound();
   if (!snapshot) notFound();
 
   const contact = conversation.contact;

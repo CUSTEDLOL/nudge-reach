@@ -52,9 +52,6 @@
      (The serif display face read as generic "AI website"; retired.) */
   --font-display: var(--font-geist-sans), -apple-system, "Segoe UI", sans-serif;
 
-  /* Brand wordmark face (logo + splash) — chunky geometric. */
-  --font-logo: var(--font-poppins), var(--font-geist-sans), sans-serif;
-
   /* Motion tokens → animate-* utilities ----------------------------- */
   --animate-float: float 7s ease-in-out infinite;
   --animate-float-slow: float 11s ease-in-out infinite;
@@ -341,17 +338,26 @@ html {
   display: none;
 }
 .jsm .ns-splash {
-  display: flex;
+  display: block;
 }
-/* Icons stay unpainted until the typing timeline drives them in. */
-.jsm .splash-ch {
-  opacity: 0;
-}
-/* Once a slot flips from icon to letter, it renders in the playful
-   caricature face (the wordmark reads NUDGE, all-caps). */
-.splash-ch.is-letter {
-  font-family: var(--font-playful);
-  font-weight: 800;
+/* Liquid fill: a soft-edged mask reveals the white logo bottom→top as
+   `--fill` (0→100, animated by GSAP) climbs. The ~14%-tall transition band
+   (rather than a hard line) is what reads as a liquid edge, not a wipe. */
+.splash-logo-white {
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    #000 calc(var(--fill, 0) * 1%),
+    transparent calc(var(--fill, 0) * 1% + 14%),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    #000 calc(var(--fill, 0) * 1%),
+    transparent calc(var(--fill, 0) * 1% + 14%),
+    transparent 100%
+  );
 }
 
 /* Film grain — pure CSS fallback (a4-grain.png replaces it when present). */

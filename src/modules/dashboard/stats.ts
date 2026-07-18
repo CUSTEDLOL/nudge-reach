@@ -117,7 +117,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       description: input.whatsappConnected
         ? "Your business number is linked."
         : input.simulationMode
-          ? "Simulation mode is on — sends are safely mocked."
+          ? "Simulation mode is on. Sends are safely mocked."
           : "Link your WhatsApp Business number.",
       href: "/settings/whatsapp",
       done: input.whatsappConnected || input.simulationMode,
@@ -153,23 +153,13 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       done: input.activeCampaignCount > 0,
     },
     {
-      key: "automation",
-      title: "Enable an automation",
-      description:
-        input.enabledAutomationCount > 0
-          ? "Replies are being handled automatically."
-          : "Auto-reply to keywords and new contacts.",
-      href: "/automations",
-      done: input.enabledAutomationCount > 0,
-    },
-    {
       key: "knowledge",
       title: "Teach your AI the business",
       description:
         input.knowledgeFactCount > 0
           ? "Your AI has structured knowledge to answer from."
           : "Run the questionnaire so the AI answers like staff.",
-      href: "/knowledge/questionnaire",
+      href: "/agent/questionnaire",
       done: input.knowledgeFactCount > 0,
     },
   ];

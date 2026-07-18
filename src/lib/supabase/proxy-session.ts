@@ -5,13 +5,12 @@ import { NextResponse, type NextRequest } from "next/server";
 //   this prefix list so a stray "/" wouldn't make every route public.
 // /api/webhooks: Meta calls it (signature-verified, not cookie-auth'd).
 // /api/cron: queue tick (no session; safe — it only advances queued work).
-// /waitlist + /api/waitlist: public marketing landing page + its signup endpoint.
+// /api/waitlist: public signup endpoint for the homepage lead form (demo/waitlist).
 const PUBLIC_PATHS = [
   "/login",
   "/auth",
   "/api/webhooks",
   "/api/cron",
-  "/waitlist",
   "/api/waitlist",
   // public marketing pages split off the landing page
   "/pricing",
