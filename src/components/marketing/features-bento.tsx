@@ -14,10 +14,6 @@ export function FeaturesBento() {
               Everything it works with.
             </span>
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-[16px] leading-relaxed text-ink/55">
-            The full toolkit behind the Front Desk: the agent, the outreach,
-            the numbers and the plumbing.
-          </p>
         </div>
 
         <FeatureScenes />
