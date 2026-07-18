@@ -78,6 +78,69 @@ function SignUpLink({ overHero }: { overHero: boolean }) {
   );
 }
 
+/** The staircase that ends the white slab — six blocky bands, irregular
+ * depths, all right angles. Steps stay small (~3-10% of the slab) so each
+ * one reads as a square block rather than a long stripe. Percentages of
+ * the slab's own box. */
+const PIXEL_EDGE = [92, 86, 95, 84, 90, 83];
+
+const EDGE_POLYGON = (() => {
+  const band = 100 / PIXEL_EDGE.length;
+  const pts: string[] = ["0% 0%"];
+  PIXEL_EDGE.forEach((x, i) => {
+    pts.push(`${x}% ${i * band}%`, `${x}% ${(i + 1) * band}%`);
+  });
+  pts.push("0% 100%");
+  return `polygon(${pts.join(", ")})`;
+})();
+
+/** Loose blocks trailing off the staircase, fading as they scatter — the
+ * "pixels coming apart" beat. x/y are % of the slab box; size is px so the
+ * blocks stay chunky and square at every width. */
+const PIXEL_DUST = [
+  { x: 97, y: 4, o: 0.8 },
+  { x: 106, y: 4, o: 0.32 },
+  { x: 101, y: 21, o: 0.55 },
+  { x: 99, y: 38, o: 0.7 },
+  { x: 109, y: 38, o: 0.26 },
+  { x: 104, y: 55, o: 0.42 },
+  { x: 98, y: 72, o: 0.6 },
+  { x: 112, y: 72, o: 0.18 },
+  { x: 105, y: 88, o: 0.3 },
+];
+const DUST_PX = 8;
+
+/** Hero-only: a white slab under the logo so the green wordmark reads on
+ * white, dissolving to the right in blocky Minecraft-style steps. Sits
+ * behind the pill's content; the pill's own overflow clips the rounded
+ * corners. */
+function PixelSlab() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 left-0 z-0 w-[52%] sm:w-[40%] md:w-[27%]"
+    >
+      <div
+        className="absolute inset-0 bg-white/95"
+        style={{ clipPath: EDGE_POLYGON }}
+      />
+      {PIXEL_DUST.map((b, i) => (
+        <span
+          key={i}
+          className="absolute bg-white"
+          style={{
+            left: `${b.x}%`,
+            top: `${b.y}%`,
+            width: DUST_PX,
+            height: DUST_PX,
+            opacity: b.o,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * One centered navbar pill that stays the same across the whole page.
  */
@@ -113,30 +176,32 @@ export function Navbar() {
       <div className="mx-auto flex w-full max-w-[110rem] justify-center">
         <div
           className={cn(
-            "flex w-full max-w-5xl items-center justify-between gap-3 rounded-2xl px-4 py-2.5 sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6",
+            "relative flex w-full max-w-5xl items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 py-2.5 sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6",
             overHero
               ? "border border-white/25 bg-white/[0.16] text-white shadow-[0_8px_32px_-12px_rgba(3,10,7,0.35)] backdrop-blur-xl"
               : "border border-black/[0.06] bg-white/92 text-ink shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)] backdrop-blur-xl"
           )}
         >
+          {overHero && <PixelSlab />}
+
           {/* left — logo, always visible */}
-          <div className="flex items-center md:justify-self-start">
+          <div className="relative z-10 flex items-center md:justify-self-start">
             <Logo tone="light" id="nav-logo-target" />
           </div>
 
           {/* center — nav links, true-centered in the pill (desktop only) */}
-          <div className="hidden md:flex md:justify-self-center">
+          <div className="relative z-10 hidden md:flex md:justify-self-center">
             <NavLinks overHero={overHero} />
           </div>
 
           {/* right — sign up + the one solid CTA (desktop only) */}
-          <div className="hidden items-center gap-1 md:flex md:justify-self-end">
+          <div className="relative z-10 hidden items-center gap-1 md:flex md:justify-self-end">
             <SignUpLink overHero={overHero} />
             <NavCta />
           </div>
 
           {/* mobile hamburger */}
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="relative z-10 flex items-center gap-2 md:hidden">
             <button
               type="button"
               aria-label={open ? "Close menu" : "Open menu"}
