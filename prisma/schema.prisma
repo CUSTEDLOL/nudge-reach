@@ -69,6 +69,7 @@ model Org {
   webhookEndpoints WebhookEndpoint[]
   auditLogs        AuditLog[]
   bookingRequests  BookingRequest[]
+  paymentRequests  PaymentRequest[]
   calendarAccount  CalendarAccount?
   followUpConfig   FollowUpConfig?
   knowledgeEntries KnowledgeEntry[]
@@ -517,6 +518,7 @@ model Contact {
   tags        ContactTag[]
   notes       Note[]
   bookingRequests BookingRequest[]
+  paymentRequests PaymentRequest[]
 
   @@unique([orgId, phoneE164])
   @@index([orgId])
@@ -557,6 +559,36 @@ model BookingRequest {
   @@index([orgId, status])
   @@index([contactId])
   @@index([scheduledFor])
+}
+
+// A customer-facing payment link the agent (or staff) sent in a conversation —
+// booking deposits, advances, bills. Separate from subscription billing (the
+// org paying US); this is the org's customer paying THEM. Provider "simulation"
+// rows demo end-to-end with zero keys (invariant #4).
+model PaymentRequest {
+  id             String   @id @default(cuid())
+  orgId          String
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId      String
+  contact        Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  conversationId String?
+  // Optional link back to the booking this deposit secures.
+  bookingRequestId String?
+  // Minor units (paise for INR). Currency follows the org's currency.
+  amountMinor    Int
+  currency       String   @default("INR")
+  purpose        String
+  status         String   @default("created") // created | paid | cancelled | expired
+  provider       String // razorpay | simulation
+  providerLinkId String? // Razorpay payment-link id (plink_…)
+  shortUrl       String
+  paidAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orgId, status])
+  @@index([contactId])
+  @@index([providerLinkId])
 }
 
 // Per-org Revenue-Recovery follow-up config (5.2). One toggle turns the whole

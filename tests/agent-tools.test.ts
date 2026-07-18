@@ -25,13 +25,14 @@ const ctx = {
 };
 
 describe("tool definitions", () => {
-  it("exposes exactly the four worker tools with object schemas", () => {
+  it("exposes exactly the five worker tools with object schemas", () => {
     const names = toolDefs().map((t) => t.name).sort();
     expect(names).toEqual([
       "ask_owner",
       "capture_booking_request",
       "capture_lead",
       "handoff_to_human",
+      "send_payment_link",
     ]);
     for (const def of toolDefs()) {
       expect(def.input_schema.type).toBe("object");

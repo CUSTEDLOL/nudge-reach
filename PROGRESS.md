@@ -5,6 +5,36 @@ what's next.
 
 ---
 
+## Payments in chat + AI Agent page (2026-07-18) ✅
+
+Feature 1 of the competitive build-out (payments → ingestion → reschedule →
+multi-language → tool-calling → catalog → staff booking).
+
+- **`send_payment_link` agent tool** — the missing "collects payments" action.
+  New `modules/payments`: Razorpay Payment Links in live mode, simulation links
+  otherwise (cron flips them to paid after ~90s so the deposit story demos with
+  zero keys). Flagship plan-gated like booking; amount bounds enforced;
+  `payment_link.paid` webhook marks rows paid idempotently. `PaymentRequest`
+  model added. Tests: `tests/payment-link.test.ts` (7).
+- **AI Agent page** — `/agent` top-level in the sidebar (Training tab = owner
+  question queue + facts library; Setup tab = persona). `/knowledge` and
+  `/settings/agent` 301 there.
+
+### Next
+- Ingestion suite: website crawl / PDF / menu-photo / Google Business Profile
+  → draft facts the owner confirms card-by-card (replaces questionnaire-first
+  onboarding).
+
+## Landing page refinements — splash logo + hero edge (2026-07-18) ✅
+
+- **Splash logo animation**: Kept the existing icon-to-letter sequence but the
+  final U now renders with two dashes underneath (matching the NUDGE wordmark
+  style), moved up and set in the same font.
+- **Hero bottom edge**: Replaced the hard white glow with a softer fade and an
+  irregular leaf-fringe SVG overlay. Removed the pale bottom wash, tightened
+  the green underlay, and added deterministic leaf shapes with varied rotations
+  and positions.
+
 ## Landing bento — five finite signature reveals (2026-07-18) ✅
 
 - Replaced the shared strip treatment with a different finite reveal for every

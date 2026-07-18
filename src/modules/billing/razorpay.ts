@@ -89,6 +89,56 @@ export async function createRazorpayOrder(
   return body;
 }
 
+export interface RazorpayPaymentLink {
+  id: string;
+  short_url: string;
+  status: string;
+}
+
+/**
+ * Create a Razorpay Payment Link (POST /v1/payment_links) — the CUSTOMER-facing
+ * "pay ₹500 deposit" URL the agent sends in chat. Distinct from orders (our
+ * subscription checkout). Razorpay's own SMS/email notify is off — WhatsApp
+ * delivery is ours. `notes` carries orgId + paymentRequestId so the webhook can
+ * route `payment_link.paid` back to the right row.
+ */
+export async function createRazorpayPaymentLink(input: {
+  amountMinor: number;
+  currency: string;
+  description: string;
+  referenceId: string;
+  notes: Record<string, string>;
+}): Promise<RazorpayPaymentLink> {
+  if (!isRazorpayConfigured()) {
+    throw new Error("Razorpay is not configured (missing RAZORPAY_KEY_ID/SECRET).");
+  }
+  const res = await fetch("https://api.razorpay.com/v1/payment_links", {
+    method: "POST",
+    headers: {
+      Authorization: authHeader(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: input.amountMinor,
+      currency: input.currency,
+      description: input.description,
+      reference_id: input.referenceId,
+      notify: { sms: false, email: false },
+      reminder_enable: false,
+      notes: input.notes,
+    }),
+  });
+  const body = (await res.json().catch(() => null)) as
+    | (RazorpayPaymentLink & { error?: { description?: string } })
+    | null;
+  if (!res.ok || !body?.id || !body?.short_url) {
+    throw new Error(
+      body?.error?.description ?? `Razorpay payment link failed (HTTP ${res.status})`
+    );
+  }
+  return body;
+}
+
 /**
  * Verify the checkout signature Razorpay returns to the browser after payment:
  * HMAC-SHA256(order_id | payment_id, key_secret) === signature.

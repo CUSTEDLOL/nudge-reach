@@ -4,6 +4,7 @@ import { handoffTool, HANDOFF_TOOL_NAME } from "@/modules/agent/tools/handoff";
 import { captureLeadTool } from "@/modules/agent/tools/capture-lead";
 import { captureBookingTool } from "@/modules/agent/tools/capture-booking";
 import { askOwnerTool } from "@/modules/agent/tools/ask-owner";
+import { sendPaymentLinkTool } from "@/modules/agent/tools/send-payment-link";
 
 export type { ToolContext } from "@/modules/agent/tools/types";
 export { HANDOFF_TOOL_NAME } from "@/modules/agent/tools/handoff";
@@ -14,6 +15,7 @@ const TOOLS: AgentTool[] = [
   captureLeadTool,
   captureBookingTool,
   askOwnerTool,
+  sendPaymentLinkTool,
 ];
 const BY_NAME = new Map(TOOLS.map((t) => [t.def.name, t]));
 

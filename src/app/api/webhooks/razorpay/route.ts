@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyWebhookSignature } from "@/modules/billing/razorpay";
 import { getPlan } from "@/modules/billing/plans";
+import { markPaymentPaid } from "@/modules/payments";
 
 /**
  * Razorpay server-to-server webhook: the source of truth for subscription
@@ -21,12 +22,24 @@ export async function POST(request: Request) {
     event?: string;
     payload?: {
       payment?: { entity?: { notes?: { orgId?: string; planId?: string } } };
+      payment_link?: {
+        entity?: { notes?: { paymentRequestId?: string; kind?: string } };
+      };
     };
   };
   try {
     payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
+  }
+
+  // Customer-facing payment link (agent-sent deposit/advance) settled.
+  if (payload.event === "payment_link.paid") {
+    const linkNotes = payload.payload?.payment_link?.entity?.notes;
+    if (linkNotes?.kind === "customer_payment" && linkNotes.paymentRequestId) {
+      await markPaymentPaid(linkNotes.paymentRequestId);
+    }
+    return NextResponse.json({ ok: true });
   }
 
   const notes = payload.payload?.payment?.entity?.notes;
