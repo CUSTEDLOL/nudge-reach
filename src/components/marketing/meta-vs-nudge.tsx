@@ -1,40 +1,50 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "motion/react";
 import { Crown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Container, Section } from "./section";
-import { BookDemoButton } from "./book-demo";
 
 /**
- * The scorecard: the capability ledger rebuilt as a game roster. Every
- * contender is a player card — five stats, chunky power bars, a giant ghost
- * score — ranked into a leaderboard with Nudge as the champion card. Scores
- * are the old ledger's marks translated to 0–3 (none / you-wire-it /
- * partial / does it), so the fun framing sits on honest data. Static: the
- * only motion is a hover lift, so nothing here can misbehave.
+ * The scorecard: the capability ledger as a game roster. Every contender is
+ * a player card — five stats out of four, chunky power bars, a giant ghost
+ * score — ranked into a leaderboard with Nudge as the champion card.
+ *
+ * Interactive: pick a stat and the roster re-ranks by it (FLIP via motion's
+ * layout prop), every card dims its other rows, and the point lands —
+ * whichever stat you pick, the top of the board doesn't change. Scores come
+ * from the old ledger: 0 = doesn't, 1 = only once you wire it, 2 = partial,
+ * 3 = does it. The fourth notch is reserved for doing it unattended, which
+ * only the Front Desk earns.
  */
 
 const STATS = ["Answers", "Books", "Chases", "Collects", "Runs itself"] as const;
+type Stat = (typeof STATS)[number];
+
+const PER_STAT = 4;
+const MAX = STATS.length * PER_STAT;
 
 type Player = {
   name: string;
   klass: string;
-  /** 0 = doesn't, 1 = only if you wire it, 2 = partial, 3 = does it. */
   scores: [number, number, number, number, number];
   verdict: string;
   card: string;
   accent: string;
-  ink?: "light";
 };
 
-const ROSTER: Player[] = [
-  {
-    name: "Nudge",
-    klass: "AI Front Desk",
-    scores: [3, 3, 3, 3, 3],
-    verdict:
-      "Trained on your business, takes the real actions, chases the revenue, and we set the whole thing up.",
-    card: "linear-gradient(135deg, #54e58b 0%, #8eec72 48%, #c9f34f 100%)",
-    accent: "#075c35",
-  },
+const CHAMPION: Player = {
+  name: "Nudge",
+  klass: "AI Front Desk",
+  scores: [4, 4, 4, 4, 4],
+  verdict:
+    "Trained on your business, takes the real actions, chases the revenue, and we set the whole thing up.",
+  card: "linear-gradient(135deg, #54e58b 0%, #8eec72 48%, #c9f34f 100%)",
+  accent: "#075c35",
+};
+
+const CHALLENGERS: Player[] = [
   {
     name: "Haptik",
     klass: "Enterprise",
@@ -85,39 +95,65 @@ const ROSTER: Player[] = [
   },
 ];
 
-const MAX = STATS.length * 3;
 const total = (p: Player) => p.scores.reduce((a, b) => a + b, 0);
 
-function PowerBar({ value, accent }: { value: number; accent: string }) {
+function PowerBar({
+  value,
+  accent,
+  muted,
+}: {
+  value: number;
+  accent: string;
+  muted?: boolean;
+}) {
   return (
     <span className="flex gap-[3px]" aria-hidden>
-      {[0, 1, 2].map((i) => (
+      {Array.from({ length: PER_STAT }, (_, i) => (
         <span
           key={i}
-          className="h-2 w-4 rounded-[2px] border border-ink/25 sm:w-5"
-          style={{ background: i < value ? accent : "transparent" }}
+          className="h-2 w-3.5 rounded-[2px] border border-ink/25 transition-all duration-300 sm:w-4"
+          style={{
+            background: i < value ? accent : "transparent",
+            opacity: muted ? 0.35 : 1,
+          }}
         />
       ))}
     </span>
   );
 }
 
-function StatSheet({ player }: { player: Player }) {
+function StatSheet({ player, lens }: { player: Player; lens: Stat | null }) {
   return (
     <dl className="space-y-1.5">
-      {STATS.map((stat, i) => (
-        <div key={stat} className="flex items-center justify-between gap-3">
-          <dt className="font-mono text-[9.5px] font-bold uppercase tracking-[0.1em] text-ink/60">
-            {stat}
-          </dt>
-          <dd
-            className="shrink-0"
-            aria-label={`${stat}: ${player.scores[i]} out of 3`}
+      {STATS.map((stat, i) => {
+        const muted = lens !== null && lens !== stat;
+        return (
+          <div
+            key={stat}
+            className="flex items-center justify-between gap-3 transition-opacity duration-300"
+            style={{ opacity: muted ? 0.4 : 1 }}
           >
-            <PowerBar value={player.scores[i]} accent={player.accent} />
-          </dd>
-        </div>
-      ))}
+            <dt
+              className={cn(
+                "font-mono text-[9.5px] uppercase tracking-[0.1em] transition-colors duration-300",
+                lens === stat ? "font-black text-ink" : "font-bold text-ink/60"
+              )}
+            >
+              {stat}
+            </dt>
+            <dd
+              className="shrink-0"
+              aria-label={`${stat}: ${player.scores[i]} out of ${PER_STAT}`}
+            >
+              <PowerBar
+                value={player.scores[i]}
+                accent={player.accent}
+                muted={muted}
+              />
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
@@ -138,9 +174,46 @@ function GhostScore({ value, wide }: { value: number; wide?: boolean }) {
   );
 }
 
+function LensChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "rounded-full border-2 px-3.5 py-1.5 font-mono text-[10.5px] font-black uppercase tracking-[0.1em] transition-all duration-200",
+        active
+          ? "border-ink/70 bg-ink text-white shadow-[3px_3px_0_rgba(10,15,13,0.35)]"
+          : "border-ink/25 bg-white/70 text-ink/60 hover:border-ink/50 hover:text-ink"
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function MetaVsNudge() {
-  const champion = ROSTER[0];
-  const rest = ROSTER.slice(1);
+  const [lens, setLens] = useState<Stat | null>(null);
+  const statIndex = lens ? STATS.indexOf(lens) : -1;
+  const outOf = statIndex === -1 ? MAX : PER_STAT;
+  const scoreOf = (p: Player) =>
+    statIndex === -1 ? total(p) : p.scores[statIndex];
+
+  const ranked =
+    statIndex === -1
+      ? CHALLENGERS
+      : [...CHALLENGERS].sort(
+          (a, b) =>
+            b.scores[statIndex] - a.scores[statIndex] || total(b) - total(a)
+        );
 
   return (
     <Section id="compare" className="overflow-x-clip bg-[#f1f7ec]">
@@ -154,19 +227,31 @@ export function MetaVsNudge() {
             <br />
             whole roster.
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-[15.5px] leading-relaxed text-ink/60">
-            Five things a front desk actually does. Everyone answers now,
-            that&rsquo;s one stat out of five. Here&rsquo;s the rest of the
-            sheet.
-          </p>
         </div>
 
-        {/* champion */}
+        {/* the lens — pick a stat, the board re-ranks by it */}
+        <div className="mx-auto mt-9 flex max-w-4xl flex-wrap items-center justify-center gap-2">
+          <LensChip
+            label="Total"
+            active={lens === null}
+            onClick={() => setLens(null)}
+          />
+          {STATS.map((stat) => (
+            <LensChip
+              key={stat}
+              label={stat}
+              active={lens === stat}
+              onClick={() => setLens(lens === stat ? null : stat)}
+            />
+          ))}
+        </div>
+
+        {/* champion — tops every lens, which is the whole point */}
         <article
-          className="relative mx-auto mt-12 flex max-w-6xl flex-col gap-6 overflow-hidden rounded-[1.75rem] border-2 border-ink/70 p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-8 lg:flex-row lg:items-center lg:gap-10"
-          style={{ background: champion.card }}
+          className="relative mx-auto mt-8 flex max-w-6xl flex-col gap-6 overflow-hidden rounded-[1.75rem] border-2 border-ink/70 p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-8 lg:flex-row lg:items-center lg:gap-10"
+          style={{ background: CHAMPION.card }}
         >
-          <GhostScore value={total(champion)} wide />
+          <GhostScore value={scoreOf(CHAMPION)} wide />
 
           <div className="relative z-10 lg:w-[46%]">
             <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/70 bg-white px-3 py-1 font-mono text-[10px] font-black uppercase tracking-[0.12em] text-ink">
@@ -174,42 +259,44 @@ export function MetaVsNudge() {
               Rank 01
             </span>
             <h3 className="mt-3 font-display text-[clamp(2.2rem,5vw,3.4rem)] font-black uppercase leading-[0.9] tracking-[-0.045em] text-ink">
-              {champion.name}
+              {CHAMPION.name}
             </h3>
             <p
               className="mt-1 font-display text-[15px] font-black uppercase tracking-[0.02em]"
-              style={{ color: champion.accent }}
+              style={{ color: CHAMPION.accent }}
             >
-              {champion.klass}
+              {CHAMPION.klass}
             </p>
             <p className="mt-4 max-w-md text-[14px] font-medium leading-relaxed text-ink/75">
-              {champion.verdict}
+              {CHAMPION.verdict}
             </p>
           </div>
 
           <div className="relative z-10 flex-1 rounded-2xl border-2 border-ink/25 bg-white/55 p-5 backdrop-blur-sm sm:p-6">
             <div className="mb-4 flex items-baseline justify-between">
               <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink/55">
-                Stat sheet
+                {lens ?? "Stat sheet"}
               </span>
               <span className="font-display text-[15px] font-black text-ink">
-                {total(champion)}
-                <span className="text-ink/45">/{MAX}</span>
+                {scoreOf(CHAMPION)}
+                <span className="text-ink/45">/{outOf}</span>
               </span>
             </div>
-            <StatSheet player={champion} />
+            <StatSheet player={CHAMPION} lens={lens} />
           </div>
         </article>
 
-        {/* the rest of the roster */}
+        {/* the rest of the roster — re-ranks under the chosen lens */}
         <div className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {rest.map((player, index) => (
-            <article
+          {ranked.map((player, index) => (
+            <motion.article
               key={player.name}
-              className="relative flex flex-col overflow-hidden rounded-[1.5rem] border-2 border-ink/70 p-5 shadow-[7px_7px_0_rgba(10,15,13,0.82)] transition-transform duration-300 hover:-translate-y-1 sm:p-6"
+              layout
+              transition={{ type: "spring", stiffness: 340, damping: 34 }}
+              className="relative flex flex-col overflow-hidden rounded-[1.5rem] border-2 border-ink/70 p-5 shadow-[7px_7px_0_rgba(10,15,13,0.82)] sm:p-6"
               style={{ background: player.card }}
             >
-              <GhostScore value={total(player)} />
+              <GhostScore value={scoreOf(player)} />
 
               <div className="relative z-10 flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -229,7 +316,7 @@ export function MetaVsNudge() {
               </div>
 
               <div className="relative z-10 mt-5 rounded-xl border-2 border-ink/20 bg-white/55 p-3.5">
-                <StatSheet player={player} />
+                <StatSheet player={player} lens={lens} />
               </div>
 
               <p className="relative z-10 mt-4 text-[12.5px] font-medium leading-snug text-ink/70">
@@ -237,24 +324,11 @@ export function MetaVsNudge() {
               </p>
 
               <p className="relative z-10 mt-3 font-display text-[13px] font-black text-ink/80">
-                {total(player)}
-                <span className="text-ink/40">/{MAX}</span>
+                {scoreOf(player)}
+                <span className="text-ink/40">/{outOf}</span>
               </p>
-            </article>
+            </motion.article>
           ))}
-        </div>
-
-        <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] leading-relaxed text-ink/50">
-          Scored on what each one does without you: full bar = does it, half =
-          only once you wire it up, empty = it doesn&rsquo;t. We built this, so
-          of course we win our own scorecard. The stats underneath are the
-          honest part.
-        </p>
-
-        <div className="mt-8 flex justify-center">
-          <BookDemoButton variant="primary">
-            Book a Demo: see it run yours
-          </BookDemoButton>
         </div>
       </Container>
     </Section>

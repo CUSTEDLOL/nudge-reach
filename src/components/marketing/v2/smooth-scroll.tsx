@@ -4,6 +4,12 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger, motionAllowed } from "./gsap";
 
+declare global {
+  interface Window {
+    __lenis?: Lenis;
+  }
+}
+
 /**
  * Lenis smooth scroll, synced to GSAP's ticker so ScrollTrigger scrubbing and
  * the inertia layer share one clock. Rules of engagement:
@@ -22,6 +28,10 @@ export function SmoothScroll() {
       duration: 0.8,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
+
+    // Published so a section can clamp scroll through the same instance —
+    // fighting Lenis with window.scrollTo does not work.
+    window.__lenis = lenis;
 
     lenis.on("scroll", ScrollTrigger.update);
     const tick = (time: number) => lenis.raf(time * 1000);
@@ -49,6 +59,7 @@ export function SmoothScroll() {
       document.removeEventListener("click", onClick);
       gsap.ticker.remove(tick);
       lenis.destroy();
+      delete window.__lenis;
     };
   }, []);
 

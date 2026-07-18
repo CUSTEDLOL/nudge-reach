@@ -110,31 +110,30 @@ const PIXEL_DUST = [
 ];
 const DUST_PX = 8;
 
-/** A slab under the logo, dissolving to the right in blocky Minecraft-style
- * steps. Over the hero it's white so the green wordmark reads on white;
- * once the navbar leaves the hero it recolors to ink to match the solid
- * pill instead of just vanishing. Sits behind the pill's content; the
- * pill's own overflow clips the rounded corners. */
-function PixelSlab({ overHero }: { overHero: boolean }) {
+/** A white slab under the logo, dissolving to the right in blocky
+ * Minecraft-style steps, so the green wordmark reads on white over the
+ * hero. On the hand-off out of the hero the slab SWEEPS right across the
+ * whole pill — its pixel edge leading like a grid clearing the track —
+ * and slides off, revealing the solid pill behind it. A fixed-width slab
+ * that translates, so the pixel staircase stays crisp the whole way and
+ * the pill's overflow clips it. */
+function PixelSlab({ racing }: { racing: boolean }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-y-0 left-0 z-0 w-[52%] sm:w-[40%] md:w-[27%]"
+      className={cn(
+        "pointer-events-none absolute inset-y-0 left-0 z-0 w-[46%] transition-transform duration-[640ms] ease-[cubic-bezier(0.72,0,0.24,1)] sm:w-[34%] md:w-[24%]",
+        racing ? "translate-x-[460%]" : "translate-x-0"
+      )}
     >
       <div
-        className={cn(
-          "absolute inset-0 transition-colors duration-500 ease-out",
-          overHero ? "bg-white/95" : "bg-ink/90"
-        )}
+        className="absolute inset-0 bg-white/95"
         style={{ clipPath: EDGE_POLYGON }}
       />
       {PIXEL_DUST.map((b, i) => (
         <span
           key={i}
-          className={cn(
-            "absolute transition-colors duration-500 ease-out",
-            overHero ? "bg-white" : "bg-ink/90"
-          )}
+          className="absolute bg-white"
           style={{
             left: `${b.x}%`,
             top: `${b.y}%`,
@@ -154,6 +153,9 @@ function PixelSlab({ overHero }: { overHero: boolean }) {
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [overHero, setOverHero] = useState(true);
+  /** The pill's own fill lags the hand-off so the racing slab lands first
+   * and the solid state "kicks in" behind it, rather than cross-fading. */
+  const [solidBg, setSolidBg] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -170,6 +172,18 @@ export function Navbar() {
     };
   }, []);
 
+  // Leaving the hero: hold the glass while the slab races across, then drop
+  // the solid fill in under it. Returning: switch back immediately so the
+  // slab retracts over glass, not over white.
+  useEffect(() => {
+    // Both directions go through a timer so the state change never happens
+    // synchronously in the effect body. Leaving the hero: flip the pill to
+    // solid (text glass→ink, bg → white) mid-sweep, so the black "kicks in"
+    // exactly as the pixel band passes over it. Returning: flip back at once.
+    const t = window.setTimeout(() => setSolidBg(!overHero), overHero ? 0 : 320);
+    return () => window.clearTimeout(t);
+  }, [overHero]);
+
   // Lock body scroll while the mobile menu is open.
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -183,13 +197,13 @@ export function Navbar() {
       <div className="mx-auto flex w-full max-w-[110rem] justify-center">
         <div
           className={cn(
-            "relative flex w-full max-w-5xl items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 py-2.5 sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6",
-            overHero
-              ? "border border-white/25 bg-white/[0.16] text-white shadow-[0_8px_32px_-12px_rgba(3,10,7,0.35)] backdrop-blur-xl"
-              : "border border-black/[0.06] bg-white/92 text-ink shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)] backdrop-blur-xl"
+            "relative flex w-full max-w-5xl items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 py-2.5 transition-colors duration-300 sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6",
+            solidBg
+              ? "border border-black/[0.06] bg-white/92 text-ink shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)] backdrop-blur-xl"
+              : "border border-white/25 bg-white/[0.16] text-white shadow-[0_8px_32px_-12px_rgba(3,10,7,0.35)] backdrop-blur-xl"
           )}
         >
-          <PixelSlab overHero={overHero} />
+          <PixelSlab racing={!overHero} />
 
           {/* left — logo, always visible */}
           <div className="relative z-10 flex items-center md:justify-self-start">
