@@ -1,19 +1,20 @@
-import { type CSSProperties } from "react";
+"use client";
+
+import { useState, type CSSProperties } from "react";
 import { Container, Section, SectionHeading } from "./section";
 
 /**
  * Industries as a word-search: a monospace letter grid where the verticals
- * we serve are highlighted — each in its own marker colour — by a stroke
- * that draws in on its turn and then STAYS, building up top→bottom (row
- * order) until the whole grid is highlighted, then resets together and
- * chases again from the first word (pure CSS, so it runs all the time
- * regardless of scroll). Two entries (Hotels, Salons) run DOWN a column
- * instead of across a row, so it reads as a real crossword rather than a
- * flat word search. Every letter shares the exact same font/weight/colour —
- * the coloured bar is the only thing that marks a found word, never bold
- * text. Filler rows/columns hide legible texture words (WHATSAPP, SPAS,
- * GYMS…) that stay un-highlighted. Layout is two CSS vars (--cell / --cellh)
- * so the bars position with pure calc() — no measuring.
+ * we serve are hidden until found. The grid starts fully blank — no marker
+ * colour anywhere — and hovering (or focusing/tapping) a word draws its bar
+ * in and leaves it highlighted for good; words already found stay found
+ * regardless of where the cursor goes next. Two entries (Hotels, Salons)
+ * run DOWN a column instead of across a row, so it reads as a real
+ * crossword rather than a flat word search. Every letter shares the exact
+ * same font/weight/colour — the coloured bar is the only thing that marks a
+ * find, never bold text. Filler rows/columns hide legible texture words
+ * (WHATSAPP, SPAS, GYMS…) that never highlight. Layout is two CSS vars
+ * (--cell / --cellh) so every box positions with pure calc() — no measuring.
  */
 
 // prettier-ignore
@@ -30,12 +31,10 @@ const ROWS = [
   "LRUYADGROWTHENCY",
 ];
 
-/** The highlighted finds — row, start column, length, marker colour, and
+/** The findable words — row, start column, length, marker colour, and
  * orientation (default horizontal). Hotels runs down column 13 (rows 1-6);
  * Salons runs down column 0 (rows 3-8) — both through filler cells, so the
- * five horizontal words are unaffected. Order = reveal order (top→bottom by
- * each word's own top-most row), and its index drives which hl-chase-N(v)
- * keyframe it uses. */
+ * five horizontal words are unaffected. */
 const WORDS: {
   label: string;
   row: number;
@@ -53,18 +52,18 @@ const WORDS: {
   { label: "Colleges", row: 7, col: 1, len: 8, color: "rgba(167,139,250,0.6)" }, // violet
 ];
 
-function markerStyle(w: (typeof WORDS)[number], i: number): CSSProperties {
+const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+
+/** The shared box every word occupies — bar, and hover/focus hit target,
+ * both use this so they always line up exactly. */
+function wordBox(w: (typeof WORDS)[number]): CSSProperties {
   const vertical = w.orientation === "vertical";
-  const animationName = `hl-chase-${i}${vertical ? "v" : ""}`;
   if (vertical) {
     return {
       top: `calc(${w.row} * var(--cellh) - var(--cellh) * 0.22)`,
       left: `calc(${w.col} * var(--cell) + var(--cell) * 0.13)`,
       width: "calc(var(--cell) * 0.74)",
       height: `calc(${w.len} * var(--cellh) + var(--cellh) * 0.44)`,
-      backgroundColor: w.color,
-      transformOrigin: "center top",
-      animationName,
     };
   }
   return {
@@ -72,19 +71,25 @@ function markerStyle(w: (typeof WORDS)[number], i: number): CSSProperties {
     left: `calc(${w.col} * var(--cell) - var(--cell) * 0.22)`,
     width: `calc(${w.len} * var(--cell) + var(--cell) * 0.44)`,
     height: "calc(var(--cellh) * 0.74)",
-    backgroundColor: w.color,
-    animationName,
   };
 }
 
 export function IndustryWordSearch() {
+  // Once found, a word never un-highlights — hovering elsewhere doesn't
+  // clear it, and re-hovering it is a harmless no-op.
+  const [found, setFound] = useState<ReadonlySet<number>>(new Set());
+
+  function reveal(i: number) {
+    setFound((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
+  }
+
   return (
     <Section id="industries" className="bg-[#faf9f5]">
       <Container>
         <SectionHeading
           eyebrow="Works across industries"
           title="Find your business."
-          subtitle="Site visits for real estate, appointments for clinics, tables for cafes, rooms for hotels, admissions for schools and colleges — one Front Desk, trained for the counter it runs."
+          subtitle="Site visits for real estate, appointments for clinics, tables for cafes, rooms for hotels, admissions for schools and colleges — one Front Desk, trained for the counter it runs. Hover a word to find it."
         />
 
         <div className="mt-14 sm:mt-16">
@@ -93,7 +98,6 @@ export function IndustryWordSearch() {
             colleges and salons.
           </p>
           <div
-            aria-hidden
             className="relative isolate mx-auto w-fit select-none font-mono"
             style={
               {
@@ -102,16 +106,32 @@ export function IndustryWordSearch() {
               } as CSSProperties
             }
           >
-            {/* marker fills — behind the letters. Each bar draws in on its
-                own turn and stays; horizontal bars sweep left→right, the two
-                vertical ones sweep top→bottom. */}
-            {WORDS.map((w, i) => (
-              <span
-                key={w.label}
-                className="hl-bar absolute rounded-[0.4em]"
-                style={markerStyle(w, i)}
-              />
-            ))}
+            {/* marker fills — behind the letters, blank until found. */}
+            {WORDS.map((w, i) => {
+              const vertical = w.orientation === "vertical";
+              const isFound = found.has(i);
+              return (
+                <span
+                  key={w.label}
+                  aria-hidden
+                  className="absolute rounded-[0.4em]"
+                  style={{
+                    ...wordBox(w),
+                    backgroundColor: w.color,
+                    transformOrigin: vertical ? "center top" : "left center",
+                    transform: isFound
+                      ? vertical
+                        ? "scaleY(1)"
+                        : "scaleX(1)"
+                      : vertical
+                        ? "scaleY(0)"
+                        : "scaleX(0)",
+                    opacity: isFound ? 1 : 0,
+                    transition: `transform 650ms ${EASE}, opacity 300ms ${EASE}`,
+                  }}
+                />
+              );
+            })}
 
             {/* letters — on top of the marker layer. Every letter is styled
                 identically; only the marker bar behind it marks a find. */}
@@ -126,6 +146,24 @@ export function IndustryWordSearch() {
                   </span>
                 ))}
               </div>
+            ))}
+
+            {/* hover / focus / tap targets — transparent, sit above the
+                letters so the whole word is one hit area regardless of
+                which cell the cursor lands on. */}
+            {WORDS.map((w, i) => (
+              <div
+                key={w.label}
+                role="button"
+                tabIndex={0}
+                aria-label={`Reveal ${w.label}`}
+                aria-pressed={found.has(i)}
+                className="absolute z-20 cursor-pointer rounded-[0.4em] outline-none focus-visible:ring-2 focus-visible:ring-ink/40"
+                style={wordBox(w)}
+                onMouseEnter={() => reveal(i)}
+                onFocus={() => reveal(i)}
+                onClick={() => reveal(i)}
+              />
             ))}
           </div>
         </div>
