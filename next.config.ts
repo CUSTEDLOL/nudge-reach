@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "6mb",
     },
   },
+  async redirects() {
+    return [
+      // /waitlist was the old "Book a demo" landing — retired for the Cal.com
+      // booking modal. Send any old/indexed links home (301).
+      { source: "/waitlist", destination: "/", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
