@@ -2,16 +2,15 @@ import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "./button";
 import { BookDemoButton } from "./book-demo";
 import { Container, Section } from "./section";
-import { Reveal } from "./motion-primitives";
 import { FeatureScenes } from "./feature-scenes";
 
 /** The daylight hand-off after the Night Shift story: the five product
- * capabilities behind the Front Desk — one reveal per bento card. */
+ * capabilities behind the Front Desk — all visible, with no hover gate. */
 export function FeaturesBento() {
   return (
     <Section id="features" className="bg-white">
       <Container>
-        <Reveal className="mx-auto max-w-3xl text-center">
+        <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-display text-[2.1rem] font-black uppercase leading-[1.06] tracking-[-0.02em] text-ink sm:text-[2.9rem]">
             One employee.
             <span className="serif-display mt-3 block text-[1.7rem] normal-case tracking-normal text-ink/85 sm:text-[2.3rem]">
@@ -22,11 +21,11 @@ export function FeaturesBento() {
             The full toolkit behind the Front Desk — the agent, the outreach,
             the numbers and the plumbing.
           </p>
-        </Reveal>
+        </div>
 
         <FeatureScenes />
 
-        <Reveal className="mt-12 flex flex-col items-center gap-5 text-center">
+        <div className="mt-12 flex flex-col items-center gap-5 text-center">
           <p className="max-w-xl text-[15px] text-ink/60">
             We configure the{" "}
             <strong className="font-bold text-ink">
@@ -43,7 +42,7 @@ export function FeaturesBento() {
               See pricing
             </ButtonLink>
           </div>
-        </Reveal>
+        </div>
       </Container>
     </Section>
   );

@@ -5,6 +5,24 @@ what's next.
 
 ---
 
+## Landing hero video + permanently open color bento (2026-07-18) ✅
+
+- Replaced the hero loop with the founder-supplied `Finale.mp4` and generated a
+  matching first-frame poster so the fallback no longer flashes the old scene.
+- Removed the bento hover gate, resting nameplates, per-card reveal effects,
+  animation timers, motion wrappers, and touch/reduced-motion branching.
+- Rebuilt all five cards as immediately visible product panels with copy and
+  imagery open by default, using strong lime, orange, electric-blue, violet,
+  and emerald palettes with dark borders and hard editorial shadows.
+- Verified the new static composition at desktop and narrow breakpoints.
+- Follow-up refinement removed capability numbering and the inner framed-image
+  boxes. Artwork now floats directly on each color field with varied editorial
+  scale/placement and large background words for a container-free, asymmetric
+  magazine rhythm while preserving a unified outer grid.
+- Rebalanced each asset against its own source aspect ratio: copy is top-anchored,
+  landscape artwork enters immediately after the description, and safe-area
+  scaling keeps the full analytics/integrations compositions inside the card.
+
 ## Landing comparison — kinetic market map (2026-07-18) ✅
 
 - Replaced the dense capability ledger with a two-axis qualitative market map:
