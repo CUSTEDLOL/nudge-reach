@@ -1,12 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import Link from "next/link";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
-import { ButtonLink } from "./button";
 import { BookDemoButton } from "./book-demo";
 
 const NAV_LINKS = [
@@ -38,43 +36,19 @@ function NavLinks({ overHero }: { overHero: boolean }) {
   );
 }
 
-/** The solid CTA — ink pill with a glossy sweep + brand-glow lift on hover.
- * The arrow slides, the shine sweeps across, the whole button lifts. Opens
- * the Cal modal. */
+/** The solid CTA — flat ink pill with a brand-glow lift on hover. The arrow
+ * slides and the whole button lifts. Opens the Cal modal. */
 function NavCta() {
   return (
     <BookDemoButton
-      className="group/cta relative hidden items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-inset ring-white/[0.06] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] md:inline-flex"
+      className="group/cta hidden items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] md:inline-flex"
     >
-      {/* glossy sweep */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-[20deg] bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover/cta:translate-x-[320%]"
-      />
-      <span className="relative">Book a Demo</span>
+      <span>Book a Demo</span>
       <ArrowRight
-        className="relative h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
+        className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
         aria-hidden
       />
     </BookDemoButton>
-  );
-}
-
-/** The quiet second action — routes to /login (handles both sign-up and
- * sign-in already). Text-only so "Book a Demo" stays the one solid pill. */
-function SignUpLink({ overHero }: { overHero: boolean }) {
-  return (
-    <Link
-      href="/login"
-      className={cn(
-        "hidden whitespace-nowrap rounded-xl px-3.5 py-2.5 text-[14px] font-semibold transition-all duration-200 md:inline-flex",
-        overHero
-          ? "text-white/90 hover:bg-white/10 hover:text-white"
-          : "text-ink/70 hover:bg-ink/[0.06] hover:text-ink"
-      )}
-    >
-      Sign Up
-    </Link>
   );
 }
 
@@ -201,9 +175,8 @@ export function Navbar() {
             <NavLinks overHero={overHero} />
           </div>
 
-          {/* right — sign up + the one solid CTA (desktop only) */}
-          <div className="relative z-10 hidden items-center gap-1 md:flex md:justify-self-end">
-            <SignUpLink overHero={overHero} />
+          {/* right — the one solid CTA (desktop only) */}
+          <div className="relative z-10 hidden items-center md:flex md:justify-self-end">
             <NavCta />
           </div>
 
@@ -259,18 +232,10 @@ export function Navbar() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-2 flex flex-col gap-2 border-t border-black/[0.06] p-2 pt-3">
+              <div className="mt-2 border-t border-black/[0.06] p-2 pt-3">
                 <BookDemoButton variant="primary" className="w-full">
                   Book a Demo
                 </BookDemoButton>
-                <ButtonLink
-                  href="/login"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => setOpen(false)}
-                >
-                  Sign Up
-                </ButtonLink>
               </div>
             </motion.div>
           </motion.div>

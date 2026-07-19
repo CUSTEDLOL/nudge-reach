@@ -79,7 +79,7 @@ const SECTIONS: LegalSection[] = [
     heading: "Your rights",
     body: [
       "Depending on your jurisdiction (including India's DPDP Act and the EU/UK GDPR), you may have the right to access, correct, export, restrict or delete your personal data, and to withdraw consent. Account owners can export contacts and message history from Settings → Data at any time.",
-      "To exercise any right, or if you are a contact of a Nudge customer and wish to make a request, email hello@nudge.so. Requests about a customer's contacts are forwarded to that customer, who is the controller of that data.",
+      "To exercise any right, or if you are a contact of a Nudge customer and wish to make a request, email hqnudge@gmail.com. Requests about a customer's contacts are forwarded to that customer, who is the controller of that data.",
     ],
   },
   {

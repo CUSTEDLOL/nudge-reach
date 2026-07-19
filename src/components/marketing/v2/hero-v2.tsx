@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import { ArrowDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { BookDemoButton } from "@/components/marketing/book-demo";
+import { GetAccessButton } from "@/components/marketing/get-access";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
 /**
@@ -35,10 +36,7 @@ export function HeroV2() {
   useGSAP(
     () => {
       if (!motionAllowed()) return;
-      // Hold the intro while the brand splash is wiping off stage.
-      const splash = document.getElementById("nudge-splash");
       const tl = gsap.timeline({
-        delay: splash ? 3.25 : 0,
         defaults: { ease: "expo.out" },
       });
       tl.from(".hero-line", { yPercent: 112, duration: 1.15, stagger: 0.14 }, 0.15).from(
@@ -103,16 +101,16 @@ export function HeroV2() {
             <BookDemoButton className="rounded-xl bg-white px-6 py-3 text-[15px] font-semibold text-ink shadow-[0_16px_40px_-14px_rgba(7,38,28,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/90">
               Book a Demo
             </BookDemoButton>
-            <a
-              href="#night-shift"
+            <GetAccessButton
+              source="hero"
               className="group/link inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3 text-[15px] font-semibold text-white backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20"
             >
-              Watch one night
-              <ArrowDown
-                className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-y-0.5"
+              Get Access
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5"
                 aria-hidden
               />
-            </a>
+            </GetAccessButton>
           </div>
         </div>
 

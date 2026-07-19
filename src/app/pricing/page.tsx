@@ -17,7 +17,7 @@ export default function PricingPage() {
     <>
       <ScrollTop />
       <Navbar />
-      <main className="bg-white pt-24">
+      <main className="bg-[#f8fbf1] pt-24">
         <Pricing />
         {/* The hire-vs-Nudge maths — the pricing argument, next to the prices. */}
         <SalaryCalculator />

@@ -4,10 +4,8 @@ import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
 import { IndustryWordSearch } from "@/components/marketing/industry-word-search";
 import { FeaturesBento } from "@/components/marketing/features-bento";
-import { FinalCTA } from "@/components/marketing/final-cta";
 import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
-import { Preloader } from "@/components/marketing/v2/preloader";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
 
@@ -68,7 +66,6 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
-      <Preloader />
       <Navbar />
       <Experience />
       <main className="relative z-10 overflow-x-clip">
@@ -87,11 +84,8 @@ export default function Home() {
           <DaySection>
             <MetaVsNudge />
           </DaySection>
-          {/* pricing and FAQ live on their own pages, via the navbar */}
-          {/* the page ends the way a hire ends — the offer letter */}
-          <DaySection>
-            <FinalCTA />
-          </DaySection>
+          {/* pricing and FAQ live on their own pages, via the navbar;
+              the closer is the footer's holo card + its Book a Demo. */}
         </div>
       </main>
       <div className="relative z-10">

@@ -76,17 +76,20 @@ export function BookDemoButton({
   variant,
   size = "md",
   className,
+  "aria-label": ariaLabel,
 }: {
   children?: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
   className?: string;
+  "aria-label"?: string;
 }) {
   useEffect(initCal, []);
 
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       data-cal-link={CAL_LINK}
       data-cal-namespace={CAL_NAMESPACE}
       data-cal-config={CAL_CONFIG}

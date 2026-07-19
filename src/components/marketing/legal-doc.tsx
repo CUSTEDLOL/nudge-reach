@@ -85,10 +85,10 @@ export function LegalDoc({
             <p className="text-[14.5px] leading-relaxed text-ink/70">
               Questions about this document? Email{" "}
               <a
-                href="mailto:hello@nudge.so"
+                href="mailto:hqnudge@gmail.com"
                 className="font-semibold text-brand-700 underline-offset-2 hover:underline"
               >
-                hello@nudge.so
+                hqnudge@gmail.com
               </a>
               .
             </p>

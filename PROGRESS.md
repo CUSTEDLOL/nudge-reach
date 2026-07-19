@@ -5,6 +5,15 @@ what's next.
 
 ---
 
+## Collectible-card footer (2026-07-18) ✅
+
+- Replaced the generic dark green marketing footer with a pale grid-backed
+  footer that matches the landing page's bold editorial card language.
+- Added a Nudge action collectible card that explains the AI Front Desk through
+  product moves, WhatsApp-style messaging, and stat chips for books / chases /
+  collects.
+- Added a chunky grass strip as the final visual edge of the website.
+
 ## Navbar restored after pull (2026-07-18) ✅
 
 - Restored `src/components/marketing/navbar.tsx` to the pre-pull local version

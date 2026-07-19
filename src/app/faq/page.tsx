@@ -31,7 +31,7 @@ export default function FAQPage() {
       />
       <ScrollTop />
       <Navbar />
-      <main className="bg-cream pt-24">
+      <main className="bg-[#f8fbf1] pt-24">
         <FAQ />
       </main>
       <Footer />

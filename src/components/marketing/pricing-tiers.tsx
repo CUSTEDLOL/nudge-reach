@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
-import { ButtonLink } from "./button";
+import Link from "next/link";
+import { Check, Crown, Sparkles } from "lucide-react";
 import { BookDemoButton } from "./book-demo";
 import { Reveal } from "./motion-primitives";
 import { RoiCalculator } from "./roi-calculator";
@@ -25,8 +25,8 @@ const TIERS: Tier[] = [
   {
     planId: "free",
     name: "Free",
-    tagline: "Run WhatsApp properly from day one, no card, no expiry.",
-    priceNote: "free forever",
+    tagline: "Run WhatsApp properly from day one. No card, no expiry.",
+    priceNote: "forever",
     features: [
       "1 WhatsApp number",
       "250 contacts",
@@ -40,7 +40,7 @@ const TIERS: Tier[] = [
     planId: "starter",
     name: "Starter",
     tagline: "For small teams making WhatsApp their main sales channel.",
-    priceNote: "per month",
+    priceNote: "/month",
     featureIntro: "Everything in Free, plus:",
     features: [
       "2,500 contacts",
@@ -54,7 +54,7 @@ const TIERS: Tier[] = [
     planId: "growth",
     name: "Growth",
     tagline: "For businesses running WhatsApp at serious volume.",
-    priceNote: "per month",
+    priceNote: "/month",
     popular: true,
     featureIntro: "Everything in Starter, plus:",
     features: [
@@ -69,7 +69,7 @@ const TIERS: Tier[] = [
     planId: "pro",
     name: "Pro",
     tagline: "For brands where WhatsApp is the revenue engine.",
-    priceNote: "per month",
+    priceNote: "/month",
     featureIntro: "Everything in Growth, plus:",
     features: [
       "Unlimited contacts",
@@ -84,6 +84,18 @@ function priceLabel(planId: string, currency: Currency): string {
   const price = planPrice(getPlan(planId), currency);
   if (currency === "USD") return `$${price.toLocaleString("en-US")}`;
   return `₹${price.toLocaleString("en-IN")}`;
+}
+
+/** Square bento check — the theme's tick, not a soft round one. */
+function CheckSquare({ tint = "#7ee2a8" }: { tint?: string }) {
+  return (
+    <span
+      className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 border-ink/70 text-ink"
+      style={{ background: tint }}
+    >
+      <Check className="h-3 w-3" strokeWidth={3.5} />
+    </span>
+  );
 }
 
 /**
@@ -102,7 +114,7 @@ export function PricingTiers() {
         <div
           role="radiogroup"
           aria-label="Pricing currency"
-          className="inline-flex items-center rounded-full border border-black/10 bg-white p-1 shadow-soft"
+          className="inline-flex items-center gap-1 rounded-full border-2 border-ink/70 bg-white p-1 shadow-[4px_4px_0_rgba(10,15,13,0.82)]"
         >
           {(
             [
@@ -117,9 +129,9 @@ export function PricingTiers() {
               aria-checked={currency === opt.value}
               onClick={() => setCurrency(opt.value)}
               className={cn(
-                "rounded-full px-4 py-2 text-[13.5px] font-semibold transition-colors duration-150",
+                "rounded-full px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.08em] transition-colors duration-150",
                 currency === opt.value
-                  ? "bg-brand-950 text-white"
+                  ? "bg-ink text-white"
                   : "text-ink/55 hover:text-ink"
               )}
             >
@@ -131,170 +143,144 @@ export function PricingTiers() {
 
       {/* Flagship — the hero tier (done-for-you AI Front Desk) */}
       <Reveal className="mt-10">
-        <div className="bg-mesh relative overflow-hidden rounded-[2rem] bg-brand-950 p-7 shadow-lift sm:p-9">
+        <article
+          className="relative overflow-hidden rounded-[1.75rem] border-2 border-ink/70 p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-9"
+          style={{
+            background:
+              "linear-gradient(135deg, #54e58b 0%, #8eec72 48%, #c9f34f 100%)",
+          }}
+        >
+          {/* ghost word — the theme's giant backdrop */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-8 right-2 select-none font-display text-[clamp(6rem,14vw,11rem)] font-black leading-none tracking-[-0.06em] text-white/25"
+          >
+            24/7
+          </span>
+
           <div className="relative z-10 grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-400 px-3 py-1 text-[11px] font-bold text-brand-950">
-                <Sparkles className="h-3 w-3" /> Flagship · done for you
+              <span className="inline-flex -rotate-2 items-center gap-1.5 rounded-full border-2 border-ink/70 bg-white px-3.5 py-1.5 font-mono text-[10px] font-black uppercase tracking-[0.12em] text-ink shadow-[3px_3px_0_rgba(10,15,13,0.35)]">
+                <Crown className="h-3.5 w-3.5" aria-hidden />
+                Flagship · Done for you
               </span>
-              <h3 className="mt-4 font-display text-3xl text-white sm:text-4xl">
+              <h3 className="mt-4 font-display text-[2.2rem] font-black uppercase leading-[0.9] tracking-[-0.04em] text-ink sm:text-[3rem]">
                 AI Front Desk
               </h3>
-              <p className="mt-3 max-w-md text-[15px] leading-relaxed text-brand-100/80">
-                Your AI employee: it books, chases and collects, and we set the
-                whole thing up. Priced against the hire it replaces, not against
-                software.
+              <p className="mt-3 max-w-md text-[14.5px] font-medium leading-relaxed text-ink/75">
+                Your AI employee. It answers, books, chases and collects — and
+                we set the whole thing up for you.
               </p>
-              <div className="mt-6 flex items-end gap-1.5">
-                <span className="font-display text-5xl leading-none text-white">
+              <div className="mt-6 flex items-end gap-2">
+                <span className="font-display text-[3.4rem] font-black leading-none tracking-[-0.03em] text-ink">
                   {priceLabel("front_desk", currency)}
                 </span>
-                <span className="mb-1 text-[13px] text-brand-100/60">per month</span>
+                <span className="mb-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-ink/60">
+                  /month
+                </span>
               </div>
-              <BookDemoButton variant="primary-dark" size="lg" className="mt-6">
+              <BookDemoButton className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-ink/80 bg-[#ffd94a] px-7 text-[13.5px] font-black uppercase tracking-[0.08em] text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#ffe37a] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:translate-y-0 active:shadow-[0_2px_0_rgba(10,15,13,0.8)]">
+                <Sparkles className="h-4 w-4" aria-hidden />
                 Book a setup call
               </BookDemoButton>
             </div>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+
+            <ul className="grid gap-2.5 rounded-2xl border-2 border-ink/25 bg-white/55 p-5 backdrop-blur-sm sm:grid-cols-2 sm:p-6 lg:grid-cols-1 xl:grid-cols-2">
               {getPlan("front_desk").features.map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-400/20 text-brand-300">
-                    <Check className="h-3 w-3" strokeWidth={3} />
-                  </span>
-                  <span className="text-[13.5px] leading-snug text-brand-100/85">
+                  <CheckSquare tint="#ffd94a" />
+                  <span className="text-[13px] font-semibold leading-snug text-ink/80">
                     {f}
                   </span>
                 </li>
               ))}
             </ul>
           </div>
-        </div>
+        </article>
       </Reveal>
 
       <Reveal className="mt-14 text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-ink/40">
-          Or start self-serve
-        </p>
+        <span className="inline-block rotate-1 rounded-full border-2 border-ink/70 bg-white px-4 py-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink shadow-[3px_3px_0_rgba(10,15,13,0.82)]">
+          Or start self-serve · free
+        </span>
       </Reveal>
 
-      <div className="mt-6 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4 xl:gap-5">
-        {TIERS.map((tier, i) => {
-          const card = (
+      <div className="mt-8 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        {TIERS.map((tier, i) => (
+          <Reveal key={tier.name} delay={i * 0.08} className="h-full">
             <div
               className={cn(
-                "flex h-full flex-col rounded-[1.75rem] p-6 xl:p-7",
-                tier.popular
-                  ? "bg-brand-950 text-white shadow-lift"
-                  : "border border-black/5 bg-white shadow-soft"
+                "flex h-full flex-col rounded-[1.5rem] border-2 border-ink/70 p-6 shadow-[7px_7px_0_rgba(10,15,13,0.82)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[9px_11px_0_rgba(10,15,13,0.82)]",
+                tier.popular ? "" : "bg-white"
               )}
+              style={
+                tier.popular
+                  ? {
+                      background:
+                        "linear-gradient(145deg, #fff3c4 0%, #ffe08a 100%)",
+                    }
+                  : undefined
+              }
             >
               <div className="flex items-center justify-between gap-2">
-                <h3
-                  className={cn(
-                    "text-lg font-semibold",
-                    tier.popular ? "text-white" : "text-ink"
-                  )}
-                >
+                <h3 className="font-display text-[1.4rem] font-black uppercase leading-none tracking-[-0.03em] text-ink">
                   {tier.name}
                 </h3>
                 {tier.popular && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-400 px-3 py-1 text-[11px] font-bold text-brand-950">
-                    <Sparkles className="h-3 w-3" /> Most popular
+                  <span className="inline-flex -rotate-2 items-center gap-1 rounded-full border-2 border-ink/70 bg-ink px-2.5 py-1 font-mono text-[9px] font-black uppercase tracking-[0.1em] text-white">
+                    <Sparkles className="h-3 w-3" /> Popular
                   </span>
                 )}
               </div>
-              <p
-                className={cn(
-                  "mt-2 min-h-[3.5rem] text-[13.5px] leading-snug",
-                  tier.popular ? "text-brand-100/70" : "text-ink/55"
-                )}
-              >
+              <p className="mt-2 min-h-[3.5rem] text-[13px] font-medium leading-snug text-ink/60">
                 {tier.tagline}
               </p>
 
-              <div className="mt-5 flex items-end gap-1.5">
-                <span
-                  className={cn(
-                    "text-[2.15rem] font-bold leading-none tracking-tight",
-                    tier.popular ? "text-white" : "text-ink"
-                  )}
-                >
+              <div className="mt-4 flex items-end gap-1.5">
+                <span className="font-display text-[2.2rem] font-black leading-none tracking-[-0.03em] text-ink">
                   {priceLabel(tier.planId, currency)}
                 </span>
-                <span
-                  className={cn(
-                    "mb-0.5 text-[13px]",
-                    tier.popular ? "text-brand-100/60" : "text-ink/45"
-                  )}
-                >
+                <span className="mb-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-ink/50">
                   {tier.priceNote}
                 </span>
               </div>
 
-              <ButtonLink
+              <Link
                 href="/login"
-                variant={tier.popular ? "primary-dark" : "secondary"}
-                className="mt-6 w-full"
+                className={cn(
+                  "mt-6 inline-flex h-11 w-full items-center justify-center rounded-xl border-2 border-ink/80 text-[12.5px] font-black uppercase tracking-[0.08em] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0",
+                  tier.popular
+                    ? "bg-ink text-white shadow-[0_4px_0_rgba(10,15,13,0.35)] hover:shadow-[0_6px_0_rgba(10,15,13,0.35)] active:shadow-[0_2px_0_rgba(10,15,13,0.35)]"
+                    : "bg-white text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] hover:bg-[#f1f7ec] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:shadow-[0_2px_0_rgba(10,15,13,0.8)]"
+                )}
               >
                 Start free
-              </ButtonLink>
+              </Link>
 
               {tier.featureIntro && (
-                <p
-                  className={cn(
-                    "mt-6 text-[12px] font-bold uppercase tracking-[0.12em]",
-                    tier.popular ? "text-brand-300" : "text-brand-700"
-                  )}
-                >
+                <p className="mt-6 font-mono text-[10px] font-black uppercase tracking-[0.1em] text-ink/45">
                   {tier.featureIntro}
                 </p>
               )}
               <ul className={cn("space-y-2.5", tier.featureIntro ? "mt-3" : "mt-6")}>
                 {tier.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
-                    <span
-                      className={cn(
-                        "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full",
-                        tier.popular
-                          ? "bg-brand-400/20 text-brand-300"
-                          : "bg-brand-100 text-brand-600"
-                      )}
-                    >
-                      <Check className="h-3 w-3" strokeWidth={3} />
-                    </span>
-                    <span
-                      className={cn(
-                        "text-[13.5px] leading-snug",
-                        tier.popular ? "text-brand-100/85" : "text-ink/70"
-                      )}
-                    >
+                    <CheckSquare />
+                    <span className="text-[13px] font-semibold leading-snug text-ink/70">
                       {f}
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
-          );
-
-          return (
-            <Reveal key={tier.name} delay={i * 0.08} className="h-full">
-              {tier.popular ? (
-                <div className="relative h-full rounded-[1.85rem] border border-brand-400/60 bg-brand-950 shadow-[0_24px_60px_-24px_rgba(6,193,103,0.45)]">
-                  {card}
-                </div>
-              ) : (
-                card
-              )}
-            </Reveal>
-          );
-        })}
+          </Reveal>
+        ))}
       </div>
 
       <Reveal delay={0.15} className="mt-8 text-center">
-        <p className="text-[13.5px] text-ink/50">
-          Prices in {currency === "USD" ? "USD" : "INR"}, billed monthly, cancel
-          anytime. Every plan includes simulation mode, opt-in enforcement and
-          the official WhatsApp Cloud API.
+        <p className="mx-auto max-w-2xl font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-ink/45">
+          Billed monthly · Cancel anytime · Official WhatsApp Cloud API on every
+          plan
         </p>
       </Reveal>
 
