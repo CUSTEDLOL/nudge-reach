@@ -661,6 +661,19 @@ model WaitlistSignup {
   @@index([createdAt])
 }
 
+// "Get Access" popup on the marketing hero. Stored first (leads survive even
+// with email unconfigured), then forwarded to the founders' inbox via Resend.
+model AccessRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phoneE164 String
+  source    String   @default("hero")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // Structured agent knowledge — one fact per row (spec 2026-07-10). The agent
 // reads a categorized digest of active rows, never the raw table. `condition`
 // is a plain-language applicability window ("weekends only") applied against

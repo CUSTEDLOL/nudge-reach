@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/api/webhooks",
   "/api/cron",
   "/api/waitlist",
+  "/api/access",
   // public marketing pages split off the landing page
   "/pricing",
   "/faq",

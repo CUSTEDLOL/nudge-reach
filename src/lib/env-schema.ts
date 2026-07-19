@@ -48,6 +48,10 @@ export const envSchema = z
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
 
+    // "Get Access" lead forwarding — Google Sheets via an Apps Script web-app
+    // URL (optional; leads always land in AccessRequest regardless)
+    LEADS_SHEET_WEBHOOK_URL: z.string().url().optional(),
+
     // Google Calendar OAuth (optional). Left empty, "Connect calendar" works in
     // SIMULATION with a mocked calendar — no Google app needed. Fill these only
     // for real OAuth. Deliberately NOT in the live superRefine below: even a
