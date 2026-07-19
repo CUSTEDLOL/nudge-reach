@@ -1024,3 +1024,77 @@ html {
     animation: none !important;
   }
 }
+
+/* ============================================================
+   Hero "WhatsApp" word — brand-green, breathing glow, and the
+   official glyph badge that springs in on hover.
+   ============================================================ */
+.wa-word {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  color: #40ef7f;
+  transform: rotate(-1.5deg);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: wa-glow 2.8s ease-in-out infinite;
+  cursor: default;
+}
+.wa-word:hover {
+  transform: rotate(0.75deg) scale(1.025) translateY(-2px);
+  animation-play-state: paused;
+  text-shadow:
+    0 4px 0 rgba(7, 61, 33, 0.95),
+    0 0 16px rgba(46, 224, 111, 0.55),
+    0 10px 24px rgba(9, 40, 74, 0.45);
+}
+/* Crisp, not foggy: a hard dark-green drop for definition against the sky,
+   with only a tight halo that breathes. */
+@keyframes wa-glow {
+  0%,
+  100% {
+    text-shadow:
+      0 4px 0 rgba(7, 61, 33, 0.95),
+      0 0 8px rgba(46, 224, 111, 0.25),
+      0 10px 24px rgba(9, 40, 74, 0.45);
+  }
+  50% {
+    text-shadow:
+      0 4px 0 rgba(7, 61, 33, 0.95),
+      0 0 14px rgba(46, 224, 111, 0.45),
+      0 10px 24px rgba(9, 40, 74, 0.45);
+  }
+}
+/* The badge: white glyph in a green coin, hidden until hover. */
+.wa-logo {
+  position: absolute;
+  top: -0.34em;
+  right: -0.42em;
+  width: 0.6em;
+  height: 0.6em;
+  padding: 0.11em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #3ee87a 0%, #1eb85c 100%);
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 9999px;
+  box-shadow:
+    0 6px 18px rgba(9, 40, 74, 0.35),
+    0 0 24px rgba(37, 211, 102, 0.65);
+  opacity: 0;
+  transform: scale(0) rotate(-24deg);
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.18s ease-out;
+  pointer-events: none;
+}
+.wa-word:hover .wa-logo {
+  opacity: 1;
+  transform: scale(1) rotate(8deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wa-word {
+    animation: none;
+    transform: none;
+  }
+}

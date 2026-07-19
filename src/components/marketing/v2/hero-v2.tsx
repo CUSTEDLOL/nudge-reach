@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import { BookDemoButton } from "@/components/marketing/book-demo";
 import { GetAccessButton } from "@/components/marketing/get-access";
+import { WhatsAppGlyph } from "@/components/marketing/holo-card";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
 /**
@@ -36,17 +37,9 @@ export function HeroV2() {
   useGSAP(
     () => {
       if (!motionAllowed()) return;
-      const tl = gsap.timeline({
-        defaults: { ease: "expo.out" },
-      });
-      tl.from(".hero-line", { yPercent: 112, duration: 1.15, stagger: 0.14 }, 0.15).from(
-        ".hero-cta",
-        { autoAlpha: 0, y: 24, duration: 0.9, stagger: 0.12 },
-        0.8
-      );
-
       // Gentle parallax drift as the hero scrolls away — no fade; the copy
-      // stays solid until the frame itself leaves.
+      // stays solid until the frame itself leaves. No entrance animation:
+      // the headline and CTAs are simply there on load.
       gsap.to(".hero-copy", {
         yPercent: -16,
         ease: "none",
@@ -84,17 +77,22 @@ export function HeroV2() {
       <div className="relative flex h-full flex-col">
         <div className="hero-copy relative z-10 mx-auto w-full max-w-[110rem] px-5 pt-24 sm:px-6 sm:pt-28 lg:pt-32">
           <h1
-            className="serif-display max-w-4xl text-[clamp(2.2rem,5vw,4.6rem)] leading-[1.08] tracking-[-0.015em] text-white"
+            className="serif-display max-w-4xl text-[clamp(1.9rem,4vw,3.6rem)] leading-[1.1] tracking-[-0.015em] text-white"
             style={{
               textShadow:
                 "0 2px 10px rgba(9,40,74,0.55), 0 10px 44px rgba(9,40,74,0.45)",
             }}
           >
-            <span className="block overflow-hidden pb-1">
-              <span className="hero-line block">The AI Front Desk</span>
+            <span className="hero-line block pb-1">
+              The #1{" "}
+              <span className="wa-word">
+                <WhatsAppGlyph className="wa-logo" aria-hidden />
+                WhatsApp
+              </span>{" "}
+              Agent
             </span>
-            <span className="block overflow-hidden pb-2">
-              <span className="hero-line block">For Your WhatsApp</span>
+            <span className="hero-line block pb-2">
+              That Handles Your Business
             </span>
           </h1>
           <div className="hero-cta mt-5 flex flex-wrap items-center gap-3">

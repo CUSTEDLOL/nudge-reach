@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { BookDemoButton } from "./book-demo";
+import { GetAccessButton } from "./get-access";
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
@@ -175,8 +176,19 @@ export function Navbar() {
             <NavLinks overHero={overHero} />
           </div>
 
-          {/* right — the one solid CTA (desktop only) */}
-          <div className="relative z-10 hidden items-center md:flex md:justify-self-end">
+          {/* right — Get Access + the solid CTA (desktop only) */}
+          <div className="relative z-10 hidden items-center gap-2 md:flex md:justify-self-end">
+            <GetAccessButton
+              source="navbar"
+              className={cn(
+                "hidden items-center whitespace-nowrap rounded-xl border px-4 py-2.5 text-[14px] font-semibold transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] md:inline-flex",
+                overHero
+                  ? "border-white/25 bg-white/10 text-white hover:border-white hover:bg-white hover:text-ink hover:shadow-[0_10px_28px_-8px_rgba(255,255,255,0.35)]"
+                  : "border-ink/15 bg-white text-ink hover:border-ink hover:bg-ink hover:text-white hover:shadow-[0_10px_28px_-8px_rgba(10,15,13,0.4)]"
+              )}
+            >
+              Get Access
+            </GetAccessButton>
             <NavCta />
           </div>
 
@@ -232,10 +244,16 @@ export function Navbar() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-2 border-t border-black/[0.06] p-2 pt-3">
+              <div className="mt-2 flex flex-col gap-2 border-t border-black/[0.06] p-2 pt-3">
                 <BookDemoButton variant="primary" className="w-full">
                   Book a Demo
                 </BookDemoButton>
+                <GetAccessButton
+                  source="navbar-mobile"
+                  className="inline-flex w-full items-center justify-center rounded-xl border-2 border-ink/15 bg-white px-4 py-2.5 text-[15px] font-semibold text-ink transition-all hover:border-ink hover:bg-ink hover:text-white"
+                >
+                  Get Access
+                </GetAccessButton>
               </div>
             </motion.div>
           </motion.div>

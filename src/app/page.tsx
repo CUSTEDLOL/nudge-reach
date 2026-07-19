@@ -6,6 +6,7 @@ import { IndustryWordSearch } from "@/components/marketing/industry-word-search"
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { Experience } from "@/components/marketing/v2/experience";
 import { HeroV2 } from "@/components/marketing/v2/hero-v2";
+import { FinalCtaV2 } from "@/components/marketing/v2/final-cta-v2";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
 
@@ -49,11 +50,12 @@ const JSON_LD = {
       offers: [
         {
           "@type": "Offer",
-          name: "AI Front Desk",
-          price: "14999",
+          name: "AI Front Desk implementation",
+          price: "20000",
           priceCurrency: "INR",
+          description:
+            "End-to-end setup of the AI Front Desk, starting from ₹20,000 — final plan customized per business.",
         },
-        { "@type": "Offer", name: "Free", price: "0", priceCurrency: "INR" },
       ],
     },
   ],
@@ -84,9 +86,10 @@ export default function Home() {
           <DaySection>
             <MetaVsNudge />
           </DaySection>
-          {/* pricing and FAQ live on their own pages, via the navbar;
-              the closer is the footer's holo card + its Book a Demo. */}
+          {/* pricing and FAQ live on their own pages, via the navbar */}
         </div>
+        {/* the closer — back in the hero's sky, one ask: early access */}
+        <FinalCtaV2 />
       </main>
       <div className="relative z-10">
         <Footer />
