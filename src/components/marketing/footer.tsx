@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Container } from "./section";
 import { Logo } from "./logo";
-import { BookDemoButton } from "./book-demo";
+import { LaunchDemoButton } from "./launch-cta";
 import { HoloCard } from "./holo-card";
 
 type FooterLink = {
@@ -77,10 +77,10 @@ function FooterTextLink({ link }: { link: FooterLink }) {
 
   if (link.demo) {
     return (
-      <BookDemoButton className={linkClass}>
+      <LaunchDemoButton className={linkClass}>
         {link.label}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-0.5" />
-      </BookDemoButton>
+      </LaunchDemoButton>
     );
   }
 
@@ -193,12 +193,12 @@ export function Footer() {
               >
                 <Mail className="h-[18px] w-[18px]" />
               </a>
-              <BookDemoButton
+              <LaunchDemoButton
                 aria-label="Book a demo call"
                 className="grid h-11 w-11 place-items-center rounded-xl border-2 border-ink/70 bg-white text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)] transition-all hover:-translate-y-0.5 hover:bg-[#06c167] hover:text-white"
               >
                 <MessageCircle className="h-[18px] w-[18px]" />
-              </BookDemoButton>
+              </LaunchDemoButton>
               <span className="inline-flex items-center gap-2 rounded-xl border-2 border-ink/70 bg-[#e9f7ff] px-4 py-2.5 text-[12.5px] font-black text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)]">
                 <ShieldCheck className="h-4 w-4" />
                 Official Meta Cloud API only

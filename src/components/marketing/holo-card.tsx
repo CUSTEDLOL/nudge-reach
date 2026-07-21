@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { CalendarCheck } from "lucide-react";
-import { BookDemoButton } from "./book-demo";
+import { LaunchDemoButton } from "./launch-cta";
 import { useReducedMotionSafe } from "./motion-primitives";
 
 /**
@@ -173,10 +173,10 @@ export function HoloCard() {
               </div>
 
               {/* the card's own move: summon the founders */}
-              <BookDemoButton className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/80 bg-[#ffd94a] text-[13px] font-black uppercase tracking-[0.08em] text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#ffe37a] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:translate-y-0 active:shadow-[0_2px_0_rgba(10,15,13,0.8)]">
+              <LaunchDemoButton className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/80 bg-[#ffd94a] text-[13px] font-black uppercase tracking-[0.08em] text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#ffe37a] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:translate-y-0 active:shadow-[0_2px_0_rgba(10,15,13,0.8)]">
                 <CalendarCheck className="h-4 w-4" aria-hidden />
                 Book a Demo
-              </BookDemoButton>
+              </LaunchDemoButton>
             </footer>
 
             {/* HOLO FOIL — rainbow sheet that slides with the pointer */}

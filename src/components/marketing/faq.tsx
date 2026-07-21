@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Container, Section } from "./section";
 import { Reveal } from "./motion-primitives";
-import { BookDemoButton } from "./book-demo";
+import { LaunchDemoButton } from "./launch-cta";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -88,9 +88,9 @@ export function FAQ() {
           <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">
             Still have a question?
           </p>
-          <BookDemoButton className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-ink/80 bg-[#ffd94a] px-7 text-[13.5px] font-black uppercase tracking-[0.08em] text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#ffe37a] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:translate-y-0 active:shadow-[0_2px_0_rgba(10,15,13,0.8)]">
+          <LaunchDemoButton className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-ink/80 bg-[#ffd94a] px-7 text-[13.5px] font-black uppercase tracking-[0.08em] text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#ffe37a] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:translate-y-0 active:shadow-[0_2px_0_rgba(10,15,13,0.8)]">
             Talk to the team
-          </BookDemoButton>
+          </LaunchDemoButton>
         </Reveal>
       </Container>
     </Section>

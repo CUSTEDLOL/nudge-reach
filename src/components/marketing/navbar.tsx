@@ -5,7 +5,7 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
-import { BookDemoButton } from "./book-demo";
+import { LaunchDemoButton } from "./launch-cta";
 import { GetAccessButton } from "./get-access";
 
 const NAV_LINKS = [
@@ -39,9 +39,10 @@ function NavLinks({ overHero }: { overHero: boolean }) {
 
 /** The solid CTA — flat ink pill with a brand-glow lift on hover. The arrow
  * slides and the whole button lifts. Opens the Cal modal. */
-function NavCta() {
+function NavCta({ overHero }: { overHero: boolean }) {
   return (
-    <BookDemoButton
+    <LaunchDemoButton
+      tone={overHero ? "dark" : "light"}
       className="group/cta hidden items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] md:inline-flex"
     >
       <span>Book a Demo</span>
@@ -49,7 +50,7 @@ function NavCta() {
         className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
         aria-hidden
       />
-    </BookDemoButton>
+    </LaunchDemoButton>
   );
 }
 
@@ -189,7 +190,7 @@ export function Navbar() {
             >
               Get Access
             </GetAccessButton>
-            <NavCta />
+            <NavCta overHero={overHero} />
           </div>
 
           {/* mobile hamburger */}
@@ -245,9 +246,9 @@ export function Navbar() {
                 ))}
               </ul>
               <div className="mt-2 flex flex-col gap-2 border-t border-black/[0.06] p-2 pt-3">
-                <BookDemoButton variant="primary" className="w-full">
+                <LaunchDemoButton variant="primary" className="w-full">
                   Book a Demo
-                </BookDemoButton>
+                </LaunchDemoButton>
                 <GetAccessButton
                   source="navbar-mobile"
                   className="inline-flex w-full items-center justify-center rounded-xl border-2 border-ink/15 bg-white px-4 py-2.5 text-[15px] font-semibold text-ink transition-all hover:border-ink hover:bg-ink hover:text-white"
