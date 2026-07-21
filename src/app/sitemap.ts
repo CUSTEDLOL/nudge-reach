@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE = "https://nudge-reach.vercel.app";
+const BASE = "https://nudgeagent.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

@@ -58,5 +58,5 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
 /** Absolute app origin for links in emails (env override, else the fallback). */
 export function appOrigin(): string {
-  return env.NEXT_PUBLIC_APP_URL ?? "https://nudge-reach.vercel.app";
+  return env.NEXT_PUBLIC_APP_URL ?? "https://nudgeagent.app";
 }

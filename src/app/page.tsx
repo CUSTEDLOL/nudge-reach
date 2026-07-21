@@ -35,8 +35,8 @@ const JSON_LD = {
     {
       "@type": "Organization",
       name: "Nudge",
-      url: "https://nudge-reach.vercel.app",
-      logo: "https://nudge-reach.vercel.app/icon.svg",
+      url: "https://nudgeagent.app",
+      logo: "https://nudgeagent.app/icon.svg",
       description:
         "Nudge is an AI Front Desk for small businesses: it answers customers, books appointments, chases quiet leads and collects payments on WhatsApp.",
     },

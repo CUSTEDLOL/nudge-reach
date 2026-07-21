@@ -55,7 +55,7 @@ export default async function IntegrationsPage() {
     headers(),
   ]);
 
-  const host = headerList.get("host") ?? "nudge-reach.vercel.app";
+  const host = headerList.get("host") ?? "nudgeagent.app";
   const proto =
     headerList.get("x-forwarded-proto") ??
     (host.startsWith("localhost") || host.startsWith("127.")

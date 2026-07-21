@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nudge-reach.vercel.app"),
+  metadataBase: new URL("https://nudgeagent.app"),
   title: {
     default: "Nudge: the AI Front Desk that runs your WhatsApp",
     template: "%s · Nudge",
