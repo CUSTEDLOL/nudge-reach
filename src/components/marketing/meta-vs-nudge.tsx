@@ -189,7 +189,7 @@ function LensChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-full border-2 px-3.5 py-1.5 font-mono text-[10.5px] font-black uppercase tracking-[0.1em] transition-all duration-200",
+        "min-h-11 rounded-full border-2 px-3.5 py-2 font-mono text-[10.5px] font-black uppercase tracking-[0.1em] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
         active
           ? "border-ink/70 bg-ink text-white shadow-[3px_3px_0_rgba(10,15,13,0.35)]"
           : "border-ink/25 bg-white/70 text-ink/60 hover:border-ink/50 hover:text-ink"

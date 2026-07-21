@@ -572,6 +572,40 @@ html {
   }
 }
 
+/* Short phones need the phone to enter below the copy instead of filling the
+   whole pinned frame behind it. We deliberately crop its lower edge: the
+   scroll-driven transcript still advances through the visible window. */
+@media (max-width: 767px) and (max-height: 700px) and (orientation: portrait) {
+  .jsm .ns-phone {
+    width: min(13.5rem, 70vw);
+    bottom: -16svh;
+  }
+}
+
+/* Mobile landscape is a two-column composition. The portrait stack cannot
+   fit into a 320–430px-tall browser viewport without masking the chapter copy. */
+@media (max-width: 1023px) and (max-height: 600px) and (orientation: landscape) {
+  .jsm .ns-copy {
+    inset: 10% auto auto 1.25rem;
+    width: 43vw;
+    height: 80svh;
+  }
+  .jsm .ns-phone {
+    inset: auto 5vw 3svh auto;
+    width: auto;
+    height: 88svh;
+    transform: none;
+  }
+  .jsm .ns-beat h2 {
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+  }
+  .jsm .ns-beat p:last-child {
+    margin-top: 0.65rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+}
+
 /* Static night→day gradient behind everything: THE page background for
    no-JS / reduced-motion / no-WebGL. The opaque canvas covers it when the
    world is running. */

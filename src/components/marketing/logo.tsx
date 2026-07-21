@@ -25,7 +25,7 @@ export function Logo({
       href="/"
       id={id}
       aria-label="Nudge home"
-      className={cn("group inline-flex items-center", className)}
+      className={cn("group inline-flex min-h-11 items-center", className)}
     >
       <Image
         src={tone === "dark" ? "/logo-mark-white.png" : "/logo-mark.png"}

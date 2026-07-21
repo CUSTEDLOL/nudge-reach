@@ -5,6 +5,33 @@ what's next.
 
 ---
 
+## Landing-page responsive production pass (2026-07-22) ✅
+
+- Audited every public landing section at 320×568, 360×800, 375×667,
+  390×844, 430×932, 768×1024, 1024×768, 1280×800 and 1440×900, plus
+  568×320 and 844×390 landscape. Added
+  `scripts/audit-landing-responsive.mjs` as a repeatable, dependency-free
+  Chrome/CDP rig for section screenshots, overflow, target size, hydration,
+  console/network and interaction checks.
+- Kept the compact mobile navbar through tablet widths, added safe-area-aware
+  placement, 44px controls, Escape handling, scroll-lock restoration and an
+  internally scrollable short-viewport menu.
+- Removed the industry word-search scroll gate (scroll-jacking) while retaining
+  the game: phones/tablets now get explicit 44px reveal controls; desktop keeps
+  hover/focus discovery.
+- Re-composed the pinned Night Shift for short portrait and landscape screens
+  so chapter copy and the phone never mask each other.
+- Made the access modal keyboard- and mobile-safe: 16px inputs, autocomplete,
+  initial/return focus, 44px close control, safe-area spacing and scrolling when
+  the keyboard or landscape viewport reduces available height.
+- Fixed the 768px navbar collision, the 320px footer-headline clip, scorecard
+  and footer tap targets, touch-only holo wording, and the missing grain-image
+  request.
+- Final production sweep: zero page overflow, console errors or failed network
+  resources at all 11 viewports; menu and modal open/lock/close behavior passed;
+  no sub-44px controls below 1024px. `tsc`, lint, 53 files / 418 tests and the
+  production build are green.
+
 ## Collectible-card footer (2026-07-18) ✅
 
 - Replaced the generic dark green marketing footer with a pale grid-backed

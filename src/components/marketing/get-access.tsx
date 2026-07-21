@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Loader2, X } from "lucide-react";
 
@@ -20,19 +20,30 @@ export function GetAccessButton({
   source?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const close = () => {
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  };
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className}>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen(true)}
+        className={className}
+      >
         {children}
       </button>
-      {open && <GetAccessModal source={source} onClose={() => setOpen(false)} />}
+      {open && <GetAccessModal source={source} onClose={close} />}
     </>
   );
 }
 
 const inputClass =
-  "w-full rounded-xl border-2 border-ink/15 bg-white px-3.5 py-3 text-[15px] text-ink outline-none transition-all placeholder:text-ink/35 focus:border-ink focus:shadow-[3px_3px_0_rgba(10,15,13,0.15)]";
+  "w-full rounded-xl border-2 border-ink/15 bg-white px-3.5 py-3 text-base text-ink outline-none transition-all placeholder:text-ink/35 focus:border-ink focus:shadow-[3px_3px_0_rgba(10,15,13,0.15)]";
 
 function GetAccessModal({
   source,
@@ -49,10 +60,11 @@ function GetAccessModal({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
   }, [onClose]);
 
@@ -93,21 +105,21 @@ function GetAccessModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-ink/50 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-ink/50 px-4 py-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center sm:py-8"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Get access"
     >
       <div
-        className="relative w-full max-w-md rounded-[1.75rem] border-2 border-ink/70 bg-white p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-8"
+        className="relative my-auto w-full max-w-md rounded-[1.75rem] border-2 border-ink/70 bg-white p-6 shadow-[9px_9px_0_rgba(10,15,13,0.82)] sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full border-2 border-ink/15 text-ink/50 transition-colors hover:border-ink hover:text-ink"
+          className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border-2 border-ink/15 text-ink/50 transition-colors hover:border-ink hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:right-4 sm:top-4"
         >
           <X className="h-4 w-4" />
         </button>
@@ -133,13 +145,21 @@ function GetAccessModal({
             </p>
             <form className="mt-5 flex flex-col gap-3.5" onSubmit={onSubmit}>
               <Field label="Name">
-                <input name="name" required placeholder="e.g. Priya Sharma" className={inputClass} />
+                <input
+                  name="name"
+                  required
+                  autoFocus
+                  autoComplete="name"
+                  placeholder="e.g. Priya Sharma"
+                  className={inputClass}
+                />
               </Field>
               <Field label="Email">
                 <input
                   name="email"
                   type="email"
                   required
+                  autoComplete="email"
                   placeholder="you@business.com"
                   className={inputClass}
                 />
@@ -149,6 +169,7 @@ function GetAccessModal({
                   name="phone"
                   type="tel"
                   required
+                  autoComplete="tel"
                   placeholder="+91 98xxxxxxxx"
                   className={inputClass}
                 />

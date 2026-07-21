@@ -209,7 +209,7 @@ export function HoloCard() {
 
         {/* the hint chip — invites the hover */}
         <p className="mt-4 text-center font-mono text-[10px] font-black uppercase tracking-[0.2em] text-ink/40 transition-colors group-hover:text-ink/70">
-          {hovering ? "★ Shiny ★" : "Hover to inspect the holo"}
+          {hovering ? "★ Shiny ★" : "Move to inspect the holo"}
         </p>
       </div>
     </div>

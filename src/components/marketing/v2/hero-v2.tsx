@@ -56,6 +56,7 @@ export function HeroV2() {
 
   return (
     <section
+      id="hero"
       ref={sectionRef}
       className="relative h-[100svh] overflow-hidden bg-[#7fb2e8]"
       aria-label="Nudge: the AI Front Desk"

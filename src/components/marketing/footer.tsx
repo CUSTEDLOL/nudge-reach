@@ -70,7 +70,7 @@ const MOVES = [
 
 function FooterTextLink({ link }: { link: FooterLink }) {
   const linkClass =
-    "group/link inline-flex items-center gap-1 text-[15px] font-semibold text-ink/65 transition-colors hover:text-ink";
+    "group/link -my-1 inline-flex min-h-11 items-center gap-1 py-1 text-[15px] font-semibold text-ink/65 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
   const arrow = (
     <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-all group-hover/link:translate-x-0.5 group-hover/link:opacity-100" />
   );
@@ -143,8 +143,8 @@ export function Footer() {
           <div>
             <Logo tone="light" />
             <h2 className="mt-10 font-display text-[clamp(1.7rem,4.4vw,4.1rem)] font-black uppercase leading-[0.98] text-ink">
-              <span className="block whitespace-nowrap">Your best front desk</span>
-              <span className="block whitespace-nowrap text-ink/38">
+              <span className="block sm:whitespace-nowrap">Your best front desk</span>
+              <span className="block sm:whitespace-nowrap text-ink/38">
                 inside WhatsApp
               </span>
             </h2>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Container, Section } from "./section";
 
 /**
@@ -10,10 +10,8 @@ import { Container, Section } from "./section";
  * highlighted for good. The grid is a real 16-column CSS grid that fills the
  * card edge to edge, so every box positions in plain percentages.
  *
- * The gate: until all seven are found, scrolling past the section is held —
- * the page eases back and a prompt appears. It always lets go (all found,
- * a few determined scrolls, or keyboard/reduced-motion), so nobody is
- * trapped.
+ * On touch-sized screens, large word buttons keep the interaction
+ * discoverable and comfortably tappable without distorting the letter grid.
  */
 
 const COLS = 16;
@@ -53,9 +51,6 @@ const WORDS: {
 ];
 
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
-/** Determined scrolls before the gate lets go regardless. */
-const GATE_PATIENCE = 26;
-
 /** The shared box every word occupies — the bar and the hit target both use
  * it, so they always line up exactly. Columns are percentages of the grid;
  * rows use the row-height var. */
@@ -64,66 +59,17 @@ function wordBox(w: (typeof WORDS)[number]): CSSProperties {
     top: `calc(${w.row} * var(--cellh) + var(--cellh) * 0.14)`,
     left: `calc(${w.col * COL_PCT}% + 2px)`,
     width: `calc(${w.len * COL_PCT}% - 4px)`,
-    height: "calc(var(--cellh) * 0.72)",
+    height: "max(calc(var(--cellh) * 0.72), 44px)",
   };
 }
 
 export function IndustryWordSearch() {
   // Once found, a word never un-highlights.
   const [found, setFound] = useState<ReadonlySet<number>>(new Set());
-  const [held, setHeld] = useState(false);
-  const [released, setReleased] = useState(false);
-  const allFound = found.size === WORDS.length;
 
   function reveal(i: number) {
     setFound((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
   }
-
-  // The gate. Clamps downward scroll at the section's bottom edge until the
-  // grid is solved. Runs through Lenis when it's driving, native otherwise.
-  useEffect(() => {
-    if (allFound || released) return;
-    const el = document.getElementById("industries");
-    if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let attempts = 0;
-    let ticking = false;
-    let hideTimer = 0;
-
-    const clamp = () => {
-      ticking = false;
-      const rect = el.getBoundingClientRect();
-      const past = window.innerHeight - rect.bottom;
-      // Only bite once the section has been read: its bottom is leaving.
-      // The correcting scroll fires this again with past ≈ 0 — leave `held`
-      // alone there, or the prompt would blink out the instant it appears.
-      if (past <= 0) return;
-      const limit = Math.max(0, window.scrollY - past);
-      const lenis = window.__lenis;
-      if (lenis) lenis.scrollTo(limit, { immediate: true });
-      else window.scrollTo(0, limit);
-      setHeld(true);
-      // Keep the prompt up while they keep pushing; hide it 1.6s after the
-      // last time the gate actually bit.
-      window.clearTimeout(hideTimer);
-      hideTimer = window.setTimeout(() => setHeld(false), 1600);
-      attempts += 1;
-      if (attempts > GATE_PATIENCE) setReleased(true);
-    };
-
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(clamp);
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.clearTimeout(hideTimer);
-    };
-  }, [allFound, released]);
 
   return (
     <Section id="industries" className="bg-white">
@@ -155,7 +101,7 @@ export function IndustryWordSearch() {
 
             <p className="sr-only">
               Nudge works for real estate, clinics, cafes, hotels, schools,
-              colleges and salons. Hover each word to mark it found.
+              colleges and salons. Select each word to mark it found.
             </p>
 
             <div
@@ -206,7 +152,7 @@ export function IndustryWordSearch() {
                   tabIndex={0}
                   aria-label={`Reveal ${w.label}`}
                   aria-pressed={found.has(i)}
-                  className="absolute z-20 cursor-pointer rounded-[0.35em] outline-none focus-visible:ring-2 focus-visible:ring-ink/40"
+                  className="absolute z-20 hidden cursor-pointer rounded-[0.35em] outline-none focus-visible:ring-2 focus-visible:ring-ink/40 lg:block"
                   style={wordBox(w)}
                   onMouseEnter={() => reveal(i)}
                   onFocus={() => reveal(i)}
@@ -214,30 +160,28 @@ export function IndustryWordSearch() {
                 />
               ))}
             </div>
+
+            <div className="relative z-20 mt-5 grid grid-cols-2 gap-2 lg:hidden">
+              {WORDS.map((word, index) => (
+                <button
+                  key={word.label}
+                  type="button"
+                  aria-pressed={found.has(index)}
+                  onClick={() => reveal(index)}
+                  className="flex min-h-11 items-center justify-center rounded-xl border-2 border-ink/25 bg-white/70 px-3 py-2 text-center text-[13px] font-black text-ink transition-colors aria-pressed:border-ink/70 aria-pressed:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  style={
+                    found.has(index)
+                      ? { boxShadow: `inset 0 -0.65rem ${word.color}` }
+                      : undefined
+                  }
+                >
+                  {word.label}
+                </button>
+              ))}
+            </div>
           </article>
         </div>
       </Container>
-
-      {/* The gate's prompt. Absolute, not fixed: DaySection puts a GSAP
-          transform on an ancestor, which would make `fixed` resolve against
-          that box instead of the viewport. The gate clamps exactly when the
-          section's bottom meets the viewport bottom, so this lands just above
-          the fold anyway. */}
-      <div
-        aria-live="polite"
-        className="pointer-events-none absolute inset-x-0 bottom-8 z-40 flex justify-center px-4"
-        style={{
-          opacity: held ? 1 : 0,
-          transform: held ? "translateY(0)" : "translateY(12px)",
-          transition: `opacity 260ms ${EASE}, transform 260ms ${EASE}`,
-        }}
-      >
-        <span className="rounded-full border-2 border-ink/70 bg-white px-5 py-2.5 text-center text-[12.5px] font-black uppercase tracking-[0.08em] text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)]">
-          {found.size === 0
-            ? "Find your industry first"
-            : `${WORDS.length - found.size} to go`}
-        </span>
-      </div>
     </Section>
   );
 }
