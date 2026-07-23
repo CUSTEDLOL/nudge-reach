@@ -556,12 +556,14 @@ html {
     left: 50%;
     right: auto;
     top: auto;
-    bottom: 2vh;
+    bottom: 3svh;
     transform: translateX(-50%);
-    /* Width-driven on phones: the transcript needs readable bubbles more
-       than it needs vertical slack — height follows the aspect ratio. */
-    width: min(16.5rem, 78vw);
-    height: auto;
+    /* Height-driven on phones so the mock scales with the VISIBLE viewport
+       (address bar in/out) and never rises into the chapter copy above.
+       Copy occupies top 7%→39svh; this keeps the phone's top at ~45svh. */
+    height: min(52svh, 30rem);
+    width: auto;
+    max-width: 80vw;
     border-radius: 2rem;
     padding: 7px;
   }
@@ -572,13 +574,12 @@ html {
   }
 }
 
-/* Short phones need the phone to enter below the copy instead of filling the
-   whole pinned frame behind it. We deliberately crop its lower edge: the
-   scroll-driven transcript still advances through the visible window. */
+/* Very short phones: shrink the mock a touch more so it always clears the
+   chapter copy — still height-driven, never cropped. */
 @media (max-width: 767px) and (max-height: 700px) and (orientation: portrait) {
   .jsm .ns-phone {
-    width: min(13.5rem, 70vw);
-    bottom: -16svh;
+    height: min(48svh, 22rem);
+    bottom: 2svh;
   }
 }
 

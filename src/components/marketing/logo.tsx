@@ -33,6 +33,10 @@ export function Logo({
         width={LOGO_W}
         height={LOGO_H}
         priority
+        // Serve the original PNG directly. The optimizer re-encodes to a
+        // 3840px variant at DPR 3, which flaked/broke on real phones; the
+        // source is only ~160 KB, so unoptimized is both robust and lighter.
+        unoptimized
         className="h-6 w-auto transition-transform duration-300 group-hover:scale-105 sm:h-7"
       />
     </Link>
