@@ -18,24 +18,32 @@ describe("envSchema", () => {
     expect(parsed.RUNTIME_MODEL).toContain("haiku");
   });
 
-  it("rejects live mode without WhatsApp credentials", () => {
+  it("rejects live mode without the deployment-level webhook secrets", () => {
     const result = envSchema.safeParse({ ...baseEnv, SEND_MODE: "live" });
     expect(result.success).toBe(false);
     if (!result.success) {
       const paths = result.error.issues.map((i) => i.path.join("."));
-      expect(paths).toContain("WABA_ID");
-      expect(paths).toContain("WHATSAPP_ACCESS_TOKEN");
+      expect(paths).toContain("WHATSAPP_WEBHOOK_VERIFY_TOKEN");
+      expect(paths).toContain("META_APP_SECRET");
       expect(paths).toContain("TOKEN_ENCRYPTION_KEY");
     }
   });
 
-  it("accepts live mode when all WhatsApp credentials are present", () => {
+  it("does NOT require env sender credentials in live mode (per-org via dashboard)", () => {
+    const result = envSchema.safeParse({ ...baseEnv, SEND_MODE: "live" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path.join("."));
+      expect(paths).not.toContain("WABA_ID");
+      expect(paths).not.toContain("PHONE_NUMBER_ID");
+      expect(paths).not.toContain("WHATSAPP_ACCESS_TOKEN");
+    }
+  });
+
+  it("accepts live mode with only the webhook secrets — no env sender number", () => {
     const result = envSchema.safeParse({
       ...baseEnv,
       SEND_MODE: "live",
-      WABA_ID: "123",
-      PHONE_NUMBER_ID: "456",
-      WHATSAPP_ACCESS_TOKEN: "token",
       WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verify",
       META_APP_SECRET: "secret",
       TOKEN_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef",

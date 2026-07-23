@@ -75,10 +75,15 @@ export const envSchema = z
   })
   .superRefine((vars, ctx) => {
     if (vars.SEND_MODE === "live") {
+      // Only the DEPLOYMENT-level secrets are required to boot live: Meta calls
+      // one webhook URL (verify token + app secret) and every per-org token is
+      // encrypted with TOKEN_ENCRYPTION_KEY. The SENDER credentials
+      // (WABA_ID / PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN) are per-org — each
+      // business pastes its own number under Settings → WhatsApp (stored
+      // encrypted). The env sender vars remain an optional single-number
+      // fallback for a self-host / agency deployment; when unset, an org with
+      // no connected number simply can't send until it connects one.
       const requiredLive = [
-        "WABA_ID",
-        "PHONE_NUMBER_ID",
-        "WHATSAPP_ACCESS_TOKEN",
         "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
         "META_APP_SECRET",
         "TOKEN_ENCRYPTION_KEY",
