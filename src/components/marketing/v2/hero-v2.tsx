@@ -158,6 +158,28 @@ export function HeroV2() {
           </svg>
         </div>
       </div>
+
+      {/* Live-reply popup — sits over the hero video's bottom-right corner and
+          masks the baked-in watermark. Purely decorative (pointer-events-none).
+          Swap TITLE / SUBTITLE below for your own copy. */}
+      <div className="pointer-events-none absolute bottom-[20%] right-4 z-20 sm:right-6">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/95 px-4 py-3.5 shadow-[0_18px_44px_-16px_rgba(7,38,28,0.65)] backdrop-blur-md">
+          <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white">
+            <WhatsAppGlyph className="h-7 w-7" />
+            <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 animate-pulse rounded-full border-2 border-white bg-emerald-400" />
+          </span>
+          <span className="flex flex-col leading-tight">
+            {/* TITLE */}
+            <span className="text-[15px] font-semibold text-ink">
+              Nudge is replying…
+            </span>
+            {/* SUBTITLE */}
+            <span className="text-[12.5px] font-medium text-ink/55">
+              Live · answers in seconds
+            </span>
+          </span>
+        </div>
+      </div>
     </section>
   );
 }
