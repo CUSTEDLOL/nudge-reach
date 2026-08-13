@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
-import { seedDemoWorkspace } from "@/modules/demo/seed";
-import { resolveOrgContext } from "@/modules/orgs/org";
 
 /**
- * One-click judge/guest sandbox: signs the visitor in anonymously, provisions
- * their own fresh org (normal tenant isolation — nothing is shared), fills it
- * via the demo seeder, and lands them on the dashboard. No credentials, no
- * auth-flow changes. Requires "Allow anonymous sign-ins" in Supabase.
+ * One-click guest sandbox: signs the visitor in anonymously and adds them as
+ * an AGENT member of the pre-seeded shared demo workspace, then lands them on
+ * the dashboard. No credentials, no auth-flow changes, and no heavy work in
+ * the request path — the demo org is provisioned once via
+ * `scripts/seed-demo-org.ts` (ownerUserId below), not per visitor.
+ * Requires "Allow anonymous sign-ins" in Supabase.
  */
+const DEMO_ORG_OWNER = "nudge-demo-template";
+
 export async function GET(request: Request) {
   const supabase = await createClient();
 
@@ -24,8 +26,19 @@ export async function GET(request: Request) {
   const limit = checkRateLimit(`demo:${ip}`, RATE_LIMITS.publicForm);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many demo workspaces — try again in a minute." },
+      { error: "Too many demo sessions — try again in a minute." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
+  const demoOrg = await prisma.org.findUnique({
+    where: { ownerUserId: DEMO_ORG_OWNER },
+    select: { id: true },
+  });
+  if (!demoOrg) {
+    return NextResponse.json(
+      { error: "Demo workspace is not provisioned yet. Please use /login." },
+      { status: 503 }
     );
   }
 
@@ -37,12 +50,19 @@ export async function GET(request: Request) {
     );
   }
 
-  const { org } = await resolveOrgContext(data.user.id);
-  await prisma.org.update({
-    where: { id: org.id },
-    data: { name: "Kanchan Silks (Demo)" },
+  await prisma.membership.upsert({
+    where: {
+      orgId_userId: { orgId: demoOrg.id, userId: data.user.id },
+    },
+    update: {},
+    create: {
+      orgId: demoOrg.id,
+      userId: data.user.id,
+      email: "",
+      displayName: "Guest",
+      role: "AGENT",
+    },
   });
-  await seedDemoWorkspace(prisma, org.id);
 
   return NextResponse.redirect(new URL("/dashboard", request.url));
 }
