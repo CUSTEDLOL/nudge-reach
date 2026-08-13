@@ -13,6 +13,11 @@ const PUBLIC_PATHS = [
   "/api/cron",
   "/api/waitlist",
   "/api/access",
+  // customer-facing hosted payment page + its x402 machine endpoint
+  "/pay",
+  "/api/pay",
+  // one-click guest sandbox (signs the visitor in itself)
+  "/demo",
   // public marketing pages split off the landing page
   "/pricing",
   "/faq",

@@ -5,6 +5,36 @@ what's next.
 
 ---
 
+## USDC payment rail + hosted pay page + guest demo sandbox (2026-08-14) ✅
+
+Built for the NTU InnovateX 2026 hackathon (Track 2: Web3 Applications, AI
+Agents and Real-World Use Cases) — and kept product-true: it strengthens
+moat #1 (real actions: payments) without touching strategy or invariants.
+
+- **`usdc` payment rail** in `modules/payments`: `createPaymentLink` takes an
+  optional `rail` (`fiat` default — zero behavior change for existing callers).
+  USDC requests are currency `USDC`, never touch Razorpay, and are served by
+  our own hosted pay page. Live settlement driver (AIsa) lands when sponsor
+  API access is provisioned; simulation serves the full flow today.
+- **Agent tool**: `send_payment_link` gained an optional `method` (`standard` |
+  `usdc`) — the agent offers USDC only for cross-border customers or on
+  explicit request. Flagship gate and amount bounds unchanged.
+- **Hosted pay page `/pay/[id]`**: public-by-unguessable-id customer page
+  (amount, purpose, network/asset/address/reference, clearly-labeled test
+  mode). Simulation rows settle via a server action guarded on
+  `provider === "simulation"`; fiat simulation links now point here too
+  (previously a dead placeholder domain).
+- **x402 machine endpoint `GET /api/pay/[id]`**: unpaid USDC requests answer
+  HTTP 402 with structured payment instructions (scheme/network/asset/amount/
+  payTo/reference); paid ones answer 200 with the receipt.
+- **Guest sandbox `GET /demo`**: one-click judge access — anonymous Supabase
+  sign-in, fresh isolated org, demo seed, straight to the dashboard. Rate
+  limited per IP; no auth-flow changes; requires "Allow anonymous sign-ins"
+  in Supabase. Session proxy PUBLIC_PATHS extended: `/pay`, `/api/pay`, `/demo`.
+- Tests: new `tests/usdc-rail.test.ts` (rail default, USDC row shape, gate,
+  bounds, tool mapping); `payment-link` sim-URL assertions updated. 54 files /
+  425 tests, lint and production build green.
+
 ## Landing-page responsive production pass (2026-07-22) ✅
 
 - Audited every public landing section at 320×568, 360×800, 375×667,

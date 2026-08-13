@@ -83,7 +83,7 @@ describe("createPaymentLink", () => {
     });
     expect(out.status).toBe("created");
     if (out.status !== "created") return;
-    expect(out.shortUrl).toContain("/sim/");
+    expect(out.shortUrl).toContain("/pay/");
     expect(out.amountLabel).toBe("₹500");
     // Row recorded with the simulation provider, org-scoped.
     expect(prisma.paymentRequest.create).toHaveBeenCalledWith(
@@ -132,7 +132,7 @@ describe("send_payment_link tool", () => {
     });
     expect(isError).toBeUndefined();
     expect(result).toContain("₹500");
-    expect(result).toContain("/sim/");
+    expect(result).toContain("/pay/");
     expect(prisma.note.create).toHaveBeenCalled();
   });
 
