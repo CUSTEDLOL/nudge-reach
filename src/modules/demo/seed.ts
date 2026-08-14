@@ -1,9 +1,9 @@
 /**
- * Demo retailer seed (spec §3.4): a rich, realistic boutique workspace —
- * contacts with stages/tags, a staffed inbox with Hinglish threads, a
- * template library, sent/scheduled/draft campaigns, automations with run
- * logs, teammate memberships and an API key — so every module of the app
- * demos instantly on first sign-in.
+ * Demo restaurant seed (spec §3.4): a rich, realistic workspace for "The
+ * Spice Garden" — contacts with stages/tags, a staffed inbox with real
+ * dining threads, a template library, sent/scheduled/draft campaigns,
+ * automations with run logs, teammate memberships and an API key — so every
+ * module of the app demos instantly on first sign-in.
  *
  * Deterministic (no AI calls, no Math.random) and idempotent (upserts /
  * find-before-create) — safe to re-run any time. Consent-safe: re-running
@@ -48,8 +48,8 @@ function minutesAfter(start: Date, minutes: number): Date {
 // Fixed demo actors
 // ---------------------------------------------------------------------------
 
-const AGENT_1 = "demo-agent-1"; // Priya Sharma
-const AGENT_2 = "demo-agent-2"; // Arjun Mehta
+const AGENT_1 = "demo-agent-1"; // Sarah Chen
+const AGENT_2 = "demo-agent-2"; // David Tan
 
 // ---------------------------------------------------------------------------
 // Tags (6, with badge-tone colors)
@@ -57,11 +57,11 @@ const AGENT_2 = "demo-agent-2"; // Arjun Mehta
 
 const TAGS: Array<{ name: string; color: string }> = [
   { name: "VIP", color: "amber" },
-  { name: "Repeat buyer", color: "emerald" },
-  { name: "New customer", color: "sky" },
-  { name: "Festive shopper", color: "rose" },
-  { name: "Wholesale", color: "violet" },
-  { name: "Window shopper", color: "neutral" },
+  { name: "Regular diner", color: "emerald" },
+  { name: "New guest", color: "sky" },
+  { name: "Weekend bruncher", color: "rose" },
+  { name: "Catering lead", color: "violet" },
+  { name: "Vegetarian", color: "neutral" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -87,46 +87,46 @@ function gmail(name: string): string {
 // Phones are +919810000101 … +919810000140 (first five match the original
 // Phase-5 seed so existing rows get enriched, not duplicated).
 const CONTACTS: SeedContact[] = [
-  { name: "Ananya Gupta", stage: "QUALIFIED", source: "in_store", email: gmail("Ananya Gupta"), tags: ["VIP", "Repeat buyer"], assigned: AGENT_1, lastContactedDaysAgo: 0 },
-  { name: "Rahul Verma", stage: "WON", source: "in_store", email: gmail("Rahul Verma"), tags: ["Repeat buyer"], assigned: null, lastContactedDaysAgo: 2 },
-  { name: "Meera Iyer", stage: "WON", source: "in_store", email: null, tags: ["VIP", "Repeat buyer"], assigned: AGENT_2, lastContactedDaysAgo: 9 },
-  { name: "Vikram Singh", stage: "CONTACTED", source: "in_store", email: gmail("Vikram Singh"), tags: [], assigned: null, lastContactedDaysAgo: 1 },
-  { name: "Sneha Patel", stage: "CONTACTED", source: "csv_import", email: gmail("Sneha Patel"), tags: ["Festive shopper"], assigned: AGENT_1, lastContactedDaysAgo: 5 },
-  { name: "Aarav Shah", stage: "CONTACTED", source: "website", email: null, tags: ["Window shopper"], assigned: null, lastContactedDaysAgo: 1 },
-  { name: "Ishita Banerjee", stage: "QUALIFIED", source: "whatsapp", email: gmail("Ishita Banerjee"), tags: ["Festive shopper"], assigned: AGENT_2, lastContactedDaysAgo: 2 },
-  { name: "Rohan Malhotra", stage: "NEW", source: "csv_import", email: gmail("Rohan Malhotra"), tags: [], assigned: null },
-  { name: "Kavya Reddy", stage: "CONTACTED", source: "referral", email: null, tags: ["Festive shopper"], assigned: AGENT_1, lastContactedDaysAgo: 7 },
-  { name: "Aditya Joshi", stage: "QUALIFIED", source: "in_store", email: gmail("Aditya Joshi"), tags: ["Repeat buyer"], assigned: null, lastContactedDaysAgo: 4 },
-  { name: "Divya Nair", stage: "NEW", source: "website", email: gmail("Divya Nair"), tags: [], assigned: null },
-  { name: "Karan Kapoor", stage: "CONTACTED", source: "csv_import", email: null, tags: [], assigned: AGENT_2, lastContactedDaysAgo: 8 },
-  { name: "Pooja Agarwal", stage: "LOST", source: "csv_import", email: gmail("Pooja Agarwal"), tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 6 },
-  { name: "Siddharth Rao", stage: "NEW", source: "website", email: gmail("Siddharth Rao"), tags: [], assigned: null },
-  { name: "Neha Chopra", stage: "WON", source: "in_store", email: null, tags: ["Repeat buyer"], assigned: AGENT_1, lastContactedDaysAgo: 12 },
-  { name: "Manish Tiwari", stage: "QUALIFIED", source: "whatsapp", email: gmail("Manish Tiwari"), tags: ["Wholesale"], assigned: AGENT_1, lastContactedDaysAgo: 4 },
-  { name: "Ritika Sethi", stage: "CONTACTED", source: "referral", email: gmail("Ritika Sethi"), tags: ["Festive shopper"], assigned: null, lastContactedDaysAgo: 10 },
-  { name: "Deepak Kumar", stage: "NEW", source: "csv_import", email: null, tags: [], assigned: null },
-  { name: "Anjali Menon", stage: "CONTACTED", source: "website", email: gmail("Anjali Menon"), tags: ["Window shopper"], assigned: null, lastContactedDaysAgo: 2 },
-  { name: "Harsh Vardhan", stage: "NEW", source: "csv_import", email: gmail("Harsh Vardhan"), tags: [], assigned: null },
-  { name: "Shreya Ghosh", stage: "CONTACTED", source: "in_store", email: null, tags: ["Repeat buyer"], assigned: AGENT_2, lastContactedDaysAgo: 6 },
-  { name: "Nikhil Bansal", stage: "NEW", source: "website", email: gmail("Nikhil Bansal"), tags: [], assigned: null },
-  { name: "Tanvi Desai", stage: "QUALIFIED", source: "referral", email: gmail("Tanvi Desai"), tags: ["Festive shopper"], assigned: AGENT_1, lastContactedDaysAgo: 3 },
-  { name: "Amit Saxena", stage: "LOST", source: "csv_import", email: null, tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 13 },
-  { name: "Lakshmi Pillai", stage: "CONTACTED", source: "in_store", email: gmail("Lakshmi Pillai"), tags: [], assigned: null, lastContactedDaysAgo: 11 },
-  { name: "Gaurav Khanna", stage: "WON", source: "in_store", email: gmail("Gaurav Khanna"), tags: ["VIP"], assigned: AGENT_2, lastContactedDaysAgo: 5 },
-  { name: "Sanya Bhatia", stage: "NEW", source: "website", email: null, tags: [], assigned: null },
-  { name: "Rajesh Yadav", stage: "CONTACTED", source: "csv_import", email: gmail("Rajesh Yadav"), tags: ["Window shopper"], assigned: null, lastContactedDaysAgo: 9 },
-  { name: "Mitali Shukla", stage: "LOST", source: "website", email: null, tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 14 },
-  { name: "Varun Chawla", stage: "NEW", source: "csv_import", email: gmail("Varun Chawla"), tags: [], assigned: null },
-  { name: "Fatima Sheikh", stage: "QUALIFIED", source: "referral", email: gmail("Fatima Sheikh"), tags: ["Festive shopper"], assigned: AGENT_1, lastContactedDaysAgo: 3 },
-  { name: "Imran Qureshi", stage: "CONTACTED", source: "whatsapp", email: null, tags: ["Wholesale"], assigned: null, lastContactedDaysAgo: 7 },
-  { name: "Simran Kaur", stage: "WON", source: "in_store", email: gmail("Simran Kaur"), tags: ["VIP", "Repeat buyer"], assigned: AGENT_2, lastContactedDaysAgo: 8 },
-  { name: "Gurpreet Singh", stage: "NEW", source: "csv_import", email: null, tags: [], assigned: null },
-  { name: "Aisha Khan", stage: "CONTACTED", source: "website", email: gmail("Aisha Khan"), tags: ["New customer"], assigned: null, lastContactedDaysAgo: 1 },
-  { name: "Devika Krishnan", stage: "LOST", source: "csv_import", email: null, tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 12 },
-  { name: "Yash Thakur", stage: "NEW", source: "website", email: gmail("Yash Thakur"), tags: ["New customer"], assigned: null },
-  { name: "Bhavna Trivedi", stage: "NEW", source: "in_store", email: null, tags: ["New customer"], assigned: null, lastContactedDaysAgo: 1 },
-  { name: "Naveen Hegde", stage: "NEW", source: "referral", email: gmail("Naveen Hegde"), tags: ["New customer"], assigned: null },
-  { name: "Swati Kulkarni", stage: "NEW", source: "website", email: gmail("Swati Kulkarni"), tags: ["New customer"], assigned: null, lastContactedDaysAgo: 0 },
+  { name: "Emily Tan", stage: "QUALIFIED", source: "in_store", email: gmail("Emily Tan"), tags: ["VIP", "Regular diner"], assigned: AGENT_1, lastContactedDaysAgo: 0 },
+  { name: "James Carter", stage: "WON", source: "in_store", email: gmail("James Carter"), tags: ["Regular diner"], assigned: null, lastContactedDaysAgo: 2 },
+  { name: "Sophie Muller", stage: "WON", source: "in_store", email: null, tags: ["VIP", "Regular diner"], assigned: AGENT_2, lastContactedDaysAgo: 9 },
+  { name: "Daniel Ong", stage: "CONTACTED", source: "in_store", email: gmail("Daniel Ong"), tags: [], assigned: null, lastContactedDaysAgo: 1 },
+  { name: "Rachel Wong", stage: "CONTACTED", source: "csv_import", email: gmail("Rachel Wong"), tags: ["Weekend bruncher"], assigned: AGENT_1, lastContactedDaysAgo: 5 },
+  { name: "Jason Teo", stage: "CONTACTED", source: "website", email: null, tags: ["Vegetarian"], assigned: null, lastContactedDaysAgo: 1 },
+  { name: "Chloe Ng", stage: "QUALIFIED", source: "whatsapp", email: gmail("Chloe Ng"), tags: ["Weekend bruncher"], assigned: AGENT_2, lastContactedDaysAgo: 2 },
+  { name: "Ryan Koh", stage: "NEW", source: "csv_import", email: gmail("Ryan Koh"), tags: [], assigned: null },
+  { name: "Amelia Foster", stage: "CONTACTED", source: "referral", email: null, tags: ["Weekend bruncher"], assigned: AGENT_1, lastContactedDaysAgo: 7 },
+  { name: "Nathan Lee", stage: "QUALIFIED", source: "in_store", email: gmail("Nathan Lee"), tags: ["Regular diner"], assigned: null, lastContactedDaysAgo: 4 },
+  { name: "Grace Liu", stage: "NEW", source: "website", email: gmail("Grace Liu"), tags: [], assigned: null },
+  { name: "Kevin Goh", stage: "CONTACTED", source: "csv_import", email: null, tags: [], assigned: AGENT_2, lastContactedDaysAgo: 8 },
+  { name: "Hannah Schmidt", stage: "LOST", source: "csv_import", email: gmail("Hannah Schmidt"), tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 6 },
+  { name: "Lucas Chen", stage: "NEW", source: "website", email: gmail("Lucas Chen"), tags: [], assigned: null },
+  { name: "Olivia Ho", stage: "WON", source: "in_store", email: null, tags: ["Regular diner"], assigned: AGENT_1, lastContactedDaysAgo: 12 },
+  { name: "William Chua", stage: "QUALIFIED", source: "whatsapp", email: gmail("William Chua"), tags: ["Catering lead"], assigned: AGENT_1, lastContactedDaysAgo: 4 },
+  { name: "Isabelle Loh", stage: "CONTACTED", source: "referral", email: gmail("Isabelle Loh"), tags: ["Weekend bruncher"], assigned: null, lastContactedDaysAgo: 10 },
+  { name: "Ethan Yap", stage: "NEW", source: "csv_import", email: null, tags: [], assigned: null },
+  { name: "Mia Fernandez", stage: "CONTACTED", source: "website", email: gmail("Mia Fernandez"), tags: ["Vegetarian"], assigned: null, lastContactedDaysAgo: 2 },
+  { name: "Aaron Sim", stage: "NEW", source: "csv_import", email: gmail("Aaron Sim"), tags: [], assigned: null },
+  { name: "Zoe Richards", stage: "CONTACTED", source: "in_store", email: null, tags: ["Regular diner"], assigned: AGENT_2, lastContactedDaysAgo: 6 },
+  { name: "Brandon Yeo", stage: "NEW", source: "website", email: gmail("Brandon Yeo"), tags: [], assigned: null },
+  { name: "Charlotte Toh", stage: "QUALIFIED", source: "referral", email: gmail("Charlotte Toh"), tags: ["Weekend bruncher"], assigned: AGENT_1, lastContactedDaysAgo: 3 },
+  { name: "Felix Wagner", stage: "LOST", source: "csv_import", email: null, tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 13 },
+  { name: "Nicole Pang", stage: "CONTACTED", source: "in_store", email: gmail("Nicole Pang"), tags: [], assigned: null, lastContactedDaysAgo: 11 },
+  { name: "Gabriel Seah", stage: "WON", source: "in_store", email: gmail("Gabriel Seah"), tags: ["VIP"], assigned: AGENT_2, lastContactedDaysAgo: 5 },
+  { name: "Lily Kwan", stage: "NEW", source: "website", email: null, tags: [], assigned: null },
+  { name: "Adam Turner", stage: "CONTACTED", source: "csv_import", email: gmail("Adam Turner"), tags: ["Vegetarian"], assigned: null, lastContactedDaysAgo: 9 },
+  { name: "Vanessa Chia", stage: "LOST", source: "website", email: null, tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 14 },
+  { name: "Oscar Lam", stage: "NEW", source: "csv_import", email: gmail("Oscar Lam"), tags: [], assigned: null },
+  { name: "Elena Petrova", stage: "QUALIFIED", source: "referral", email: gmail("Elena Petrova"), tags: ["Weekend bruncher"], assigned: AGENT_1, lastContactedDaysAgo: 3 },
+  { name: "Tom Baker", stage: "CONTACTED", source: "whatsapp", email: null, tags: ["Catering lead"], assigned: null, lastContactedDaysAgo: 7 },
+  { name: "Serena Quek", stage: "WON", source: "in_store", email: gmail("Serena Quek"), tags: ["VIP", "Regular diner"], assigned: AGENT_2, lastContactedDaysAgo: 8 },
+  { name: "Jonathan Pereira", stage: "NEW", source: "csv_import", email: null, tags: [], assigned: null },
+  { name: "Alicia Fong", stage: "CONTACTED", source: "website", email: gmail("Alicia Fong"), tags: ["New guest"], assigned: null, lastContactedDaysAgo: 1 },
+  { name: "Diego Alvarez", stage: "LOST", source: "csv_import", email: null, tags: [], assigned: null, optedOut: true, lastContactedDaysAgo: 12 },
+  { name: "Max Weber", stage: "NEW", source: "website", email: gmail("Max Weber"), tags: ["New guest"], assigned: null },
+  { name: "Bella Chin", stage: "NEW", source: "in_store", email: null, tags: ["New guest"], assigned: null, lastContactedDaysAgo: 1 },
+  { name: "Noah Fischer", stage: "NEW", source: "referral", email: gmail("Noah Fischer"), tags: ["New guest"], assigned: null },
+  { name: "Wendy Soh", stage: "NEW", source: "website", email: gmail("Wendy Soh"), tags: ["New guest"], assigned: null, lastContactedDaysAgo: 0 },
 ];
 
 function phoneFor(index: number): string {
@@ -134,7 +134,7 @@ function phoneFor(index: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Conversations (10 — mixed status/assignment/unread, Hinglish threads)
+// Conversations (10 — mixed status/assignment/unread, real dining threads)
 // ---------------------------------------------------------------------------
 
 interface SeedMessage {
@@ -156,175 +156,175 @@ interface SeedConversation {
 
 const CONVERSATIONS: SeedConversation[] = [
   {
-    contactIndex: 0, // Ananya Gupta
+    contactIndex: 0, // Emily Tan
     status: "open",
     assigned: AGENT_1,
     unread: 2,
     start: hoursAgo(3),
     messages: [
-      { dir: "inbound", body: "Hi! Aapke paas Kanjeevaram silk sarees available hain kya?", at: 0 },
-      { dir: "outbound", body: "Namaste Ananya ji! 🙏 Haan, abhi 12 naye designs aaye hain Diwali collection mein. Kaunsa colour prefer karengi?", at: 4 },
-      { dir: "inbound", body: "Maroon ya deep green mein dikhaiye please", at: 9 },
-      { dir: "outbound", body: "Bilkul! Maroon mein 3 gorgeous options hain — ₹8,500 se start. Photos bhejti hoon abhi.", at: 14 },
-      { dir: "inbound", body: "Photos mil gayi, maroon wali bahut pasand aayi. Green bhi dikha dena ek baar", at: 150 },
-      { dir: "inbound", body: "Aur haan, blouse piece included hai na?", at: 156 },
+      { dir: "inbound", body: "Hi! Do you have a table for 4 this Saturday around 7:30pm?", at: 0 },
+      { dir: "outbound", body: "Hi Emily! 😊 Saturday 7:30pm for 4 — we have the garden terrace or the main dining room. Any preference?", at: 4 },
+      { dir: "inbound", body: "Garden terrace please, it was lovely last time", at: 9 },
+      { dir: "outbound", body: "Done! Terrace table for 4, Saturday 7:30pm. Should I also pre-order the slow-roasted lamb shank? It sells out most weekends.", at: 14 },
+      { dir: "inbound", body: "Yes please, one lamb shank! Also — do you have a vegetarian tasting menu?", at: 150 },
+      { dir: "inbound", body: "And is parking available nearby?", at: 156 },
     ],
     notes: [
       {
         authorUserId: AGENT_1,
-        authorName: "Priya Sharma",
-        body: "Regular customer — silk lover, size M blouse. Usually buys during festive sales; show new arrivals first.",
+        authorName: "Sarah Chen",
+        body: "Regular guest — loves the garden terrace, usually orders the lamb shank. Celebrated her promotion here in June.",
       },
     ],
   },
   {
-    contactIndex: 5, // Aarav Shah
+    contactIndex: 5, // Jason Teo
     status: "open",
     assigned: null,
     unread: 1,
     start: daysAgo(1, 11, 20),
     messages: [
-      { dir: "inbound", body: "Bhaiya kal jo kurta liya tha L size, thoda tight hai. Exchange ho jayega?", at: 0 },
-      { dir: "outbound", body: "Haan bilkul sir, bill ke saath 7 din ke andar exchange ho jata hai. XL stock mein hai.", at: 6 },
-      { dir: "inbound", body: "Great, kal shaam ko aata hoon phir", at: 12 },
-      { dir: "inbound", body: "Store kitne baje tak khula hai?", at: 15 },
-      { dir: "outbound", body: "Namaste! Hum Mon–Sat 10:30am se 8:30pm tak khule hain, Sunday 12pm–6pm 😊", at: 16 },
+      { dir: "inbound", body: "Hi, I booked a table for 2 tonight at 8pm but something came up. Can I move it to tomorrow same time?", at: 0 },
+      { dir: "outbound", body: "No problem Jason! Moved your table for 2 to tomorrow 8pm. See you then 😊", at: 6 },
+      { dir: "inbound", body: "Thanks! By the way, most of your mains have meat — do you have a proper vegetarian selection?", at: 12 },
+      { dir: "inbound", body: "And how late is the kitchen open?", at: 15 },
+      { dir: "outbound", body: "Hello! We're open Tue–Sun, 11:30am–10:30pm — the kitchen takes last orders at 10pm 😊", at: 16 },
     ],
   },
   {
-    contactIndex: 6, // Ishita Banerjee
+    contactIndex: 6, // Chloe Ng
     status: "open",
     assigned: AGENT_2,
     unread: 3,
     start: daysAgo(2, 16, 0),
     messages: [
-      { dir: "inbound", body: "Hello! Instagram pe jo teal lehenga dekha tha, wo available hai?", at: 0 },
-      { dir: "outbound", body: "Hi Ishita! Haan available hai, size S aur M mein. ₹14,999 with dupatta.", at: 10 },
-      { dir: "inbound", body: "M size chahiye. Blouse alteration bhi karte ho?", at: 25 },
-      { dir: "outbound", body: "Ji haan, free alteration within 3 days. Aap store aa sakti hain fitting ke liye.", at: 30 },
-      { dir: "outbound", body: "Ya phir hum measurements WhatsApp pe bhi le sakte hain 😊", at: 32 },
-      { dir: "inbound", body: "Sorry reply nahi kar payi. Kal 5 baje aa rahi hoon fitting ke liye", at: 2850 },
-      { dir: "inbound", body: "Ek aur baat — matching jewellery bhi rakhte ho kya?", at: 2852 },
-      { dir: "inbound", body: "Aur parking available hai aapke yahan?", at: 2854 },
+      { dir: "inbound", body: "Hello! I saw the chef's tasting menu on your Instagram — is it available this week?", at: 0 },
+      { dir: "outbound", body: "Hi Chloe! Yes — 7 courses at ₹2,499 per person, available Thursday to Sunday evenings.", at: 10 },
+      { dir: "inbound", body: "Perfect. Can you do it for 6 people this Friday 8pm?", at: 25 },
+      { dir: "outbound", body: "Absolutely — for groups of 6+ we reserve the private dining room at no extra charge.", at: 30 },
+      { dir: "outbound", body: "I can hold Friday 8pm for you right now if you'd like 😊", at: 32 },
+      { dir: "inbound", body: "Sorry for the slow reply — yes please, hold it! It's my mum's 60th birthday", at: 2850 },
+      { dir: "inbound", body: "One more thing — can you arrange a birthday cake?", at: 2852 },
+      { dir: "inbound", body: "And is parking available at the restaurant?", at: 2854 },
     ],
   },
   {
-    contactIndex: 1, // Rahul Verma
+    contactIndex: 1, // James Carter
     status: "open",
     assigned: "OWNER", // replaced with org.ownerUserId at runtime
     unread: 0,
     start: daysAgo(3, 12, 30),
     messages: [
-      { dir: "inbound", body: "Order #1024 ka kya status hai? Kurta set order kiya tha Monday ko", at: 0 },
-      { dir: "outbound", body: "Rahul ji, aapka order pack ho gaya hai. Kal courier pickup hai — Friday tak mil jayega.", at: 8 },
-      { dir: "inbound", body: "Theek hai. Tracking number mil sakta hai?", at: 12 },
-      { dir: "outbound", body: "Ji, dispatch hote hi tracking number yahin bhej denge.", at: 20 },
-      { dir: "outbound", body: "Update: aapka order dispatch ho gaya! Tracking: DTDC D452188732. Friday tak delivery expected 📦", at: 1440 },
+      { dir: "inbound", body: "Hi, checking on my catering order for Friday — office lunch for 25, order #1024", at: 0 },
+      { dir: "outbound", body: "Hi James! Your order is confirmed — 25 lunch boxes (12 butter chicken, 8 paneer tikka, 5 vegan curry) for Friday 12:30pm.", at: 8 },
+      { dir: "inbound", body: "Great. Can delivery come to the 14th floor reception directly?", at: 12 },
+      { dir: "outbound", body: "Noted — our driver will bring it up to level 14 reception and call you on arrival.", at: 20 },
+      { dir: "outbound", body: "Update: your Friday order is packed and scheduled — driver leaves at 11:45am, arriving ~12:20pm 📦", at: 1440 },
     ],
   },
   {
-    contactIndex: 15, // Manish Tiwari
+    contactIndex: 15, // William Chua
     status: "pending",
     assigned: AGENT_1,
     unread: 0,
     start: daysAgo(5, 11, 0),
     messages: [
-      { dir: "inbound", body: "Namaste, main Tiwari Garments Gorakhpur se. Aapke cotton kurta sets ka wholesale rate chahiye tha", at: 0 },
-      { dir: "outbound", body: "Namaste Manish ji! Wholesale 20+ pieces pe milta hai. Kaunsa range dekh rahe hain aap?", at: 9 },
-      { dir: "inbound", body: "50 pieces chahiye, mixed sizes, festive designs", at: 22 },
-      { dir: "outbound", body: "50 pcs pe ₹680/piece pad jayega, GST invoice ke saath. Catalogue bhej raha hoon.", at: 30 },
-      { dir: "inbound", body: "Rate thoda tight hai bhai, ₹650 ho jaye to aaj hi confirm karta hoon", at: 55 },
-      { dir: "outbound", body: "Owner se baat karke batata hoon, kal tak pakka confirm kar dunga 👍", at: 60 },
+      { dir: "inbound", body: "Hi, I'm organising our company's annual dinner — do you do buffet catering for about 50 people?", at: 0 },
+      { dir: "outbound", body: "Hi William! Yes we do — our banquet buffet starts at 20 pax. What date are you looking at?", at: 9 },
+      { dir: "inbound", body: "Last Friday of next month, 50 people, mix of vegetarian and non-veg", at: 22 },
+      { dir: "outbound", body: "For 50 pax our premium buffet is ₹680 per head with live counters, GST invoice included. Sending the menu now.", at: 30 },
+      { dir: "inbound", body: "Budget is a bit tight — if you can do ₹650 per head I'll confirm today", at: 55 },
+      { dir: "outbound", body: "Let me check with the owner and get back to you by tomorrow 👍", at: 60 },
     ],
     notes: [
       {
         authorUserId: AGENT_1,
-        authorName: "Priya Sharma",
-        body: "Wholesale buyer from Gorakhpur — 50 pcs cotton kurta sets. Waiting on owner approval for ₹650/pc.",
+        authorName: "Sarah Chen",
+        body: "Corporate annual dinner — 50 pax premium buffet. Waiting on owner approval for ₹650/head.",
       },
     ],
   },
   {
-    contactIndex: 18, // Anjali Menon
+    contactIndex: 18, // Mia Fernandez
     status: "pending",
     assigned: null,
     unread: 2,
     start: daysAgo(2, 13, 15),
     messages: [
-      { dir: "inbound", body: "Hi, kya aap gift wrapping karte hain? Sister ki shaadi ka gift lena hai", at: 0 },
-      { dir: "outbound", body: "Hi Anjali! Haan, festive gift packing free hai ₹2,000+ ki purchase pe 🎁", at: 7 },
-      { dir: "inbound", body: "Perfect. Silk dupatta gift box mein aa sakta hai?", at: 15 },
-      { dir: "inbound", body: "Aur Sunday ko timing kya hai aapki?", at: 17 },
+      { dir: "inbound", body: "Hi, do you host birthday dinners? Planning something for my sister, about 12 people", at: 0 },
+      { dir: "outbound", body: "Hi Mia! We'd love to — our private dining room seats up to 14, and decorations are on us for birthdays 🎉", at: 7 },
+      { dir: "inbound", body: "Perfect. She's vegetarian — can the set menu be fully vegetarian?", at: 15 },
+      { dir: "inbound", body: "Also what are your Sunday hours?", at: 17 },
     ],
   },
   {
-    contactIndex: 2, // Meera Iyer
+    contactIndex: 2, // Sophie Muller
     status: "resolved",
     assigned: AGENT_2,
     unread: 0,
     start: daysAgo(10, 17, 0),
     messages: [
-      { dir: "inbound", body: "Aapke paas Banarasi dupatta hai? Website pe dekha tha", at: 0 },
-      { dir: "outbound", body: "Namaste Meera ji! Haan, pure silk Banarasi dupattas hain — rani pink, gold aur royal blue mein.", at: 5 },
-      { dir: "inbound", body: "Rani pink ka price kya hai?", at: 12 },
-      { dir: "outbound", body: "₹3,499, pure handwoven zari border ke saath. Aaj sirf 2 pieces bache hain!", at: 16 },
-      { dir: "inbound", body: "Ek reserve kar dijiye please, kal aati hoon", at: 24 },
-      { dir: "outbound", body: "Done! Aapke naam pe reserve kar diya — kal 8:30pm tak rakh lenge 😊", at: 28 },
+      { dir: "inbound", body: "Hi! Do you take reservations for anniversaries? Saw your terrace on the website", at: 0 },
+      { dir: "outbound", body: "Hi Sophie! Yes — the garden terrace is perfect for anniversaries, and we can set up candles and flowers.", at: 5 },
+      { dir: "inbound", body: "How much is the candlelight setup?", at: 12 },
+      { dir: "outbound", body: "₹1,499 including a bouquet, candles and a complimentary dessert platter. Only 2 terrace slots left for Saturday!", at: 16 },
+      { dir: "inbound", body: "Please reserve one for us, we'll come at 7", at: 24 },
+      { dir: "outbound", body: "Done! Terrace table reserved for Saturday 7pm under your name 😊", at: 28 },
       { dir: "inbound", body: "Thank you!", at: 31 },
-      { dir: "outbound", body: "Reminder: aapka rani pink Banarasi dupatta aaj ke liye reserved hai ✨", at: 1080 },
-      { dir: "inbound", body: "Haan aa rahi hoon 6 baje", at: 1105 },
-      { dir: "outbound", body: "Perfect, milte hain!", at: 1108 },
-      { dir: "inbound", body: "Dupatta bohot hi sundar hai! Thank you so much ❤️", at: 1500 },
-      { dir: "outbound", body: "Dhanyavaad Meera ji! Aapko dekh ke khushi hui. Diwali collection bhi zaroor dekhiyega 🪔", at: 1510 },
+      { dir: "outbound", body: "Reminder: your candlelight anniversary table is reserved for tonight ✨", at: 1080 },
+      { dir: "inbound", body: "We'll be there at 7!", at: 1105 },
+      { dir: "outbound", body: "Perfect, see you soon!", at: 1108 },
+      { dir: "inbound", body: "The evening was magical — thank you so much! ❤️", at: 1500 },
+      { dir: "outbound", body: "Thank you Sophie! It was our pleasure. Do try the weekend brunch sometime 🥂", at: 1510 },
     ],
   },
   {
-    contactIndex: 9, // Aditya Joshi
+    contactIndex: 9, // Nathan Lee
     status: "resolved",
     assigned: "OWNER",
     unread: 0,
     start: daysAgo(4, 10, 45),
     messages: [
-      { dir: "inbound", body: "Store timing kya hai aaj ki?", at: 0 },
-      { dir: "outbound", body: "Namaste! Hum Mon–Sat 10:30am se 8:30pm tak khule hain, Sunday 12pm–6pm 😊", at: 1 },
-      { dir: "inbound", body: "Thanks. Nehru jacket ka price range kya hai aapke yahan?", at: 6 },
-      { dir: "outbound", body: "Nehru jackets ₹2,199 se ₹5,499 tak — cotton silk aur jacquard dono mein.", at: 11 },
-      { dir: "inbound", body: "Theek hai, weekend pe aata hoon. Thanks!", at: 15 },
+      { dir: "inbound", body: "What are your hours today?", at: 0 },
+      { dir: "outbound", body: "Hello! We're open Tue–Sun, 11:30am–10:30pm — the kitchen takes last orders at 10pm 😊", at: 1 },
+      { dir: "inbound", body: "Thanks. What's the price range for the set lunch?", at: 6 },
+      { dir: "outbound", body: "Weekday set lunch is ₹499 for 3 courses; à la carte mains run ₹350–₹650.", at: 11 },
+      { dir: "inbound", body: "Nice, I'll drop by this week. Thanks!", at: 15 },
     ],
   },
   {
-    contactIndex: 12, // Pooja Agarwal (opted out)
+    contactIndex: 12, // Hannah Schmidt (opted out)
     status: "resolved",
     assigned: null,
     unread: 0,
     start: daysAgo(6, 19, 0),
     messages: [
-      { dir: "outbound", body: "Pooja ji, humara naya festive collection aa gaya hai! Sabhi silk sarees pe special launch offer. Aaj hi visit karein 🪔", at: 0 },
+      { dir: "outbound", body: "Hi Hannah, our new weekend brunch menu is here! Bottomless masala chai and live dosa counter, this weekend only 🥞", at: 0 },
       { dir: "inbound", body: "STOP", at: 34 },
-      { dir: "outbound", body: "Aapko aage se koi marketing message nahi bhejenge. Dhanyavaad.", at: 35 },
+      { dir: "outbound", body: "You won't receive any more marketing messages from us. Thank you.", at: 35 },
       { dir: "inbound", body: "Ok", at: 40 },
     ],
   },
   {
-    contactIndex: 3, // Vikram Singh
+    contactIndex: 3, // Daniel Ong
     status: "handoff",
     assigned: null,
     unread: 2,
     start: daysAgo(1, 18, 30),
     messages: [
-      { dir: "inbound", body: "Pichle hafte jo saree li thi usme zari ka dhaga nikal raha hai. Ye kya quality hai?", at: 0 },
-      { dir: "outbound", body: "Vikram ji, humein khed hai. Kya aap kharab hisse ki photo bhej sakte hain?", at: 5 },
-      { dir: "inbound", body: "Photo bhej di hai. ₹9,000 ki saree mein aisa expect nahi tha", at: 18 },
-      { dir: "outbound", body: "Aap bilkul sahi keh rahe hain. Ek senior team member aapse jaldi baat karenge.", at: 22 },
-      { dir: "inbound", body: "Mujhe replacement ya refund chahiye, simple", at: 45 },
-      { dir: "inbound", body: "Aaj shaam tak batao warna consumer forum jaana padega", at: 47 },
-      { dir: "outbound", body: "Sir, aapki baat owner tak pahunch gayi hai — aaj 7 baje tak aapko call aayega 🙏", at: 52 },
+      { dir: "inbound", body: "My delivery order arrived an hour late and completely cold. This is not what I expect from you", at: 0 },
+      { dir: "outbound", body: "Daniel, we're really sorry about this. Could you share your order number so we can check what happened?", at: 5 },
+      { dir: "inbound", body: "Order #2087. ₹1,850 for a family dinner and nobody could eat it warm", at: 18 },
+      { dir: "outbound", body: "You're absolutely right to be upset. A senior team member will contact you shortly.", at: 22 },
+      { dir: "inbound", body: "I want a refund or a fresh replacement, simple", at: 45 },
+      { dir: "inbound", body: "If I don't hear back today I'm posting the photos on Google reviews", at: 47 },
+      { dir: "outbound", body: "Daniel, the owner has been informed — you'll get a call before 7pm today 🙏", at: 52 },
     ],
     notes: [
       {
         authorUserId: "OWNER",
         authorName: "Owner",
-        body: "Refund approved if bill shown. Handle personally — referred by Meera Iyer, escalation risk.",
+        body: "Refund approved against order #2087. Handle personally — long-time guest, escalation risk.",
       },
     ],
   },
@@ -343,70 +343,70 @@ interface SeedTemplate {
 
 const LIBRARY_TEMPLATES: SeedTemplate[] = [
   {
-    name: "festive_collection_launch",
+    name: "weekend_brunch_launch",
     status: "APPROVED",
     content: {
-      productName: "Festive Collection",
-      campaignAngle: "Launch-week excitement for the new festive collection.",
-      header: "Festive collection has arrived ✨",
-      body: "Hi {{1}}, humara naya festive collection aa gaya hai! Handpicked sarees, lehengas aur kurta sets — sab kuch is week 15% launch offer ke saath. Jaldi aaiye, best pieces pehle nikal jaate hain!",
+      productName: "Weekend Brunch",
+      campaignAngle: "Launch-week excitement for the new weekend brunch menu.",
+      header: "Weekend brunch has arrived 🥞",
+      body: "Hi {{1}}, our new weekend brunch is here! Live dosa counter, bottomless masala chai and 20 new dishes — launch price ₹799 per person this weekend only. Tables go fast, book yours now!",
       footer: "Reply STOP to unsubscribe",
       buttons: [
-        { type: "QUICK_REPLY", text: "Show collection" },
-        { type: "QUICK_REPLY", text: "Visit store" },
+        { type: "QUICK_REPLY", text: "See the menu" },
+        { type: "QUICK_REPLY", text: "Book a table" },
       ],
-      sampleName: "Priya",
-      imageTreatment: "Flat-lay of mixed festive pieces on a deep red cloth with marigold accents.",
-      notes: "Evergreen launch template — reuse for every seasonal drop.",
+      sampleName: "Emily",
+      imageTreatment: "Overhead shot of the full brunch spread on a rustic wooden table, morning light.",
+      notes: "Evergreen launch template — reuse for every menu drop.",
     },
   },
   {
-    name: "new_arrivals_alert",
+    name: "new_menu_alert",
     status: "PENDING",
     content: {
-      productName: "New Arrivals",
-      campaignAngle: "First-look privilege for regulars when fresh stock lands.",
-      header: "New arrivals just for you",
-      body: "Hi {{1}}, aapke pasand ke naye designs aaye hain — pure cotton kurtas aur silk dupattas fresh stock mein. Pehli pasand aapki ho, isliye sabse pehle aapko bata rahe hain 😊",
+      productName: "Seasonal Menu",
+      campaignAngle: "First-look privilege for regulars when the seasonal menu changes.",
+      header: "New seasonal menu, just for you",
+      body: "Hi {{1}}, our chef's new seasonal menu is in — monsoon specials, slow-cooked curries and three new desserts. Our regulars get first pick, so we're telling you before anyone else 😊",
       footer: "Reply STOP to unsubscribe",
       buttons: [{ type: "QUICK_REPLY", text: "Show me" }],
-      sampleName: "Priya",
-      imageTreatment: "Neatly stacked kurtas in daylight near the shop window.",
-      notes: "Send within 48h of new stock arriving.",
+      sampleName: "Emily",
+      imageTreatment: "Close-up of the chef plating the new signature dish, kitchen bokeh behind.",
+      notes: "Send within 48h of the menu change going live.",
     },
   },
   {
-    name: "weekend_sale_reminder",
+    name: "weekday_lunch_deal",
     status: "DRAFT",
     content: {
-      productName: "Weekend Sale",
-      campaignAngle: "Short urgency window: weekend-only discount on ethnic wear.",
-      header: "Weekend sale reminder 🛍️",
-      body: "Hi {{1}}, is weekend selected ethnic wear pe flat 20% off! Sirf Saturday–Sunday. Apne favourite pieces reserve karne ke liye reply karein.",
+      productName: "Set Lunch",
+      campaignAngle: "Short urgency window: weekday-only pricing on the 3-course set lunch.",
+      header: "Weekday set lunch ⚡",
+      body: "Hi {{1}}, this week only — our 3-course set lunch at ₹499! Perfect for office lunches, Tuesday to Friday, 11:30am–3pm. Reply to reserve your table.",
       footer: "Reply STOP to unsubscribe",
       buttons: [
-        { type: "QUICK_REPLY", text: "Reserve now" },
-        { type: "QUICK_REPLY", text: "See catalogue" },
+        { type: "QUICK_REPLY", text: "Reserve a table" },
+        { type: "QUICK_REPLY", text: "See the menu" },
       ],
-      sampleName: "Priya",
-      imageTreatment: "Bright sale rack with a handwritten '20% off' card.",
-      notes: "Draft — finalize discount % with owner before submitting.",
+      sampleName: "Emily",
+      imageTreatment: "Three-course set neatly arranged on a tray with the lunch menu card.",
+      notes: "Draft — finalize the price with the owner before submitting.",
     },
   },
   {
-    name: "back_in_stock_promo",
+    name: "happy_hour_promo",
     status: "REJECTED",
     rejectionReason:
-      'Rejected by Meta review (simulated): promotional claim "guaranteed lowest price" violates advertising policy. Rephrase the claim and resubmit.',
+      'Rejected by Meta review (simulated): promotional claim "guaranteed cheapest drinks" violates advertising policy. Rephrase the claim and resubmit.',
     content: {
-      productName: "Back in Stock",
-      campaignAngle: "Restock alert for sold-out bestsellers.",
-      header: "Back in stock — guaranteed lowest price",
-      body: "Hi {{1}}, jo bestseller sarees sold out thi wo wapas aa gayi hain — guaranteed lowest price in the market! Aaj hi apna piece book karein, dobara stock ka bharosa nahi.",
+      productName: "Happy Hour",
+      campaignAngle: "Evening urgency: happy-hour pricing on drinks and starters.",
+      header: "Happy hour — guaranteed cheapest drinks",
+      body: "Hi {{1}}, happy hour is back — guaranteed cheapest drinks in the neighbourhood! 1-for-1 mocktails and half-price starters, 5–7pm daily. See you this evening!",
       footer: "Reply STOP to unsubscribe",
-      buttons: [{ type: "QUICK_REPLY", text: "Book mine" }],
-      sampleName: "Priya",
-      imageTreatment: "Close-up of the restocked saree fabric with zari detail.",
+      buttons: [{ type: "QUICK_REPLY", text: "See offers" }],
+      sampleName: "Emily",
+      imageTreatment: "Two frosted mocktails clinking on the terrace bar at golden hour.",
       notes: "Needs rewording — remove the price-guarantee claim.",
     },
   },
@@ -417,48 +417,48 @@ const LIBRARY_TEMPLATES: SeedTemplate[] = [
 // ---------------------------------------------------------------------------
 
 const DRAFT_CAMPAIGN_CONTENT: CampaignContent = {
-  productName: "Banarasi Silk Dupatta",
-  campaignAngle: "Festive-season exclusivity: handwoven pieces in limited stock.",
-  header: "Handwoven Banarasi has arrived ✨",
-  body: "Hi {{1}}, our new Banarasi silk dupattas just came in — handwoven, rich zari work, and only 20 pieces this season. Drop by this week and take 15% off your pick. Don't miss the festive colours!",
+  productName: "Chef's Tasting Menu",
+  campaignAngle: "Exclusivity: a 7-course chef's tasting menu with limited seats.",
+  header: "The chef's table is open ✨",
+  body: "Hi {{1}}, our new 7-course chef's tasting menu is here — seasonal ingredients, wine pairings, and only 12 seats a night. Book this week and enjoy a complimentary dessert course on us!",
   footer: "Reply STOP to unsubscribe",
   buttons: [
-    { type: "QUICK_REPLY", text: "Show me colours" },
-    { type: "QUICK_REPLY", text: "Reserve one" },
+    { type: "QUICK_REPLY", text: "See the courses" },
+    { type: "QUICK_REPLY", text: "Book a seat" },
   ],
-  sampleName: "Priya",
-  imageTreatment: "Drape the dupatta over a warm wooden surface in soft daylight so the zari catches the light.",
-  notes: "Festive weekends convert best — send Thursday evening.",
+  sampleName: "Emily",
+  imageTreatment: "The chef's counter at dusk, plates mid-service, warm tungsten light.",
+  notes: "Fine-dining crowd converts best Thursday evening.",
 };
 
 const SENT_CAMPAIGN_CONTENT: CampaignContent = {
-  productName: "Silk Saree Collection",
-  campaignAngle: "Diwali urgency: flat 20% off all silk sarees for regulars.",
-  header: "Diwali Dhamaka is here 🪔",
-  body: "Hi {{1}}, Diwali ki taiyari shuru! All silk sarees — Kanjeevaram, Banarasi, Tussar — flat 20% off this week only. Purani customer ho toh ek chhota surprise gift bhi. Stock limited hai, jaldi aaiye!",
+  productName: "Weekend Brunch",
+  campaignAngle: "Launch urgency: new weekend brunch at a launch price for regulars.",
+  header: "Weekend brunch is here 🥞",
+  body: "Hi {{1}}, our brand-new weekend brunch has launched! Live dosa counter, bottomless masala chai and 20 new dishes — launch price ₹799 per person this weekend. Regulars get priority seating, book now!",
   footer: "Reply STOP to unsubscribe",
   buttons: [
-    { type: "QUICK_REPLY", text: "Show offers" },
-    { type: "QUICK_REPLY", text: "Book a visit" },
+    { type: "QUICK_REPLY", text: "See the menu" },
+    { type: "QUICK_REPLY", text: "Book a table" },
   ],
-  sampleName: "Priya",
-  imageTreatment: "Sarees fanned out around a lit brass diya on a dark backdrop.",
-  notes: "Sent Diwali week — best performing campaign so far.",
+  sampleName: "Emily",
+  imageTreatment: "The full brunch spread from above, terrace sunlight, chai being poured.",
+  notes: "Sent launch week — best performing campaign so far.",
 };
 
 const SCHEDULED_CAMPAIGN_CONTENT: CampaignContent = {
-  productName: "Cotton Kurta Sets",
-  campaignAngle: "Weekend flash sale on breathable everyday cotton sets.",
-  header: "Weekend flash sale ⚡",
-  body: "Hi {{1}}, sirf is weekend — cotton kurta sets pe flat 25% off! Office wear se festive tak, sab styles available. Saturday 10:30 baje se store pe milte hain 😊",
+  productName: "Set Lunch",
+  campaignAngle: "Weekday value: 3-course set lunch for the office crowd.",
+  header: "Set lunch special ⚡",
+  body: "Hi {{1}}, this week only — our 3-course weekday set lunch at ₹499! Starter, main and dessert, served in under 45 minutes. Tue–Fri, 11:30am–3pm. Reply to reserve your table 😊",
   footer: "Reply STOP to unsubscribe",
   buttons: [
-    { type: "QUICK_REPLY", text: "Show styles" },
-    { type: "QUICK_REPLY", text: "Reserve my size" },
+    { type: "QUICK_REPLY", text: "See the menu" },
+    { type: "QUICK_REPLY", text: "Reserve a table" },
   ],
-  sampleName: "Priya",
-  imageTreatment: "Pastel cotton sets hanging on a wooden rack in bright daylight.",
-  notes: "Scheduled for tomorrow morning — audience: festive shoppers.",
+  sampleName: "Emily",
+  imageTreatment: "A crisp three-course tray on a marble table with the lunch card.",
+  notes: "Scheduled for tomorrow morning — audience: weekend brunchers.",
 };
 
 // SENT campaign per-recipient statuses (25 rows: 9 READ, 6 DELIVERED,
@@ -480,8 +480,8 @@ const MARKETING_COST_PAISE = 88; // ~₹0.88 per delivered marketing message
 async function seedMemberships(prisma: PrismaClient, orgId: string, ownerUserId: string) {
   const rows = [
     { userId: ownerUserId, email: "owner@nudge.local", displayName: "Owner", role: "OWNER" as const },
-    { userId: AGENT_1, email: "priya.sharma@nudge.demo", displayName: "Priya Sharma", role: "AGENT" as const },
-    { userId: AGENT_2, email: "arjun.mehta@nudge.demo", displayName: "Arjun Mehta", role: "AGENT" as const },
+    { userId: AGENT_1, email: "sarah.chen@nudge.demo", displayName: "Sarah Chen", role: "AGENT" as const },
+    { userId: AGENT_2, email: "david.tan@nudge.demo", displayName: "David Tan", role: "AGENT" as const },
   ];
   for (const row of rows) {
     await prisma.membership.upsert({
@@ -558,19 +558,19 @@ async function seedAudiences(
   const optedIn = (i: number) => !CONTACTS[i].optedOut;
   const defs: Array<{ name: string; memberIndexes: number[] }> = [
     {
-      name: "Regular customers (demo)",
+      name: "Regular diners (demo)",
       memberIndexes: CONTACTS.map((_, i) => i).filter(
-        (i) => optedIn(i) && (CONTACTS[i].tags.includes("Repeat buyer") || CONTACTS[i].stage === "WON" || i < 12)
+        (i) => optedIn(i) && (CONTACTS[i].tags.includes("Regular diner") || CONTACTS[i].stage === "WON" || i < 12)
       ),
     },
     {
-      name: "Festive shoppers",
+      name: "Weekend brunchers",
       memberIndexes: CONTACTS.map((_, i) => i).filter(
-        (i) => optedIn(i) && CONTACTS[i].tags.includes("Festive shopper")
+        (i) => optedIn(i) && CONTACTS[i].tags.includes("Weekend bruncher")
       ),
     },
     {
-      name: "VIP customers",
+      name: "VIP guests",
       memberIndexes: CONTACTS.map((_, i) => i).filter(
         (i) => optedIn(i) && CONTACTS[i].tags.includes("VIP")
       ),
@@ -678,16 +678,16 @@ async function seedConversations(
 }
 
 async function seedContactNotes(prisma: PrismaClient, orgId: string, contactIds: string[]) {
-  // One standalone contact note (Gaurav Khanna, VIP) from Arjun.
+  // One standalone contact note (Gabriel Seah, VIP) from David.
   const body =
-    "Prefers WhatsApp updates over calls. Anniversary in November — good gifting window.";
+    "Prefers WhatsApp updates over calls. Wedding anniversary in November — offer the terrace early.";
   const contactId = contactIds[25];
   const found = await prisma.note.findFirst({
     where: { orgId, contactId, conversationId: null, body },
   });
   if (!found) {
     await prisma.note.create({
-      data: { orgId, contactId, authorUserId: AGENT_2, authorName: "Arjun Mehta", body },
+      data: { orgId, contactId, authorUserId: AGENT_2, authorName: "David Tan", body },
     });
   }
 }
@@ -741,21 +741,21 @@ async function seedCampaigns(
   contactIds: string[],
   audienceIds: Map<string, string>
 ) {
-  // 1) DRAFT — the original Banarasi demo campaign, kept and refreshed.
+  // 1) DRAFT — the chef's tasting menu campaign, kept and refreshed.
   const draftProductId = await ensureProduct(
     prisma, orgId,
-    "Banarasi Silk Dupatta",
-    "Handwoven Banarasi silk dupatta, festive stock"
+    "Chef's Tasting Menu",
+    "7-course seasonal tasting menu, 12 seats a night"
   );
   const draft = await prisma.campaign.findFirst({
-    where: { orgId, name: "Banarasi Silk Dupatta" },
+    where: { orgId, name: "Chef's Tasting Menu" },
   });
   if (!draft) {
     await prisma.campaign.create({
       data: {
         orgId,
         productId: draftProductId,
-        name: "Banarasi Silk Dupatta",
+        name: "Chef's Tasting Menu",
         status: "DRAFT",
         content: DRAFT_CAMPAIGN_CONTENT,
       },
@@ -767,31 +767,31 @@ async function seedCampaigns(
     });
   }
 
-  // 2) SENT — Diwali campaign with ~25 realistic per-recipient Message rows.
+  // 2) SENT — brunch launch with ~25 realistic per-recipient Message rows.
   const sentProductId = await ensureProduct(
     prisma, orgId,
-    "Silk Saree Collection",
-    "Kanjeevaram, Banarasi and Tussar silk sarees — Diwali stock"
+    "Weekend Brunch",
+    "New weekend brunch — live dosa counter, 20 new dishes"
   );
   let sent = await prisma.campaign.findFirst({
-    where: { orgId, name: "Diwali Dhamaka Sale" },
+    where: { orgId, name: "Weekend Brunch Launch" },
   });
   if (!sent) {
     sent = await prisma.campaign.create({
       data: {
         orgId,
         productId: sentProductId,
-        name: "Diwali Dhamaka Sale",
+        name: "Weekend Brunch Launch",
         status: "SENT",
         content: SENT_CAMPAIGN_CONTENT,
-        audienceId: audienceIds.get("Regular customers (demo)") ?? null,
+        audienceId: audienceIds.get("Regular diners (demo)") ?? null,
         createdAt: daysAgo(6, 15, 0),
       },
     });
   }
 
   // Campaign-scoped template row (the real flow approves one before sending).
-  const sentTplName = "diwali_dhamaka_sale";
+  const sentTplName = "weekend_brunch_launch_send";
   const sentTpl = await prisma.template.findFirst({
     where: { campaignId: sent.id, name: sentTplName },
   });
@@ -830,7 +830,7 @@ async function seedCampaigns(
         campaignId: sent.id,
         contactId: contactIds[recipients[k]],
         status,
-        metaMessageId: failed ? null : `sim-wamid-diwali-${k + 1}`,
+        metaMessageId: failed ? null : `sim-wamid-brunch-${k + 1}`,
         errorCode: failed ? "131026" : null,
         costMinorUnits: failed ? null : MARKETING_COST_PAISE,
         sentAt: failed ? null : sentAt,
@@ -840,27 +840,27 @@ async function seedCampaigns(
     });
   }
 
-  // 3) SCHEDULED — weekend flash sale going out tomorrow morning.
+  // 3) SCHEDULED — weekday set-lunch push going out tomorrow morning.
   const scheduledProductId = await ensureProduct(
     prisma, orgId,
-    "Cotton Kurta Sets",
-    "Everyday breathable cotton kurta sets, office to festive"
+    "Set Lunch",
+    "3-course weekday set lunch, served in under 45 minutes"
   );
   const tomorrow = new Date(NOW);
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(10, 30, 0, 0);
   const scheduled = await prisma.campaign.findFirst({
-    where: { orgId, name: "Weekend Flash Sale" },
+    where: { orgId, name: "Set Lunch Special" },
   });
   if (!scheduled) {
     await prisma.campaign.create({
       data: {
         orgId,
         productId: scheduledProductId,
-        name: "Weekend Flash Sale",
+        name: "Set Lunch Special",
         status: "SCHEDULED",
         content: SCHEDULED_CAMPAIGN_CONTENT,
-        audienceId: audienceIds.get("Festive shoppers") ?? null,
+        audienceId: audienceIds.get("Weekend brunchers") ?? null,
         scheduledAt: tomorrow,
       },
     });
@@ -891,12 +891,12 @@ async function seedAutomations(
 
   const defs: SeedAutomation[] = [
     {
-      name: "Store hours FAQ",
-      description: "Replies instantly when a customer asks about store hours or timings.",
+      name: "Opening hours FAQ",
+      description: "Replies instantly when a guest asks about opening hours or timings.",
       enabled: true,
       trigger: "keyword",
       triggerConfig: {
-        keywords: ["hours", "timing", "kitne baje", "kab khulta", "khula hai"],
+        keywords: ["hours", "timing", "open", "close", "closing"],
         match: "contains",
       },
       steps: [
@@ -904,14 +904,14 @@ async function seedAutomations(
           order: 1,
           kind: "send_message",
           config: {
-            body: "Namaste! Hum Mon–Sat 10:30am se 8:30pm tak khule hain, Sunday 12pm–6pm 😊",
+            body: "Hello! We're open Tue–Sun, 11:30am–10:30pm — the kitchen takes last orders at 10pm 😊",
           },
         },
       ],
     },
     {
-      name: "Welcome new customers",
-      description: "Greets every new contact with the festive launch template and tags them.",
+      name: "Welcome new guests",
+      description: "Greets every new contact with the brunch launch template and tags them.",
       enabled: true,
       trigger: "contact_created",
       triggerConfig: {},
@@ -920,23 +920,23 @@ async function seedAutomations(
           order: 1,
           kind: "send_template",
           config: {
-            templateId: templateIds.get("festive_collection_launch") ?? null,
-            templateName: "festive_collection_launch",
+            templateId: templateIds.get("weekend_brunch_launch") ?? null,
+            templateName: "weekend_brunch_launch",
           },
         },
         {
           order: 2,
           kind: "add_tag",
           config: {
-            tagId: tagIds.get("New customer") ?? null,
-            tagName: "New customer",
+            tagId: tagIds.get("New guest") ?? null,
+            tagName: "New guest",
           },
         },
       ],
     },
     {
-      name: "Route VIPs to Priya",
-      description: "When the VIP tag is added, assigns the contact to Priya and bumps the stage.",
+      name: "Route VIPs to Sarah",
+      description: "When the VIP tag is added, assigns the guest to Sarah and bumps the stage.",
       enabled: false,
       trigger: "tag_added",
       triggerConfig: { tagId: tagIds.get("VIP") ?? null, tagName: "VIP" },
@@ -944,7 +944,7 @@ async function seedAutomations(
         {
           order: 1,
           kind: "assign_agent",
-          config: { userId: AGENT_1, displayName: "Priya Sharma" },
+          config: { userId: AGENT_1, displayName: "Sarah Chen" },
         },
         { order: 2, kind: "update_lead_stage", config: { stage: "QUALIFIED" } },
       ],
@@ -987,8 +987,8 @@ async function seedAutomations(
     }
   }
 
-  // Run history on "Store hours FAQ" (2 completed + 1 failed, with step logs).
-  const faqId = idByName.get("Store hours FAQ");
+  // Run history on "Opening hours FAQ" (2 completed + 1 failed, with step logs).
+  const faqId = idByName.get("Opening hours FAQ");
   if (faqId) {
     const existingRuns = await prisma.automationRun.count({
       where: { automationId: faqId },
@@ -996,7 +996,7 @@ async function seedAutomations(
     if (existingRuns === 0) {
       const runs = [
         {
-          contactIndex: 9, // Aditya Joshi — resolved thread with the auto-reply
+          contactIndex: 9, // Nathan Lee — resolved thread with the auto-reply
           status: "COMPLETED" as const,
           currentStep: 1,
           at: daysAgo(4, 10, 46),
@@ -1005,13 +1005,13 @@ async function seedAutomations(
               step: 1,
               kind: "send_message",
               status: "ok",
-              detail: "Sent store-hours reply within the 24h service window",
+              detail: "Sent opening-hours reply within the 24h service window",
               at: daysAgo(4, 10, 46).toISOString(),
             },
           ],
         },
         {
-          contactIndex: 5, // Aarav Shah — open thread, hours question answered
+          contactIndex: 5, // Jason Teo — open thread, hours question answered
           status: "COMPLETED" as const,
           currentStep: 1,
           at: daysAgo(1, 11, 36),
@@ -1020,13 +1020,13 @@ async function seedAutomations(
               step: 1,
               kind: "send_message",
               status: "ok",
-              detail: "Sent store-hours reply within the 24h service window",
+              detail: "Sent opening-hours reply within the 24h service window",
               at: daysAgo(1, 11, 36).toISOString(),
             },
           ],
         },
         {
-          contactIndex: 18, // Anjali Menon — window had closed, send failed
+          contactIndex: 18, // Mia Fernandez — window had closed, send failed
           status: "FAILED" as const,
           currentStep: 1,
           at: daysAgo(1, 9, 5),
@@ -1088,12 +1088,12 @@ async function seedFrontDesk(
     create: {
       orgId,
       enabled: true,
-      vertical: "retail",
-      businessName: "Aarav Textiles",
+      vertical: "restaurant",
+      businessName: "The Spice Garden",
       businessInfo:
-        "HOURS:\nMon–Sat 10am–8pm, Sun closed\n\nSERVICES:\nSarees, lehengas, kurta sets, festive collection\n\nPRICES:\nSarees from ₹1,200; lehengas from ₹4,500\n\nBOOKING & POLICIES:\nAppointments preferred for styling; walk-ins welcome.",
-      tone: "Warm, friendly, and concise",
-      doNots: "Never promise same-day delivery.",
+        "HOURS:\nTue–Sun 11:30am–10:30pm (kitchen last orders 10pm), closed Mondays\n\nSERVICES:\nDine-in, garden terrace, private dining room (up to 14), weekend brunch, corporate catering, birthday & anniversary setups\n\nPRICES:\nMains ₹350–₹650; weekday 3-course set lunch ₹499; chef's 7-course tasting menu ₹2,499 per person; weekend brunch ₹799 per person\n\nBOOKING & POLICIES:\nReservations recommended on weekends. Groups of 6+ and private dining require a ₹2,000 booking deposit (adjusted against the bill). Free cancellation up to 24h before.",
+      tone: "Warm, welcoming, and concise",
+      doNots: "Never confirm a table without checking availability. Never promise off-menu dishes.",
     },
     update: { enabled: true },
   });
@@ -1118,9 +1118,9 @@ async function seedFrontDesk(
 
   // Confirmed bookings so the "bookings this month" card + reminder tick have data.
   const bookings = [
-    { name: "Priya Sharma", contactId: contactIds[0], requestedFor: "Saturday 2pm", status: "confirmed", offsetHours: 20, event: "sim-cal-demo1" },
-    { name: "Rahul Verma", contactId: contactIds[1], requestedFor: "yesterday 4pm", status: "confirmed", offsetHours: -3, event: "sim-cal-demo2" },
-    { name: "Anjali Rao", contactId: contactIds[2], requestedFor: "Monday 11am", status: "no_show", offsetHours: -26, event: null as string | null },
+    { name: "Emily Tan", contactId: contactIds[0], requestedFor: "Saturday 7:30pm", status: "confirmed", offsetHours: 20, event: "sim-cal-demo1" },
+    { name: "James Carter", contactId: contactIds[1], requestedFor: "yesterday 8pm", status: "confirmed", offsetHours: -3, event: "sim-cal-demo2" },
+    { name: "Sophie Muller", contactId: contactIds[2], requestedFor: "Monday 12:30pm", status: "no_show", offsetHours: -26, event: null as string | null },
   ];
   for (const b of bookings) {
     if (!b.contactId) continue;
@@ -1148,16 +1148,16 @@ async function seedFrontDesk(
     fact: string;
     condition?: string;
   }[] = [
-    { category: "menu_services", fact: "Sarees, lehengas, kurta sets and a festive collection in store" },
-    { category: "menu_services", fact: "Custom blouse stitching available", condition: "weekdays only" },
-    { category: "menu_services", fact: "Saree pre-pleating service available", condition: "weekends only" },
-    { category: "pricing", fact: "Sarees start at ₹1,200; lehengas from ₹4,500" },
-    { category: "pricing", fact: "10% discount on bills above ₹10,000", condition: "festive season (October–December)" },
-    { category: "hours", fact: "Open Monday to Saturday, 10am to 8pm" },
-    { category: "hours", fact: "Closed on Sundays" },
-    { category: "location", fact: "Shop 12, Textile Market, MG Road — opposite the metro exit; parking in the market basement" },
-    { category: "policies", fact: "Exchanges within 7 days with the bill; no cash refunds" },
-    { category: "payments", fact: "UPI, all major cards and cash accepted" },
+    { category: "menu_services", fact: "Modern Indian and pan-Asian menu — signatures: slow-roasted lamb shank, butter chicken, laksa, paneer tikka, vegan jackfruit curry" },
+    { category: "menu_services", fact: "3-course set lunch served 11:30am–3pm", condition: "weekdays only" },
+    { category: "menu_services", fact: "Brunch buffet with live dosa counter, 11am–3pm", condition: "weekends only" },
+    { category: "pricing", fact: "Mains ₹350–₹650; weekday set lunch ₹499; chef's tasting menu ₹2,499 per person; weekend brunch ₹799 per person" },
+    { category: "pricing", fact: "10% off the bill for groups of 10 or more", condition: "weekdays only" },
+    { category: "hours", fact: "Open Tuesday to Sunday, 11:30am to 10:30pm; kitchen takes last orders at 10pm" },
+    { category: "hours", fact: "Closed on Mondays" },
+    { category: "location", fact: "12 Garden Lane, off MG Road — two minutes from the metro exit; free parking in the rear courtyard" },
+    { category: "policies", fact: "Groups of 6+ and the private dining room require a ₹2,000 booking deposit, adjusted against the final bill; free cancellation up to 24 hours before" },
+    { category: "payments", fact: "UPI, all major cards and cash accepted; international guests can pay booking deposits in USDC via a secure payment link" },
   ];
   if ((await prisma.knowledgeEntry.count({ where: { orgId } })) === 0) {
     await prisma.knowledgeEntry.createMany({
@@ -1172,7 +1172,7 @@ async function seedFrontDesk(
   }
 
   // One pending owner question so the /knowledge queue + dashboard nudge demo.
-  const demoQuestion = "Do you have bridal lehengas on rent?";
+  const demoQuestion = "Do you have a kids' menu or high chairs?";
   const demoKey = questionKey(demoQuestion);
   const pendingExists = await prisma.ownerQuestion.findFirst({
     where: { orgId, questionKey: demoKey },
@@ -1245,7 +1245,7 @@ export async function seedDemoWorkspace(
   await prisma.org.update({
     where: { id: org.id },
     data: {
-      vertical: org.vertical ?? "boutique",
+      vertical: org.vertical ?? "restaurant",
       onboardedAt: org.onboardedAt ?? NOW,
       plan: "front_desk",
       subscriptionStatus: "active",

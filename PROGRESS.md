@@ -34,6 +34,12 @@ moat #1 (real actions: payments) without touching strategy or invariants.
 - Tests: new `tests/usdc-rail.test.ts` (rail default, USDC row shape, gate,
   bounds, tool mapping); `payment-link` sim-URL assertions updated. 54 files /
   425 tests, lint and production build green.
+- **Demo re-theme**: the demo seed is now "The Spice Garden" restaurant —
+  international guest names, English dining threads (reservations, private
+  dining deposit, catering negotiation, STOP flow, cold-delivery escalation),
+  restaurant knowledge (incl. the 6+-group ₹2,000 deposit and USDC-for-
+  international-guests facts that ground the on-chain payment demo).
+  `scripts/seed-demo-org.ts` now fully resets front-desk state + CRM data.
 
 ## Landing-page responsive production pass (2026-07-22) ✅
 
