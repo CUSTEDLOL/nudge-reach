@@ -52,6 +52,10 @@ email, headless walk of onboarding → every page) and the fixes it demanded.
   56 files / 430 tests, lint, tsc, production build green.
 
 ### Founder TODO
+- One command fixes the Supabase side: create a personal access token
+  (Supabase → Account → Access Tokens) and run
+  `SUPABASE_ACCESS_TOKEN=sbp_... node scripts/supabase-auth-config.mjs`
+  — or do it by hand:
 - Supabase → Authentication → URL Configuration: Site URL
   `https://nudgeagent.app`; Redirect URLs `https://nudgeagent.app/**`,
   `http://localhost:3000/**`. Email templates → Confirm signup:
