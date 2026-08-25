@@ -25,6 +25,8 @@ export interface ActionResult {
   message: string;
   /** Set by the simulation tester so the caller can open the thread. */
   conversationId?: string;
+  /** The tester's message landed but no AI reply was sent, and why. */
+  skipped?: "no_profile" | "disabled";
 }
 
 export interface SuggestActionResult extends ActionResult {
@@ -479,9 +481,10 @@ export async function simulateInboundAction(
         ok: true,
         message:
           result.skipped === "disabled"
-            ? "Message received. The AI agent is off, so no auto-reply was sent."
+            ? "Message received — your AI is switched off (AI Agent → Setup), so it didn't reply."
             : "Message received. No AI agent is configured, so no auto-reply was sent.",
         conversationId,
+        skipped: result.skipped,
       };
     }
     if (result.handoff) {

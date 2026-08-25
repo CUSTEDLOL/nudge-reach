@@ -40,6 +40,12 @@ email, headless walk of onboarding → every page) and the fixes it demanded.
   The `/demo` sandbox and fresh signups therefore never touch Meta even once
   prod is flipped to live. Owner-facing copy says "Test mode", never
   "simulation". Backfilled: orgs with a connected number → `simulated=false`.
+- **The AI is on shift from day one**: onboarding step 1 creates an enabled
+  `AgentProfile` named after the business, and `ensureAgentProfile` does the
+  same on the first inbound for older orgs — a fresh workspace's first
+  "Try your AI" message gets an answer instead of silence (found live: the
+  audit org had no profile, so the tester created a thread with no reply).
+  Owner-off stays respected; a skipped reply is explained in a toast.
 - Demo CTAs: the hover launch scene is gone; `LaunchDemoButton` is a plain
   Cal.com trigger.
 - Tests: `tests/org-mode*.test.ts`, dashboard checklist tests updated.

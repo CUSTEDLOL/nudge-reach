@@ -61,6 +61,13 @@ export async function saveBusinessProfileAction(
           : {}),
       },
     });
+    // The AI employee introduces itself as this business from the first
+    // message; the owner refines tone and facts on AI Agent → Setup.
+    await prisma.agentProfile.upsert({
+      where: { orgId: ctx.org.id },
+      create: { orgId: ctx.org.id, enabled: true, vertical, businessName: name },
+      update: { vertical, businessName: name },
+    });
   } catch {
     return { ok: false, message: "Couldn't save — please try again." };
   }

@@ -68,6 +68,7 @@ export function TryYourAi({
         toast({ tone: "error", description: result.message });
         return;
       }
+      if (result.skipped) toast({ tone: "error", description: result.message });
       if (result.conversationId) {
         router.push(`/inbox/${result.conversationId}`);
         return;

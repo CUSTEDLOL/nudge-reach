@@ -1,3 +1,4 @@
+import { ensureAgentProfile } from "@/modules/agent/profile";
 import { prisma } from "@/lib/db";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { isStopMessage } from "@/modules/whatsapp/webhook-verify";
@@ -113,7 +114,7 @@ export async function handleInboundMessage(
     };
   }
 
-  const profile = await prisma.agentProfile.findUnique({ where: { orgId } });
+  const profile = await ensureAgentProfile(orgId);
   if (!profile) return { conversationId: conversation.id, skipped: "no_profile" };
   if (!profile.enabled)
     return { conversationId: conversation.id, skipped: "disabled" };
