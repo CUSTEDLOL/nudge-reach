@@ -197,6 +197,15 @@ export function Navbar() {
 
           {/* right — Get Access + the solid CTA (desktop only) */}
           <div className="relative z-10 hidden items-center gap-2 lg:flex lg:justify-self-end">
+            <a
+              href="/login"
+              className={cn(
+                "hidden min-h-11 items-center whitespace-nowrap rounded-xl px-3 py-2.5 text-[14px] font-semibold transition-colors lg:inline-flex",
+                overHero ? "text-white/85 hover:text-white" : "text-ink/65 hover:text-ink"
+              )}
+            >
+              Sign in
+            </a>
             <GetAccessButton
               source="navbar"
               className={cn(
@@ -268,6 +277,13 @@ export function Navbar() {
                 ))}
               </ul>
               <div className="mt-2 flex flex-col gap-2 border-t border-black/[0.06] p-2 pt-3">
+                <a
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-11 items-center justify-center rounded-xl px-4 py-3 text-base font-medium text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink"
+                >
+                  Sign in
+                </a>
                 <LaunchDemoButton variant="primary" className="w-full">
                   Book a Demo
                 </LaunchDemoButton>
