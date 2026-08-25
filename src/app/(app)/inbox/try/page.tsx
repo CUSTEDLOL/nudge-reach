@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
 import { PageHeader } from "@/components/ui/page-header";
@@ -17,7 +17,7 @@ export default async function TryYourAiPage() {
         description="Message your business the way a customer would. The reply comes from your AI Front Desk, using only what you've taught it."
       />
       <TryYourAi
-        simulation={env.SEND_MODE === "simulation"}
+        simulation={isSimulated(org)}
         dialCode={org.dialCode}
         connectedName={account?.displayName ?? null}
       />

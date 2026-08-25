@@ -5,9 +5,9 @@ import {
   ShieldCheck,
   Smartphone,
 } from "lucide-react";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrg } from "@/modules/orgs/auth";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
-import { env } from "@/lib/env";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -46,7 +46,7 @@ const SETUP_NEEDS = [
 export default async function WhatsappSettingsPage() {
   const org = await requireOrg();
   const account = await getWhatsappAccount(org.id);
-  const simulation = env.SEND_MODE === "simulation";
+  const simulation = isSimulated(org);
 
   return (
     <section className="flex flex-col gap-4">

@@ -948,14 +948,14 @@ function StepReview({
               ? "Schedule broadcast"
               : approved
                 ? simulation
-                  ? "Send now (simulated)"
+                  ? "Send now (test mode)"
                   : "Send now"
                 : "Submit for approval"}
           </Button>
         </div>
         {simulation && (
           <p className="text-xs text-neutral-400">
-            Simulation mode: no real messages leave the building — delivery is
+            Test mode: no real messages leave the building — delivery is
             mocked so you can see the full journey.
           </p>
         )}

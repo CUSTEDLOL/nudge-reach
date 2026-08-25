@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { orgSendMode } from "@/modules/orgs/mode";
 import { canSendMarketing } from "@/modules/consent";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -33,7 +33,7 @@ export async function GoLiveChecklist({ orgId }: { orgId: string }) {
       }),
     ]);
   const optedIn = contacts.filter(canSendMarketing).length;
-  const simulation = env.SEND_MODE === "simulation";
+  const simulation = (await orgSendMode(orgId)) === "simulation";
 
   const items: ChecklistItem[] = [
     {

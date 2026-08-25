@@ -10,6 +10,11 @@ export async function saveWhatsappAccount(input: {
   accessToken: string;
 }) {
   const accessTokenEncrypted = encryptSecret(input.accessToken);
+  // A connected number is what takes the org out of test mode.
+  await prisma.org.update({
+    where: { id: input.orgId },
+    data: { simulated: false },
+  });
   return prisma.whatsappAccount.upsert({
     where: { orgId: input.orgId },
     create: {

@@ -147,8 +147,14 @@ export default async function AgentPage({
               >
                 Inbox
               </Link>{" "}
-              — in simulation mode you can send an inbound message as the
-              customer.
+              — or message it as a customer from{" "}
+              <Link
+                href="/inbox/try"
+                className="font-medium text-brand-700 underline-offset-2 hover:underline"
+              >
+                Try your AI
+              </Link>
+              .
             </p>
           </div>
         }

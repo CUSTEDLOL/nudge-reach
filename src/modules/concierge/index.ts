@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { orgSendMode } from "@/modules/orgs/mode";
 import { buildTemplatePayload } from "@/modules/whatsapp/template";
 import type { CampaignContent } from "@/modules/campaign/schema";
 
@@ -110,7 +110,7 @@ export async function installVerticalPack(
   vertical: string
 ): Promise<number> {
   const pack = verticalPackFor(vertical);
-  const approve = env.SEND_MODE !== "live";
+  const approve = (await orgSendMode(orgId)) !== "live";
   for (const t of pack) {
     const componentsJson = buildTemplatePayload(t.content, {
       name: t.name,

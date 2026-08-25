@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrg } from "@/modules/orgs/auth";
 import { canSendMarketing } from "@/modules/consent";
 import { getApprovedTemplates } from "@/modules/whatsapp/library";
@@ -57,7 +57,7 @@ export default async function NewBroadcastPage() {
         sources={sourceRows.map((s) => s.optInSource)}
         ratePaise={getMessageRateMinor(orgCurrency(org))}
         currencySymbol={CURRENCY_INFO[orgCurrency(org)].symbol}
-        simulation={env.SEND_MODE === "simulation"}
+        simulation={isSimulated(org)}
       />
     </div>
   );

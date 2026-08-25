@@ -106,7 +106,7 @@ export function Sidebar({
           {simulation && (
             <div className="mx-1 flex items-center gap-2 rounded-full border border-brand-400/25 bg-brand-400/10 px-3 py-1.5 text-xs font-medium text-brand-200">
               <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Simulation mode
+              Test mode
             </div>
           )}
           <div className="flex items-center gap-2.5 border-t border-white/10 px-1 pt-4">

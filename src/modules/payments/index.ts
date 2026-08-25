@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { sendModeFor, type SendMode } from "@/modules/orgs/mode";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import {
   createRazorpayPaymentLink,
@@ -52,8 +53,8 @@ export type CreateLinkOutcome =
   | { status: "not_allowed"; reason: string }
   | { status: "invalid"; reason: string };
 
-function shouldUseRazorpay(): boolean {
-  return env.SEND_MODE === "live" && isRazorpayConfigured();
+function shouldUseRazorpay(mode: SendMode): boolean {
+  return mode === "live" && isRazorpayConfigured();
 }
 
 export function formatAmountMinor(amountMinor: number, currency: string): string {
@@ -96,7 +97,7 @@ export async function createPaymentLink(
 
   const org = await prisma.org.findUnique({
     where: { id: orgId },
-    select: { plan: true, currency: true },
+    select: { plan: true, currency: true, simulated: true },
   });
   if (!org) return { status: "not_allowed", reason: "Org not found." };
   // Runtime flagship gate — same rule as calendar booking.
@@ -109,7 +110,7 @@ export async function createPaymentLink(
 
   const currency =
     rail === "usdc" ? "USDC" : org.currency === "USD" ? "USD" : "INR";
-  const useRazorpay = rail === "fiat" && shouldUseRazorpay();
+  const useRazorpay = rail === "fiat" && shouldUseRazorpay(sendModeFor(org));
   const request = await prisma.paymentRequest.create({
     data: {
       orgId,

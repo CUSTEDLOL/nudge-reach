@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { LeadStage } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { sendMessage } from "@/modules/messaging";
 import { isWithinServiceWindow } from "@/modules/agent/window";
@@ -445,10 +445,13 @@ export async function simulateInboundAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
-    if (env.SEND_MODE !== "simulation") {
-      return { ok: false, message: "The tester only works in simulation mode." };
-    }
     const { org } = await requireOrgContext();
+    if (!isSimulated(org)) {
+      return {
+        ok: false,
+        message: "Your number is live — message it from your phone instead.",
+      };
+    }
     const rawPhone = String(formData.get("phone") ?? "").trim();
     const text = String(formData.get("text") ?? "").trim();
     if (!rawPhone || !text) {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrg } from "@/modules/orgs/auth";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import { refreshTemplateStatus } from "@/modules/whatsapp/approval";
@@ -78,7 +78,7 @@ export default async function CampaignPage({
   const currency = orgCurrency(org);
   const ratePaise = getMessageRateMinor(currency);
   const currencySymbol = CURRENCY_INFO[currency].symbol;
-  const simulation = env.SEND_MODE === "simulation";
+  const simulation = isSimulated(org);
 
   let audiences: { id: string; name: string; optedInCount: number }[] = [];
   if (campaign.status === "TEMPLATE_APPROVED" || isScheduled) {

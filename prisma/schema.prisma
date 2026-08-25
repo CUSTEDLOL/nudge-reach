@@ -35,6 +35,10 @@ model Org {
   vertical    String?
   // Set when the onboarding wizard completes (or is skipped).
   onboardedAt DateTime?
+  // Per-org test mode: sends, approvals, calendar and payments stay mocked
+  // until a real WhatsApp number is connected. SEND_MODE=simulation still
+  // mocks everything globally (invariant #4); this only matters in live.
+  simulated   Boolean    @default(true)
   // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
   settings    Json       @default("{}")
   // Globalization (spec: global outreach). Defaults preserve the original

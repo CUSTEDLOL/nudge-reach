@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
@@ -46,13 +47,13 @@ export async function testWhatsappConnectionAction(): Promise<ActionResult> {
         message: `Give Meta a breather — try again in ${rate.retryAfterSeconds}s.`,
       };
     }
-    if (env.SEND_MODE === "simulation") {
+    if (isSimulated(org)) {
       const account = await getWhatsappAccount(org.id);
       return {
         ok: true,
         message: account
-          ? `Simulation mode: "${account.displayName}" is saved and everything is wired up. Sends stay mocked until SEND_MODE=live.`
-          : "Simulation mode: connection OK — sends and approvals are mocked, no WhatsApp account needed.",
+          ? `Test mode: "${account.displayName}" is saved and everything is wired up. Sends stay mocked until your number goes live.`
+          : "Test mode: connection OK — sends and approvals are mocked, no WhatsApp account needed.",
       };
     }
 

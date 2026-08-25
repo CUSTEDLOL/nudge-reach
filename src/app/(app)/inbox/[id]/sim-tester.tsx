@@ -62,7 +62,7 @@ export function SimTester({
         <FlaskConical className="h-3.5 w-3.5" aria-hidden />
         Test as customer
         <span className="ml-auto rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700">
-          simulation
+          test mode
         </span>
       </button>
       {open && (

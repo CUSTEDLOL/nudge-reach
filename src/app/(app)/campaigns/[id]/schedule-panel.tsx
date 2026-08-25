@@ -110,7 +110,7 @@ export function SchedulePanel({
         <form action={sendNow}>
           <input type="hidden" name="campaignId" value={campaignId} />
           <Button loading={sending} disabled={cancelling}>
-            {simulation ? "Send now (simulated)" : "Send now"}
+            {simulation ? "Send now (test mode)" : "Send now"}
           </Button>
         </form>
         <form action={cancel}>
@@ -123,7 +123,7 @@ export function SchedulePanel({
 
       {simulation && (
         <p className="mt-3 text-xs text-neutral-400">
-          Simulation mode: no real messages leave the building — delivery is
+          Test mode: no real messages leave the building — delivery is
           mocked so you can see the full journey.
         </p>
       )}

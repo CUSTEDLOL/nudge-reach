@@ -219,14 +219,13 @@ export function OnboardingWizard(props: WizardProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-neutral-900">
-                      You&apos;re in simulation mode
+                      Test mode until your number is live
                     </p>
-                    <Badge tone="info">Simulation</Badge>
+                    <Badge tone="info">Test mode</Badge>
                   </div>
                   <p className="mt-1 text-sm text-neutral-500">
-                    No WhatsApp Business account needed to explore — every
-                    send is safely mocked end to end. Connect a real number
-                    any time from Settings.
+                    Explore everything now — nothing reaches real customers
+                    until we connect your number on the setup call.
                   </p>
                   <Link
                     href="/settings/whatsapp"

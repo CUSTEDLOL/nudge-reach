@@ -5,7 +5,7 @@
  */
 import type { CampaignStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { orgSendMode } from "@/modules/orgs/mode";
 import {
   buildChecklist,
   computeMessageRates,
@@ -49,7 +49,7 @@ export interface DashboardData {
 }
 
 export async function getDashboardData(orgId: string): Promise<DashboardData> {
-  const simulationMode = env.SEND_MODE === "simulation";
+  const simulationMode = (await orgSendMode(orgId)) === "simulation";
 
   const [
     contactCount,
@@ -191,6 +191,6 @@ export async function getOnboardingSnapshot(
     contactCount,
     whatsappConnected: account !== null,
     whatsappDisplayName: account?.displayName ?? null,
-    simulationMode: env.SEND_MODE === "simulation",
+    simulationMode: (await orgSendMode(orgId)) === "simulation",
   };
 }

@@ -185,7 +185,7 @@ export function StatsDashboard({
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
-            {simulation ? "Cost so far (simulated)" : "Actual cost so far"}
+            {simulation ? "Cost so far (test mode)" : "Actual cost so far"}
           </p>
           <p className="mt-0.5 font-semibold text-neutral-900">
             {currencySymbol}{(stats.actualCostMinor / 100).toFixed(2)}

@@ -191,14 +191,14 @@ export function RunPanel({
             {when === "later"
               ? "Schedule broadcast"
               : simulation
-                ? "Run campaign (simulated)"
+                ? "Run campaign (test mode)"
                 : "Run campaign"}
           </Button>
         </div>
 
         {simulation && (
           <p className="mt-3 text-xs text-neutral-400">
-            Simulation mode: no real messages leave the building — delivery is
+            Test mode: no real messages leave the building — delivery is
             mocked so you can see the full journey.
           </p>
         )}

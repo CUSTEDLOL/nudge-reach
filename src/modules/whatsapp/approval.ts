@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { env } from "@/lib/env";
+import { orgSendMode } from "@/modules/orgs/mode";
 import { prisma } from "@/lib/db";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import {
@@ -32,7 +33,7 @@ export async function submitTemplateForApproval(campaignId: string, orgId: strin
   let headerImageHandle: string | undefined;
   let metaTemplateId: string | undefined;
 
-  if (env.SEND_MODE === "live") {
+  if ((await orgSendMode(orgId)) === "live") {
     const creds = await getWhatsappCredentials(orgId);
     if (!creds) {
       throw new Error(
@@ -104,7 +105,7 @@ export async function refreshTemplateStatus(campaignId: string, orgId: string) {
   if (!template) return null;
   if (template.metaStatus !== "PENDING") return template;
 
-  if (env.SEND_MODE === "live") {
+  if ((await orgSendMode(orgId)) === "live") {
     const creds = await getWhatsappCredentials(orgId);
     if (!creds) return template;
     const res = await fetch(

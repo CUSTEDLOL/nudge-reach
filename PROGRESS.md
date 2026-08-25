@@ -5,6 +5,55 @@ what's next.
 
 ---
 
+## Launch-readiness pass — signup, AI-first onboarding, per-org test mode (2026-08-25) ✅
+
+Audit of the real lead path on production (real signup, real confirmation
+email, headless walk of onboarding → every page) and the fixes it demanded.
+
+- **Signup was broken for real leads**: Supabase's Site URL was still
+  `http://localhost:3000`, so confirmation links bounced leads to localhost;
+  and `/auth/confirm` only accepted `token_hash`, not the PKCE `code` the
+  default emails carry. Route now handles both. **Supabase dashboard must
+  also be set** (Site URL → nudgeagent.app, redirect allowlist, token_hash
+  email templates) — see the founder TODO below.
+- `/login`: Forgot-password → reset email → `/auth/reset`; stale-link
+  errors explained (`?error=confirm|auth`, read by a server page wrapper);
+  "Sign in with Google" renders only with `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1`
+  (the provider is off in Supabase — the button errored for every click).
+  Navbar has a Sign in link again.
+- **AI-first onboarding**: `/inbox/try` lets a fresh workspace message its
+  own AI as a customer (the tester used to live only inside an existing
+  thread, so a new account had no way to see the agent). Linked from the
+  dashboard header, quick actions, empty inbox, AI Agent page. Dashboard
+  checklist is Teach your AI → Try your AI → Connect WhatsApp → contacts →
+  campaign; "New broadcast" is no longer the dashboard's primary button.
+  Wizard copy is AI Front Desk first; the auto "<email>'s shop" name isn't
+  prefilled anymore.
+- **Settings → WhatsApp** is concierge-first: what to have ready + "Book your
+  setup call" (Cal.com); the WABA/token form sits under Advanced; the go-live
+  checklist speaks to the owner (env-var items gone).
+- **Per-org test mode** (`Org.simulated`, default true): `modules/orgs/mode`
+  (`sendModeFor` / `isSimulated` / `orgSendMode`) replaces every
+  `env.SEND_MODE` check in app + modules. Global `SEND_MODE=simulation` still
+  mocks everything (invariant #4); in a live deployment an org stays mocked
+  until `saveWhatsappAccount` connects a number (flips `simulated=false`).
+  The `/demo` sandbox and fresh signups therefore never touch Meta even once
+  prod is flipped to live. Owner-facing copy says "Test mode", never
+  "simulation". Backfilled: orgs with a connected number → `simulated=false`.
+- Demo CTAs: the hover launch scene is gone; `LaunchDemoButton` is a plain
+  Cal.com trigger.
+- Tests: `tests/org-mode*.test.ts`, dashboard checklist tests updated.
+  56 files / 430 tests, lint, tsc, production build green.
+
+### Founder TODO
+- Supabase → Authentication → URL Configuration: Site URL
+  `https://nudgeagent.app`; Redirect URLs `https://nudgeagent.app/**`,
+  `http://localhost:3000/**`. Email templates → Confirm signup:
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/dashboard`;
+  Reset password: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset`.
+- Flip prod `SEND_MODE` to `live` when the first client connects (safe now —
+  every other org stays in test mode).
+
 ## USDC payment rail + hosted pay page + guest demo sandbox (2026-08-14) ✅
 
 Built for the NTU InnovateX 2026 hackathon (Track 2: Web3 Applications, AI

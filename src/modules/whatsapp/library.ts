@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { orgSendMode } from "@/modules/orgs/mode";
 import {
   campaignContentSchema,
   type CampaignContent,
@@ -259,7 +259,7 @@ export async function submitLibraryTemplate(templateId: string, orgId: string) {
   if (template.metaStatus === "APPROVED") {
     throw new Error("This template is already approved.");
   }
-  if (env.SEND_MODE === "live") {
+  if ((await orgSendMode(orgId)) === "live") {
     throw new Error(LIVE_SUBMISSION_STUB_MESSAGE);
   }
   return prisma.template.update({
@@ -288,7 +288,7 @@ export async function refreshLibraryTemplateStatus(
   });
   if (!template) return null;
   if (template.metaStatus !== "PENDING") return template;
-  if (env.SEND_MODE === "live") return template;
+  if ((await orgSendMode(orgId)) === "live") return template;
 
   const ageSeconds = (Date.now() - template.submittedAt.getTime()) / 1000;
   if (ageSeconds < SIMULATED_REVIEW_SECONDS) return template;

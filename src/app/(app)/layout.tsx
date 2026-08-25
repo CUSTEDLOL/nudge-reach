@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
-import { env } from "@/lib/env";
 import { AppShell } from "@/components/features/app-shell/shell";
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         orgName={org.name}
         user={{ name, email }}
         role={role}
-        simulation={env.SEND_MODE === "simulation"}
+        simulation={isSimulated(org)}
       >
         {children}
       </AppShell>

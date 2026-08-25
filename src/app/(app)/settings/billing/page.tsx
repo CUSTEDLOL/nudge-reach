@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Check, MessageSquare, Wallet, Users } from "lucide-react";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
-import { env } from "@/lib/env";
 import { formatMoney, getMonthlyUsage } from "@/modules/billing";
 import { PLANS, getPlan, planPrice } from "@/modules/billing/plans";
 import { formatPlanPrice, orgCurrency } from "@/modules/billing/money";
@@ -25,7 +25,7 @@ export default async function BillingSettingsPage() {
 
   const usage = await getMonthlyUsage(org.id);
   const currentPlan = getPlan(org.plan);
-  const simulation = env.SEND_MODE === "simulation";
+  const simulation = isSimulated(org);
   const currency = orgCurrency(org);
   const gatewayName = currency === "INR" ? "Razorpay" : "Stripe";
   const paymentsOn =

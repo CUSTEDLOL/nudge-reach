@@ -3,8 +3,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { MessageCircle, ShieldAlert, ShoppingBag } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
-import { env } from "@/lib/env";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
 import { getCalendarAccount } from "@/modules/calendar";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
@@ -63,7 +63,7 @@ export default async function IntegrationsPage() {
       : "https");
   const webhookUrl = `${proto}://${host}/api/webhooks/whatsapp`;
 
-  const simulation = env.SEND_MODE === "simulation";
+  const simulation = isSimulated(ctx.org);
   const canManage = ctx.role === "OWNER" || ctx.role === "ADMIN";
 
   const serializedKeys: SerializedApiKey[] = apiKeys.map((key) => ({

@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { canSendMarketing } from "@/modules/consent";
+import { orgSendMode, type SendMode } from "@/modules/orgs/mode";
 import { getWhatsappCredentials } from "@/modules/whatsapp/accounts";
 import { WhatsappLiveDriver } from "@/modules/messaging/drivers/whatsapp-live";
 import { WhatsappSimulationDriver } from "@/modules/messaging/drivers/whatsapp-simulation";
@@ -14,10 +15,10 @@ import type {
 
 export type { Channel, MessagePayload, Recipient, SendResult };
 
-function resolveDriver(channel: Channel): ChannelDriver {
+function resolveDriver(channel: Channel, mode: SendMode): ChannelDriver {
   switch (channel) {
     case "whatsapp":
-      return env.SEND_MODE === "live"
+      return mode === "live"
         ? new WhatsappLiveDriver()
         : new WhatsappSimulationDriver();
   }
@@ -55,10 +56,16 @@ export async function sendMessage(
     };
   }
 
+  // Per-org test mode: an org without a connected number stays mocked even in
+  // a live deployment. Sends with no org fall back to the global mode.
+  const mode: SendMode = options.orgId
+    ? await orgSendMode(options.orgId)
+    : env.SEND_MODE;
+
   // Resolve this org's own WhatsApp credentials (multi-tenant). Falls back to
   // the env single-number credentials inside the driver when none are stored.
   let credentials: SenderCredentials | undefined;
-  if (channel === "whatsapp" && env.SEND_MODE === "live" && options.orgId) {
+  if (channel === "whatsapp" && mode === "live" && options.orgId) {
     const creds = await getWhatsappCredentials(options.orgId);
     if (creds) {
       credentials = {
@@ -69,5 +76,5 @@ export async function sendMessage(
     }
   }
 
-  return resolveDriver(channel).send(recipient, payload, credentials);
+  return resolveDriver(channel, mode).send(recipient, payload, credentials);
 }

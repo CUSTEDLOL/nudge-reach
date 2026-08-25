@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseInboxFilter } from "@/modules/inbox/filters";
 import {
@@ -128,7 +128,7 @@ export default async function InboxThreadPage({
           contactPhone={contact.phoneE164}
           conversationStatus={conversation.status}
           templates={templates}
-          simulation={env.SEND_MODE === "simulation"}
+          simulation={isSimulated(org)}
           backHref={backHref}
           panel={panelProps}
         />

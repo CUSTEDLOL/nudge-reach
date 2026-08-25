@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { recordAudit } from "@/modules/orgs/audit";
 import { resetDemoWorkspace } from "@/modules/demo/reset";
@@ -21,11 +21,11 @@ export async function resetDemoDataAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "OWNER");
-    if (env.SEND_MODE !== "simulation") {
+    if (!isSimulated(ctx.org)) {
       return {
         ok: false,
         message:
-          "Demo reset is only available in simulation mode — it would wipe real customer data in live mode.",
+          "Demo reset is only available in test mode — it would wipe real customer data once your number is live.",
       };
     }
 

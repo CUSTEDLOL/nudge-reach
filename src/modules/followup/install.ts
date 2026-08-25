@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { orgSendMode } from "@/modules/orgs/mode";
 import { buildTemplatePayload } from "@/modules/whatsapp/template";
 import { PACK_TEMPLATES, leadNudgeAutomation } from "@/modules/followup/pack";
 
@@ -10,7 +10,7 @@ const LEAD_NUDGE_NAME = "Revenue Recovery — quiet-lead nudge";
  *  immediately (so the demo works); live submits them for real Meta review. */
 async function ensurePackTemplates(orgId: string): Promise<Map<string, string>> {
   const byName = new Map<string, string>();
-  const approve = env.SEND_MODE !== "live";
+  const approve = (await orgSendMode(orgId)) !== "live";
   for (const t of PACK_TEMPLATES) {
     const componentsJson = buildTemplatePayload(t.content, {
       name: t.name,

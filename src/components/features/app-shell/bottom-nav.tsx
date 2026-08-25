@@ -162,7 +162,7 @@ function MoreSheet({
         {simulation && (
           <p className="mx-4 mt-3 flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700">
             <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            Simulation mode — sends are mocked
+            Test mode — nothing reaches real customers
           </p>
         )}
         <nav aria-label="More sections" className="p-2 pt-3">

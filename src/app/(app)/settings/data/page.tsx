@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Download, FileDown, FlaskConical, MessageSquare } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +21,7 @@ export default async function DataSettingsPage() {
       prisma.message.count({ where: { campaign: { orgId: org.id } } }),
     ]);
   const messageCount = conversationMessages + campaignMessages;
-  const showDemoReset = env.SEND_MODE === "simulation" && role === "OWNER";
+  const showDemoReset = isSimulated(org) && role === "OWNER";
 
   return (
     <section>
@@ -94,7 +94,7 @@ export default async function DataSettingsPage() {
                   Reset demo data
                 </p>
                 <p className="mt-0.5 max-w-xl text-sm text-neutral-600">
-                  Simulation mode only: wipe this workspace&apos;s contacts,
+                  Test mode only: wipe this workspace&apos;s contacts,
                   conversations, campaigns and automations, and re-seed the
                   fresh demo workspace. Team, WhatsApp connection, keys and
                   webhooks are kept.

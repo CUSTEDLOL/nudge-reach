@@ -4,10 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
+import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAiFrontDesk } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
-import { env } from "@/lib/env";
 import { saveCalendarAccount, disconnectCalendar } from "@/modules/calendar";
 import {
   googleAuthUrl,
@@ -32,7 +32,7 @@ export async function connectCalendarAction(): Promise<ActionResult> {
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
 
-    if (env.SEND_MODE === "simulation") {
+    if (isSimulated(ctx.org)) {
       await saveCalendarAccount({
         orgId: ctx.org.id,
         accountEmail: "demo-calendar@nudge.local",
@@ -44,7 +44,7 @@ export async function connectCalendarAction(): Promise<ActionResult> {
       return {
         ok: true,
         message:
-          'Simulation mode: calendar "connected" — bookings, reminders and follow-ups are mocked. No Google app needed.',
+          'Test mode: calendar "connected" — bookings, reminders and follow-ups are mocked. No Google app needed.',
       };
     }
 

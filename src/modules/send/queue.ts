@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { sendModeFor } from "@/modules/orgs/mode";
 import { prisma } from "@/lib/db";
 import { canSendMarketing } from "@/modules/consent";
 import { sendMessage } from "@/modules/messaging";
@@ -239,12 +240,12 @@ export async function releaseDueCampaigns(): Promise<number> {
 
 /** Simulation only: advance message statuses on the deterministic timeline. */
 export async function applySimulatedProgress(campaignId: string): Promise<void> {
-  if (env.SEND_MODE !== "simulation") return;
   // Accrue simulated cost in the org's billing currency (global outreach).
   const campaignOrg = await prisma.campaign.findUnique({
     where: { id: campaignId },
-    select: { org: { select: { currency: true } } },
+    select: { org: { select: { currency: true, simulated: true } } },
   });
+  if (!campaignOrg || sendModeFor(campaignOrg.org) !== "simulation") return;
   const rate = getMessageRateMinor(
     campaignOrg && isCurrency(campaignOrg.org.currency)
       ? campaignOrg.org.currency

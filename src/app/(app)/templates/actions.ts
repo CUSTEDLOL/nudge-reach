@@ -183,7 +183,7 @@ export async function submitTemplateAction(
     revalidatePath(`/templates/${id}`);
     return {
       ok: true,
-      message: "Submitted to Meta for review — usually settles in seconds here (simulated).",
+      message: "Submitted for review — settles in seconds in test mode.",
     };
   } catch (err) {
     return {
