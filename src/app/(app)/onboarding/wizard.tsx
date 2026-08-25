@@ -94,8 +94,7 @@ export function OnboardingWizard(props: WizardProps) {
             </h1>
           </div>
           <p className="mt-1 text-sm text-neutral-500">
-            Three quick steps and you&apos;re ready to send your first
-            WhatsApp campaign.
+            Three quick steps and your AI Front Desk is on shift.
           </p>
         </div>
         <form action={skipAction}>
@@ -120,7 +119,8 @@ export function OnboardingWizard(props: WizardProps) {
             Tell us about your business
           </h2>
           <p className="mt-1 text-sm text-neutral-500">
-            We use this to tailor campaign copy and your AI assistant.
+            Your AI employee introduces itself as this business and answers in
+            its name.
           </p>
           <form action={profileAction} className="mt-5 flex flex-col gap-4">
             <div>

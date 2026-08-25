@@ -18,11 +18,14 @@ export default async function OnboardingPage() {
   }
 
   const snapshot = await getOnboardingSnapshot(org.id);
+  // The org is auto-named "<email>'s shop" at signup — don't make the owner
+  // delete that before typing their real business name.
+  const isAutoName = org.name === "My shop" || org.name.endsWith("'s shop");
 
   return (
     <div className="mx-auto w-full max-w-2xl py-4">
       <OnboardingWizard
-        orgName={org.name}
+        orgName={isAutoName ? "" : org.name}
         vertical={org.vertical}
         country={presetForDialCode(org.dialCode)?.code ?? ""}
         whatsappConnected={snapshot.whatsappConnected}

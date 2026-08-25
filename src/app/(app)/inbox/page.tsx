@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { Bot, MessageSquare } from "lucide-react";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseInboxFilter } from "@/modules/inbox/filters";
 import { listConversationSummaries } from "@/modules/inbox/queries";
 import { PageHeader } from "@/components/ui/page-header";
+import { buttonVariants } from "@/components/ui/button";
 import { ListPane } from "./list-pane";
 
 export const metadata: Metadata = { title: "Inbox" };
@@ -43,17 +45,29 @@ export default async function InboxPage({
         />
         <div className="hidden flex-col items-center justify-center gap-3 bg-neutral-50/60 px-6 text-center lg:flex">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-            <MessageSquare className="h-5 w-5" aria-hidden />
+            {conversations.length === 0 ? (
+              <Bot className="h-5 w-5" aria-hidden />
+            ) : (
+              <MessageSquare className="h-5 w-5" aria-hidden />
+            )}
           </span>
           <div>
             <h2 className="text-sm font-semibold text-neutral-900">
-              Select a conversation
+              {conversations.length === 0
+                ? "See your AI answer"
+                : "Select a conversation"}
             </h2>
             <p className="mx-auto mt-1 max-w-xs text-sm text-neutral-500">
-              Pick a thread on the left to read it, reply, and manage the
-              contact.
+              {conversations.length === 0
+                ? "Message your business as a customer would — the reply lands right here."
+                : "Pick a thread on the left to read it, reply, and manage the contact."}
             </p>
           </div>
+          {conversations.length === 0 && (
+            <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
+              Try your AI
+            </Link>
+          )}
         </div>
       </div>
     </>

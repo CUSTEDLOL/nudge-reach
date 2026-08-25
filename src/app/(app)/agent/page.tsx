@@ -82,12 +82,17 @@ export default async function AgentPage({
         title="AI Agent"
         description="Your AI employee — what it knows, the questions it's waiting on, and how it behaves on WhatsApp."
         actions={
-          <Link
-            href="/agent/questionnaire"
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            Teach it with the questionnaire
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/agent/questionnaire"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              Teach it with the questionnaire
+            </Link>
+            <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
+              Try it in chat
+            </Link>
+          </div>
         }
       />
 

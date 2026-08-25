@@ -87,10 +87,10 @@ describe("buildChecklist", () => {
     whatsappConnected: false,
     simulationMode: false,
     contactCount: 0,
-    templateCount: 0,
     activeCampaignCount: 0,
     enabledAutomationCount: 0,
     knowledgeFactCount: 0,
+    conversationCount: 0,
   };
 
   it("everything pending on a fresh live-mode org", () => {
@@ -104,6 +104,17 @@ describe("buildChecklist", () => {
   it("simulation mode counts as WhatsApp connected (AGENTS.md rule 5)", () => {
     const checklist = buildChecklist({ ...empty, simulationMode: true });
     expect(checklist.items.find((i) => i.key === "whatsapp")?.done).toBe(true);
+  });
+
+  it("leads with the AI, not broadcasting", () => {
+    const keys = buildChecklist(empty).items.map((i) => i.key);
+    expect(keys.slice(0, 2)).toEqual(["knowledge", "tryit"]);
+    expect(keys[keys.length - 1]).toBe("campaign");
+  });
+
+  it("the tester's conversation completes the try-it step", () => {
+    const checklist = buildChecklist({ ...empty, conversationCount: 1 });
+    expect(checklist.items.find((i) => i.key === "tryit")?.done).toBe(true);
   });
 
   it("a real WhatsappAccount counts as connected in live mode", () => {
@@ -123,10 +134,10 @@ describe("buildChecklist", () => {
       whatsappConnected: true,
       simulationMode: false,
       contactCount: 40,
-      templateCount: 2,
       activeCampaignCount: 1,
       enabledAutomationCount: 1,
       knowledgeFactCount: 8,
+      conversationCount: 3,
     });
     expect(checklist.completed).toBe(5);
     expect(checklist.allDone).toBe(true);

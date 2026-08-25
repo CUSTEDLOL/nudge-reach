@@ -7,9 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
 /**
- * Go-live checklist (spec phase 5): computed server-side from real state so
- * the owner always knows exactly what stands between simulation and the first
- * real WhatsApp message. Rendered on Settings → WhatsApp.
+ * What stands between this workspace and real customers — computed from real
+ * state, phrased for the business owner (platform env vars are not their job).
  */
 
 interface ChecklistItem {
@@ -21,74 +20,58 @@ interface ChecklistItem {
 }
 
 export async function GoLiveChecklist({ orgId }: { orgId: string }) {
-  const [account, approvedTemplates, contacts] = await Promise.all([
-    prisma.whatsappAccount.findUnique({ where: { orgId } }),
-    prisma.template.count({
-      where: { orgId, campaignId: null, metaStatus: "APPROVED" },
-    }),
-    prisma.contact.findMany({
-      where: { orgId },
-      select: { optedIn: true, optedOutAt: true },
-    }),
-  ]);
+  const [account, approvedTemplates, knowledgeFacts, contacts] =
+    await Promise.all([
+      prisma.whatsappAccount.findUnique({ where: { orgId } }),
+      prisma.template.count({
+        where: { orgId, campaignId: null, metaStatus: "APPROVED" },
+      }),
+      prisma.knowledgeEntry.count({ where: { orgId, status: "active" } }),
+      prisma.contact.findMany({
+        where: { orgId },
+        select: { optedIn: true, optedOutAt: true },
+      }),
+    ]);
   const optedIn = contacts.filter(canSendMarketing).length;
-
-  const live = env.SEND_MODE === "live";
-  const webhookEnvReady = Boolean(
-    env.WHATSAPP_WEBHOOK_VERIFY_TOKEN && env.META_APP_SECRET
-  );
-  const encryptionReady = Boolean(env.TOKEN_ENCRYPTION_KEY);
+  const simulation = env.SEND_MODE === "simulation";
 
   const items: ChecklistItem[] = [
+    {
+      done: knowledgeFacts > 0,
+      title: "Teach the AI your business",
+      hint:
+        knowledgeFacts > 0
+          ? `${knowledgeFacts} fact${knowledgeFacts === 1 ? "" : "s"} in its memory — it answers from these, nothing else.`
+          : "Run the questionnaire or import your website so it answers like your best staff.",
+      href: "/agent/questionnaire",
+      linkLabel: "Teach it",
+    },
     {
       done: Boolean(account),
       title: "Connect your WhatsApp number",
       hint: account
-        ? `Connected as “${account.displayName}” — the token is stored encrypted.`
-        : "Paste WABA ID, phone number ID, display name and access token from Meta's dashboard into the form above.",
-    },
-    {
-      done: webhookEnvReady,
-      title: "Set the webhook secrets",
-      hint: webhookEnvReady
-        ? "WHATSAPP_WEBHOOK_VERIFY_TOKEN and META_APP_SECRET are set — Meta's events can be verified."
-        : "Set WHATSAPP_WEBHOOK_VERIFY_TOKEN (any random string) and META_APP_SECRET (App Settings → Basic) in your deployment env, then point Meta's webhook at your /api/webhooks/whatsapp URL.",
-      href: "/integrations",
-      linkLabel: "Webhook URL & test",
-    },
-    {
-      done: encryptionReady,
-      title: "Set the token encryption key",
-      hint: encryptionReady
-        ? "TOKEN_ENCRYPTION_KEY is set — access tokens are encrypted at rest."
-        : "Set TOKEN_ENCRYPTION_KEY (32+ random chars, e.g. `openssl rand -hex 32`) in your deployment env.",
-    },
-    {
-      done: approvedTemplates > 0,
-      title: "Get a template approved",
-      hint:
-        approvedTemplates > 0
-          ? `${approvedTemplates} approved template${approvedTemplates === 1 ? "" : "s"} ready — campaigns and out-of-window replies can send.`
-          : "Marketing messages need a Meta-approved template. Create one in the library and submit it for review.",
-      href: "/templates",
-      linkLabel: "Template library",
+        ? `Connected as “${account.displayName}”.`
+        : "We do this with you on the setup call — nothing to paste.",
     },
     {
       done: optedIn > 0,
-      title: "Have opted-in contacts",
+      title: "Bring in opted-in customers",
       hint:
         optedIn > 0
-          ? `${optedIn.toLocaleString("en-IN")} contact${optedIn === 1 ? "" : "s"} opted in to marketing.`
-          : "Import or add contacts with explicit WhatsApp opt-in — campaigns only ever send to opted-in people.",
+          ? `${optedIn.toLocaleString("en-IN")} customer${optedIn === 1 ? "" : "s"} said yes to WhatsApp.`
+          : "Import the customers who agreed to hear from you — follow-ups and offers only ever go to them.",
       href: "/contacts",
       linkLabel: "Contacts",
     },
     {
-      done: live,
-      title: "Flip SEND_MODE to live",
-      hint: live
-        ? "Live mode is on — sends go over the real Cloud API."
-        : "The final switch: set SEND_MODE=live in your deployment env and redeploy. The app refuses to boot in live mode with missing credentials, so a misconfiguration can't half-send.",
+      done: approvedTemplates > 0,
+      title: "Get your first template approved",
+      hint:
+        approvedTemplates > 0
+          ? `${approvedTemplates} approved template${approvedTemplates === 1 ? "" : "s"} — reminders and follow-ups can go out.`
+          : "Reminders, follow-ups and offers go out as Meta-approved templates. We submit the first set for you.",
+      href: "/templates",
+      linkLabel: "Templates",
     },
   ];
 
@@ -97,16 +80,15 @@ export async function GoLiveChecklist({ orgId }: { orgId: string }) {
   return (
     <Card className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-neutral-900">
-          Go-live checklist
-        </h2>
+        <h2 className="text-sm font-semibold text-neutral-900">Going live</h2>
         <Badge tone={doneCount === items.length ? "success" : "brand"}>
           {doneCount} of {items.length}
         </Badge>
       </div>
       <p className="mt-1 text-sm text-neutral-500">
-        Everything between simulation and your first real WhatsApp message.
-        Full runbook: <span className="font-mono text-xs">docs/GO_LIVE_WHATSAPP.md</span>
+        {simulation
+          ? "Everything runs in test mode for now. Here's what stands between you and real customers."
+          : "What stands between you and real customers."}
       </p>
       <ol className="mt-4 flex flex-col gap-3">
         {items.map((item) => (

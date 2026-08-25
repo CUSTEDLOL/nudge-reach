@@ -63,7 +63,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     automationCount,
     enabledAutomationCount,
     whatsappAccountCount,
-    templateCount,
+    conversationCount,
     knowledgeFactCount,
     conversations,
     campaigns,
@@ -91,11 +91,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     prisma.automation.count({ where: { orgId } }),
     prisma.automation.count({ where: { orgId, enabled: true } }),
     prisma.whatsappAccount.count({ where: { orgId } }),
-    // Library templates (orgId set) or campaign-generated ones — either
-    // counts as "created a template" for the checklist.
-    prisma.template.count({
-      where: { OR: [{ orgId }, { campaign: { orgId } }] },
-    }),
+    prisma.conversation.count({ where: { orgId } }),
     prisma.knowledgeEntry.count({ where: { orgId, status: "active" } }),
     prisma.conversation.findMany({
       where: { orgId },
@@ -148,10 +144,10 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
       whatsappConnected: whatsappAccountCount > 0,
       simulationMode,
       contactCount,
-      templateCount,
       activeCampaignCount: campaignsSentCount,
       enabledAutomationCount,
       knowledgeFactCount,
+      conversationCount,
     }),
     simulationMode,
     recentConversations: conversations.map((c) => ({

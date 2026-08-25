@@ -23,6 +23,8 @@ import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 export interface ActionResult {
   ok: boolean;
   message: string;
+  /** Set by the simulation tester so the caller can open the thread. */
+  conversationId?: string;
 }
 
 export interface SuggestActionResult extends ActionResult {
@@ -465,8 +467,9 @@ export async function simulateInboundAction(
 
     revalidateInbox(result.conversationId);
 
+    const conversationId = result.conversationId;
     if (result.optedOut) {
-      return { ok: true, message: "Customer opted out (STOP) — no reply sent." };
+      return { ok: true, message: "Customer opted out (STOP) — no reply sent.", conversationId };
     }
     if (result.skipped) {
       return {
@@ -475,12 +478,13 @@ export async function simulateInboundAction(
           result.skipped === "disabled"
             ? "Message received. The AI agent is off, so no auto-reply was sent."
             : "Message received. No AI agent is configured, so no auto-reply was sent.",
+        conversationId,
       };
     }
     if (result.handoff) {
-      return { ok: true, message: "Message received — the agent handed off to a human." };
+      return { ok: true, message: "Message received — the agent handed off to a human.", conversationId };
     }
-    return { ok: true, message: "Message received — the agent replied." };
+    return { ok: true, message: "Message received — the agent replied.", conversationId };
   } catch {
     return { ok: false, message: "The simulated message failed — try again." };
   }

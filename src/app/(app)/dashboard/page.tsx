@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   ArrowRight,
   BookOpen,
+  Bot,
   Check,
   HelpCircle,
   Megaphone,
@@ -75,9 +76,9 @@ export default async function DashboardPage() {
           title={`${greetingForHour(hourInTimezone(org.timezone))}, ${firstName}`}
           description={`${today}. Here's how ${org.name} is doing.`}
           actions={
-            <Link href="/campaigns/new" className={buttonVariants()}>
-              <Megaphone className="h-4 w-4" aria-hidden />
-              New broadcast
+            <Link href="/inbox/try" className={buttonVariants()}>
+              <Bot className="h-4 w-4" aria-hidden />
+              Try your AI
             </Link>
           }
         />
@@ -304,7 +305,7 @@ function ChecklistCard({
         <div>
           <CardTitle>Finish setting up {orgName}</CardTitle>
           <CardDescription className="mt-0.5">
-            {`${checklist.completed} of ${checklist.total} steps done. You're close to your first campaign.`}
+            {`${checklist.completed} of ${checklist.total} steps done. Your AI Front Desk is almost on shift.`}
           </CardDescription>
         </div>
         <div className="flex w-44 items-center gap-2">
@@ -409,17 +410,17 @@ function RecentConversationsCard({
             No conversations yet
           </p>
           <p className="max-w-xs text-sm text-neutral-500">
-            When customers reply to your campaigns, their chats land here.
+            When customers message your WhatsApp, your AI answers here.
           </p>
           <Link
-            href="/inbox"
+            href="/inbox/try"
             className={buttonVariants({
               variant: "secondary",
               size: "sm",
               className: "mt-1",
             })}
           >
-            Open inbox
+            Try your AI
           </Link>
         </div>
       ) : (
@@ -472,28 +473,28 @@ const QUICK_ACTIONS: {
   icon: LucideIcon;
 }[] = [
   {
-    label: "New broadcast",
-    description: "Message an audience",
-    href: "/campaigns/new",
-    icon: Megaphone,
-  },
-  {
-    label: "Add contact",
-    description: "Save an opted-in customer",
-    href: "/contacts?new=1",
-    icon: UserPlus,
-  },
-  {
     label: "Train your AI",
     description: "Teach it a new answer",
     href: "/agent",
     icon: BookOpen,
   },
   {
+    label: "Try your AI",
+    description: "Message it as a customer",
+    href: "/inbox/try",
+    icon: Bot,
+  },
+  {
     label: "Connect WhatsApp",
     description: "Link your business number",
     href: "/settings/whatsapp",
     icon: Plug,
+  },
+  {
+    label: "Add contact",
+    description: "Save an opted-in customer",
+    href: "/contacts?new=1",
+    icon: UserPlus,
   },
 ];
 

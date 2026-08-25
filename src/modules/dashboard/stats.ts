@@ -78,23 +78,23 @@ export interface ChecklistInput {
   /** SEND_MODE=simulation counts as connected (AGENTS.md rule 5). */
   simulationMode: boolean;
   contactCount: number;
-  /** Templates belonging to the org (library or campaign-generated). */
-  templateCount: number;
   /** Campaigns that are SENT or SENDING. */
   activeCampaignCount: number;
   enabledAutomationCount: number;
   /** Active KnowledgeEntry rows — the AI's structured brain. */
   knowledgeFactCount: number;
+  /** Any conversation at all — the "try your AI" tester creates one too. */
+  conversationCount: number;
 }
 
 export interface ChecklistItem {
   key:
+    | "knowledge"
+    | "tryit"
     | "whatsapp"
     | "contacts"
-    | "template"
     | "campaign"
-    | "automation"
-    | "knowledge";
+    | "automation";
   title: string;
   description: string;
   href: string;
@@ -108,59 +108,60 @@ export interface Checklist {
   allDone: boolean;
 }
 
-/** Onboarding checklist, computed from real org data (spec §M1). */
+/** Onboarding checklist, computed from real org data — AI employee first,
+ * broadcasting last (it is a feature inside the Front Desk, not the headline). */
 export function buildChecklist(input: ChecklistInput): Checklist {
   const items: ChecklistItem[] = [
+    {
+      key: "knowledge",
+      title: "Teach your AI the business",
+      description:
+        input.knowledgeFactCount > 0
+          ? "It answers from your own facts — nothing else."
+          : "Run the questionnaire so it answers like your best staff.",
+      href: "/agent/questionnaire",
+      done: input.knowledgeFactCount > 0,
+    },
+    {
+      key: "tryit",
+      title: "Try your AI",
+      description:
+        input.conversationCount > 0
+          ? "You've watched it answer."
+          : "Message it as a customer and watch it reply.",
+      href: "/inbox/try",
+      done: input.conversationCount > 0,
+    },
     {
       key: "whatsapp",
       title: "Connect WhatsApp",
       description: input.whatsappConnected
         ? "Your business number is linked."
         : input.simulationMode
-          ? "Simulation mode is on. Sends are safely mocked."
+          ? "Test mode until your number is live — we set it up with you."
           : "Link your WhatsApp Business number.",
       href: "/settings/whatsapp",
       done: input.whatsappConnected || input.simulationMode,
     },
     {
       key: "contacts",
-      title: "Import contacts",
+      title: "Bring in opted-in customers",
       description:
         input.contactCount > CHECKLIST_CONTACT_TARGET
           ? "Your opted-in customer list is in."
-          : `Add ${CHECKLIST_CONTACT_TARGET + 1}+ opted-in customers to message.`,
+          : `Add ${CHECKLIST_CONTACT_TARGET + 1}+ customers who said yes to WhatsApp.`,
       href: "/contacts",
       done: input.contactCount > CHECKLIST_CONTACT_TARGET,
     },
     {
-      key: "template",
-      title: "Create a template",
-      description:
-        input.templateCount > 0
-          ? "You have a reusable message template."
-          : "Draft a reusable, Meta-compliant message.",
-      href: "/templates",
-      done: input.templateCount > 0,
-    },
-    {
       key: "campaign",
-      title: "Send a campaign",
+      title: "Send your first campaign",
       description:
         input.activeCampaignCount > 0
           ? "Your first broadcast is out."
-          : "Broadcast your first offer to an audience.",
+          : "Offers and reminders, only to your opted-in list.",
       href: "/campaigns/new",
       done: input.activeCampaignCount > 0,
-    },
-    {
-      key: "knowledge",
-      title: "Teach your AI the business",
-      description:
-        input.knowledgeFactCount > 0
-          ? "Your AI has structured knowledge to answer from."
-          : "Run the questionnaire so the AI answers like staff.",
-      href: "/agent/questionnaire",
-      done: input.knowledgeFactCount > 0,
     },
   ];
 

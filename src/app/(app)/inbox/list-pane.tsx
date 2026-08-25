@@ -154,6 +154,14 @@ function ConversationItems({
               ? "New customer messages land here automatically."
               : "Nothing matches this filter yet."}
         </p>
+        {!q.trim() && filter === "open" && (
+          <Link
+            href="/inbox/try"
+            className="mt-1 text-xs font-semibold text-brand-700 underline-offset-2 hover:underline"
+          >
+            Try your AI as a customer →
+          </Link>
+        )}
       </div>
     );
   }

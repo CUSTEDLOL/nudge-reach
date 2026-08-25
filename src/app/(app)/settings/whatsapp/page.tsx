@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
-import { FlaskConical } from "lucide-react";
+import {
+  CalendarCheck,
+  PhoneCall,
+  ShieldCheck,
+  Smartphone,
+} from "lucide-react";
 import { requireOrg } from "@/modules/orgs/auth";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
 import { env } from "@/lib/env";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,32 +23,39 @@ import { GoLiveChecklist } from "./go-live-checklist";
 
 export const metadata: Metadata = { title: "WhatsApp settings" };
 
+const SETUP_CALL_URL = "https://cal.com/hqnudge/30min";
+
+const SETUP_NEEDS = [
+  {
+    icon: Smartphone,
+    title: "A number for your business",
+    body: "A fresh SIM or landline that isn't already on the WhatsApp app — or we migrate your existing one.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Your Facebook / Meta login",
+    body: "We create the WhatsApp Business Account under your name. You own it, always.",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Your Google Calendar",
+    body: "Optional — one click lets the AI book real appointments.",
+  },
+];
+
 export default async function WhatsappSettingsPage() {
   const org = await requireOrg();
   const account = await getWhatsappAccount(org.id);
+  const simulation = env.SEND_MODE === "simulation";
 
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader
-        title="WhatsApp connection"
-        description="Connect your WhatsApp Business account — or keep everything mocked in simulation."
+        title="WhatsApp number"
+        description="Your AI Front Desk answers from your own WhatsApp Business number. We connect it with you."
       />
 
-      {env.SEND_MODE === "simulation" && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm text-sky-800">
-          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <div>
-            <p className="font-semibold">You&apos;re in simulation mode</p>
-            <p className="mt-0.5">
-              Everything works without a WhatsApp account — sends and template
-              approvals are mocked. Connect a real account here whenever
-              you&apos;re ready to go live.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {account && (
+      {account ? (
         <Card className="p-5">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="success">Connected</Badge>
@@ -53,38 +66,82 @@ export default async function WhatsappSettingsPage() {
           <p className="mt-2 font-mono text-xs text-neutral-500">
             WABA {account.wabaId} · Phone {account.phoneNumberId}
           </p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Access token is stored encrypted. Submitting the form below
-            replaces this connection.
+        </Card>
+      ) : (
+        <Card className="p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={simulation ? "info" : "warning"}>
+              {simulation ? "Test mode" : "Not connected yet"}
+            </Badge>
+            <p className="text-sm font-semibold text-neutral-900">
+              {simulation
+                ? "Your AI runs in test mode until your number is connected"
+                : "No number connected yet"}
+            </p>
+          </div>
+          <p className="mt-2 text-sm text-neutral-500">
+            Try the AI, teach it your business and import contacts now —
+            nothing reaches real customers until your number is live.
           </p>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {account ? "Replace connection" : "Connect manually"}
-          </CardTitle>
+          <CardTitle>We connect your number for you</CardTitle>
           <CardDescription>
-            From your{" "}
-            <a
-              href="https://developers.facebook.com"
-              className="font-medium text-brand-700 underline-offset-2 hover:underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Meta developer app
-            </a>
-            : WhatsApp → API Setup. Embedded Signup comes later — manual works
-            for testing with Meta&apos;s test number.
+            One 30-minute setup call. Have these ready and you&apos;re live the
+            same day.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ConnectForm />
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {SETUP_NEEDS.map((item) => (
+              <li
+                key={item.title}
+                className="rounded-xl border border-neutral-200 p-4"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                  <item.icon className="h-4 w-4" aria-hidden />
+                </span>
+                <p className="mt-2 text-sm font-medium text-neutral-900">
+                  {item.title}
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+                  {item.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+          <a
+            href={SETUP_CALL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ className: "mt-5" })}
+          >
+            <PhoneCall className="h-4 w-4" aria-hidden />
+            Book your setup call
+          </a>
         </CardContent>
       </Card>
 
       <GoLiveChecklist orgId={org.id} />
+
+      <details className="rounded-2xl border border-neutral-200 bg-white">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-neutral-700">
+          Advanced: connect manually
+          <span className="ml-2 font-normal text-neutral-400">
+            for teams with their own Meta developer app
+          </span>
+        </summary>
+        <div className="border-t border-neutral-100 px-5 py-5">
+          <p className="mb-4 text-sm text-neutral-500">
+            From your Meta developer app: WhatsApp → API Setup.
+            {account && " Saving here replaces the current connection."}
+          </p>
+          <ConnectForm />
+        </div>
+      </details>
     </section>
   );
 }
