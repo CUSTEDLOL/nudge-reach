@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Check, MessageSquare, Wallet, Users } from "lucide-react";
 import { isSimulated } from "@/modules/orgs/mode";
+import { trialDaysLeft } from "@/modules/billing/trial";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { formatMoney, getMonthlyUsage } from "@/modules/billing";
 import { PLANS, getPlan, planPrice } from "@/modules/billing/plans";
@@ -26,6 +27,7 @@ export default async function BillingSettingsPage() {
   const usage = await getMonthlyUsage(org.id);
   const currentPlan = getPlan(org.plan);
   const simulation = isSimulated(org);
+  const trialDays = trialDaysLeft(org.trialEndsAt);
   const currency = orgCurrency(org);
   const gatewayName = currency === "INR" ? "Razorpay" : "Stripe";
   const paymentsOn =
@@ -47,13 +49,19 @@ export default async function BillingSettingsPage() {
               </p>
               {org.subscriptionStatus === "active" ? (
                 <Badge tone="success">Active</Badge>
+              ) : trialDays !== null ? (
+                <Badge tone="brand">
+                  Trial · {trialDays} day{trialDays === 1 ? "" : "s"} left
+                </Badge>
               ) : (
                 <Badge tone="neutral">Free</Badge>
               )}
-              {simulation && <Badge tone="info">Simulation</Badge>}
+              {simulation && <Badge tone="info">Test mode</Badge>}
             </div>
             <p className="mt-1 text-sm text-neutral-500">
-              {currentPlan.tagline}
+              {trialDays !== null && org.subscriptionStatus !== "active"
+                ? `Everything in the AI Front Desk — calendar booking, follow-ups, agent actions — free for ${trialDays} more day${trialDays === 1 ? "" : "s"}. Pick a plan below to keep it.`
+                : currentPlan.tagline}
               {org.currentPeriodEnd && org.subscriptionStatus === "active"
                 ? ` Renews ${new Intl.DateTimeFormat("en-IN", {
                     day: "numeric",
@@ -85,7 +93,7 @@ export default async function BillingSettingsPage() {
             label="Message cost"
             value={formatMoney(usage.costMinorUnits, usage.currency)}
             icon={<Wallet className="h-4 w-4" aria-hidden />}
-            hint={simulation ? "estimated (simulation)" : "billed by Meta"}
+            hint={simulation ? "estimated (test mode)" : "billed by Meta"}
           />
           <StatCard
             label="Contacts"

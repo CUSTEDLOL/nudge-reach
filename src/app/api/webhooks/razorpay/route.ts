@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       where: { id: orgId },
       data: {
         plan: plan.id,
+        trialEndsAt: null,
         subscriptionStatus: "active",
         currentPeriodEnd: periodEnd,
       },

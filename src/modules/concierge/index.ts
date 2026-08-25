@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { orgSendMode } from "@/modules/orgs/mode";
+import { submitRowToMeta } from "@/modules/whatsapp/library";
 import { buildTemplatePayload } from "@/modules/whatsapp/template";
 import type { CampaignContent } from "@/modules/campaign/schema";
 
@@ -126,12 +127,22 @@ export async function installVerticalPack(
     const existing = await prisma.template.findFirst({
       where: { orgId, name: t.name, campaignId: null },
     });
-    if (existing) {
-      await prisma.template.update({ where: { id: existing.id }, data });
-    } else {
-      await prisma.template.create({
-        data: { orgId, campaignId: null, name: t.name, ...data },
-      });
+    const row = existing
+      ? await prisma.template.update({ where: { id: existing.id }, data })
+      : await prisma.template.create({
+          data: { orgId, campaignId: null, name: t.name, ...data },
+        });
+    if (!approve && row.metaStatus !== "APPROVED") {
+      await submitRowToMeta(orgId, row).catch((err: unknown) =>
+        prisma.template.update({
+          where: { id: row.id },
+          data: {
+            metaStatus: "REJECTED",
+            rejectionReason:
+              err instanceof Error ? err.message : "Couldn't submit to Meta.",
+          },
+        })
+      );
     }
   }
   return pack.length;

@@ -59,7 +59,7 @@ export function CalendarCard({
                 ? `The AI agent books real appointments${
                     email ? ` into ${email}` : ""
                   }${
-                    simulated ? " (simulation — mocked calendar)" : ""
+                    simulated ? " (test calendar)" : ""
                   }, checks availability, and offers open slots.`
                 : "Let the AI agent book straight into your calendar — check availability, create the event, send the confirmation. The moat Meta's free agent can't cross."}
             </p>

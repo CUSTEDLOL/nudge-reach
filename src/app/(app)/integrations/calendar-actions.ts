@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
-import { isSimulated } from "@/modules/orgs/mode";
+import { env } from "@/lib/env";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAiFrontDesk } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
@@ -32,7 +32,7 @@ export async function connectCalendarAction(): Promise<ActionResult> {
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
 
-    if (isSimulated(ctx.org)) {
+    if (env.SEND_MODE === "simulation" || !isGoogleCalendarConfigured()) {
       await saveCalendarAccount({
         orgId: ctx.org.id,
         accountEmail: "demo-calendar@nudge.local",
@@ -44,17 +44,10 @@ export async function connectCalendarAction(): Promise<ActionResult> {
       return {
         ok: true,
         message:
-          'Test mode: calendar "connected" — bookings, reminders and follow-ups are mocked. No Google app needed.',
+          "Test calendar connected — bookings, reminders and follow-ups flow end to end. Real Google Calendar sync switches on the moment it's enabled for your workspace.",
       };
     }
 
-    if (!isGoogleCalendarConfigured()) {
-      return {
-        ok: false,
-        message:
-          "Google Calendar isn't configured yet — add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.",
-      };
-    }
     // CSRF: an unguessable per-session nonce in `state`, checked in the callback.
     const nonce = randomBytes(16).toString("hex");
     (await cookies()).set("gcal_oauth_state", nonce, {

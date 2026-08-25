@@ -39,6 +39,9 @@ model Org {
   // until a real WhatsApp number is connected. SEND_MODE=simulation still
   // mocks everything globally (invariant #4); this only matters in live.
   simulated   Boolean    @default(true)
+  // AI Front Desk trial for self-serve signups; cleared when a subscription
+  // activates, expired to Free by the cron tick.
+  trialEndsAt DateTime?
   // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
   settings    Json       @default("{}")
   // Globalization (spec: global outreach). Defaults preserve the original

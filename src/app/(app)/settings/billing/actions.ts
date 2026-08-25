@@ -161,6 +161,7 @@ export async function confirmCheckoutAction(
       where: { id: ctx.org.id },
       data: {
         plan: plan.id,
+        trialEndsAt: null,
         subscriptionStatus: "active",
         currentPeriodEnd: periodEnd,
       },

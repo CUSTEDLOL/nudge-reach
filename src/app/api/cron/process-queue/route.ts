@@ -10,6 +10,7 @@ import {
 import { tickAutomationRuns } from "@/modules/automation/engine";
 import { tickBookingReminders } from "@/modules/followup/reminders";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
+import { expireTrials } from "@/modules/billing/trial";
 
 /**
  * Queue tick: releases due SCHEDULED campaigns, resumes WAITING automation
@@ -47,6 +48,9 @@ export async function GET(request: Request) {
   //     collect-a-deposit story demos end-to-end with zero keys.
   const paymentsPaid = await applySimulatedPaymentProgress();
 
+  // 2d. AI Front Desk trials that ended fall back to Free.
+  const expiredTrials = await expireTrials();
+
   // 3. Advance every SENDING campaign (including freshly released ones).
   const sending = await prisma.campaign.findMany({
     where: { status: "SENDING" },
@@ -63,6 +67,7 @@ export async function GET(request: Request) {
     resumedRuns,
     followUps,
     paymentsPaid,
+    expiredTrials,
     campaigns: sending.length,
     processed,
   });

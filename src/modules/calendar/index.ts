@@ -1,4 +1,4 @@
-import { orgSendMode, type SendMode } from "@/modules/orgs/mode";
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { CalendarSimulationDriver } from "@/modules/calendar/drivers/calendar-simulation";
@@ -24,10 +24,12 @@ export {
 } from "@/modules/calendar/accounts";
 export { isGoogleCalendarConfigured } from "@/modules/calendar/google";
 
-/** Real Google only when the org is live AND Google is configured AND the
- * connection itself isn't a mocked one. */
-function shouldUseGoogle(mode: SendMode, simulated: boolean): boolean {
-  return mode === "live" && isGoogleCalendarConfigured() && !simulated;
+/** Real Google whenever the deployment is live with keys and the connection
+ * itself isn't a mocked one. Deliberately independent of the org's WhatsApp
+ * test mode: a self-serve owner connects their real calendar first and sees
+ * "Try your AI" bookings land in it before their number is live. */
+function shouldUseGoogle(simulated: boolean): boolean {
+  return env.SEND_MODE === "live" && isGoogleCalendarConfigured() && !simulated;
 }
 
 export async function isCalendarConnected(orgId: string): Promise<boolean> {
@@ -66,7 +68,7 @@ export async function bookAppointment(
     end: parsed.end.toISOString(),
   };
 
-  const real = shouldUseGoogle(await orgSendMode(orgId), account.simulated);
+  const real = shouldUseGoogle(account.simulated);
   const driver: CalendarDriver = real
     ? new GoogleCalendarDriver()
     : new CalendarSimulationDriver();

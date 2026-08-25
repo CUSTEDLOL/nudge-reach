@@ -46,6 +46,22 @@ email, headless walk of onboarding → every page) and the fixes it demanded.
   "Try your AI" message gets an answer instead of silence (found live: the
   audit org had no profile, so the tester created a thread with no reply).
   Owner-off stays respected; a skipped reply is explained in a toast.
+- **Self-serve everything except the WhatsApp connection:**
+  - **Real template submission** (`modules/whatsapp/meta-templates`): library
+    templates, the Revenue-Recovery pack and the concierge vertical packs are
+    submitted to Meta on the org's own WABA in live mode (the old
+    "ships with WABA onboarding" stub is gone); status syncs via poll +
+    webhook; a refusal lands on the row as REJECTED with Meta's reason.
+    Image-header library templates still need a text header in live.
+  - **14-day AI Front Desk trial** for every new workspace (`Org.trialEndsAt`,
+    `modules/billing/trial`): calendar booking, follow-ups and agent actions
+    are reachable self-serve before a subscription exists; the cron tick drops
+    expired trials to Free; a paid activation clears the trial. Billing page
+    shows days left.
+  - **Calendar independent of WhatsApp test mode**: with `GOOGLE_*` keys in a
+    live deployment, every org connects its real Google Calendar (one click,
+    Google consent) even before its number is live; without keys a test
+    calendar is connected with owner-facing copy (no env-var names).
 - Demo CTAs: the hover launch scene is gone; `LaunchDemoButton` is a plain
   Cal.com trigger.
 - Tests: `tests/org-mode*.test.ts`, dashboard checklist tests updated.
@@ -63,6 +79,11 @@ email, headless walk of onboarding → every page) and the fixes it demanded.
   Reset password: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset`.
 - Flip prod `SEND_MODE` to `live` when the first client connects (safe now —
   every other org stays in test mode).
+- Real calendar booking needs a Google OAuth client: Google Cloud → OAuth
+  consent (External, test users) → Web client with redirect
+  `https://nudgeagent.app/api/integrations/google/callback` → set
+  `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` in
+  Vercel (custedlols-projects/nudge-reach).
 
 ## USDC payment rail + hosted pay page + guest demo sandbox (2026-08-14) ✅
 

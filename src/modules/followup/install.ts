@@ -1,13 +1,15 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { orgSendMode } from "@/modules/orgs/mode";
+import { submitRowToMeta } from "@/modules/whatsapp/library";
 import { buildTemplatePayload } from "@/modules/whatsapp/template";
 import { PACK_TEMPLATES, leadNudgeAutomation } from "@/modules/followup/pack";
 
 const LEAD_NUDGE_NAME = "Revenue Recovery — quiet-lead nudge";
 
-/** Create/refresh the pack's library templates. Simulation approves them
- *  immediately (so the demo works); live submits them for real Meta review. */
+/** Create/refresh the pack's library templates. Test mode approves them
+ *  immediately (so the demo works); live submits each to Meta for review and
+ *  records a refusal on the row so the owner can fix and resubmit. */
 async function ensurePackTemplates(orgId: string): Promise<Map<string, string>> {
   const byName = new Map<string, string>();
   const approve = (await orgSendMode(orgId)) !== "live";
@@ -31,6 +33,18 @@ async function ensurePackTemplates(orgId: string): Promise<Map<string, string>> 
       : await prisma.template.create({
           data: { orgId, campaignId: null, name: t.name, ...data },
         });
+    if (!approve && row.metaStatus !== "APPROVED") {
+      await submitRowToMeta(orgId, row).catch((err: unknown) =>
+        prisma.template.update({
+          where: { id: row.id },
+          data: {
+            metaStatus: "REJECTED",
+            rejectionReason:
+              err instanceof Error ? err.message : "Couldn't submit to Meta.",
+          },
+        })
+      );
+    }
     byName.set(t.name, row.id);
   }
   return byName;

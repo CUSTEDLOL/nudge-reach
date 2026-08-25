@@ -1,4 +1,5 @@
 import { Membership, Org, Prisma } from "@prisma/client";
+import { TRIAL_PLAN, trialEndDate } from "@/modules/billing/trial";
 import { prisma } from "@/lib/db";
 
 /**
@@ -97,6 +98,8 @@ export async function resolveOrgContext(
       data: {
         ownerUserId: userId,
         name,
+        plan: TRIAL_PLAN,
+        trialEndsAt: trialEndDate(),
         memberships: {
           create: {
             userId,

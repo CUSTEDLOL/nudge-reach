@@ -2,6 +2,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { orgSendMode } from "@/modules/orgs/mode";
 import {
+  createMetaTemplate,
+  fetchMetaTemplateStatus,
+} from "@/modules/whatsapp/meta-templates";
+import {
   campaignContentSchema,
   type CampaignContent,
 } from "@/modules/campaign/schema";
@@ -26,10 +30,6 @@ const SIMULATED_REJECTION_REASON =
   'Rejected by Meta review (simulated): the template name contains "reject", ' +
   "which the demo treats as a rejection trigger. Rename the template and " +
   "resubmit to see the approval path.";
-
-const LIVE_SUBMISSION_STUB_MESSAGE =
-  "Live template submission ships with WABA onboarding. Switch to " +
-  "SEND_MODE=simulation to demo the review flow end to end.";
 
 // ---------------------------------------------------------------------------
 // Library content shape
@@ -245,10 +245,62 @@ export function buildLibraryComponents(
 // Mock review flow (library analog of lib/whatsapp/approval.ts)
 // ---------------------------------------------------------------------------
 
+type TemplateRow = NonNullable<
+  Awaited<ReturnType<typeof prisma.template.findFirst>>
+>;
+
+/** Map Meta's review status onto the row; unknown statuses stay PENDING. */
+function statusUpdate(status: string, reason?: string) {
+  if (status === "APPROVED") {
+    return { metaStatus: "APPROVED" as const, rejectionReason: null };
+  }
+  if (status === "REJECTED") {
+    return {
+      metaStatus: "REJECTED" as const,
+      rejectionReason: reason ?? "Rejected by Meta",
+    };
+  }
+  return { metaStatus: "PENDING" as const, rejectionReason: null };
+}
+
 /**
- * Submit a library template for Meta review. Simulation marks it PENDING and
- * the poll (`refreshLibraryTemplateStatus`) settles it after the mock review
- * window. Live mode is a friendly stub until WABA onboarding lands.
+ * Live mode: push a library row to Meta for review on the org's own WABA.
+ * A name Meta already knows is adopted at its current status rather than
+ * failing. Throws with Meta's reason when the submission itself is refused.
+ */
+export async function submitRowToMeta(orgId: string, row: TemplateRow) {
+  const result = await createMetaTemplate(orgId, {
+    name: row.name,
+    language: row.language,
+    category: row.category,
+    components: row.componentsJson,
+  });
+  if (result.existing) {
+    const meta = await fetchMetaTemplateStatus(orgId, row.name);
+    return prisma.template.update({
+      where: { id: row.id },
+      data: {
+        ...statusUpdate(meta?.status ?? "PENDING", meta?.reason),
+        metaTemplateId: meta?.id ?? row.metaTemplateId,
+        submittedAt: new Date(),
+      },
+    });
+  }
+  return prisma.template.update({
+    where: { id: row.id },
+    data: {
+      metaStatus: "PENDING",
+      rejectionReason: null,
+      metaTemplateId: result.id ?? null,
+      submittedAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Submit a library template for review. Test mode marks it PENDING and the
+ * poll (`refreshLibraryTemplateStatus`) settles it after the mock review
+ * window; live mode submits to Meta on the org's WABA.
  */
 export async function submitLibraryTemplate(templateId: string, orgId: string) {
   const template = await prisma.template.findFirst({
@@ -260,7 +312,7 @@ export async function submitLibraryTemplate(templateId: string, orgId: string) {
     throw new Error("This template is already approved.");
   }
   if ((await orgSendMode(orgId)) === "live") {
-    throw new Error(LIVE_SUBMISSION_STUB_MESSAGE);
+    return submitRowToMeta(orgId, template);
   }
   return prisma.template.update({
     where: { id: template.id },
@@ -273,11 +325,10 @@ export async function submitLibraryTemplate(templateId: string, orgId: string) {
 }
 
 /**
- * Polling fallback (and the only mechanism in simulation): settle a PENDING
- * library template once the mock review window has elapsed. Approves by
- * default; rejects when the slug contains "reject" (documented demo
- * convention). Live mode is a no-op stub — statuses will arrive via the
- * template webhook once WABA onboarding ships.
+ * Polling fallback: in test mode, settle a PENDING library template once the
+ * mock review window has elapsed (approves by default; rejects when the slug
+ * contains "reject" — the documented demo convention). In live mode, ask Meta
+ * for the current status — the template webhook normally gets there first.
  */
 export async function refreshLibraryTemplateStatus(
   templateId: string,
@@ -288,7 +339,17 @@ export async function refreshLibraryTemplateStatus(
   });
   if (!template) return null;
   if (template.metaStatus !== "PENDING") return template;
-  if ((await orgSendMode(orgId)) === "live") return template;
+  if ((await orgSendMode(orgId)) === "live") {
+    const meta = await fetchMetaTemplateStatus(orgId, template.name);
+    if (!meta || meta.status === "PENDING") return template;
+    return prisma.template.update({
+      where: { id: template.id },
+      data: {
+        ...statusUpdate(meta.status, meta.reason),
+        metaTemplateId: meta.id ?? template.metaTemplateId,
+      },
+    });
+  }
 
   const ageSeconds = (Date.now() - template.submittedAt.getTime()) / 1000;
   if (ageSeconds < SIMULATED_REVIEW_SECONDS) return template;
