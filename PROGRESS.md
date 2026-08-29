@@ -5,6 +5,64 @@ what's next.
 
 ---
 
+## Pre-launch full-system sweep (2026-08-29) ✅
+
+Marketing spend starts; a friend's real business number goes live tonight.
+Everything below was exercised, not assumed.
+
+### Verified (local simulation + production)
+- All 28 authenticated routes render with zero console / HTTP / page errors.
+- Agent eval (`npm run eval:agent`, live Haiku): **100% — 70/70 runs clean**,
+  booking completion 10/10, 0 false hand-offs, 0 hallucinated prices.
+- Agent tools (booking row, lead → QUALIFIED, off-topic decline), the
+  learn-on-the-job loop (ask_owner → answer → distilled fact → automatic
+  follow-up → answered from memory), STOP opt-out, campaign template approval,
+  consent-gated send queue (9 queued / 1 skipped → delivered / read / clicked /
+  cost), campaign wizard → send, CSV import with consent, library template
+  create → submit → Approved (production), Revenue Recovery toggle, calendar
+  connect (test), API key create, Add contact, team invite, contacts export,
+  fiat + USDC payment links → hosted pay page + x402 402 response.
+- **Real Meta webhook path**: a signed inbound POST to `/api/webhooks/whatsapp`
+  routes by `phone_number_id` to the right org and the agent replies in ~2.5 s;
+  a tampered signature is rejected with 401.
+
+### Fixed
+- **Modals closed while typing** (`components/ui/overlay.ts`): the open effect
+  re-ran on every parent render and moved focus to the close button, so a space
+  closed the dialog. Hit Integrations → Create API key; would have hit any
+  controlled input inside a Modal.
+- **Cron cadence**: Vercel Hobby cron fires once a day, so T-2h reminders,
+  automation waits, scheduled campaigns and trial expiry could lag a full day.
+  `.github/workflows/cron-tick.yml` now ticks `/api/cron/process-queue` every
+  10 minutes (set the `CRON_SECRET` repo secret to match Vercel).
+- **Shared WABA template status**: numbers hosted under the platform WABA share
+  template objects; a Meta status webhook now updates every org on that WABA.
+
+### Known / by design
+- Five stale "Weekend Flash Sale" campaigns in old guest demo orgs sit in
+  SENDING with no template; the tick scans and skips them (harmless).
+- Per-client Meta apps (client's own app secret) are not supported by the
+  single `META_APP_SECRET` webhook check — first clients' numbers are hosted
+  under the platform's Business Manager / WABA (the path used tonight).
+
+### Founder — go-live tonight (hosted path, ~30 min)
+1. Permanent token: Meta Business Settings → System users → add "nudge-prod"
+   (admin) → assign the Nudge app + the WABA → generate token with
+   `whatsapp_business_messaging` + `whatsapp_business_management`.
+2. Add the friend's number to the Nudge WABA (WhatsApp Manager → Phone numbers
+   → Add; the number must not be on the WhatsApp app; OTP on their phone;
+   display name = their business). Note its Phone number ID.
+3. Vercel (custedlols-projects/nudge-reach): `SEND_MODE=live`, confirm
+   `WHATSAPP_ACCESS_TOKEN` (the new permanent token), `META_APP_SECRET`,
+   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `TOKEN_ENCRYPTION_KEY`, `CRON_SECRET`;
+   redeploy.
+4. In the friend's workspace: Settings → WhatsApp → Advanced → WABA
+   `3064885677036509`, their Phone number ID, the permanent token → Save.
+   The org leaves test mode automatically. Reconnect Spice Garden the same way
+   (its stored token expired).
+5. Message the number from a phone → reply lands in Inbox; then Automations →
+   Turn on Revenue Recovery (templates go to Meta for review).
+
 ## Launch-readiness pass — signup, AI-first onboarding, per-org test mode (2026-08-25) ✅
 
 Audit of the real lead path on production (real signup, real confirmation
