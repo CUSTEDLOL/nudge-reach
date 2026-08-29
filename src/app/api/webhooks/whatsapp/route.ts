@@ -181,16 +181,27 @@ async function processTemplateUpdate(
   wabaId: string | undefined
 ) {
   if (!value?.message_template_name || !value.event || !wabaId) return;
-  // Tenant isolation: template names are only unique per WABA, so resolve the
-  // org that owns this WABA and scope the lookup to it — a status event for one
-  // tenant must never flip another tenant's identically-named template.
-  const account = await prisma.whatsappAccount.findFirst({
+  // Tenant isolation: template names are only unique per WABA, so scope the
+  // lookup to the org(s) connected to this WABA — a status event for one WABA
+  // must never flip another tenant's identically-named template. Several orgs
+  // can share one WABA (numbers hosted under the platform's Business Manager),
+  // and a Meta template is one object per WABA, so all of them get the update.
+  const accounts = await prisma.whatsappAccount.findMany({
     where: { wabaId },
     select: { orgId: true },
   });
-  if (!account) return;
+  if (accounts.length === 0) return;
+  for (const account of accounts) {
+    await applyTemplateStatus(account.orgId, value);
+  }
+}
+
+async function applyTemplateStatus(
+  orgId: string,
+  value: { event?: string; message_template_name?: string; reason?: string }
+) {
   const template = await prisma.template.findFirst({
-    where: { name: value.message_template_name, orgId: account.orgId },
+    where: { name: value.message_template_name, orgId },
     orderBy: { submittedAt: "desc" },
   });
   if (!template) return;

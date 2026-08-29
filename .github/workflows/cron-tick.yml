@@ -1,0 +1,26 @@
+name: Cron tick (follow-ups, reminders, queues)
+
+# Vercel's Hobby cron fires once a day; reminders (T-24h / T-2h), automation
+# waits, scheduled campaigns and trial expiry need a tick every few minutes.
+# This calls the same idempotent endpoint. Set CRON_SECRET in the repo secrets
+# to match the Vercel env (the endpoint accepts unauthenticated ticks only when
+# no secret is configured).
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Tick /api/cron/process-queue
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://nudgeagent.app' }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then AUTH=(-H "Authorization: Bearer $CRON_SECRET"); else AUTH=(); fi
+          code=$(curl -sS -o /tmp/tick.json -w "%{http_code}" --max-time 120 "${AUTH[@]}" "$APP_URL/api/cron/process-queue")
+          echo "HTTP $code"; cat /tmp/tick.json; echo
+          [ "$code" = "200" ]
