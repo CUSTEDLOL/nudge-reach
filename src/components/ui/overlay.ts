@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore, type RefObject } from "react";
+import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
 const noopSubscribe = () => () => {};
 
@@ -25,6 +25,15 @@ export function useOverlay(
   onClose: () => void,
   panelRef: RefObject<HTMLDivElement | null>
 ) {
+  // Parents recreate `onClose` on every render (typing into a controlled
+  // input re-renders the modal's owner). The effect must only run when the
+  // overlay opens/closes — re-running it per keystroke moved focus to the
+  // panel's first focusable (the close button), so the next space closed it.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -37,7 +46,7 @@ export function useOverlay(
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -67,5 +76,5 @@ export function useOverlay(
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
-  }, [open, onClose, panelRef]);
+  }, [open, panelRef]);
 }
