@@ -108,7 +108,7 @@ interface WebhookPayload {
           errors?: Array<{ code?: number | string }>;
           pricing?: { amount_1000?: number };
         }>;
-        messages?: Array<{ from?: string; text?: { body?: string } }>;
+        messages?: Array<{ id?: string; from?: string; text?: { body?: string } }>;
         metadata?: { phone_number_id?: string };
         event?: string;
         message_template_name?: string;
@@ -152,7 +152,7 @@ async function processStatuses(
 }
 
 async function processInbound(
-  messages: Array<{ from?: string; text?: { body?: string } }>,
+  messages: Array<{ id?: string; from?: string; text?: { body?: string } }>,
   phoneNumberId?: string
 ) {
   if (!phoneNumberId) return;
@@ -164,9 +164,20 @@ async function processInbound(
   for (const inbound of messages ?? []) {
     const text = inbound.text?.body ?? "";
     if (!inbound.from || !text) continue;
+    // Meta redelivers a webhook it considers failed (slow reply, non-200), so
+    // the same message id can arrive more than once — reply to each wamid once.
+    if (inbound.id) {
+      const seen = await prisma.conversationMessage.findFirst({
+        where: { metaMessageId: inbound.id, direction: "inbound" },
+        select: { id: true },
+      });
+      if (seen) continue;
+    }
     // Threads the conversation, handles STOP, and auto-replies if the agent
     // is enabled (see lib/agent/inbound.ts).
-    await handleInboundMessage(account.orgId, inbound.from, text);
+    await handleInboundMessage(account.orgId, inbound.from, text, {
+      metaMessageId: inbound.id,
+    });
   }
 }
 

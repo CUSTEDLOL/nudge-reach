@@ -5,6 +5,33 @@ what's next.
 
 ---
 
+## Pre-launch test battery — 29 groups / 129 checks (2026-08-29) ✅
+
+Full results in `docs/TEST_REPORT.md` (top section). Gates green (lint, tsc, **439/439**
+tests, build); prod smoke 28/30; all 28 app routes render; live scripts + eval 28/28 clean;
+load: 803 req/s static, 90 req/s DB-bound, 0 errors; responsive 11/11 viewports clean.
+
+### Fixed
+- **Duplicate webhook delivery replied twice.** Meta redelivers a webhook it considers
+  failed; the same `wamid` produced two inbound rows and two AI replies. The route now skips
+  a wamid it has already stored and `handleInboundMessage` persists `metaMessageId` on the
+  inbound row (`tests/webhook-inbound-dedupe.test.ts`; re-verified end-to-end).
+- **Prod functions run in US-East (`iad1`) against a Singapore DB** — the cron tick took
+  58 s in production vs 3 s locally, and every agent reply pays the same tax.
+  `vercel.json` now pins `regions: ["sin1"]`; applies on the next deploy.
+
+- **Hardening headers** were missing on prod: `next.config.ts` now sends
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`,
+  `Permissions-Policy`.
+- `phase7-live` flagged "grounding" only because agent-eval's clinic vertical had rewritten the
+  shared `nudgetest` org's profile; the script now resets the full restaurant fixture.
+
+### Runtime model → Sonnet
+`RUNTIME_MODEL=claude-sonnet-5` is the production choice (founder call, 2026-08-29): eval
+28/28 clean on Sonnet, ~1.3 s vs ~1.1 s per reply, ~3× Haiku token price. Guard unchanged
+(Opus/Fable/Mythos still blocked); invariant #3 wording updated in AGENTS.md. **Set the same
+var in Vercel.**
+
 ## Pre-launch full-system sweep (2026-08-29) ✅
 
 Marketing spend starts; a friend's real business number goes live tonight.

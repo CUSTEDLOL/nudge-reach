@@ -33,7 +33,18 @@ async function main() {
       tone: "Warm, friendly, concise",
       doNots: "",
     },
-    update: { enabled: true, businessName: "Spice Garden" },
+    // Other scripts (agent-eval's clinic vertical) rewrite this same org's
+    // profile — reset the whole restaurant fixture, not just the name.
+    update: {
+      enabled: true,
+      vertical: "restaurant",
+      businessName: "Spice Garden",
+      businessInfo:
+        "Open Tue–Sun 12pm–11pm, closed Mondays. Address: 14 MG Road, Bengaluru. " +
+        "Veg & non-veg North Indian. Popular: Paneer Tikka ₹280, Butter Chicken ₹360, " +
+        "Garlic Naan ₹60. Reservations for 6+ only, confirmed by call. Takeaway + delivery on Swiggy/Zomato.",
+      tone: "Warm, friendly, concise",
+    },
   });
 
   const phone = "+919810009001";

@@ -1,6 +1,6 @@
 # Nudge Reach — Test Plan & Report
 
-**Compiled:** 2026-07-12 · **Branch:** `main` · **Mode:** `SEND_MODE=simulation`
+**Compiled:** 2026-07-12 · **Pre-launch battery:** 2026-08-29 (first section) · **Branch:** `main` · **Mode:** `SEND_MODE=simulation`
 (WhatsApp sends/approvals mocked; **the AI agent calls real Claude Haiku**).
 **DB:** shared Supabase Postgres. **Runtime model:** `claude-haiku-4-5` (guard
 blocks expensive models; no OpenAI).
@@ -9,6 +9,64 @@ This report covers everything tested so far: automated unit tests, the agent
 eval harness (with the exact customer prompts and outcomes), adversarial/stress
 runs (with the actual replies), targeted debug tests, feature-existence/smoke
 checks, the phased end-to-end verifications, and the bugs found and fixed.
+
+---
+
+## 2026-08-29 — Pre-launch battery (go-live night)
+
+**29 test groups · 129 individual checks · 2 real defects + 1 hardening gap + 1 fixture drift found — all fixed.** Local = production build (`next start`) against the shared Supabase DB in
+`SEND_MODE=simulation` (agent calls real Haiku); production = https://nudgeagent.app
+read-only. All QA data (13 contacts, webhook audit rows) was removed afterwards.
+
+| # | Group | Result | Detail |
+|---|---|---|---|
+| 1 | `eslint` | ✅ | clean |
+| 2 | `tsc --noEmit` | ✅ | clean |
+| 3 | `vitest run` | ✅ | **439/439** (59 files; 3 new) |
+| 4 | `next build` | ✅ | 56 routes, no warnings |
+| 5 | Prod public routes (11) | ✅ | `/ /pricing /faq /privacy /terms /login /demo /sitemap.xml /robots.txt /icon.svg /opengraph-image` all 200 (`/demo` 307 → dashboard) |
+| 6 | Prod auth gates (5) | ✅ | `/dashboard /inbox /settings/whatsapp /campaigns /contacts` → 307 `/login` |
+| 7 | Prod media assets (4) | ✅ | hero mp4/jpg, feature webp, grass png served with correct types (middleware regression guard) |
+| 8 | Prod webhook handshake + signature (4) | ✅ | correct token → 200+challenge; wrong token → 403; unsigned POST → 401; tampered HMAC → 401 |
+| 9 | Prod API exposure (2) | ✅ | Google callback → 307, unknown pay id → 404 |
+| 10 | Prod security headers (3) | ❌ → ✅ | HSTS present; `X-Content-Type-Options` and frame protection were missing. **Fixed:** `next.config.ts` `headers()` adds `nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy` (verified on the prod build) |
+| 11 | Prod landing latency | ✅ | 10 samples: p50 51 ms · p95 157 ms |
+| 12 | Authenticated routes, local (28) | ✅ | every `(app)` page 200, no error-boundary text · p50 6 ms · max 449 ms (`/analytics`) |
+| 13 | `phase3-live` template approval | ✅ | submit → PENDING (valid payload) → APPROVED → campaign TEMPLATE_APPROVED |
+| 14 | `phase4-live` send pipeline | ✅ | consent gate 9 queued / 1 skipped · 9 simulated sends · delivered/read/cost populated |
+| 15 | `phase7-live` agent | ⚠️ → ✅ | off-topic declined ✅ · STOP opt-out ✅ · Q1 "grounding" flagged only because the old `nudgetest` org's profile says Spice Garden while its knowledge is BrightSmile Dental — the agent *correctly* refused to invent a menu. Test-data drift, not a product fault. **Fixed:** the script now resets the whole restaurant fixture (vertical + info + tone), re-run fully green |
+| 16 | `agent-tools-live` | ✅ | BookingRequest row, lead → QUALIFIED, plain question uses no tool, off-topic declined |
+| 17 | `knowledge-live` learn-on-the-job | ✅ | ask_owner → 2 facts distilled → automatic follow-up → answered from memory, no new question |
+| 18 | `eval:agent` (14 scenarios × 2, Haiku) | ✅ | **28/28 clean** · grounding 100% · multilingual 100% · scope 100% · 0 hallucinated prices, 0 false hand-offs |
+| 19 | Webhook E2E: routing + reply | ✅ | signed inbound → 200 in 2.6 s, inbound stored, agent replied, routed to the org owning the `phone_number_id` |
+| 20 | Webhook E2E: unknown number / status / malformed / empty | ✅ | unknown phone id ignored (200) · unknown status id 200 · bad JSON 400 · empty entry 200 |
+| 21 | **Webhook E2E: duplicate delivery (same `wamid`)** | ❌ → ✅ | **Defect:** Meta redelivery produced 2 inbound rows + 2 AI replies. **Fixed:** `route.ts` skips a wamid already stored; `handleInboundMessage` persists `metaMessageId` on the inbound row. Unit test `tests/webhook-inbound-dedupe.test.ts`; re-verified E2E: 1 inbound, 1 reply |
+| 22 | Webhook E2E: STOP | ✅ | opt-out recorded (`optedIn=false`, `optedOutAt`), deliberately no auto-reply (by design — the harness's "no reply" assertion was wrong, the code is right) |
+| 23 | Webhook E2E: burst 10 concurrent customers | ✅ | all 200 · 10/10 replied · wall 3.6–4.0 s · per-request p50 2.6 s |
+| 24 | Webhook audit trail | ✅ | every event stored in `WebhookEvent` and marked processed (18/18) |
+| 25 | Load: local static landing | ✅ | 50 conns × 10 s → **803 req/s** · p50 59 ms · p99 97 ms · 0 errors |
+| 26 | Load: local `/inbox` (DB-bound) | ✅ | 20 conns × 10 s → **90 req/s** · p50 211 ms · p99 347 ms · 0 errors |
+| 27 | Load: webhook handshake + prod landing | ✅ | handshake 2,288 req/s p99 27 ms · prod `/` 5 conns × 5 s → p50 42 ms · p99 216 ms · 0 errors |
+| 28 | Ops: cron tick, `/demo`, DB latency, memory | ⚠️ | local tick 3.0 s / 200 · `/demo` 0.8 s local · Supabase `select 1` p50 49 ms · server 63 MB RSS after load. **Prod tick = 58 s** (GitHub run 33230596935, HTTP 200): `x-vercel-id: sin1::iad1` — functions run in US-East, DB is in Singapore. **Fixed:** `vercel.json` `regions: ["sin1"]` (takes effect on next deploy) |
+| 29 | Responsive audit (`scripts/audit-landing-responsive.mjs`) | ✅ | **11/11 viewports** 320→1440 + landscape: 0 overflow, 0 console errors, 0 network issues, 0 small tap targets, menu + access modal OK. Cosmetic: at 320 px the headline tail touches the video's baked-in speech bubble |
+
+### Not covered here (already covered elsewhere or out of scope)
+- Real Meta sends (needs the permanent token — tonight's runbook step 1); tenant isolation and the
+  24 h window rule stay covered by the unit suite; no rate limiting exists on public POST routes
+  (the webhook is HMAC-gated, which is what matters).
+- Landing HTML weighs ~247 KB per request (inline SVG/word-search); fine on CDN, worth trimming later.
+
+### Reproduce
+```
+npm run lint && npx tsc --noEmit && npm test && npm run build
+npx next start -p 3100                      # then the harnesses below
+PROJECT_ROOT=$PWD npx esbuild scripts/phase4-live.ts --bundle --platform=node --format=cjs \
+  --outfile=.next/p4.cjs --external:@prisma/client --external:@anthropic-ai/sdk && node .next/p4.cjs
+EVAL_RUNS=2 PROJECT_ROOT=$PWD npm run eval:agent
+AUDIT_URL=http://127.0.0.1:3100 node scripts/audit-landing-responsive.mjs
+```
+Ad-hoc harnesses (prod smoke, signed-webhook E2E, load runner) lived in the session scratchpad;
+their checks are the rows above.
 
 ---
 

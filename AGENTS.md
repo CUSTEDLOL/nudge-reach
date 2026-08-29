@@ -60,7 +60,8 @@ slide back to "WhatsApp CRM" copy or campaign-blast-first framing.
 2. **Consent enforced in code** — marketing only to `opted_in`; double-gated
    (queue + `sendMessage`); opt-outs permanent; STOP always wins; imports can't
    resurrect an opt-out.
-3. **Cheap AI at runtime** — Haiku only, through the single `lib/model-router`,
+3. **Cheap AI at runtime** — Haiku or Sonnet only (`RUNTIME_MODEL`; Sonnet is the
+   production choice since 2026-08-29), through the single `lib/model-router`,
    with the expensive-model guard intact. Never hardcode Opus/Fable at runtime.
 4. **Simulation mode works end-to-end** — with `SEND_MODE=simulation` (default),
    the ENTIRE product (generate → send → calendar booking → follow-ups →

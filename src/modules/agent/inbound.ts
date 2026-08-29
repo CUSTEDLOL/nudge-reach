@@ -31,7 +31,8 @@ const HISTORY_LIMIT = 12;
 export async function handleInboundMessage(
   orgId: string,
   fromPhone: string,
-  text: string
+  text: string,
+  opts: { metaMessageId?: string } = {}
 ): Promise<InboundResult> {
   // Meta's webhook always sends `from` with the country code but no "+"
   // (e.g. "919876543210", "971501234567") — so a bare digit string is an
@@ -85,7 +86,12 @@ export async function handleInboundMessage(
   });
 
   await prisma.conversationMessage.create({
-    data: { conversationId: conversation.id, direction: "inbound", body: text },
+    data: {
+      conversationId: conversation.id,
+      direction: "inbound",
+      body: text,
+      metaMessageId: opts.metaMessageId ?? null,
+    },
   });
 
   // Notify any integrations subscribed to inbound messages (fire-and-forget).
