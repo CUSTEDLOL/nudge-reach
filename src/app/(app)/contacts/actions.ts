@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import type { LeadStage, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrg, requireOrgContext, requireRole } from "@/modules/orgs/auth";
+import { isSimulated } from "@/modules/orgs/mode";
+import { handleInboundMessage } from "@/modules/agent/inbound";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { checkContactLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
@@ -592,5 +594,54 @@ export async function deleteAudience(
       message:
         err instanceof Error ? err.message : "Could not delete audience.",
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Simulation tester: message as this customer (bootstraps the first
+// conversation for a contact who has never messaged in — spec: sim mode must
+// demo the full flow with zero external keys)
+// ---------------------------------------------------------------------------
+
+export interface SimulateMessageResult extends ActionResult {
+  conversationId?: string;
+}
+
+export async function simulateContactMessage(
+  formData: FormData
+): Promise<SimulateMessageResult> {
+  try {
+    const org = await requireOrg();
+    if (!isSimulated(org)) {
+      return { ok: false, message: "The tester only works in simulation mode." };
+    }
+    const contactId = String(formData.get("contactId") ?? "");
+    const text = String(formData.get("text") ?? "").trim();
+    if (!text) {
+      return { ok: false, message: "Type the customer's message first." };
+    }
+    const contact = await prisma.contact.findFirst({
+      where: { id: contactId, orgId: org.id },
+    });
+    if (!contact) return { ok: false, message: "Contact not found." };
+
+    // Same handler the live webhook uses — creates the conversation if needed.
+    const result = await handleInboundMessage(org.id, contact.phoneE164, text);
+
+    revalidatePath("/inbox");
+    revalidatePath(`/inbox/${result.conversationId}`);
+    revalidateContact(contactId);
+
+    return {
+      ok: true,
+      conversationId: result.conversationId,
+      message: result.optedOut
+        ? "Customer opted out (STOP) — no reply sent."
+        : result.skipped
+          ? "Message received — no AI reply (agent off or not set up yet)."
+          : "Message received — the agent replied.",
+    };
+  } catch {
+    return { ok: false, message: "The simulated message failed — try again." };
   }
 }

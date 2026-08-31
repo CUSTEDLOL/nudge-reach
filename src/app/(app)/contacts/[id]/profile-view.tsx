@@ -7,9 +7,11 @@ import {
   useState,
   useTransition,
 } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  FlaskConical,
   Mail,
   Megaphone,
   MessageCircle,
@@ -21,11 +23,11 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ConfirmDialog } from "@/components/ui/modal";
+import { ConfirmDialog, Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -47,6 +49,7 @@ import {
   deleteContact,
   optOutContact,
   removeContactTag,
+  simulateContactMessage,
   updateContact,
   type ActionResult,
 } from "../actions";
@@ -169,6 +172,8 @@ export function ProfileView({
   notes,
   activity,
   campaignMessages,
+  conversationId,
+  simulation,
 }: {
   contact: ContactRow;
   tags: TagInfo[];
@@ -176,12 +181,17 @@ export function ProfileView({
   notes: NoteRow[];
   activity: ActivityItem[];
   campaignMessages: CampaignMessageRow[];
+  /** Existing conversation for this contact, if any. */
+  conversationId: string | null;
+  /** SEND_MODE=simulation — enables the "message as customer" tester. */
+  simulation: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
   const [confirmOptOut, setConfirmOptOut] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
   const [tab, setTab] = useState("activity");
 
   const optedIn = canSendMarketing({
@@ -272,16 +282,36 @@ export function ProfileView({
               {formatDate(contact.lastContactedAt)}
             </p>
           </div>
-          {optedIn && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setConfirmOptOut(true)}
-              className="text-red-600 hover:bg-red-50"
-            >
-              Opt out
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {conversationId ? (
+              <Link
+                href={`/inbox/${conversationId}`}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
+              >
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden />
+                Open chat
+              </Link>
+            ) : simulation ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSimOpen(true)}
+              >
+                <FlaskConical className="h-3.5 w-3.5" aria-hidden />
+                Message as customer
+              </Button>
+            ) : null}
+            {optedIn && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setConfirmOptOut(true)}
+                className="text-red-600 hover:bg-red-50"
+              >
+                Opt out
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -436,6 +466,13 @@ export function ProfileView({
         }}
       />
 
+      <SimMessageDialog
+        open={simOpen}
+        onClose={() => setSimOpen(false)}
+        contactId={contact.id}
+        contactName={contact.name}
+      />
+
       <ConfirmDialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
@@ -452,6 +489,70 @@ export function ProfileView({
         }}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Simulation: message as this customer (creates the first conversation)
+// ---------------------------------------------------------------------------
+
+function SimMessageDialog({
+  open,
+  onClose,
+  contactId,
+  contactName,
+}: {
+  open: boolean;
+  onClose: () => void;
+  contactId: string;
+  contactName: string;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [text, setText] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function send() {
+    const fd = new FormData();
+    fd.set("contactId", contactId);
+    fd.set("text", text);
+    startTransition(async () => {
+      const res = await simulateContactMessage(fd);
+      toast({ description: res.message, tone: res.ok ? "success" : "error" });
+      if (res.ok && res.conversationId) {
+        onClose();
+        router.push(`/inbox/${res.conversationId}`);
+      }
+    });
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Message as ${contactName}`}
+      description="Simulation only — pretend this customer texted your WhatsApp. It runs through the exact same handler as a real inbound message and opens the conversation in your inbox."
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={send} loading={pending} disabled={!text.trim()}>
+            <Send className="h-3.5 w-3.5" aria-hidden />
+            Send as customer
+          </Button>
+        </div>
+      }
+    >
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        autoFocus
+        placeholder={`e.g. "Hi! Are you open this weekend?"`}
+        aria-label={`Message from ${contactName}`}
+      />
+    </Modal>
   );
 }
 

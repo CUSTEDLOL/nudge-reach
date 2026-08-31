@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/modules/orgs/auth";
+import { isSimulated } from "@/modules/orgs/mode";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate, sourceLabel } from "../types";
@@ -33,7 +34,7 @@ export default async function ContactProfilePage({
   });
   if (!contact) notFound();
 
-  const [tags, memberships, convMessages, campaignMessages] =
+  const [tags, memberships, convMessages, campaignMessages, conversation] =
     await Promise.all([
       prisma.tag.findMany({
         where: { orgId: org.id },
@@ -54,6 +55,10 @@ export default async function ContactProfilePage({
         include: { campaign: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 100,
+      }),
+      prisma.conversation.findFirst({
+        where: { orgId: org.id, contactId: contact.id },
+        select: { id: true },
       }),
     ]);
 
@@ -147,6 +152,8 @@ export default async function ContactProfilePage({
         notes={notes}
         activity={activity}
         campaignMessages={campaignRows}
+        conversationId={conversation?.id ?? null}
+        simulation={isSimulated(org)}
       />
     </div>
   );
