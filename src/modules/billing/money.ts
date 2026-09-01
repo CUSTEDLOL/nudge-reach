@@ -94,3 +94,25 @@ export const COUNTRY_PRESETS = [
 export function presetForDialCode(dialCode: string) {
   return COUNTRY_PRESETS.find((p) => p.dialCode === dialCode) ?? null;
 }
+
+/**
+ * Rough USD conversion for cost-vs-price ratios only (AI-cost alerting) —
+ * never for billing. Hand-set like PLAN_PRICES; update rarely.
+ */
+const APPROX_USD_PER_UNIT: Record<Currency, number> = {
+  INR: 0.012,
+  USD: 1,
+  AED: 0.27,
+  SAR: 0.27,
+  SGD: 0.78,
+  MYR: 0.24,
+  IDR: 0.000062,
+  BRL: 0.19,
+  MXN: 0.055,
+  GBP: 1.28,
+};
+
+/** Major units of `currency` → micro-USD (1e-6 USD). */
+export function approxMicroUsd(amountMajor: number, currency: Currency): number {
+  return Math.round(amountMajor * APPROX_USD_PER_UNIT[currency] * 1_000_000);
+}

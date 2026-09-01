@@ -5,6 +5,30 @@ what's next.
 
 ---
 
+## WS2 — Sonnet policy + AI cost visibility (2026-09-01) ✅
+
+- **Model policy:** guard unchanged in mechanism (denylist — Opus/Fable/Mythos
+  throw) but now explicitly tested to allow `claude-sonnet-5`; env default
+  flipped `claude-haiku-4-5` → `claude-sonnet-5` (`lib/env-schema.ts`).
+- **Metering (new `AiUsage` table, RLS'd):** every routed LLM call records
+  model, input/output tokens and micro-USD cost (Sonnet $3/$15 per MTok,
+  Haiku $1/$5; unknown models priced as Sonnet), attributed to org +
+  conversation + purpose (agent_reply / suggest / distill / ingest /
+  campaign_copy). Fire-and-forget at the router choke point; `runAgent`
+  accumulates its whole tool loop into one row. Keyless/simulation fallbacks
+  write synthetic estimates (chars/4) flagged `synthetic` — the meter works
+  with zero keys (invariant 4).
+- **Dashboard (Analytics):** AI cost for the period, cost per conversation,
+  cost per booking, and cost as % of plan price, with an amber alert when the
+  percentage crosses the threshold (default 35%, `PLAN_COST_ALERT_PCT`;
+  per-org override `Org.settings.aiCostAlertPct`). Synthetic-only data is
+  labeled "simulated estimate", never passed off as real.
+
+### Founders must do manually
+- Vercel: set `RUNTIME_MODEL=claude-sonnet-5` (schema default now matches).
+- `.env.local` still pins Haiku for local work — evals run ~3× cheaper
+  locally; change it to Sonnet when you want local parity with prod.
+
 ## WS1 — Crypto pay rail removed (2026-09-01) ✅
 
 Founder decision (PLAN.md WS1): the hackathon crypto rail is gone entirely.

@@ -35,7 +35,7 @@ async function distillOne(
   const item = scriptItemById(v, id);
   const trimmed = answer.trim();
   if (!item || !trimmed) return 0;
-  const facts = await distillAnswer(item.prompt, trimmed);
+  const facts = await distillAnswer(item.prompt, trimmed, orgId);
   // The script knows the section; prefer it when the model punted to "other".
   await prisma.knowledgeEntry.createMany({
     data: facts.map((f) => ({

@@ -179,3 +179,26 @@ export function rateDelta(
     direction: pts > 0 ? "up" : pts < 0 ? "down" : "neutral",
   };
 }
+
+/** "$3.42" / "$0.07" / "<$0.01" from micro-USD (1e-6 USD). */
+export function formatMicroUsd(micro: number): string {
+  if (micro === 0) return "$0";
+  const usd = micro / 1_000_000;
+  if (usd < 0.01) return "<$0.01";
+  return `$${usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * AI-cost alert (PLAN.md WS2): flag an org whose period AI cost exceeds
+ * `thresholdPct` of its plan price. Null when the plan is unpriced (₹0 /
+ * unknown) — an honest "can't compute", not a pass.
+ */
+export function aiCostAlert(
+  totalMicroUsd: number,
+  planPriceMicroUsd: number,
+  thresholdPct: number
+): { pct: number; over: boolean } | null {
+  if (planPriceMicroUsd <= 0) return null;
+  const pct = (totalMicroUsd / planPriceMicroUsd) * 100;
+  return { pct, over: pct > thresholdPct };
+}

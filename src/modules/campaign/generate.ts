@@ -59,6 +59,8 @@ export interface GenerateCampaignInput {
   };
   /** Market copywriting voice; defaults to the original Indian voice. */
   voice?: MarketVoice;
+  /** Org the generated copy is billed to (AI usage metering). */
+  orgId?: string;
 }
 
 function buildUserPrompt(description?: string): string {
@@ -85,11 +87,15 @@ export async function generateCampaignContent(
 
   const system = systemPrompt(input.voice ?? "india");
   const prompt = buildUserPrompt(input.description);
+  const attribution = input.orgId
+    ? ({ orgId: input.orgId, purpose: "campaign_copy" } as const)
+    : undefined;
   let text = await generate({
     system,
     prompt,
     image: input.image,
     maxTokens: 1024,
+    attribution,
   });
 
   let parsed = extractJson(text);
@@ -101,6 +107,7 @@ export async function generateCampaignContent(
         `Respond with ONLY the JSON object — first character "{", last character "}".`,
       image: input.image,
       maxTokens: 1024,
+      attribution,
     });
     parsed = extractJson(text);
   }

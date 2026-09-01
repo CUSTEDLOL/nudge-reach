@@ -9,6 +9,10 @@ describe("assertRuntimeModelAllowed (rule 3: no expensive models at runtime)", (
     ).not.toThrow();
   });
 
+  it("allows Sonnet (the production runtime tier)", () => {
+    expect(() => assertRuntimeModelAllowed("claude-sonnet-5")).not.toThrow();
+  });
+
   it("rejects Opus", () => {
     expect(() => assertRuntimeModelAllowed("claude-opus-4-8")).toThrow(
       /rule 3/

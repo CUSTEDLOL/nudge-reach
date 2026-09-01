@@ -14,9 +14,10 @@ export const envSchema = z
     DATABASE_URL: z.string().min(1),
     DIRECT_URL: z.string().min(1).optional(),
 
-    // Runtime AI — cheap Haiku tier only; never an expensive model
+    // Runtime AI — Sonnet is the production tier (founder call 2026-08-29);
+    // Haiku stays allowed for cheap paths. Opus/Fable/Mythos throw (guard).
     ANTHROPIC_API_KEY: z.string().optional(),
-    RUNTIME_MODEL: z.string().default("claude-haiku-4-5"),
+    RUNTIME_MODEL: z.string().default("claude-sonnet-5"),
 
     // Messaging
     SEND_MODE: z.enum(["simulation", "live"]).default("simulation"),

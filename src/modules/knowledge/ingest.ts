@@ -138,7 +138,7 @@ function parseFactsArray(raw: string): DistilledFact[] {
   }
 }
 
-async function modelFacts(pageText: string): Promise<DistilledFact[]> {
+async function modelFacts(pageText: string, orgId: string): Promise<DistilledFact[]> {
   const facts: DistilledFact[] = [];
   const chunks: string[] = [];
   for (
@@ -154,6 +154,7 @@ async function modelFacts(pageText: string): Promise<DistilledFact[]> {
         system: INGEST_SYSTEM,
         messages: [{ role: "user", text: chunk }],
         maxTokens: 700,
+        attribution: { orgId, purpose: "ingest" },
       });
       facts.push(...parseFactsArray(raw ?? ""));
     } catch {
@@ -256,7 +257,7 @@ export async function ingestWebsite(
     const text = stripHtml(html);
     if (text.length < 40) continue;
     collected.push(
-      ...(env.ANTHROPIC_API_KEY ? await modelFacts(text) : heuristicFacts(text))
+      ...(env.ANTHROPIC_API_KEY ? await modelFacts(text, orgId) : heuristicFacts(text))
     );
   }
   const drafts = await storeDraftFacts(orgId, collected);
@@ -442,6 +443,7 @@ export async function ingestFile(
           image: { data: input.base64, mediaType: input.mediaType },
         }),
     maxTokens: 1500,
+    attribution: { orgId, purpose: "ingest" },
   });
 
   const drafts = await storeDraftFacts(orgId, parseFactsArray(raw));

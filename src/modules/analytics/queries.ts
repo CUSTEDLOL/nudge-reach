@@ -425,3 +425,60 @@ export async function topTags(orgId: string, limit = 8): Promise<TopTag[]> {
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 }
+
+/* ------------------------------------------------------------------ */
+/* AI cost (PLAN.md WS2)                                               */
+/* ------------------------------------------------------------------ */
+
+export interface AiCostSummary {
+  totalMicroUsd: number;
+  /** True when every recorded row is a synthetic (simulation) estimate. */
+  syntheticOnly: boolean;
+  conversationsTouched: number;
+  perConversationMicroUsd: number | null;
+  bookings: number;
+  perBookingMicroUsd: number | null;
+}
+
+/** Period AI spend for an org, with per-conversation and per-booking unit costs. */
+export async function aiCostSummary(
+  orgId: string,
+  days: number
+): Promise<AiCostSummary> {
+  const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const [groups, convRows, bookings] = await Promise.all([
+    prisma.aiUsage.groupBy({
+      by: ["synthetic"],
+      where: { orgId, createdAt: { gte: start } },
+      _sum: { costMicroUsd: true },
+    }),
+    prisma.aiUsage.findMany({
+      where: { orgId, createdAt: { gte: start }, conversationId: { not: null } },
+      distinct: ["conversationId"],
+      select: { conversationId: true },
+    }),
+    prisma.bookingRequest.count({
+      where: { orgId, createdAt: { gte: start } },
+    }),
+  ]);
+
+  const totalMicroUsd = groups.reduce(
+    (sum, g) => sum + (g._sum.costMicroUsd ?? 0),
+    0
+  );
+  const hasReal = groups.some((g) => !g.synthetic);
+  const conversationsTouched = convRows.length;
+
+  return {
+    totalMicroUsd,
+    syntheticOnly: groups.length > 0 && !hasReal,
+    conversationsTouched,
+    perConversationMicroUsd:
+      conversationsTouched > 0
+        ? Math.round(totalMicroUsd / conversationsTouched)
+        : null,
+    bookings,
+    perBookingMicroUsd:
+      bookings > 0 ? Math.round(totalMicroUsd / bookings) : null,
+  };
+}

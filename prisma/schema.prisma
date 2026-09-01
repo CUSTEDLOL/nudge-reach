@@ -75,6 +75,7 @@ model Org {
   templates        Template[]
   webhookEndpoints WebhookEndpoint[]
   auditLogs        AuditLog[]
+  aiUsage          AiUsage[]
   bookingRequests  BookingRequest[]
   paymentRequests  PaymentRequest[]
   calendarAccount  CalendarAccount?
@@ -698,6 +699,29 @@ model KnowledgeEntry {
   updatedAt DateTime @updatedAt
 
   @@index([orgId, status, category])
+}
+
+// One LLM call, attributed to org (+ conversation when there is one).
+// Written fire-and-forget by lib/model-router; the analytics dashboard and
+// the credit meter read it. conversationId is a plain string on purpose —
+// cost history must survive conversation/contact deletion.
+model AiUsage {
+  id             String   @id @default(cuid())
+  orgId          String
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  conversationId String?
+  purpose        String // agent_reply | suggest | distill | ingest | campaign_copy
+  model          String
+  inputTokens    Int
+  outputTokens   Int
+  // Micro-USD (1e-6 USD) so integer math never loses fractions of a cent.
+  costMicroUsd   Int
+  // True when the tokens are synthetic estimates (simulation / keyless).
+  synthetic      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([orgId, conversationId])
 }
 
 // A question the agent could not answer, waiting for the owner

@@ -176,3 +176,10 @@ export function getPlan(id: string): Plan {
   if (id === "scale") id = "pro";
   return PLANS.find((p) => p.id === id) ?? PLANS[0];
 }
+
+/**
+ * Alert threshold (PLAN.md WS2): flag an org when its monthly AI cost
+ * exceeds this percentage of its plan price. Per-org override lives in
+ * Org.settings.aiCostAlertPct.
+ */
+export const PLAN_COST_ALERT_PCT = 35;
