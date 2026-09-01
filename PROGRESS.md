@@ -5,6 +5,28 @@ what's next.
 
 ---
 
+## WS1 — Crypto pay rail removed (2026-09-01) ✅
+
+Founder decision (PLAN.md WS1): the hackathon crypto rail is gone entirely.
+
+- Deleted the machine-payment API route, the rail's test file and the
+  hackathon submission doc; stripped the rail branches from
+  `modules/payments`, the `send_payment_link` tool schema, the hosted
+  `/pay/[id]` page (which stays — it serves fiat simulation links) and the
+  session-proxy public paths.
+- Payment links now: live + Razorpay keys → real Razorpay link; otherwise the
+  hosted simulation page. Verified by `tests/payment-link.test.ts` (sim) and
+  the new `tests/payment-link-live.test.ts` (live routing, ported from the
+  deleted file).
+- Demo seed's payments fact no longer advertises the removed rail; billing
+  page icon swapped so term scans stay clean.
+- **Guard:** `tests/no-crypto-references.test.ts` scans src/tests/docs/prisma/
+  scripts + top-level docs every suite run and fails on any banned term —
+  reintroduction breaks the build.
+- Old PaymentRequest rows in the removed currency survive harmlessly
+  (label-only). Optional cleanup:
+  `UPDATE "PaymentRequest" SET status='cancelled' WHERE currency NOT IN ('INR','USD');`
+
 ## WS0 — Self-serve pivot housekeeping (2026-09-01) ✅
 
 The self-serve pivot begins; the approved workstream plan is `PLAN.md` (WS0-WS7,
@@ -72,7 +94,7 @@ Everything below was exercised, not assumed.
   cost), campaign wizard → send, CSV import with consent, library template
   create → submit → Approved (production), Revenue Recovery toggle, calendar
   connect (test), API key create, Add contact, team invite, contacts export,
-  fiat + USDC payment links → hosted pay page + x402 402 response.
+  payment links → hosted pay page (crypto rail removed 2026-09-01, PLAN.md WS1).
 - **Real Meta webhook path**: a signed inbound POST to `/api/webhooks/whatsapp`
   routes by `phone_number_id` to the right org and the agent replies in ~2.5 s;
   a tampered signature is rejected with 401.
@@ -194,41 +216,26 @@ email, headless walk of onboarding → every page) and the fixes it demanded.
   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` in
   Vercel (custedlols-projects/nudge-reach).
 
-## USDC payment rail + hosted pay page + guest demo sandbox (2026-08-14) ✅
+## Hosted pay page + guest demo sandbox (2026-08-14; hackathon rail removed 2026-09-01)
 
-Built for the NTU InnovateX 2026 hackathon (Track 2: Web3 Applications, AI
-Agents and Real-World Use Cases) — and kept product-true: it strengthens
-moat #1 (real actions: payments) without touching strategy or invariants.
+Originally built for the NTU InnovateX 2026 hackathon. The hackathon-specific
+payment rail was **removed on 2026-09-01** (founder decision, see PLAN.md
+WS1) — payment links are Razorpay in live mode and the hosted simulation page
+otherwise. What remains in the product from this work:
 
-- **`usdc` payment rail** in `modules/payments`: `createPaymentLink` takes an
-  optional `rail` (`fiat` default — zero behavior change for existing callers).
-  USDC requests are currency `USDC`, never touch Razorpay, and are served by
-  our own hosted pay page. Live settlement driver (AIsa) lands when sponsor
-  API access is provisioned; simulation serves the full flow today.
-- **Agent tool**: `send_payment_link` gained an optional `method` (`standard` |
-  `usdc`) — the agent offers USDC only for cross-border customers or on
-  explicit request. Flagship gate and amount bounds unchanged.
 - **Hosted pay page `/pay/[id]`**: public-by-unguessable-id customer page
-  (amount, purpose, network/asset/address/reference, clearly-labeled test
-  mode). Simulation rows settle via a server action guarded on
-  `provider === "simulation"`; fiat simulation links now point here too
-  (previously a dead placeholder domain).
-- **x402 machine endpoint `GET /api/pay/[id]`**: unpaid USDC requests answer
-  HTTP 402 with structured payment instructions (scheme/network/asset/amount/
-  payTo/reference); paid ones answer 200 with the receipt.
-- **Guest sandbox `GET /demo`**: one-click judge access — anonymous Supabase
-  sign-in, fresh isolated org, demo seed, straight to the dashboard. Rate
-  limited per IP; no auth-flow changes; requires "Allow anonymous sign-ins"
-  in Supabase. Session proxy PUBLIC_PATHS extended: `/pay`, `/api/pay`, `/demo`.
-- Tests: new `tests/usdc-rail.test.ts` (rail default, USDC row shape, gate,
-  bounds, tool mapping); `payment-link` sim-URL assertions updated. 54 files /
-  425 tests, lint and production build green.
-- **Demo re-theme**: the demo seed is now "The Spice Garden" restaurant —
+  (amount, purpose, clearly-labeled test mode). Simulation rows settle via a
+  server action guarded on `provider === "simulation"`; fiat simulation links
+  point here (previously a dead placeholder domain).
+- **Guest sandbox `GET /demo`**: one-click guest access — anonymous Supabase
+  sign-in, shared pre-seeded demo org, straight to the dashboard. Rate
+  limited per IP; requires "Allow anonymous sign-ins" in Supabase. Session
+  proxy PUBLIC_PATHS extended: `/pay`, `/demo`.
+- **Demo re-theme**: the demo seed is "The Spice Garden" restaurant —
   international guest names, English dining threads (reservations, private
-  dining deposit, catering negotiation, STOP flow, cold-delivery escalation),
-  restaurant knowledge (incl. the 6+-group ₹2,000 deposit and USDC-for-
-  international-guests facts that ground the on-chain payment demo).
-  `scripts/seed-demo-org.ts` now fully resets front-desk state + CRM data.
+  dining deposit, catering negotiation, STOP flow, cold-delivery escalation)
+  and restaurant knowledge incl. the 6+-group ₹2,000 deposit.
+  `scripts/seed-demo-org.ts` fully resets front-desk state + CRM data.
 
 ## Landing-page responsive production pass (2026-07-22) ✅
 

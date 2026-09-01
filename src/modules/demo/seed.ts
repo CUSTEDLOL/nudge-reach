@@ -1157,7 +1157,7 @@ async function seedFrontDesk(
     { category: "hours", fact: "Closed on Mondays" },
     { category: "location", fact: "12 Garden Lane, off MG Road — two minutes from the metro exit; free parking in the rear courtyard" },
     { category: "policies", fact: "Groups of 6+ and the private dining room require a ₹2,000 booking deposit, adjusted against the final bill; free cancellation up to 24 hours before" },
-    { category: "payments", fact: "UPI, all major cards and cash accepted; international guests can pay booking deposits in USDC via a secure payment link" },
+    { category: "payments", fact: "UPI, all major cards and cash accepted; booking deposits can be paid via a secure payment link" },
   ];
   if ((await prisma.knowledgeEntry.count({ where: { orgId } })) === 0) {
     await prisma.knowledgeEntry.createMany({

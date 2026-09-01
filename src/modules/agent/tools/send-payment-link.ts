@@ -27,19 +27,12 @@ export const sendPaymentLinkTool = defineTool({
         description:
           "What the payment is for, shown on the payment page (e.g. 'Booking deposit — Saturday 7 PM').",
       },
-      method: {
-        type: "string",
-        enum: ["standard", "usdc"],
-        description:
-          "Payment method. Use \"usdc\" ONLY when the customer is paying from another country or explicitly asks to pay in crypto/stablecoin — it collects USDC on-chain, and the amount you pass is in USD. Omit (or use \"standard\") for normal card/UPI payment in the business's own currency.",
-      },
     },
     required: ["amount", "purpose"],
   },
   schema: z.object({
     amount: z.number().positive().finite(),
     purpose: z.string().trim().min(3).max(200),
-    method: z.enum(["standard", "usdc"]).optional(),
   }),
   write: true,
   async handler(ctx, input) {
@@ -49,7 +42,6 @@ export const sendPaymentLinkTool = defineTool({
       conversationId: ctx.conversationId,
       amountMinor,
       purpose: input.purpose,
-      rail: input.method === "usdc" ? "usdc" : "fiat",
     });
 
     if (outcome.status === "invalid") {

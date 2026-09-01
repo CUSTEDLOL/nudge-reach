@@ -7,7 +7,7 @@ import { markPaymentPaid } from "@/modules/payments";
 /**
  * Simulation-only settlement: the "I've sent the payment" button on the pay
  * page. Guarded server-side on provider === "simulation" so it can never
- * settle a real (Razorpay / on-chain) payment — those flip via webhooks.
+ * settle a real Razorpay payment — those flip via webhooks.
  */
 export async function settleSimulatedPayment(id: string): Promise<void> {
   const row = await prisma.paymentRequest.findUnique({

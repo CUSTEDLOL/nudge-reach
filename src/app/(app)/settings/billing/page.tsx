@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Check, MessageSquare, Wallet, Users } from "lucide-react";
+import { Check, CreditCard, MessageSquare, Users } from "lucide-react";
 import { isSimulated } from "@/modules/orgs/mode";
 import { trialDaysLeft } from "@/modules/billing/trial";
 import { requireOrgContext } from "@/modules/orgs/auth";
@@ -92,7 +92,7 @@ export default async function BillingSettingsPage() {
           <StatCard
             label="Message cost"
             value={formatMoney(usage.costMinorUnits, usage.currency)}
-            icon={<Wallet className="h-4 w-4" aria-hidden />}
+            icon={<CreditCard className="h-4 w-4" aria-hidden />}
             hint={simulation ? "estimated (test mode)" : "billed by Meta"}
           />
           <StatCard
