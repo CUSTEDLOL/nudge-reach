@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sendModeFor, type SendMode } from "@/modules/orgs/mode";
@@ -16,30 +15,8 @@ import {
  * pattern. Flagship-gated like booking: payments are an agent "real action".
  */
 
-const MIN_AMOUNT_MINOR = 100; // ₹1.00 (or USDC 1.00 on the usdc rail)
+const MIN_AMOUNT_MINOR = 100; // ₹1.00
 const MAX_AMOUNT_MINOR = 50_00_000; // ₹50,000 — sanity cap for a chat deposit
-
-/**
- * Payment rails. "fiat" is the existing card/UPI path (Razorpay in live).
- * "usdc" collects the deposit on-chain in USDC via our hosted x402-style pay
- * page — built for cross-border customers whose cards decline. The live
- * settlement driver (AIsa) lands when sponsor API access is provisioned;
- * simulation serves the full flow today (invariant #4).
- */
-export type PaymentRail = "fiat" | "usdc";
-
-/** Simulated treasury address shown on the pay page in simulation mode. */
-export const SIM_USDC_ADDRESS = "0x51mN0dGe000000000000000000000000000F4CED";
-export const USDC_NETWORK = "base";
-
-/**
- * Deterministic stand-in transaction hash for simulation receipts — clearly
- * labeled "simulated" wherever it is shown. Real hashes arrive with the live
- * settlement driver.
- */
-export function simulatedTxHash(paymentRequestId: string): string {
-  return `0x${createHash("sha256").update(paymentRequestId).digest("hex")}`;
-}
 
 function appBaseUrl(): string {
   return (
@@ -77,10 +54,8 @@ export async function createPaymentLink(
     amountMinor: number;
     purpose: string;
     bookingRequestId?: string;
-    rail?: PaymentRail;
   }
 ): Promise<CreateLinkOutcome> {
-  const rail: PaymentRail = input.rail ?? "fiat";
   if (
     !Number.isInteger(input.amountMinor) ||
     input.amountMinor < MIN_AMOUNT_MINOR ||
@@ -108,9 +83,8 @@ export async function createPaymentLink(
     };
   }
 
-  const currency =
-    rail === "usdc" ? "USDC" : org.currency === "USD" ? "USD" : "INR";
-  const useRazorpay = rail === "fiat" && shouldUseRazorpay(sendModeFor(org));
+  const currency = org.currency === "USD" ? "USD" : "INR";
+  const useRazorpay = shouldUseRazorpay(sendModeFor(org));
   const request = await prisma.paymentRequest.create({
     data: {
       orgId,
@@ -147,10 +121,6 @@ export async function createPaymentLink(
           err instanceof Error ? err.message : "Payment provider unavailable.",
       };
     }
-  } else if (rail === "usdc") {
-    // On-chain rail: our hosted x402-style pay page serves the payment
-    // instructions (and, in simulation, settles the demo payment itself).
-    shortUrl = `${appBaseUrl()}/pay/${request.id}`;
   } else {
     // Simulation: the hosted pay page settles it on click (and cron marks it
     // paid ~90s later regardless) so "deposit received" demos end-to-end.

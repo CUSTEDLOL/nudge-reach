@@ -28,7 +28,7 @@ read-only. All QA data (13 contacts, webhook audit rows) was removed afterwards.
 | 6 | Prod auth gates (5) | ✅ | `/dashboard /inbox /settings/whatsapp /campaigns /contacts` → 307 `/login` |
 | 7 | Prod media assets (4) | ✅ | hero mp4/jpg, feature webp, grass png served with correct types (middleware regression guard) |
 | 8 | Prod webhook handshake + signature (4) | ✅ | correct token → 200+challenge; wrong token → 403; unsigned POST → 401; tampered HMAC → 401 |
-| 9 | Prod API exposure (2) | ✅ | Google callback → 307, unknown pay id → 404 |
+| 9 | Prod API exposure (2) | ✅ | Google callback → 307, unknown hosted-pay-page id → 404 |
 | 10 | Prod security headers (3) | ❌ → ✅ | HSTS present; `X-Content-Type-Options` and frame protection were missing. **Fixed:** `next.config.ts` `headers()` adds `nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy` (verified on the prod build) |
 | 11 | Prod landing latency | ✅ | 10 samples: p50 51 ms · p95 157 ms |
 | 12 | Authenticated routes, local (28) | ✅ | every `(app)` page 200, no error-boundary text · p50 6 ms · max 449 ms (`/analytics`) |

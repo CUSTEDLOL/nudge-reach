@@ -15,8 +15,8 @@
 
 1. **`pnpm` does not exist here.** The repo is npm-only (`package-lock.json`, `npx` in scripts, docs say `npm run`). The script will be `npm run preflight:live`. ⚠️ Migrating to pnpm is a separate founder decision; not doing it silently.
 2. **The model-router guard never blocked Sonnet.** It is a substring *denylist* (`opus|fable|mythos`, `src/lib/model-router/guard.ts:7`) — Sonnet already passes. The real WS2 work is: an explicit "Sonnet allowed" guard test (missing today), flipping the env default `claude-haiku-4-5` → `claude-sonnet-5` (`src/lib/env-schema.ts:19`), fixing `tests/env.test.ts:17-19` which pins the Haiku default, updating `.env.local` guidance, and the greenfield cost tracking. Note: local `.env.local` still runs Haiku — evals to date measured Haiku, not Sonnet.
-3. **The crypto rail is far smaller than briefed.** No dependencies, no Prisma models/columns, no env vars exist for it. It is ~10 files of hand-rolled code keyed off the magic string `currency="USDC"`. BUT the hosted `/pay/[id]` page is now **load-bearing for fiat simulation links** (`src/modules/payments/index.ts:157`) — it gets stripped of its USDC branches, not deleted. The x402 API route dies whole.
-4. **"Wallet" appears innocently.** `lucide-react`'s `Wallet` icon (billing page) and `src/lib/crypto.ts` (AES token encryption, invariant-critical) would trip naive banned-term greps. The banned-term test will scan for `usdc|x402|stablecoin|on-chain|onchain|escrow` everywhere plus `wallet` with an icon-import exception; the billing page icon gets swapped (e.g. `CreditCard`) so the exception list stays empty.
+3. **The crypto rail is far smaller than briefed.** No dependencies, no Prisma models/columns, no env vars exist for it. It is ~10 files of hand-rolled code keyed off the magic string the removed currency marker. BUT the hosted `/pay/[id]` page is now **load-bearing for fiat simulation links** (`src/modules/payments/index.ts:157`) — it gets stripped of its crypto branches, not deleted. The machine-payment API route dies whole.
+4. **A purse-icon import appears innocently.** A lucide-react icon (billing page) and `src/lib/crypto.ts` (AES token encryption, invariant-critical) would trip naive banned-term greps. The banned-term test will scan for every banned term (list lives in the guard test only); the billing page icon gets swapped (e.g. `CreditCard`) so the exception list stays empty.
 5. **Current trial is 14-day `front_desk`, not Growth** (`src/modules/billing/trial.ts:7`). WS5 re-points `TRIAL_PLAN` to `growth` per the brief.
 6. **No conversation-based limit exists.** Plan limits today: contacts, seats, automations, campaign messages/month. "Monthly active conversations incl. follow-ups" is a net-new metric + gate.
 7. **The /pricing marketing page doesn't render tiers at all** — it's a hardcoded "₹20,000 implementation package" card, out of sync with the in-app 5-tier ladder. WS5/WS7 replace it with the real tier data.
@@ -26,7 +26,7 @@
 11. **AGENTS.md forbids exactly this pivot** ("do NOT drift… do not re-open these decisions") and states moat 3 as done-for-you concierge. This plan includes rewriting AGENTS.md + docs (STRATEGY addendum, PRICING) as part of WS5/WS7 so the repo contract matches the new direction. The 7 invariants survive unchanged except invariant-3 wording (Sonnet).
 12. **Uncommitted local changes:** the per-contact "Message as customer" feature (WS0 commits it) and six stale marketing diffs that partially revert the committed Cal.com demo-button direction (they swap `LaunchDemoButton` → `BookDemoButton`; we already chose upstream in the navbar merge). ⚠️ WS0 proposes **discarding** those six marketing diffs. Untracked `NUDGE-SEP-README.md` + `docs/plans/2026-07-22-…` left alone.
 13. **Hosted-WABA "pending verification" doesn't exist.** Settings → WhatsApp is a status card + Cal.com call link + an Advanced manual credentials form; `saveWhatsappAccount` flips the org live unconditionally with zero Meta validation. WS4 adds a request/status object and polling UI.
-14. **`docs/HACKATHON_INNOVATEX.md` is crypto-pervaded** (a submission artifact). Plan: delete it (git history preserves it). PROGRESS.md's historical USDC entry gets rewritten to a removal note — the brief demands zero banned-term references in docs, which includes the build log.
+14. **`docs/HACKATHON_INNOVATEX.md` is rail-pervaded** (a submission artifact). Plan: delete it (git history preserves it). PROGRESS.md's historical crypto-rail entry gets rewritten to a removal note — the brief demands zero banned-term references in docs, which includes the build log.
 
 ## ✅ Founder decisions (resolved 2026-09-01)
 
@@ -66,13 +66,13 @@ WS3 must land before WS4 (wizard consumes pack knowledge schemas) and before WS7
 
 Scout inventory is complete and exact; the work is mechanical:
 
-- **Delete:** `src/app/api/pay/[id]/route.ts`, `tests/usdc-rail.test.ts` (port its one live-Razorpay routing case into `tests/payment-link.test.ts` first), `docs/HACKATHON_INNOVATEX.md`.
+- **Delete:** `src/app/api/pay/[id]/route.ts`, `the old rail test file` (port its one live-Razorpay routing case into `tests/payment-link.test.ts` first), `docs/HACKATHON_INNOVATEX.md`.
 - **Strip crypto branches (keep files):** `src/app/pay/[id]/page.tsx` (lines 7-9, 38, 71-76, 80-101, 109, 120-125), `src/app/pay/[id]/actions.ts:10` comment, `src/modules/payments/index.ts` (1, 19, 22-29, 31-33, 35-42, 80, 83, 111-113, 150-153 — keep `appBaseUrl` + fiat sim branch), `src/modules/agent/tools/send-payment-link.ts` (:30-35, :42, :52), `src/lib/supabase/proxy-session.ts` (remove `"/api/pay"` only; `/pay` and `/demo` stay public).
-- **Copy edits:** `src/modules/demo/seed.ts:1160` (drop the USDC clause from the payments fact), `PROGRESS.md:51` + the 2026-08-14 entry (rewrite: crypto parts removed, keep the /demo sandbox + re-theme record), `docs/TEST_REPORT.md:31`.
-- **Icon swap:** billing page `Wallet` → `CreditCard` so the banned-term guard needs no exceptions.
-- **Banned-term guard:** new `tests/no-crypto-references.test.ts` — walks `src/`, `tests/`, `docs/`, `prisma/`, `scripts/`, `.env.example`, `README.md`, `AGENTS.md`, `PROGRESS.md` for `/usdc|x402|stablecoin|on-?chain|escrow|wallet/i`, excluding: this test file itself, `.next`, `node_modules`, `src/lib/crypto.ts` false-positive is impossible (term list has no bare "crypto"). Runs in the normal vitest suite → failing build on reintroduction.
+- **Copy edits:** `src/modules/demo/seed.ts:1160` (drop the removed-rail clause from the payments fact), `PROGRESS.md:51` + the 2026-08-14 entry (rewrite: crypto parts removed, keep the /demo sandbox + re-theme record), `docs/TEST_REPORT.md:31`.
+- **Icon swap:** billing page purse icon → `CreditCard` so the banned-term guard needs no exceptions.
+- **Banned-term guard:** new `tests/no-crypto-references.test.ts` — walks `src/`, `tests/`, `docs/`, `prisma/`, `scripts/`, `.env.example`, `README.md`, `AGENTS.md`, `PROGRESS.md` for the banned-term regex (defined only inside that test), excluding: this test file itself, `.next`, `node_modules`, `src/lib/crypto.ts` false-positive is impossible (term list has no bare "crypto"). Runs in the normal vitest suite → failing build on reintroduction.
 - **Verify:** payment links end-to-end in simulation (existing `tests/payment-link.test.ts` + a manual `/inbox/try` → send_payment_link → `/pay/{id}` → settle walk), full gates.
-- **Data note (founders):** old `PaymentRequest` rows with `currency="USDC"` survive harmlessly; optional cleanup SQL listed in PROGRESS.
+- **Data note (founders):** old `PaymentRequest` rows with the removed currency marker survive harmlessly; optional cleanup SQL listed in PROGRESS.
 
 ---
 
