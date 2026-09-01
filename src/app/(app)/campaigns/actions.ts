@@ -129,6 +129,7 @@ async function createCampaignFromPhoto(
       description,
       image,
       voice: marketVoiceForDialCode(orgRow?.dialCode ?? "+91"),
+      orgId,
     });
   } catch (err) {
     return {

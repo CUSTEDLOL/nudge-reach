@@ -67,6 +67,11 @@ export async function generateAgentActionReply(
     runTool: (call) => runTool(ctx, call),
     maxTokens: 500,
     maxSteps: 5,
+    attribution: {
+      orgId: ctx.orgId,
+      conversationId: ctx.conversationId,
+      purpose: "agent_reply",
+    },
   });
 
   const handoff = calledHandoff(toolCalls);

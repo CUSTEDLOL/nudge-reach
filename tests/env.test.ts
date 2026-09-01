@@ -13,9 +13,9 @@ describe("envSchema", () => {
     expect(parsed.SEND_MODE).toBe("simulation");
   });
 
-  it("defaults the runtime model to a cheap Haiku tier (rule 3)", () => {
+  it("defaults the runtime model to Sonnet (rule 3: production tier)", () => {
     const parsed = envSchema.parse(baseEnv);
-    expect(parsed.RUNTIME_MODEL).toContain("haiku");
+    expect(parsed.RUNTIME_MODEL).toContain("sonnet");
   });
 
   it("rejects live mode without the deployment-level webhook secrets", () => {

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
 import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
+import { recordUsage, type Attribution } from "@/lib/model-router/usage";
 
 /**
  * Platform module: the ONLY doorway through which the app talks to an LLM.
@@ -24,6 +25,8 @@ export interface GenerateInput {
     data: string;
   };
   maxTokens?: number;
+  /** Org/conversation the call is billed to; omit only for unattributable calls. */
+  attribution?: Attribution;
 }
 
 let _client: Anthropic | null = null;
@@ -46,6 +49,7 @@ export async function generate({
   image,
   document,
   maxTokens = 1024, // campaigns are short; keep the cap low to control cost
+  attribution,
 }: GenerateInput): Promise<string> {
   const model = env.RUNTIME_MODEL || "claude-haiku-4-5";
   assertRuntimeModelAllowed(model);
@@ -80,6 +84,15 @@ export async function generate({
     messages: [{ role: "user", content }],
   });
 
+  if (attribution) {
+    recordUsage(
+      attribution,
+      model,
+      response.usage.input_tokens,
+      response.usage.output_tokens
+    );
+  }
+
   return response.content
     .filter(
       (block): block is Anthropic.TextBlock => block.type === "text"
@@ -97,6 +110,8 @@ export interface ChatInput {
   system: string;
   messages: ChatTurn[];
   maxTokens?: number;
+  /** Org/conversation the call is billed to; omit only for unattributable calls. */
+  attribution?: Attribution;
 }
 
 /**
@@ -108,6 +123,7 @@ export async function chat({
   system,
   messages,
   maxTokens = 400, // WhatsApp replies are short; keep cost + latency low
+  attribution,
 }: ChatInput): Promise<string> {
   const model = env.RUNTIME_MODEL || "claude-haiku-4-5";
   assertRuntimeModelAllowed(model);
@@ -118,6 +134,15 @@ export async function chat({
     system,
     messages: messages.map((m) => ({ role: m.role, content: m.text })),
   });
+
+  if (attribution) {
+    recordUsage(
+      attribution,
+      model,
+      response.usage.input_tokens,
+      response.usage.output_tokens
+    );
+  }
 
   return response.content
     .filter((block): block is Anthropic.TextBlock => block.type === "text")
@@ -154,6 +179,8 @@ export interface RunAgentInput {
   maxTokens?: number;
   /** Hard ceiling on model↔tool round trips (default 5). */
   maxSteps?: number;
+  /** Org/conversation the call is billed to; omit only for unattributable calls. */
+  attribution?: Attribution;
 }
 
 export interface RunAgentResult {
@@ -172,6 +199,7 @@ export async function runAgent({
   runTool,
   maxTokens = 500,
   maxSteps = 5,
+  attribution,
 }: RunAgentInput): Promise<RunAgentResult> {
   const model = env.RUNTIME_MODEL || "claude-haiku-4-5";
   assertRuntimeModelAllowed(model);
@@ -182,6 +210,17 @@ export async function runAgent({
   }));
   const toolCalls: ToolInvocation[] = [];
 
+  // One usage row per agent run — accumulated across every loop step.
+  let inputTokens = 0;
+  let outputTokens = 0;
+  const tally = (usage: Anthropic.Usage | undefined) => {
+    inputTokens += usage?.input_tokens ?? 0;
+    outputTokens += usage?.output_tokens ?? 0;
+  };
+  const flushUsage = () => {
+    if (attribution) recordUsage(attribution, model, inputTokens, outputTokens);
+  };
+
   for (let step = 0; step < maxSteps; step++) {
     const response = await client().messages.create({
       model,
@@ -191,6 +230,7 @@ export async function runAgent({
       messages: convo,
     });
 
+    tally(response.usage);
     const toolUses = response.content.filter(
       (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
     );
@@ -202,6 +242,7 @@ export async function runAgent({
         .map((b) => b.text)
         .join("")
         .trim();
+      flushUsage();
       return { text, toolCalls, cappedOut: false };
     }
 
@@ -240,6 +281,8 @@ export async function runAgent({
       },
     ],
   });
+  tally(closing.usage);
+  flushUsage();
   const text = closing.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)

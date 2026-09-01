@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   BarChart3,
+  Bot,
   CheckCheck,
   Eye,
   IndianRupee,
@@ -10,13 +11,16 @@ import {
 } from "lucide-react";
 import { requireOrg } from "@/modules/orgs/auth";
 import { formatMoney } from "@/modules/billing";
-import { orgCurrency } from "@/modules/billing/money";
+import { approxMicroUsd, orgCurrency } from "@/modules/billing/money";
+import { getPlan, planPrice, PLAN_COST_ALERT_PCT } from "@/modules/billing/plans";
 import {
   countDelta,
   formatMinutes,
   formatPct,
   parseRange,
   rateDelta,
+  aiCostAlert,
+  formatMicroUsd,
 } from "@/modules/analytics/compute";
 import {
   agentPerformance,
@@ -26,6 +30,7 @@ import {
   messageVolumeByDay,
   rates,
   topTags,
+  aiCostSummary,
 } from "@/modules/analytics/queries";
 import { AreaVolumeChart } from "@/components/features/charts/area-volume-chart";
 import { FunnelBars } from "@/components/features/charts/funnel-bars";
@@ -101,7 +106,7 @@ export default async function AnalyticsPage({
     );
   }
 
-  const [volume, rateStats, campaigns, agents, funnel, tags] =
+  const [volume, rateStats, campaigns, agents, funnel, tags, aiCost] =
     await Promise.all([
       messageVolumeByDay(org.id, days),
       rates(org.id, days),
@@ -109,7 +114,24 @@ export default async function AnalyticsPage({
       agentPerformance(org.id, days),
       leadFunnel(org.id),
       topTags(org.id),
+      aiCostSummary(org.id, days),
     ]);
+
+  // AI cost vs plan price (PLAN.md WS2). Org settings may override the pct.
+  const planPriceMicroUsd = approxMicroUsd(
+    planPrice(getPlan(org.plan), currency),
+    currency
+  );
+  const alertPct =
+    typeof (org.settings as { aiCostAlertPct?: number })?.aiCostAlertPct ===
+    "number"
+      ? (org.settings as { aiCostAlertPct: number }).aiCostAlertPct
+      : PLAN_COST_ALERT_PCT;
+  const costAlert = aiCostAlert(
+    aiCost.totalMicroUsd,
+    planPriceMicroUsd,
+    alertPct
+  );
 
   const { current, previous } = rateStats;
   const messagesSent = current.totals.sent + current.totals.outboundConversation;
@@ -168,6 +190,48 @@ export default async function AnalyticsPage({
           hint="estimate"
         />
       </div>
+      {/* AI cost row (PLAN.md WS2) */}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard
+          label="AI cost"
+          value={formatMicroUsd(aiCost.totalMicroUsd)}
+          icon={<Bot className="h-4 w-4" aria-hidden />}
+          hint={aiCost.syntheticOnly ? "simulated estimate" : "period total"}
+        />
+        <StatCard
+          label="Cost / conversation"
+          value={
+            aiCost.perConversationMicroUsd === null
+              ? "—"
+              : formatMicroUsd(aiCost.perConversationMicroUsd)
+          }
+          icon={<Bot className="h-4 w-4" aria-hidden />}
+          hint={`${aiCost.conversationsTouched} AI conversations`}
+        />
+        <StatCard
+          label="Cost / booking"
+          value={
+            aiCost.perBookingMicroUsd === null
+              ? "—"
+              : formatMicroUsd(aiCost.perBookingMicroUsd)
+          }
+          icon={<Bot className="h-4 w-4" aria-hidden />}
+          hint={`${aiCost.bookings} bookings`}
+        />
+        <StatCard
+          label="% of plan price"
+          value={costAlert === null ? "—" : `${Math.round(costAlert.pct)}%`}
+          icon={<Bot className="h-4 w-4" aria-hidden />}
+          hint={costAlert === null ? "no plan price" : `alert at ${alertPct}%`}
+        />
+      </div>
+      {costAlert?.over && (
+        <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
+          AI cost is {Math.round(costAlert.pct)}% of this workspace&apos;s plan
+          price — above the {alertPct}% alert threshold. Consider a plan
+          upgrade or checking for runaway conversations.
+        </p>
+      )}
       <p className="mt-2 text-xs text-neutral-400">
         Reply rate counts unique campaign recipients whose conversation received
         an inbound message after the send — a proxy for interest, not tracked

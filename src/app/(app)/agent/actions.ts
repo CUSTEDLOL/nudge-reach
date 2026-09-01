@@ -333,7 +333,11 @@ export async function structureExistingInfoAction(): Promise<ActionResult> {
       .slice(0, 40);
     let count = 0;
     for (const chunk of chunks) {
-      const facts = await distillAnswer("General business information", chunk);
+      const facts = await distillAnswer(
+        "General business information",
+        chunk,
+        ctx.org.id
+      );
       await prisma.knowledgeEntry.createMany({
         data: facts.map((f) => ({
           orgId: ctx.org.id,

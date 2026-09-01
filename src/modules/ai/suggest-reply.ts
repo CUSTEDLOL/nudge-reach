@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { chat } from "@/lib/model-router";
+import { recordSyntheticUsage } from "@/lib/model-router/usage";
 import { buildHistory } from "@/modules/agent/reply";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { firstName } from "@/modules/inbox/format";
@@ -135,11 +136,13 @@ export async function suggestReply(
       };
 
   if (!env.ANTHROPIC_API_KEY) {
-    return {
-      ok: true,
-      draft: cannedDraft(tone, contactFirst, grounding.businessName),
-      sample: true,
-    };
+    const draft = cannedDraft(tone, contactFirst, grounding.businessName);
+    recordSyntheticUsage(
+      { orgId, conversationId, purpose: "suggest" },
+      grounding.businessInfo,
+      draft
+    );
+    return { ok: true, draft, sample: true };
   }
 
   const history = buildHistory(
@@ -168,6 +171,7 @@ export async function suggestReply(
       ),
       messages: history,
       maxTokens: 300,
+      attribution: { orgId, conversationId, purpose: "suggest" },
     });
     if (!draft) return { ok: false, error: "The model returned nothing — try again." };
     return { ok: true, draft, sample: false };

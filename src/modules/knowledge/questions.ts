@@ -90,7 +90,7 @@ export async function answerOwnerQuestion(
   });
   if (!q) throw new Error("Question not found or already handled.");
 
-  const facts = await distillAnswer(q.question, trimmed);
+  const facts = await distillAnswer(q.question, trimmed, orgCtx.org.id);
   const entries = await prisma.knowledgeEntry.createManyAndReturn({
     data: facts.map((f) => ({
       orgId: orgCtx.org.id,
