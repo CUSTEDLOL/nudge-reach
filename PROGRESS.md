@@ -5,6 +5,30 @@ what's next.
 
 ---
 
+## WS0 — Self-serve pivot housekeeping (2026-09-01) ✅
+
+The self-serve pivot begins; the approved workstream plan is `PLAN.md` (WS0-WS7,
+founder decisions D1-D6 recorded inside). This entry ships WS0.
+
+- **Per-contact "Message as customer"** (`contacts/[id]`): a manually added
+  contact finally has a path to a first conversation — the contact header links
+  to the existing thread, or (test mode only) opens a dialog that routes the
+  typed message through the exact webhook handler. Complements `/inbox/try`.
+- **`npm run preflight:live`** — the go-live runbook as a script
+  (`src/lib/preflight.ts` + `scripts/preflight-live.ts`, unit-tested): send
+  mode, runtime-model guard sanity, live-required secrets, Meta token/WABA/
+  phone/webhook reachability via the Graph API, Supabase site-URL (management
+  API when `SUPABASE_ACCESS_TOKEN` is set, manual reminder otherwise), and
+  WARN-only rows for Razorpay/Stripe/Google. Zero-key simulation never FAILs
+  (invariant 4). Exit 1 on any FAIL.
+- Discarded six stale uncommitted marketing diffs that partially reverted the
+  committed Cal.com demo-button direction.
+
+### Founders must do manually
+- Run `npm run preflight:live` before flipping any org live; fix FAILs.
+- Optional: set `SUPABASE_ACCESS_TOKEN` locally so the site-URL check runs
+  automatically.
+
 ## Pre-launch test battery — 29 groups / 129 checks (2026-08-29) ✅
 
 Full results in `docs/TEST_REPORT.md` (top section). Gates green (lint, tsc, **439/439**
