@@ -57,11 +57,35 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Google Tag Manager */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-WTMGT6DJ');",
+          }}
+        />
+        {/* End Google Tag Manager */}
+        <meta
+          name="facebook-domain-verification"
+          content="uh9j91b9gh8qxdt3bxezjqlpa82fil"
+        />
+      </head>
       {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
           cz-shortcut-listen) inject attributes onto <body> before React
           hydrates. suppressHydrationWarning only covers one level, so the
           <html> tag's own flag doesn't reach here. */}
       <body suppressHydrationWarning className="min-h-full flex flex-col">
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-WTMGT6DJ"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        {/* End Google Tag Manager (noscript) */}
         {/* Motion gate: adds `jsm` to <html> ONLY when JS runs AND the
             visitor doesn't prefer reduced motion. Inline in the LAYOUT so it
             executes during HTML parse (before first paint) and, because the

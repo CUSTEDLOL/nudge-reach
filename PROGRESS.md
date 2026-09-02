@@ -5,6 +5,13 @@ what's next.
 
 ---
 
+## Landing-page verification tags (2026-09-02) ✅
+
+- Moved the existing `GTM-WTMGT6DJ` loader to the top of the document `<head>`.
+- Kept the matching noscript iframe immediately after the opening `<body>`.
+- Added Facebook domain verification token `uh9j91b9gh8qxdt3bxezjqlpa82fil`.
+- Added a static placement regression test in `tests/landing-tracking.test.ts`.
+
 ## WS2 — Sonnet policy + AI cost visibility (2026-09-01) ✅
 
 - **Model policy:** guard unchanged in mechanism (denylist — Opus/Fable/Mythos
