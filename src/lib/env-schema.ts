@@ -55,6 +55,12 @@ export const envSchema = z
     VOICE_INITIATION_SECRET: z.string().optional(),
     VOICE_TOOLS_SECRET: z.string().optional(),
 
+    // CRM integrations (optional — without keys the simulation provider is used)
+    ZOHO_CLIENT_ID: z.string().optional(),
+    ZOHO_CLIENT_SECRET: z.string().optional(),
+    SALESFORCE_CLIENT_ID: z.string().optional(),
+    SALESFORCE_CLIENT_SECRET: z.string().optional(),
+
     // Payments — Razorpay for INR orgs (optional; free mode without keys)
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
