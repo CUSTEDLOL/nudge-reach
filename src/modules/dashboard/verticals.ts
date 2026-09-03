@@ -10,6 +10,8 @@ export const VERTICALS = [
   { value: "restaurant", label: "Restaurant / Café" },
   { value: "salon", label: "Salon / Beauty" },
   { value: "clinic", label: "Clinic / Health" },
+  { value: "study_abroad", label: "Study-abroad consultancy" },
+  { value: "coaching", label: "Coaching / Test prep" },
   { value: "home_decor", label: "Home & Decor" },
   { value: "real_estate", label: "Real estate" },
   { value: "services", label: "Local services" },

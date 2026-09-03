@@ -14,9 +14,10 @@ export interface PackTemplate {
   content: CampaignContent;
 }
 
-const OPT_OUT = "Reply STOP to unsubscribe";
+export const OPT_OUT = "Reply STOP to unsubscribe";
 
-function tpl(
+/** Shared factory for pack templates (Revenue-Recovery + Vertical Packs). */
+export function makePackTemplate(
   name: string,
   category: "MARKETING" | "UTILITY",
   header: string,
@@ -43,21 +44,21 @@ function tpl(
 
 /** The pack's approved templates. Names are Meta-safe (lowercase + underscores). */
 export const PACK_TEMPLATES: PackTemplate[] = [
-  tpl(
+  makePackTemplate(
     "appt_reminder_24h",
     "UTILITY",
     "Appointment reminder",
     "Hi {{1}}, a friendly reminder about your appointment with us tomorrow. Looking forward to seeing you! Need to change it? Just reply here.",
     "See you soon"
   ),
-  tpl(
+  makePackTemplate(
     "appt_reminder_2h",
     "UTILITY",
     "Coming up soon",
     "Hi {{1}}, your appointment is coming up in a couple of hours. See you shortly! Running late or need to reschedule? Reply here.",
     "See you soon"
   ),
-  tpl(
+  makePackTemplate(
     "no_show_rebook",
     "MARKETING",
     "We missed you",
@@ -65,7 +66,7 @@ export const PACK_TEMPLATES: PackTemplate[] = [
     OPT_OUT,
     [{ type: "QUICK_REPLY", text: "Rebook me" }]
   ),
-  tpl(
+  makePackTemplate(
     "review_ask",
     "MARKETING",
     "How did we do?",
@@ -73,14 +74,14 @@ export const PACK_TEMPLATES: PackTemplate[] = [
     OPT_OUT,
     [{ type: "QUICK_REPLY", text: "Leave feedback" }]
   ),
-  tpl(
+  makePackTemplate(
     "lead_nudge_1",
     "MARKETING",
     "Still thinking it over?",
     "Hi {{1}}, still thinking it over? We'd love to help — reply here with any questions and we'll get you sorted right away.",
     OPT_OUT
   ),
-  tpl(
+  makePackTemplate(
     "lead_nudge_2",
     "MARKETING",
     "One message away",
