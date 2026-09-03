@@ -5,6 +5,31 @@ what's next.
 
 ---
 
+## CRM integrations — the employee writes to your CRM (2026-09-04) ✅
+
+Roadmap #5, plan `docs/superpowers/plans/2026-08-29-crm-integrations.md`. One-way
+sync Nudge → Zoho CRM / Salesforce through a queued, retrying job table drained by
+the cron tick; simulation provider for test mode. Setup and what syncs:
+`docs/CRM_INTEGRATIONS.md`.
+
+### Built
+- `CrmConnection` (encrypted tokens, DC/instance, status) + `CrmSyncJob`
+  (unique per org/provider/event/entity, backoff, dead-letter).
+- `src/modules/crm/`: provider interface, Zoho (v8: Leads/upsert on Phone, Notes,
+  Tasks, Lead_Status) and Salesforce (v62: find-or-create Lead, Task, Status)
+  providers, simulation provider, HMAC-signed OAuth state, connections with
+  just-in-time refresh, sync queue + tick, event hooks.
+- Hooks: new contact (WhatsApp or phone), lead qualified, booking captured,
+  payment paid, hand-off requested (+ `crmConversationSummary` ready for the
+  copilot workstream).
+- Routes `/api/integrations/crm/[provider]/{start,callback}`; Integrations →
+  CRM card (connect, sync now, disconnect, last-ten sync log).
+- `scripts/crm-live.ts` verifies the loop in simulation; 9 new test files.
+
+### Founder — to switch on for a client
+Zoho API console client + Salesforce Connected App → four Vercel env vars →
+client clicks Connect on Integrations.
+
 ## Voice front desk — the employee picks up the phone (2026-09-04) ✅
 
 Roadmap #6, plan `docs/superpowers/plans/2026-08-29-voice-front-desk.md`, design
