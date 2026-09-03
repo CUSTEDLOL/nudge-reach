@@ -1,0 +1,85 @@
+import crypto from "node:crypto";
+import { NextResponse } from "next/server";
+import { env } from "@/lib/env";
+import { prisma } from "@/lib/db";
+import { ensureAgentProfile } from "@/modules/agent/profile";
+import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
+import { buildCallInit } from "@/modules/voice/initiation";
+
+/**
+ * ElevenLabs "conversation initiation client data" webhook — fires when a
+ * call rings. We resolve the dialled number to an org and hand back that
+ * business's prompt, opener, language and voice for this one call.
+ */
+
+function secretOk(header: string | null): boolean {
+  const expected = env.VOICE_INITIATION_SECRET ?? "";
+  if (!expected || !header || header.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
+
+const e164 = (raw: string | undefined) => {
+  const digits = (raw ?? "").replace(/[^\d]/g, "");
+  return digits ? `+${digits}` : "";
+};
+
+export async function POST(request: Request) {
+  if (!secretOk(request.headers.get("x-nudge-voice-secret"))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const body = (await request.json().catch(() => ({}))) as {
+    caller_id?: string;
+    called_number?: string;
+  };
+  const called = e164(body.called_number);
+  const caller = e164(body.caller_id);
+
+  const number = await prisma.voiceNumber.findUnique({
+    where: { phoneE164: called },
+    include: { org: true },
+  });
+  if (!number || !number.enabled) {
+    return NextResponse.json({ error: "unknown number" }, { status: 404 });
+  }
+
+  const profile = await ensureAgentProfile(number.orgId);
+  if (!profile || !profile.enabled) {
+    return NextResponse.json({ error: "agent disabled" }, { status: 404 });
+  }
+
+  const [contact, entries] = await Promise.all([
+    caller
+      ? prisma.contact.findUnique({
+          where: { orgId_phoneE164: { orgId: number.orgId, phoneE164: caller } },
+        })
+      : Promise.resolve(null),
+    prisma.knowledgeEntry.findMany({
+      where: { orgId: number.orgId, status: "active" },
+      select: { category: true, fact: true, condition: true },
+      orderBy: { createdAt: "asc" },
+      take: 400,
+    }),
+  ]);
+
+  const init = buildCallInit({
+    org: { id: number.orgId, timezone: number.org.timezone },
+    number: {
+      phoneE164: number.phoneE164,
+      language: number.language,
+      voiceId: number.voiceId,
+      transferTo: number.transferTo,
+    },
+    profile: {
+      vertical: profile.vertical,
+      businessName: profile.businessName,
+      businessInfo: profile.businessInfo,
+      tone: profile.tone,
+      doNots: profile.doNots,
+    },
+    knowledgeDigest: buildKnowledgeDigest(entries),
+    contact: { name: contact?.name ?? caller, phoneE164: caller },
+    purpose: "inbound",
+    now: new Date(),
+  });
+  return NextResponse.json(init);
+}
