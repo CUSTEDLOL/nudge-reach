@@ -221,6 +221,7 @@ function ConversationItems({
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
+                    {c.channel === "voice" && <Badge tone="info">Phone call</Badge>}
                     {c.status === "handoff" && (
                       <Badge tone="warning">Needs human</Badge>
                     )}
