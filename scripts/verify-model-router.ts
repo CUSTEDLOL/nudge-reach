@@ -1,24 +1,27 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Phase 1 acceptance: "model-router returns text for a test prompt."
  * Exercises the same SDK call shape as lib/model-router/index.ts with the
- * RUNTIME_MODEL from .env.local. (The router's model guard is unit-tested
- * separately; the full TS code path runs live in the Phase 2 generate flow.)
+ * RUNTIME_MODEL from .env.local, guarded by the REAL runtime-model guard
+ * (single source — no duplicated regex).
  */
-const Anthropic = require("@anthropic-ai/sdk").default;
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
+import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
 
+const PROJECT_ROOT = process.env.PROJECT_ROOT ?? process.cwd();
 for (const line of fs
-  .readFileSync(path.join(__dirname, "..", ".env.local"), "utf8")
+  .readFileSync(path.join(PROJECT_ROOT, ".env.local"), "utf8")
   .split("\n")) {
   const m = line.match(/^([A-Z_]+)="?([^"]*)"?$/);
   if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
 }
 
 const model = process.env.RUNTIME_MODEL || "claude-haiku-4-5";
-if (/opus|fable|mythos/i.test(model)) {
-  console.error(`❌ rule 3 violation: ${model}`);
+try {
+  assertRuntimeModelAllowed(model);
+} catch (err) {
+  console.error(`❌ ${err instanceof Error ? err.message : err}`);
   process.exit(1);
 }
 
@@ -38,7 +41,7 @@ async function main() {
   });
   const text = response.content
     .filter((b) => b.type === "text")
-    .map((b) => b.text)
+    .map((b) => (b.type === "text" ? b.text : ""))
     .join("");
   console.log(`✅ model: ${response.model}`);
   console.log(`✅ text: ${text}`);
@@ -48,6 +51,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("❌", err.message);
+  console.error("❌", err instanceof Error ? err.message : err);
   process.exit(1);
 });

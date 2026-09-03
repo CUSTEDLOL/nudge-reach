@@ -4,7 +4,7 @@
  * Pure function so it can be unit-tested without an API key.
  */
 
-const FORBIDDEN_RUNTIME_MODELS = ["opus", "fable", "mythos"];
+export const FORBIDDEN_RUNTIME_MODELS = ["opus", "fable", "mythos"] as const;
 
 export function assertRuntimeModelAllowed(model: string): void {
   const lower = model.toLowerCase();

@@ -15,8 +15,10 @@ export interface PreflightCheck {
   detail: string;
 }
 
+import { FORBIDDEN_RUNTIME_MODELS } from "@/lib/model-router/guard";
+
 const GRAPH = "https://graph.facebook.com/v23.0";
-const FORBIDDEN_MODEL = /opus|fable|mythos/i;
+const FORBIDDEN_MODEL = new RegExp(FORBIDDEN_RUNTIME_MODELS.join("|"), "i");
 
 function present(env: PreflightEnv, key: string): boolean {
   return Boolean(env[key]?.trim());
