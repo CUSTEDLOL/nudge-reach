@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { outcomeOf } from "@/modules/voice/transcript";
@@ -73,7 +74,7 @@ export async function fileCall(
       providerCallId: call.providerCallId,
       status: "completed",
       durationSecs: call.durationSecs,
-      transcript: call.transcript,
+      transcript: call.transcript as unknown as Prisma.InputJsonValue,
       summary: call.summary,
       outcome,
       purpose,

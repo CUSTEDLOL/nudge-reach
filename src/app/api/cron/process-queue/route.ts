@@ -9,6 +9,7 @@ import {
 } from "@/modules/send/queue";
 import { tickAutomationRuns } from "@/modules/automation/engine";
 import { tickBookingReminders } from "@/modules/followup/reminders";
+import { tickReminderCalls } from "@/modules/voice/reminder-calls";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
 import { expireTrials } from "@/modules/billing/trial";
 
@@ -44,6 +45,9 @@ export async function GET(request: Request) {
   //     post-service review asks (5.2). Consent + template-gated like every send.
   const followUps = await tickBookingReminders();
 
+  // 2b'. Voice front desk: T-2h reminder calls for clients who opted in.
+  const calls = await tickReminderCalls();
+
   // 2c. Simulation-mode payment links flip to "paid" after ~90s so the
   //     collect-a-deposit story demos end-to-end with zero keys.
   const paymentsPaid = await applySimulatedPaymentProgress();
@@ -66,6 +70,7 @@ export async function GET(request: Request) {
     released,
     resumedRuns,
     followUps,
+    calls,
     paymentsPaid,
     expiredTrials,
     campaigns: sending.length,
