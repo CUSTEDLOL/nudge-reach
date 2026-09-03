@@ -5,6 +5,32 @@ what's next.
 
 ---
 
+## Voice front desk — the employee picks up the phone (2026-09-04) ✅
+
+Roadmap #6, plan `docs/superpowers/plans/2026-08-29-voice-front-desk.md`, design
+`docs/superpowers/specs/2026-08-29-voice-and-crm-design.md`. ElevenLabs Agents runs
+speech + the loop (LLM pinned via `ELEVENLABS_LLM`, guard-checked); we supply
+per-call context, execute every action through the existing tool handlers, and
+file the transcript. Exotel SIP (India) / Twilio elsewhere; simulation driver for
+test mode. How to switch it on: `docs/VOICE.md`.
+
+### Built
+- `VoiceNumber`, `VoiceCall`, `Conversation.channel`, `FollowUpConfig.reminderCalls`.
+- `src/modules/voice/`: initiation builder, post-call parser + outcome, ElevenLabs +
+  simulation drivers (HMAC verify, SIP outbound call), `fileCall` (contact →
+  voice thread → per-turn messages → VoiceCall → `call.completed` webhook),
+  webhook-tool bridge onto `runTool`, `tickReminderCalls` on the cron tick.
+- Routes: `/api/voice/initiation`, `/api/voice/post-call`, `/api/voice/tools/[tool]`.
+- Settings → Voice (numbers, language, transfer number, reminder-calls opt-in,
+  simulate a call); inbox shows a "Phone call" chip on voice threads.
+- `scripts/voice-setup.ts` creates the shared agent; Voice add-on priced in PRICING.md.
+- 10 new test files (env guard, builders, drivers, routes, reminder tick, form).
+
+### Founder — to switch voice on for a client
+ElevenLabs workspace + keys → run the setup script → post-call webhook secret →
+Exotel KYC + vSIP trunk (or Twilio) → import the number in ElevenLabs → add it in
+Settings → Voice. Reminder calls stay off until the client opts in.
+
 ## Pre-launch test battery — 29 groups / 129 checks (2026-08-29) ✅
 
 Full results in `docs/TEST_REPORT.md` (top section). Gates green (lint, tsc, **439/439**
