@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { crmContactCreated } from "@/modules/crm/events";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { outcomeOf } from "@/modules/voice/transcript";
 import type { PostCall } from "@/modules/voice/types";
@@ -22,11 +23,16 @@ export async function fileCall(
   });
   const customerE164 = call.direction === "inbound" ? call.fromE164 : call.toE164;
 
+  const existingContact = await prisma.contact.findUnique({
+    where: { orgId_phoneE164: { orgId, phoneE164: customerE164 } },
+    select: { id: true },
+  });
   const contact = await prisma.contact.upsert({
     where: { orgId_phoneE164: { orgId, phoneE164: customerE164 } },
     create: { orgId, phoneE164: customerE164, name: customerE164, optInSource: "voice" },
     update: {},
   });
+  if (!existingContact) void crmContactCreated(orgId, contact, "Phone (Nudge)");
   const now = new Date();
   const summary = call.summary ?? call.transcript.at(-1)?.message ?? "Phone call";
   const conversation = await prisma.conversation.upsert({

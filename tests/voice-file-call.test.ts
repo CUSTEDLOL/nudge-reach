@@ -18,6 +18,7 @@ const db = vi.hoisted(() => {
         }),
       },
       contact: {
+        findUnique: vi.fn(async () => null),
         upsert: vi.fn(async () => ({ id: "c1", name: "+919876543210", optedIn: false, optedOutAt: null })),
       },
       conversation: { upsert: vi.fn(async () => ({ id: "cv1" })), update: vi.fn(async () => ({})) },
@@ -32,6 +33,7 @@ const db = vi.hoisted(() => {
 });
 vi.mock("@/lib/db", () => ({ prisma: db.prisma }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({ dispatchWebhook: vi.fn(async () => {}) }));
+vi.mock("@/modules/crm/events", () => ({ crmContactCreated: vi.fn(async () => {}) }));
 
 import { fileCall } from "@/modules/voice/file-call";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
