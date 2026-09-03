@@ -10,6 +10,8 @@ const PUBLIC_PATHS = [
   "/login",
   "/auth",
   "/api/webhooks",
+  // voice front desk: ElevenLabs webhooks + tool calls carry their own secrets
+  "/api/voice",
   "/api/cron",
   "/api/waitlist",
   "/api/access",
@@ -36,10 +38,6 @@ const PUBLIC_PATHS = [
  * getClaims() — the proxy is convenience, not the security boundary.
  */
 export async function updateSession(request: NextRequest) {
-  // TEMP LOCAL ONLY (hackathon capture) — never commit; mirrors auth.ts bypass.
-  if (process.env.DEV_AUTH_BYPASS === "1") {
-    return NextResponse.next({ request });
-  }
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
