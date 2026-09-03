@@ -10,6 +10,7 @@ import {
 import { tickAutomationRuns } from "@/modules/automation/engine";
 import { tickBookingReminders } from "@/modules/followup/reminders";
 import { tickReminderCalls } from "@/modules/voice/reminder-calls";
+import { tickCrmSync } from "@/modules/crm/sync";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
 import { expireTrials } from "@/modules/billing/trial";
 
@@ -41,6 +42,9 @@ export async function GET(request: Request) {
   // 2. Automation runs parked on a `wait` step whose resumeAt is due (§M6).
   const resumedRuns = await tickAutomationRuns();
 
+  // 2a. CRM sync jobs (Zoho / Salesforce), one per connection per tick.
+  const crmSynced = await tickCrmSync();
+
   // 2b. Revenue-Recovery follow-ups: T-24h/T-2h reminders, no-show rebooks,
   //     post-service review asks (5.2). Consent + template-gated like every send.
   const followUps = await tickBookingReminders();
@@ -69,6 +73,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     released,
     resumedRuns,
+    crmSynced,
     followUps,
     calls,
     paymentsPaid,
