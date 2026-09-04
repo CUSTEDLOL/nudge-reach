@@ -1,7 +1,9 @@
 # Self-Serve Vertical SaaS — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
-> **Status: APPROVED 2026-09-01** (all decisions resolved — see "Founder decisions"). Implementation in progress, WS0 first.
+> **Status: WS0–WS2 SHIPPED; WS3–WS7 PAUSED 2026-09-04.** The enterprise track
+> (`docs/plans/2026-09-04-enterprise-track.md`) is the active roadmap — founder
+> decision F1. Do not start WS3–WS7 work without re-confirming with the founder.
 
 **Goal:** Convert Nudge from a concierge-gated "AI Front Desk" flagship into a self-serve vertical SaaS: pack-pre-trained agent, 30-minute self-onboarding, three market-priced tiers, and per-vertical ad attribution that decides which vertical wins.
 
@@ -36,7 +38,6 @@
 - **D4 — `/admin/funnel` gate:** `FOUNDER_EMAILS` env allowlist, checked server-side, route 404s otherwise.
 - **D5 — Wizard:** new orgs only; mid-flight orgs map to step 1. Step 2 carries the two-question market-research instrument: (1) industry — full 15-20 option list + free text, pack verticals get the pre-trained agent, everything else gets the generic pack **and logs demand as a funnel event**; (2) "what should Nudge handle?" multi-select (answer instantly / book / chase leads / collect payments / campaigns) — personalizes later steps and feeds per-vertical feature demand into /admin/funnel.
 - **D6 — `/pay/[id]`:** keep-and-strip.
-
 ---
 
 ## Sequencing & branches

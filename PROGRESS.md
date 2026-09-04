@@ -5,6 +5,34 @@ what's next.
 
 ---
 
+## E0 — Enterprise foundation (2026-09-04) ✅
+
+First workstream of the enterprise track (`docs/plans/2026-09-04-enterprise-track.md`);
+the self-serve plan's WS3–WS7 are paused (PLAN.md header). Also reconciled the two
+diverged mains: local WS0–WS2 merged with origin's voice front desk + CRM sync —
+both retained, pushed.
+
+### Built
+- `enterprise` plan (contact-only — hidden from the billing grid, rejected by
+  checkout, founder-assigned only) + six `PlanLimits` feature flags per the F4
+  matrix: `publicApi` (Growth+), `webWidget` (paid), `leadScoring` (Pro+),
+  `customActions`/`byoLlm`/`multiNumber` (front_desk/enterprise). `check*`
+  helpers in `billing/limits.ts` mirror `checkAiFrontDesk`.
+- API-key + webhook **creation** now plan-gated on `publicApi` (closes the gap
+  where Growth's "Webhooks + API access" promise was unenforced); revoke/
+  toggle/delete stay open for downgraded orgs. Integrations page shows the
+  upsell when gated.
+- Append-only `ContactEvent` table (RLS'd) + fire-and-forget
+  `recordContactEvent`; emitting at: lead-stage changes (agent tool, contact
+  edit, bulk stage, inbox stage), opt-outs (manual + STOP), booking status
+  (agent capture, review-completed pass), payment paid. E6 lead scoring reads
+  this history.
+- `npm run plan:set -- --org <id|owner-email-prefix> --plan <planId>`.
+
+### Founders must do manually
+- Assign the enterprise tier per client: `npm run plan:set -- --org … --plan enterprise`.
+- No Vercel/env changes needed for E0.
+
 ## CRM integrations — the employee writes to your CRM (2026-09-04) ✅
 
 Roadmap #5, plan `docs/superpowers/plans/2026-08-29-crm-integrations.md`. One-way
