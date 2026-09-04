@@ -14,6 +14,9 @@ const PUBLIC_PATHS = [
   "/api/voice",
   // public developer API: nk_live_ key auth inside resolveApiKeyOrg, never cookies
   "/api/v1",
+  // website widget (E5): embed script + public config/click endpoints
+  "/widget.js",
+  "/api/widget",
   "/api/cron",
   "/api/waitlist",
   "/api/access",

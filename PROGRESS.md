@@ -5,6 +5,30 @@ what's next.
 
 ---
 
+## E5 — Website WhatsApp widget (2026-09-04) ✅
+
+Sixth enterprise workstream (head plan §E5, scope F6: wa.me button, not live
+web-chat). Any site adds one script tag and gets a floating WhatsApp button
+that opens the business's number with a pre-filled message.
+
+### Built
+- `src/modules/widget/`: config in `Org.settings.widget` (house pattern) with
+  a random `wk_…` public key (never the org id); public lookup returns render
+  data only.
+- Public routes: `/widget.js` (dependency-free IIFE, cached 1h),
+  `/api/widget/[key]/config` (404 for unknown/disabled/malformed keys, cached
+  5m), `/api/widget/[key]/event` (click beacon → `widget_click` ContactEvent,
+  IP rate-limited). All on the auth-proxy public list.
+- Settings → Website widget (ADMIN, paid tiers via `webWidget`): on/off,
+  public WhatsApp number (wa.me needs real digits — Meta's phoneNumberId is an
+  ID, not a number), pre-filled message, corner, color, live preview,
+  copy-paste snippet.
+- 8 tests: no-org-id leak, 404 matrix, rate limit, key stability, garbage-key
+  rejection before DB.
+
+### Founders must do manually
+- Nothing. Clicks accrue to ContactEvent for E6/analytics.
+
 ## E4 — Multiple WhatsApp numbers per org (2026-09-04) ✅
 
 Fifth enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E4,
