@@ -56,15 +56,15 @@ const ROWS: ComparisonRow[] = [
     outcome: "Books into your real calendar",
     nudge: { text: "Checks availability + books", tone: "positive" },
     meta: { text: "No real-system action", tone: "negative" },
-    crm: { text: "Possible with setup", tone: "partial" },
+    crm: { text: "Available on some plans", tone: "partial" },
     human: { text: "Yes — manually", tone: "partial" },
   },
   {
     outcome: "Chases leads who go quiet",
     nudge: { text: "Automatic follow-up", tone: "positive" },
     meta: { text: "Inbound only", tone: "negative" },
-    crm: { text: "You build the automation", tone: "partial" },
-    human: { text: "Only when remembered", tone: "partial" },
+    crm: { text: "Available via automations", tone: "partial" },
+    human: { text: "Depends on staff capacity", tone: "partial" },
   },
   {
     outcome: "Sends payment links",
@@ -77,28 +77,28 @@ const ROWS: ComparisonRow[] = [
     outcome: "Recovers no-shows",
     nudge: { text: "Reminds + re-engages", tone: "positive" },
     meta: { text: "No outbound recovery", tone: "negative" },
-    crm: { text: "You build the campaign", tone: "partial" },
+    crm: { text: "Available via automations", tone: "partial" },
     human: { text: "Manual follow-up", tone: "partial" },
   },
   {
     outcome: "Setup and training",
     nudge: { text: "We do it for you", tone: "positive" },
     meta: { text: "You train it", tone: "partial" },
-    crm: { text: "Your team configures it", tone: "partial" },
+    crm: { text: "Self-serve or paid onboarding", tone: "partial" },
     human: { text: "You recruit + train", tone: "negative" },
   },
   {
     outcome: "Works after hours",
     nudge: { text: "Always on — 24/7", tone: "positive" },
     meta: { text: "24/7 for inbound", tone: "partial" },
-    crm: { text: "Automations only", tone: "partial" },
+    crm: { text: "24/7 once configured", tone: "positive" },
     human: { text: "Needs shifts", tone: "negative" },
   },
   {
     outcome: "Who operates it?",
     nudge: { text: "Nudge runs it", tone: "positive" },
     meta: { text: "You supervise it", tone: "partial" },
-    crm: { text: "Your team", tone: "negative" },
+    crm: { text: "Your team or partner", tone: "partial" },
     human: { text: "The employee", tone: "partial" },
   },
 ];
@@ -143,7 +143,7 @@ export function MetaVsNudge() {
           </p>
         </header>
 
-        <p className="mt-8 text-center text-[12px] font-semibold text-ink/45 sm:hidden">
+        <p className="mt-8 text-center text-[12px] font-semibold text-ink/60 sm:hidden">
           Swipe to compare →
         </p>
 
@@ -153,7 +153,7 @@ export function MetaVsNudge() {
           tabIndex={0}
           className="mx-auto mt-3 max-w-7xl overflow-x-auto rounded-[1.5rem] border-2 border-ink/15 bg-white shadow-[0_24px_70px_-36px_rgba(10,31,26,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-4 sm:mt-10"
         >
-          <table className="w-full min-w-[1060px] border-separate border-spacing-0 text-left">
+          <table className="w-full min-w-[865px] border-separate border-spacing-0 text-left sm:min-w-[1060px]">
             <caption className="sr-only">
               Nudge compared with Meta&apos;s free AI, WhatsApp CRM tools, and a
               human receptionist
@@ -162,7 +162,7 @@ export function MetaVsNudge() {
               <tr>
                 <th
                   scope="col"
-                  className="sticky left-0 z-20 w-[220px] border-b border-r border-ink/15 bg-[#f8faf7] px-5 py-5 text-[12px] font-bold uppercase tracking-[0.12em] text-ink/50"
+                  className="sticky left-0 z-20 w-[145px] min-w-[145px] border-b border-r border-ink/15 bg-[#f8faf7] px-3 py-5 text-[12px] font-bold uppercase tracking-[0.12em] text-ink/60 sm:w-[220px] sm:min-w-[220px] sm:px-5"
                 >
                   What gets done
                 </th>
@@ -171,9 +171,9 @@ export function MetaVsNudge() {
                     key={column.key}
                     scope="col"
                     className={cn(
-                      "w-[210px] border-b border-ink/15 px-5 py-5 align-bottom",
+                      "w-[180px] min-w-[180px] border-b border-ink/15 px-3 py-5 align-bottom sm:w-[210px] sm:min-w-[210px] sm:px-5",
                       column.featured
-                        ? "bg-brand-500 text-white"
+                        ? "bg-brand-800 text-white"
                         : "bg-[#f8faf7] text-ink"
                     )}
                   >
@@ -188,7 +188,7 @@ export function MetaVsNudge() {
                     <span
                       className={cn(
                         "mt-1 block text-[11px] font-semibold leading-snug",
-                        column.featured ? "text-white/80" : "text-ink/45"
+                        column.featured ? "text-brand-100" : "text-ink/60"
                       )}
                     >
                       {column.detail}
@@ -203,7 +203,7 @@ export function MetaVsNudge() {
                   <th
                     scope="row"
                     className={cn(
-                      "sticky left-0 z-10 border-r border-ink/15 bg-white px-5 py-4 text-[13px] font-bold leading-snug text-ink",
+                      "sticky left-0 z-10 w-[145px] min-w-[145px] border-r border-ink/15 bg-white px-3 py-4 text-[13px] font-bold leading-snug text-ink sm:w-[220px] sm:min-w-[220px] sm:px-5",
                       rowIndex < ROWS.length - 1 && "border-b"
                     )}
                   >
@@ -213,7 +213,7 @@ export function MetaVsNudge() {
                     <td
                       key={column.key}
                       className={cn(
-                        "px-5 py-4 align-top",
+                        "w-[180px] min-w-[180px] px-3 py-4 align-top sm:w-[210px] sm:min-w-[210px] sm:px-5",
                         rowIndex < ROWS.length - 1 && "border-b border-ink/10",
                         column.featured ? "bg-brand-50" : "bg-white"
                       )}
