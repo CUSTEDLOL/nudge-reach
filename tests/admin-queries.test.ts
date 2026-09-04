@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { prisma } = vi.hoisted(() => ({
   prisma: {
     org: { count: vi.fn(), groupBy: vi.fn(), findMany: vi.fn() },
+    conversation: { groupBy: vi.fn() },
     conversationMessage: { findMany: vi.fn(), groupBy: vi.fn() },
     aiUsage: { groupBy: vi.fn() },
     bookingRequest: { count: vi.fn() },
@@ -12,7 +13,7 @@ const { prisma } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
 
-import { overviewStats } from "@/modules/admin/queries";
+import { orgsList, overviewStats } from "@/modules/admin/queries";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -75,5 +76,49 @@ describe("overviewStats", () => {
       const select = call[0]?.select ?? {};
       expect(select).not.toHaveProperty("body");
     }
+  });
+});
+
+describe("orgsList", () => {
+  const makeOrg = (id: string) => ({
+    id,
+    name: `Org ${id}`,
+    plan: "growth",
+    simulated: true,
+    vertical: "clinic",
+    createdAt: new Date(),
+    memberships: [{ email: `${id}@x.com` }],
+    _count: { contacts: 3, whatsappAccounts: 1, memberships: 2 },
+  });
+
+  beforeEach(() => {
+    prisma.aiUsage.groupBy.mockResolvedValue([
+      { orgId: "o1", _sum: { costMicroUsd: 2_000_000 } },
+    ]);
+    prisma.conversation.groupBy.mockResolvedValue([
+      { orgId: "o1", _max: { lastInboundAt: new Date("2026-09-01") } },
+    ]);
+  });
+
+  it("returns a page with merged cost + last-inbound and a next cursor", async () => {
+    prisma.org.findMany.mockResolvedValue(
+      Array.from({ length: 51 }, (_, i) => makeOrg(`o${i + 1}`))
+    );
+    const page = await orgsList({});
+    expect(page.rows).toHaveLength(50);
+    expect(page.nextCursor).toBe("o50");
+    expect(page.rows[0].aiCostMicroUsd30d).toBe(2_000_000);
+    expect(page.rows[0].lastInboundAt).toEqual(new Date("2026-09-01"));
+    expect(page.rows[1].aiCostMicroUsd30d).toBe(0);
+  });
+
+  it("passes search and cursor into the query and ends pagination honestly", async () => {
+    prisma.org.findMany.mockResolvedValue([makeOrg("o1")]);
+    const page = await orgsList({ search: "spice", cursor: "o99" });
+    expect(page.nextCursor).toBeNull();
+    const args = prisma.org.findMany.mock.calls.at(-1)![0];
+    expect(args.cursor).toEqual({ id: "o99" });
+    expect(args.skip).toBe(1);
+    expect(JSON.stringify(args.where)).toContain("spice");
   });
 });

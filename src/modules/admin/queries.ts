@@ -107,3 +107,110 @@ export async function overviewStats(days: number): Promise<OverviewStats> {
     paymentsPaid: paymentsPaid,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Orgs table                                                          */
+/* ------------------------------------------------------------------ */
+
+export interface OrgRow {
+  id: string;
+  name: string;
+  plan: string;
+  simulated: boolean;
+  vertical: string | null;
+  ownerEmail: string | null;
+  numbers: number;
+  contacts: number;
+  members: number;
+  aiCostMicroUsd30d: number;
+  lastInboundAt: Date | null;
+  createdAt: Date;
+}
+
+export interface OrgsPage {
+  rows: OrgRow[];
+  /** Pass back as ?cursor= to fetch the next page; null = no more. */
+  nextCursor: string | null;
+}
+
+const ORGS_PAGE_SIZE = 50;
+
+export async function orgsList(opts: {
+  search?: string;
+  cursor?: string;
+}): Promise<OrgsPage> {
+  const search = opts.search?.trim();
+  const orgs = await prisma.org.findMany({
+    where: search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            {
+              memberships: {
+                some: { email: { contains: search, mode: "insensitive" } },
+              },
+            },
+          ],
+        }
+      : undefined,
+    orderBy: { createdAt: "desc" },
+    take: ORGS_PAGE_SIZE + 1,
+    ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+    select: {
+      id: true,
+      name: true,
+      plan: true,
+      simulated: true,
+      vertical: true,
+      createdAt: true,
+      memberships: {
+        where: { role: "OWNER" },
+        select: { email: true },
+        take: 1,
+      },
+      _count: {
+        select: { contacts: true, whatsappAccounts: true, memberships: true },
+      },
+    },
+  });
+
+  const hasMore = orgs.length > ORGS_PAGE_SIZE;
+  const page = hasMore ? orgs.slice(0, ORGS_PAGE_SIZE) : orgs;
+  const ids = page.map((o) => o.id);
+
+  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [costGroups, inboundGroups] = await Promise.all([
+    prisma.aiUsage.groupBy({
+      by: ["orgId"],
+      where: { orgId: { in: ids }, createdAt: { gte: since30 } },
+      _sum: { costMicroUsd: true },
+    }),
+    prisma.conversation.groupBy({
+      by: ["orgId"],
+      where: { orgId: { in: ids } },
+      _max: { lastInboundAt: true },
+    }),
+  ]);
+  const costBy = new Map(costGroups.map((g) => [g.orgId, g._sum.costMicroUsd ?? 0]));
+  const inboundBy = new Map(
+    inboundGroups.map((g) => [g.orgId, g._max.lastInboundAt ?? null])
+  );
+
+  return {
+    rows: page.map((o) => ({
+      id: o.id,
+      name: o.name,
+      plan: o.plan,
+      simulated: o.simulated,
+      vertical: o.vertical,
+      ownerEmail: o.memberships[0]?.email ?? null,
+      numbers: o._count.whatsappAccounts,
+      contacts: o._count.contacts,
+      members: o._count.memberships,
+      aiCostMicroUsd30d: costBy.get(o.id) ?? 0,
+      lastInboundAt: inboundBy.get(o.id) ?? null,
+      createdAt: o.createdAt,
+    })),
+    nextCursor: hasMore ? page[page.length - 1].id : null,
+  };
+}
