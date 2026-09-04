@@ -199,7 +199,35 @@ async function main() {
   // clean any prior eval contacts (cascade drops their conversations/bookings)
   await prisma.contact.deleteMany({ where: { orgId: org.id, phoneE164: { startsWith: EVAL_PREFIX } } });
 
-  console.log(`\n🧪 Agent eval — ${SCENARIOS.length} scenarios × ${RUNS} runs (Haiku, simulation)\n`);
+  // E3 provider matrix: EVAL_PROVIDER + EVAL_MODEL + EVAL_API_KEY run the same
+  // scenarios on a BYO provider (temporary LlmAccount + enterprise plan on the
+  // eval org, both restored afterwards). Without them: the platform model.
+  const evalProvider = process.env.EVAL_PROVIDER;
+  const evalModel = process.env.EVAL_MODEL;
+  const evalApiKey = process.env.EVAL_API_KEY;
+  let restorePlan: string | null = null;
+  if (evalProvider && evalModel && evalApiKey) {
+    const { encryptSecret } = await import("@/lib/crypto");
+    restorePlan = org.plan;
+    await prisma.org.update({ where: { id: org.id }, data: { plan: "enterprise" } });
+    await prisma.llmAccount.upsert({
+      where: { orgId: org.id },
+      create: { orgId: org.id, provider: evalProvider, model: evalModel, apiKeyEncrypted: encryptSecret(evalApiKey) },
+      update: { provider: evalProvider, model: evalModel, apiKeyEncrypted: encryptSecret(evalApiKey) },
+    });
+  }
+  const cleanupByok = async () => {
+    if (restorePlan !== null) {
+      await prisma.llmAccount.deleteMany({ where: { orgId: org.id } });
+      await prisma.org.update({ where: { id: org.id }, data: { plan: restorePlan } });
+    }
+  };
+  process.on("beforeExit", () => void cleanupByok());
+
+  const modelLabel = evalProvider
+    ? `${evalProvider}/${evalModel}`
+    : process.env.RUNTIME_MODEL || "claude-haiku-4-5";
+  console.log(`\n🧪 Agent eval — ${SCENARIOS.length} scenarios × ${RUNS} runs (${modelLabel}, simulation)\n`);
   const salt = String(Date.now()).slice(-4);
 
   // group scenarios by vertical so the shared org agent-profile is stable per group

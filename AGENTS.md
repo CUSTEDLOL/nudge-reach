@@ -63,9 +63,13 @@ slide back to "WhatsApp CRM" copy or campaign-blast-first framing.
 2. **Consent enforced in code** — marketing only to `opted_in`; double-gated
    (queue + `sendMessage`); opt-outs permanent; STOP always wins; imports can't
    resurrect an opt-out.
-3. **Cheap AI at runtime** — Haiku or Sonnet only (`RUNTIME_MODEL`; Sonnet is the
-   production choice since 2026-08-29), through the single `lib/model-router`,
-   with the expensive-model guard intact. Never hardcode Opus/Fable at runtime.
+3. **Cheap AI at runtime** (amended 2026-09-04, enterprise track E3) —
+   **platform-paid** AI stays Haiku or Sonnet only (`RUNTIME_MODEL`; Sonnet is
+   the production choice since 2026-08-29), with the expensive-model guard
+   intact; never hardcode Opus/Fable at runtime. **Enterprise orgs may bring
+   their own OpenAI / Google / Anthropic API key** (their cost, AES-encrypted,
+   models limited to the curated `BYOK_ALLOWED_MODELS` list). ALL calls —
+   platform and BYO — go through the single `lib/model-router` doorway.
 4. **Simulation mode works end-to-end** — with `SEND_MODE=simulation` (default),
    the ENTIRE product (generate → send → calendar booking → follow-ups →
    dashboard) demos with zero external keys. Every new feature must too.

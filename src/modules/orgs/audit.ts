@@ -36,7 +36,9 @@ export type AuditAction =
   | "voice.number_saved"
   | "custom_action.created"
   | "custom_action.updated"
-  | "custom_action.deleted";
+  | "custom_action.deleted"
+  | "llm.connected"
+  | "llm.disconnected";
 
 /** Human labels for the viewer. */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -69,6 +71,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "custom_action.created": "Custom agent action created",
   "custom_action.updated": "Custom agent action updated",
   "custom_action.deleted": "Custom agent action deleted",
+  "llm.connected": "Own AI model connected",
+  "llm.disconnected": "Own AI model disconnected",
 };
 
 export function recordAudit(

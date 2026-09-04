@@ -5,6 +5,36 @@ what's next.
 
 ---
 
+## E3 — BYO-LLM: OpenAI / Google / Anthropic on the customer's key (2026-09-04) ✅
+
+Fourth enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E3).
+**Invariant 3 amended in AGENTS.md**: platform-paid AI stays guarded
+Haiku/Sonnet; Enterprise orgs may run their own provider key through the same
+single model-router doorway.
+
+### Built
+- Model-router split into provider drivers (`drivers/anthropic|openai|gemini.ts`)
+  behind the unchanged `generate`/`chat`/`runAgent` surface — zero call-site
+  changes; `AgentToolDef.input_schema` is now a provider-neutral JSON schema.
+  Clients cached per key; PDF ingest pinned to the platform driver.
+- Per-call resolution: attributed org with a valid `LlmAccount` (new table,
+  RLS'd, key AES-encrypted) + `byoLlm` plan flag + model on the curated
+  `BYOK_ALLOWED_MODELS` list → runs on their key; anything invalid falls back
+  to the platform path silently. Usage rows flagged `byok` and still priced
+  (multi-provider price table) so Analytics shows their AI cost.
+- Settings → AI model (ADMIN, Enterprise-gated): provider/model pickers from
+  the allow-list, encrypted key entry, live "Test key" ping, one-click return
+  to Nudge's model. Audit-logged.
+- Eval matrix: `EVAL_PROVIDER`/`EVAL_MODEL`/`EVAL_API_KEY` run the same 14
+  scenarios on a BYO provider (temporary LlmAccount, restored after) so
+  providers can be benchmarked before customers ask.
+- New deps: `openai`, `@google/genai`. 25 new tests (resolution, guard v2,
+  driver marshalling incl. tool loops with mocked SDKs).
+
+### Founders must do manually
+- Nothing for platform behavior. To benchmark providers:
+  `EVAL_PROVIDER=openai EVAL_MODEL=gpt-5-mini EVAL_API_KEY=… npm run eval:agent`.
+
 ## E2 — Custom agent actions (2026-09-04) ✅
 
 Third enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E2):
