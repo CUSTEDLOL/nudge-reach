@@ -5,6 +5,7 @@ import { isStopMessage } from "@/modules/whatsapp/webhook-verify";
 import { sendMessage } from "@/modules/messaging";
 import { crmContactCreated } from "@/modules/crm/events";
 import { recordContactEvent } from "@/modules/contacts/events";
+import { scoreContactSoon } from "@/modules/scoring/compute";
 import { buildHistory, generateAgentActionReply } from "@/modules/agent/reply";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { runInboundAutomations } from "@/modules/automation/engine";
@@ -107,6 +108,9 @@ export async function handleInboundMessage(
       metaMessageId: opts.metaMessageId ?? null,
     },
   });
+
+  // E6: refresh the lead score on activity (fire-and-forget, plan-gated inside).
+  scoreContactSoon(orgId, contact.id);
 
   // Notify any integrations subscribed to inbound messages (fire-and-forget).
   void dispatchWebhook(orgId, "message.received", {

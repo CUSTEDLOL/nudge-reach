@@ -204,6 +204,33 @@ export function ContactsTable({
       ),
     },
     {
+      // E6 lead score (Pro+); em-dash until first scored / on lower tiers.
+      key: "score",
+      header: "Score",
+      sortValue: (row) => row.leadScore ?? -1,
+      cell: (row) =>
+        row.leadScore === null ? (
+          <span className="text-neutral-300">—</span>
+        ) : (
+          <span className="flex items-center gap-1.5">
+            <span
+              className={
+                "font-mono text-xs font-semibold " +
+                (row.leadScore >= 70
+                  ? "text-emerald-600"
+                  : row.leadScore >= 40
+                    ? "text-amber-600"
+                    : "text-neutral-500")
+              }
+            >
+              {row.leadScore}
+            </span>
+            {row.churnRisk === "high" && <Badge tone="danger">At risk</Badge>}
+            {row.churnRisk === "medium" && <Badge tone="warning">Cooling</Badge>}
+          </span>
+        ),
+    },
+    {
       key: "assignee",
       header: "Assignee",
       cell: (row) => {

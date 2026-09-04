@@ -30,6 +30,11 @@ export type ContactRow = {
   leadStage: LeadStage;
   assignedToUserId: string | null;
   lastContactedAt: string | null;
+  // E6 lead scoring (Pro+). Null until first scored / on lower tiers.
+  leadScore: number | null;
+  churnRisk: string | null;
+  /** Present on the profile page only — why the score is what it is. */
+  leadScoreReasons?: string[] | null;
   createdAt: string;
   tags: { id: string; name: string; color: string }[];
 };

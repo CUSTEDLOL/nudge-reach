@@ -13,6 +13,7 @@ import { tickReminderCalls } from "@/modules/voice/reminder-calls";
 import { tickCrmSync } from "@/modules/crm/sync";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
 import { expireTrials } from "@/modules/billing/trial";
+import { tickLeadScoring } from "@/modules/scoring/compute";
 
 /**
  * Queue tick: releases due SCHEDULED campaigns, resumes WAITING automation
@@ -59,6 +60,9 @@ export async function GET(request: Request) {
   // 2d. AI Front Desk trials that ended fall back to Free.
   const expiredTrials = await expireTrials();
 
+  // 2e. E6: rescore stale contacts (bounded batch, plan-gated per org).
+  const rescored = await tickLeadScoring();
+
   // 3. Advance every SENDING campaign (including freshly released ones).
   const sending = await prisma.campaign.findMany({
     where: { status: "SENDING" },
@@ -78,6 +82,7 @@ export async function GET(request: Request) {
     calls,
     paymentsPaid,
     expiredTrials,
+    rescored,
     campaigns: sending.length,
     processed,
   });

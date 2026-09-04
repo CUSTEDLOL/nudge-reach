@@ -6,7 +6,8 @@
 > that workstream) then superpowers:executing-plans / TDD. The head session (this chat)
 > reviews between workstreams.
 >
-> **Status: APPROVED 2026-09-04.** Founder decisions F1–F3 resolved (below). The
+> **Status: E0–E6 SHIPPED 2026-09-04** (E5 as wa.me button per F6; E4 sticky-routing variant). Remaining: E4b (per-number staff access + campaign number picker), E7 superseded — a voice front desk (ElevenLabs) shipped via origin/main on 2026-09-04.
+> **Originally: APPROVED 2026-09-04.** Founder decisions F1–F3 resolved (below). The
 > self-serve plan's WS3–WS7 (PLAN.md) are **PAUSED** — this track is the active roadmap.
 
 **Goal:** Make Nudge enterprise-grade by adding, one careful workstream at a time: a

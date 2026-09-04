@@ -73,6 +73,11 @@ export default async function ContactProfilePage({
     leadStage: contact.leadStage,
     assignedToUserId: contact.assignedToUserId,
     lastContactedAt: contact.lastContactedAt?.toISOString() ?? null,
+    leadScore: contact.leadScore,
+    churnRisk: contact.churnRisk,
+    leadScoreReasons: Array.isArray(contact.leadScoreReasons)
+      ? (contact.leadScoreReasons as string[])
+      : null,
     createdAt: contact.createdAt.toISOString(),
     tags: contact.tags.map((ct) => ({
       id: ct.tag.id,

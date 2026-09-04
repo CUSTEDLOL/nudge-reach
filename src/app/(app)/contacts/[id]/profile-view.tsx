@@ -341,6 +341,23 @@ export function ProfileView({
                   </Badge>
                 </div>
               </div>
+              {contact.leadScore !== null && (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Lead score</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-semibold text-neutral-900">
+                      {contact.leadScore}/100
+                    </span>
+                    {contact.churnRisk === "high" && <Badge tone="danger">At risk</Badge>}
+                    {contact.churnRisk === "medium" && <Badge tone="warning">Cooling</Badge>}
+                  </div>
+                  {contact.leadScoreReasons && contact.leadScoreReasons.length > 0 && (
+                    <p className="text-xs text-neutral-500">
+                      {contact.leadScoreReasons.join(" · ")}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="profile-assignee">Assignee</Label>
                 <Select

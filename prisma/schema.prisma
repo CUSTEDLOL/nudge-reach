@@ -539,6 +539,12 @@ model Contact {
   assignedToUserId String?
   // Last time the org messaged this contact (any channel/path).
   lastContactedAt  DateTime?
+  // E6 lead scoring (deterministic, explainable — modules/scoring). Reasons
+  // are human-readable strings; churnRisk only set for repeat customers.
+  leadScore        Int?
+  leadScoreReasons Json?
+  churnRisk        String? // low | medium | high
+  scoredAt         DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   audiences        AudienceContact[]

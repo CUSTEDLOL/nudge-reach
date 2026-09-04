@@ -5,6 +5,30 @@ what's next.
 
 ---
 
+## E6 — Lead scoring + churn risk (2026-09-04) ✅
+
+Final active workstream of the enterprise track (head plan §E6). Deterministic,
+explainable, zero AI cost — hand-weighted rules with monotonicity tests.
+
+### Built
+- `src/modules/scoring/`: pure `computeLeadScore` (0–100 + human-readable
+  reasons: recency, chat frequency, campaign READ/CLICKED, bookings kept vs
+  missed, payments, stage; an opt-out caps the score at 5) and
+  `computeChurnRisk` (repeat customers measured against their OWN historical
+  cadence → low/medium/high).
+- `Contact` gains `leadScore/leadScoreReasons/churnRisk/scoredAt`. Recompute:
+  fire-and-forget on every inbound message + a bounded cron batch (200 stale
+  contacts/tick), both plan-gated on `leadScoring` (Pro+).
+- UI: sortable Score column with At-risk/Cooling chips in the contacts table;
+  score + reasons on the contact profile.
+- 10 pure scoring tests incl. monotonicity (more no-shows / longer silence can
+  never raise a score) — 587 total.
+- No auto-messaging from scores (explicitly out of scope; follow-ups remain
+  the followup module's job).
+
+### Founders must do manually
+- Nothing. Scores appear as the cron/inbound traffic touches contacts.
+
 ## E5 — Website WhatsApp widget (2026-09-04) ✅
 
 Sixth enterprise workstream (head plan §E5, scope F6: wa.me button, not live
