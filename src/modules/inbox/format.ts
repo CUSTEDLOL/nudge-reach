@@ -85,8 +85,16 @@ export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
 
-/** Truncate a message body for Conversation.lastMessagePreview. */
+/**
+ * Truncate a message body for Conversation.lastMessagePreview. Truncation is
+ * code-point-safe and lone surrogates are stripped — a preview must never
+ * split an emoji in half (Postgres rejects unpaired surrogates).
+ */
 export function toPreview(body: string): string {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return flat.length > 120 ? `${flat.slice(0, 119)}…` : flat;
+  const flat = body
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const points = [...flat];
+  return points.length > 120 ? `${points.slice(0, 119).join("")}…` : flat;
 }

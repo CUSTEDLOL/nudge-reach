@@ -135,4 +135,14 @@ describe("format helpers", () => {
     expect(preview.length).toBe(120);
     expect(preview.endsWith("…")).toBe(true);
   });
+
+  it("toPreview never splits an emoji or emits a lone surrogate (Postgres rejects them)", () => {
+    // 119 chars then an emoji: naive .slice(0,119) would cut the pair in half.
+    const tricky = "x".repeat(119) + "🙏🙏🙏";
+    const preview = toPreview(tricky);
+    expect(preview).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+    expect(preview.endsWith("…")).toBe(true);
+    // A reply already ending in half an emoji (maxTokens truncation) is cleaned.
+    expect(toPreview("thanks \uD83D")).toBe("thanks");
+  });
 });

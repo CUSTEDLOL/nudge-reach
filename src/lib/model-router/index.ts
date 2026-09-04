@@ -22,6 +22,18 @@ import type {
 
 export type { AgentToolDef, ChatTurn, ToolInvocation } from "@/lib/model-router/types";
 
+/**
+ * A model reply truncated at maxTokens can end in half an emoji (an unpaired
+ * UTF-16 surrogate), which Postgres rejects on insert. Strip lone surrogates
+ * once here so no driver can leak one into the app.
+ */
+function sanitizeText(text: string): string {
+  return text.replace(
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
+    ""
+  );
+}
+
 export interface GenerateInput {
   system: string;
   prompt: string;
@@ -91,7 +103,7 @@ export async function generate({
   if (attribution) {
     recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
   }
-  return text;
+  return sanitizeText(text);
 }
 
 export interface ChatInput {
@@ -117,7 +129,7 @@ export async function chat({
   if (attribution) {
     recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
   }
-  return text;
+  return sanitizeText(text);
 }
 
 export interface RunAgentInput {
@@ -169,5 +181,5 @@ export async function runAgent({
   if (attribution) {
     recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
   }
-  return { text, toolCalls, cappedOut };
+  return { text: sanitizeText(text), toolCalls, cappedOut };
 }

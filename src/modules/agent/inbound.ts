@@ -140,11 +140,16 @@ export async function handleInboundMessage(
   // ("weekends only" resolves against TODAY). The digest is the primary
   // source of truth; the legacy businessInfo blob rides along until migrated.
   const [recent, org, knowledgeEntries] = await Promise.all([
-    prisma.conversationMessage.findMany({
-      where: { conversationId: conversation.id },
-      orderBy: { createdAt: "asc" },
-      take: HISTORY_LIMIT,
-    }),
+    // NEWEST messages, then restored to chronological order — a long thread
+    // must keep the customer's latest turns, not its opening ones. This also
+    // guarantees the just-persisted inbound is always in the window.
+    prisma.conversationMessage
+      .findMany({
+        where: { conversationId: conversation.id },
+        orderBy: { createdAt: "desc" },
+        take: HISTORY_LIMIT,
+      })
+      .then((rows) => rows.reverse()),
     prisma.org.findUnique({ where: { id: orgId }, select: { timezone: true } }),
     prisma.knowledgeEntry.findMany({
       where: { orgId, status: "active" },
@@ -154,6 +159,12 @@ export async function handleInboundMessage(
     }),
   ]);
 
+  // buildHistory drops leading assistant turns; whatever happens, the agent
+  // must at minimum see the message it is replying to (empty history is an
+  // API error).
+  const history = buildHistory(recent);
+  if (history.length === 0) history.push({ role: "user", text });
+
   const { text: replyText, handoff, actions } = await generateAgentActionReply(
     {
       vertical: profile.vertical,
@@ -162,7 +173,7 @@ export async function handleInboundMessage(
       tone: profile.tone,
       doNots: profile.doNots,
     },
-    buildHistory(recent),
+    history,
     {
       orgId,
       contactId: contact.id,
