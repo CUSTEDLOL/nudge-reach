@@ -5,15 +5,18 @@ what's next.
 
 ---
 
-## Landing comparison clarity pass (2026-09-04) ✅
+## Landing comparison story redesign (2026-09-05) ✅
 
-- Replaced the animated competitor leaderboard, scores, and filters with one
-  direct feature-by-feature comparison table.
-- Compares Nudge with Meta's free AI, CRM tools (WATI, AiSensy, Interakt), and
-  a human receptionist across eight plain-language front-desk outcomes.
-- Highlights Nudge's done-for-you column, keeps row labels sticky on narrow
-  screens, and uses semantic table headers for accessibility.
-- Added a focused render/content regression test.
+- Replaced the dense comparison matrix with one late-night enquiry and four
+  easy-to-scan operating-model cards.
+- Shows Nudge carrying the lead through reply, real-calendar check, deposit and
+  follow-up; the Meta, CRM-tool and human cards explain who owns the remaining
+  work without making brittle capability-denial claims.
+- Uses the landing page's saturated bento cards, ink borders, hard shadows and
+  ghost words; desktop is asymmetric and mobile stacks vertically with no
+  horizontal scrolling.
+- Reworked the focused render/content test around the story, credible copy,
+  semantic articles and mobile-safe static structure.
 
 ## E3 — BYO-LLM: OpenAI / Google / Anthropic on the customer's key (2026-09-04) ✅
 
