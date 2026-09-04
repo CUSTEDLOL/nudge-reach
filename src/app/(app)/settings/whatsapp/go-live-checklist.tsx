@@ -22,7 +22,10 @@ interface ChecklistItem {
 export async function GoLiveChecklist({ orgId }: { orgId: string }) {
   const [account, approvedTemplates, knowledgeFacts, contacts] =
     await Promise.all([
-      prisma.whatsappAccount.findUnique({ where: { orgId } }),
+      prisma.whatsappAccount.findFirst({
+        where: { orgId },
+        orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      }),
       prisma.template.count({
         where: { orgId, campaignId: null, metaStatus: "APPROVED" },
       }),

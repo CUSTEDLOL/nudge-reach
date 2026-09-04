@@ -25,13 +25,14 @@ export async function connectWhatsappAction(
 
   try {
     requireRole(ctx, "ADMIN");
-    await saveWhatsappAccount({
+    const saved = await saveWhatsappAccount({
       orgId: ctx.org.id,
       wabaId,
       phoneNumberId,
       displayName,
       accessToken,
     });
+    if (!saved.ok) return { ok: false, message: saved.message };
   } catch (err) {
     return {
       ok: false,

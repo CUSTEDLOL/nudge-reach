@@ -182,8 +182,9 @@ export async function getOnboardingSnapshot(
 ): Promise<OnboardingSnapshot> {
   const [contactCount, account] = await Promise.all([
     prisma.contact.count({ where: { orgId } }),
-    prisma.whatsappAccount.findUnique({
+    prisma.whatsappAccount.findFirst({
       where: { orgId },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
       select: { displayName: true },
     }),
   ]);
