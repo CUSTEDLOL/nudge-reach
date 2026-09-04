@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { LaunchDemoButton } from "./launch-cta";
-import { GetAccessButton } from "./get-access";
 
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
@@ -90,13 +89,16 @@ const DUST_PX = 8;
 /** A slab under the logo, dissolving to the right in blocky Minecraft-style
  * steps. Over the hero it's white so the green wordmark reads on white;
  * once the navbar leaves the hero it recolors to ink to match the solid
- * pill instead of just vanishing. Sits behind the pill's content; the
- * pill's own overflow clips the rounded corners. */
+ * pill instead of just vanishing. Sized by the logo wrapper it lives in
+ * (not the pill) so it can never run under the nav links: it bleeds out to
+ * the pill's left/top/bottom edges (negative insets mirror the pill's
+ * padding) and trails 2.5rem past the wordmark for the staircase + dust.
+ * The pill's own overflow clips the rounded corners. */
 function PixelSlab({ overHero }: { overHero: boolean }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-y-0 left-0 z-0 w-[52%] sm:w-[40%] md:w-[27%]"
+      className="pointer-events-none absolute -inset-y-2.5 -left-4 -right-10 z-0 sm:-left-5 lg:-left-6"
     >
       <div
         className={cn(
@@ -183,11 +185,10 @@ export function Navbar() {
               : "border border-black/[0.06] bg-white/92 text-ink shadow-[0_14px_44px_-16px_rgba(10,31,26,0.22)] backdrop-blur-xl"
           )}
         >
-          <PixelSlab overHero={overHero} />
-
-          {/* left — logo, always visible */}
-          <div className="relative z-10 flex items-center lg:justify-self-start">
-            <Logo tone="light" id="nav-logo-target" />
+          {/* left — logo on its dissolving slab, always visible */}
+          <div className="relative z-10 flex items-center self-stretch lg:justify-self-start">
+            <PixelSlab overHero={overHero} />
+            <Logo tone="light" id="nav-logo-target" className="relative z-10" />
           </div>
 
           {/* center — nav links, true-centered in the pill (desktop only) */}
@@ -195,7 +196,7 @@ export function Navbar() {
             <NavLinks overHero={overHero} />
           </div>
 
-          {/* right — Get Access + the solid CTA (desktop only) */}
+          {/* right — Sign in + the solid CTA (desktop only) */}
           <div className="relative z-10 hidden items-center gap-2 lg:flex lg:justify-self-end">
             <a
               href="/login"
@@ -206,17 +207,6 @@ export function Navbar() {
             >
               Sign in
             </a>
-            <GetAccessButton
-              source="navbar"
-              className={cn(
-                "hidden min-h-11 items-center whitespace-nowrap rounded-xl border px-4 py-2.5 text-[14px] font-semibold transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] lg:inline-flex",
-                overHero
-                  ? "border-white/25 bg-white/10 text-white hover:border-white hover:bg-white hover:text-ink hover:shadow-[0_10px_28px_-8px_rgba(255,255,255,0.35)]"
-                  : "border-ink/15 bg-white text-ink hover:border-ink hover:bg-ink hover:text-white hover:shadow-[0_10px_28px_-8px_rgba(10,15,13,0.4)]"
-              )}
-            >
-              Get Access
-            </GetAccessButton>
             <NavCta overHero={overHero} />
           </div>
 
@@ -287,12 +277,6 @@ export function Navbar() {
                 <LaunchDemoButton variant="primary" className="w-full">
                   Book a Demo
                 </LaunchDemoButton>
-                <GetAccessButton
-                  source="navbar-mobile"
-                  className="inline-flex w-full items-center justify-center rounded-xl border-2 border-ink/15 bg-white px-4 py-2.5 text-[15px] font-semibold text-ink transition-all hover:border-ink hover:bg-ink hover:text-white"
-                >
-                  Get Access
-                </GetAccessButton>
               </div>
             </motion.div>
           </motion.div>
