@@ -39,9 +39,12 @@ export const WEBHOOK_EVENT_OPTIONS = [
 export function WebhooksCard({
   webhooks,
   canManage,
+  gateMessage,
 }: {
   webhooks: SerializedWebhook[];
   canManage: boolean;
+  /** Set when the org's plan lacks publicApi (E0) — renders the upsell instead of the add button. */
+  gateMessage?: string | null;
 }) {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -121,12 +124,17 @@ export function WebhooksCard({
             </p>
           </div>
         </div>
-        {canManage && (
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Add webhook
-          </Button>
-        )}
+        {canManage &&
+          (gateMessage ? (
+            <p className="max-w-56 text-right text-xs text-neutral-500">
+              {gateMessage}
+            </p>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Add webhook
+            </Button>
+          ))}
       </div>
 
       {webhooks.length > 0 && (

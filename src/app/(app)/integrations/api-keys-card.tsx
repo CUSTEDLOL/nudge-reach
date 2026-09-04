@@ -44,9 +44,12 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", {
 export function ApiKeysCard({
   keys,
   canManage,
+  gateMessage,
 }: {
   keys: SerializedApiKey[];
   canManage: boolean;
+  /** Set when the org's plan lacks publicApi (E0) — renders the upsell instead of the create button. */
+  gateMessage?: string | null;
 }) {
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -101,12 +104,17 @@ export function ApiKeysCard({
               at rest — the full key is shown once at creation.
             </CardDescription>
           </div>
-          {canManage && (
-            <Button size="sm" onClick={() => setModalOpen(true)}>
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              Create key
-            </Button>
-          )}
+          {canManage &&
+            (gateMessage ? (
+              <p className="max-w-56 text-right text-xs text-neutral-500">
+                {gateMessage}
+              </p>
+            ) : (
+              <Button size="sm" onClick={() => setModalOpen(true)}>
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+                Create key
+              </Button>
+            ))}
         </div>
       </CardHeader>
       <CardContent className="px-0 pb-0">

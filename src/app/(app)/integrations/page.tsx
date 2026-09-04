@@ -8,6 +8,7 @@ import { requireOrgContext } from "@/modules/orgs/auth";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
 import { getCalendarAccount } from "@/modules/calendar";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import { getPlan } from "@/modules/billing/plans";
 import { CalendarCard } from "./calendar-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -65,6 +66,10 @@ export default async function IntegrationsPage() {
 
   const simulation = isSimulated(ctx.org);
   const canManage = ctx.role === "OWNER" || ctx.role === "ADMIN";
+  // E0 publicApi gate — the create actions enforce this server-side too.
+  const apiGateMessage = getPlan(ctx.org.plan).limits.publicApi
+    ? null
+    : "API keys + webhooks are available from the Growth plan — upgrade in Settings → Billing.";
 
   const serializedKeys: SerializedApiKey[] = apiKeys.map((key) => ({
     id: key.id,
@@ -167,10 +172,18 @@ export default async function IntegrationsPage() {
         />
 
         {/* Outbound webhooks (real — Zapier/Make/n8n/custom) */}
-        <WebhooksCard webhooks={serializedWebhooks} canManage={canManage} />
+        <WebhooksCard
+          webhooks={serializedWebhooks}
+          canManage={canManage}
+          gateMessage={apiGateMessage}
+        />
 
         {/* API keys */}
-        <ApiKeysCard keys={serializedKeys} canManage={canManage} />
+        <ApiKeysCard
+          keys={serializedKeys}
+          canManage={canManage}
+          gateMessage={apiGateMessage}
+        />
 
         {/* Native e-commerce connector — genuinely not built yet */}
         <div>

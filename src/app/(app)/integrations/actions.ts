@@ -10,6 +10,7 @@ import {
   getWhatsappCredentials,
 } from "@/modules/whatsapp/accounts";
 import { createApiKey, revokeApiKey } from "@/modules/integrations/api-keys";
+import { checkPublicApi } from "@/modules/billing/limits";
 import {
   deliver,
   generateWebhookSecret,
@@ -109,6 +110,9 @@ export async function createApiKeyAction(
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    // Growth+ feature (E0 publicApi flag). Revoke stays ungated for cleanup.
+    const gate = await checkPublicApi(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
 
     const name = String(formData.get("name") ?? "").trim();
     if (!name) {
@@ -175,6 +179,9 @@ export async function createWebhookEndpointAction(
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    // Growth+ feature (E0 publicApi flag). Toggle/delete stay ungated for cleanup.
+    const gate = await checkPublicApi(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
 
     const url = String(formData.get("url") ?? "").trim();
     const events = formData.getAll("events").map(String).filter(isWebhookEvent);
