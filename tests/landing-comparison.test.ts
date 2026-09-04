@@ -11,60 +11,65 @@ const html = renderToStaticMarkup(MetaVsNudge());
 const text = html
   .replace(/<[^>]+>/g, " ")
   .replaceAll("&#x27;", "'")
+  .replaceAll("&quot;", '"')
   .replace(/\s+/g, " ")
   .trim();
 
 describe("landing-page comparison section", () => {
-  it("uses a semantic table for the approved hybrid comparison", () => {
-    expect(text).toContain("Why businesses choose Nudge");
-    expect(text).toContain("Meta's free AI");
-    expect(text).toContain("WATI, AiSensy, Interakt");
-    expect(text).toContain("Human receptionist");
-    expect(html).toContain("<table");
-    expect(html).toContain('scope="col"');
-    expect(html).toContain('scope="row"');
-    expect(html.match(/<th[^>]*scope="col"/g)).toHaveLength(5);
-    expect(html.match(/<th[^>]*scope="row"/g)).toHaveLength(8);
-  });
+  it("turns one late-night enquiry into a complete Nudge outcome", () => {
+    expect(text).toContain("THE DIFFERENCE ISN'T MORE FEATURES.");
+    expect(text).toContain("It's who does the work.");
+    expect(text).toContain("Hi, is Saturday available?");
+    expect(text).toContain("11:47 PM");
+    expect(text).toContain("Nudge AI Front Desk");
+    expect(text).toContain(
+      "Booked. Deposit collected. Follow-up handled."
+    );
 
-  it("compares the eight outcomes customers care about", () => {
-    for (const outcome of [
-      "Answers every new enquiry",
-      "Books into your real calendar",
-      "Chases leads who go quiet",
-      "Sends payment links",
-      "Recovers no-shows",
-      "Setup and training",
-      "Works after hours",
-      "Who operates it?",
+    for (const step of [
+      "Replied",
+      "Calendar checked",
+      "Deposit received",
+      "Follow-up ready",
     ]) {
-      expect(text).toContain(outcome);
+      expect(text).toContain(step);
     }
   });
 
-  it("keeps navigation stable and removes the scorecard interaction", () => {
+  it("compares operating models without denying competitor capabilities", () => {
+    expect(text).toContain("Meta's AI");
+    expect(text).toContain("A capable agent for incoming conversations.");
+    expect(text).toContain("You connect + oversee");
+
+    expect(text).toContain("CRM tools");
+    expect(text).toContain(
+      "Powerful software for building WhatsApp workflows."
+    );
+    expect(text).toContain("WATI · AiSensy · Interakt");
+    expect(text).toContain("Your team or partner operates");
+
+    expect(text).toContain("Human receptionist");
+    expect(text).toContain("A capable person behind the desk.");
+    expect(text).toContain("You hire + train + cover shifts");
+
+    expect(source).not.toContain("No real-system action");
+    expect(source).not.toContain("Inbound only");
+    expect(source).not.toContain("Doesn't collect payment");
+  });
+
+  it("uses a static, semantic card structure that stacks on mobile", () => {
     expect(html).toContain('id="compare"');
-    expect(source).not.toContain("Biased scorecard");
-    expect(source).not.toContain("LensChip");
-    expect(source).not.toContain("PowerBar");
+    expect(html).toContain(
+      'aria-label="How Nudge handles the same enquiry compared with alternatives"'
+    );
+    expect(html.match(/<article/g)).toHaveLength(4);
+    expect(html.match(/aria-labelledby=/g)).toHaveLength(4);
+    expect(text).toContain("With Nudge, the front desk is the product.");
+
+    expect(source).not.toContain("<table");
+    expect(source).not.toContain('scope="col"');
+    expect(source).not.toContain("Swipe to compare");
+    expect(source).not.toContain("overflow-x-auto");
     expect(source).not.toContain("useState");
-  });
-
-  it("keeps named-platform claims credible", () => {
-    expect(text).toContain("Available on some plans");
-    expect(text).toContain("Available via automations");
-    expect(text).toContain("24/7 once configured");
-    expect(text).toContain("Self-serve or paid onboarding");
-    expect(source).not.toContain("Automations only");
-    expect(source).not.toContain("Only when remembered");
-  });
-
-  it("uses accessible contrast and workable mobile column widths", () => {
-    expect(html).toContain('aria-label="Nudge competitor comparison"');
-    expect(html).toContain('tabindex="0"');
-    expect(source).toContain("bg-brand-800 text-white");
-    expect(source).toContain("min-w-[145px]");
-    expect(source).toContain("min-w-[180px]");
-    expect(source).toContain("text-ink/60");
   });
 });
