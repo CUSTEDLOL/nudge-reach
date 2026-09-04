@@ -20,9 +20,32 @@ export interface PlanLimits {
    * flagship-only feature gates on (see `checkAiFrontDesk` in limits.ts).
    */
   aiFrontDesk: boolean;
+  /**
+   * Enterprise-track feature flags (docs/plans/2026-09-04-enterprise-track.md
+   * F4). Same precedent as aiFrontDesk: booleans here, `check*` wrappers in
+   * limits.ts, enforced server-side right before the gated mutation.
+   */
+  /** Developer API keys + outbound webhooks (Growth+). */
+  publicApi: boolean;
+  /** Agent calls the customer's own backend via configured HTTP actions. */
+  customActions: boolean;
+  /** Bring-your-own LLM key (OpenAI / Google / Anthropic). */
+  byoLlm: boolean;
+  /** Multiple WhatsApp numbers on one org. */
+  multiNumber: boolean;
+  /** Embeddable website WhatsApp button widget (paid tiers). */
+  webWidget: boolean;
+  /** Predictive lead scoring + churn risk (Pro+). */
+  leadScoring: boolean;
 }
 
-export type PlanId = "free" | "starter" | "growth" | "pro" | "front_desk";
+export type PlanId =
+  | "free"
+  | "starter"
+  | "growth"
+  | "pro"
+  | "front_desk"
+  | "enterprise";
 
 export interface Plan {
   id: PlanId;
@@ -34,6 +57,11 @@ export interface Plan {
   highlighted?: boolean;
   /** The done-for-you flagship — the hero of the marketing site. */
   flagship?: boolean;
+  /**
+   * Not self-serve purchasable: hidden from the billing grid and rejected by
+   * checkout — founder assigns it via `npm run plan:set`.
+   */
+  contactOnly?: boolean;
 }
 
 /**
@@ -61,6 +89,8 @@ export const PLAN_PRICES: Record<PlanId, Record<Currency, number>> = {
     INR: 14_999, USD: 179, AED: 659, SAR: 679, SGD: 599, MYR: 1_199,
     IDR: 2_999_000, BRL: 899, MXN: 3_499, GBP: 149,
   },
+  // Contact-us tier — 0 everywhere because it is never sold through checkout.
+  enterprise: { INR: 0, USD: 0, AED: 0, SAR: 0, SGD: 0, MYR: 0, IDR: 0, BRL: 0, MXN: 0, GBP: 0 },
 };
 
 /** Major-unit monthly price in the given currency. */
@@ -86,6 +116,12 @@ export const PLANS: Plan[] = [
       automations: 2,
       messagesPerMonth: 500,
       aiFrontDesk: false,
+      publicApi: false,
+      customActions: false,
+      byoLlm: false,
+      multiNumber: false,
+      webWidget: false,
+      leadScoring: false,
     },
   },
   {
@@ -106,6 +142,12 @@ export const PLANS: Plan[] = [
       automations: null,
       messagesPerMonth: 3000,
       aiFrontDesk: false,
+      publicApi: false,
+      customActions: false,
+      byoLlm: false,
+      multiNumber: false,
+      webWidget: true,
+      leadScoring: false,
     },
   },
   {
@@ -126,6 +168,12 @@ export const PLANS: Plan[] = [
       automations: null,
       messagesPerMonth: 30000,
       aiFrontDesk: false,
+      publicApi: true,
+      customActions: false,
+      byoLlm: false,
+      multiNumber: false,
+      webWidget: true,
+      leadScoring: false,
     },
     highlighted: true,
   },
@@ -146,6 +194,12 @@ export const PLANS: Plan[] = [
       automations: null,
       messagesPerMonth: null,
       aiFrontDesk: false,
+      publicApi: true,
+      customActions: false,
+      byoLlm: false,
+      multiNumber: false,
+      webWidget: true,
+      leadScoring: true,
     },
   },
   {
@@ -166,10 +220,48 @@ export const PLANS: Plan[] = [
       automations: null,
       messagesPerMonth: null,
       aiFrontDesk: true,
+      publicApi: true,
+      customActions: true,
+      byoLlm: true,
+      multiNumber: true,
+      webWidget: true,
+      leadScoring: true,
     },
     flagship: true,
   },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    tagline: "For teams that need Nudge to fit their stack.",
+    features: [
+      "Everything in AI Front Desk",
+      "Developer API + webhooks",
+      "Custom agent actions into your backend",
+      "Bring your own LLM (OpenAI / Google / Anthropic)",
+      "Multiple WhatsApp numbers",
+      "Predictive lead scoring",
+    ],
+    limits: {
+      contacts: null,
+      teamMembers: null,
+      automations: null,
+      messagesPerMonth: null,
+      aiFrontDesk: true,
+      publicApi: true,
+      customActions: true,
+      byoLlm: true,
+      multiNumber: true,
+      webWidget: true,
+      leadScoring: true,
+    },
+    contactOnly: true,
+  },
 ];
+
+/** The tiers sold through the self-serve billing grid (contact-only tiers excluded). */
+export function selfServePlans(): Plan[] {
+  return PLANS.filter((p) => !p.contactOnly);
+}
 
 export function getPlan(id: string): Plan {
   // "scale" was Pro's pre-launch id; map it forward for any stored value.

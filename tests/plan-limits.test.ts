@@ -33,22 +33,24 @@ describe("evaluateLimit", () => {
 });
 
 describe("plans", () => {
-  it("has the five sellable tiers in order (AI Front Desk flagship last)", () => {
+  it("has the six tiers in order (contact-only Enterprise last)", () => {
     expect(PLANS.map((p) => p.id)).toEqual([
       "free",
       "starter",
       "growth",
       "pro",
       "front_desk",
+      "enterprise",
     ]);
     expect(PLANS.map((p) => planPrice(p, "INR"))).toEqual([
-      0, 999, 2499, 5999, 14999,
+      0, 999, 2499, 5999, 14999, 0,
     ]);
   });
 
-  it("only the flagship has the AI Front Desk capability", () => {
+  it("only the flagship and enterprise have the AI Front Desk capability", () => {
     expect(PLANS.filter((p) => p.limits.aiFrontDesk).map((p) => p.id)).toEqual([
       "front_desk",
+      "enterprise",
     ]);
   });
 

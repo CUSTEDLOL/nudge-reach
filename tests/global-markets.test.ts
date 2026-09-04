@@ -11,7 +11,7 @@ import {
   orgCurrency,
   presetForDialCode,
 } from "@/modules/billing/money";
-import { PLANS, planPrice } from "@/modules/billing/plans";
+import { planPrice, selfServePlans } from "@/modules/billing/plans";
 
 describe("normalizePhoneE164 — country-aware (global outreach)", () => {
   it("keeps the original Indian defaults intact", () => {
@@ -61,7 +61,8 @@ describe("money", () => {
   });
 
   it("every plan has a sensible USD price ladder", () => {
-    const usd = PLANS.map((p) => planPrice(p, "USD"));
+    // Ladder invariants apply to the sellable tiers; contact-only Enterprise is priced 0.
+    const usd = selfServePlans().map((p) => planPrice(p, "USD"));
     expect(usd).toEqual([0, 29, 69, 159, 179]);
     for (let i = 1; i < usd.length; i++) expect(usd[i]).toBeGreaterThan(usd[i - 1]);
   });
@@ -78,7 +79,7 @@ describe("money", () => {
 
   it("every currency has a strictly increasing plan-price ladder", () => {
     for (const c of CURRENCIES) {
-      const ladder = PLANS.map((p) => planPrice(p, c));
+      const ladder = selfServePlans().map((p) => planPrice(p, c));
       expect(ladder[0]).toBe(0);
       for (let i = 1; i < ladder.length; i++) {
         expect(ladder[i]).toBeGreaterThan(ladder[i - 1]);

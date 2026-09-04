@@ -4,7 +4,7 @@ import { isSimulated } from "@/modules/orgs/mode";
 import { trialDaysLeft } from "@/modules/billing/trial";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { formatMoney, getMonthlyUsage } from "@/modules/billing";
-import { PLANS, getPlan, planPrice } from "@/modules/billing/plans";
+import { selfServePlans, getPlan, planPrice } from "@/modules/billing/plans";
 import { formatPlanPrice, orgCurrency } from "@/modules/billing/money";
 import { isRazorpayConfigured } from "@/modules/billing/razorpay";
 import { isStripeConfigured } from "@/modules/billing/stripe";
@@ -120,7 +120,7 @@ export default async function BillingSettingsPage() {
           }
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((plan) => {
+          {selfServePlans().map((plan) => {
             const isCurrent = plan.id === currentPlan.id;
             return (
               <Card

@@ -52,6 +52,9 @@ export async function startCheckoutAction(
     if (plan.id === "free") {
       return { ok: false, message: "Pick a paid plan to upgrade." };
     }
+    if (plan.contactOnly) {
+      return { ok: false, message: "Contact us to move to the Enterprise plan." };
+    }
 
     const currency = orgCurrency(ctx.org);
 

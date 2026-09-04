@@ -110,6 +110,57 @@ export async function checkAiFrontDesk(orgId: string): Promise<LimitCheck> {
   };
 }
 
+/**
+ * Enterprise-track feature gates (E0, docs/plans/2026-09-04-enterprise-track.md
+ * F4). Same shape and usage as checkAiFrontDesk: call right before the gated
+ * mutation, return the message on failure.
+ */
+type FeatureFlag =
+  | "publicApi"
+  | "customActions"
+  | "byoLlm"
+  | "multiNumber"
+  | "webWidget"
+  | "leadScoring";
+
+const FEATURE_LABEL: Record<FeatureFlag, string> = {
+  publicApi: "API keys + webhooks",
+  customActions: "Custom agent actions",
+  byoLlm: "Bring-your-own LLM",
+  multiNumber: "Multiple WhatsApp numbers",
+  webWidget: "The website widget",
+  leadScoring: "Lead scoring",
+};
+
+async function checkFeature(orgId: string, flag: FeatureFlag): Promise<LimitCheck> {
+  const plan = await planFor(orgId);
+  if (plan.limits[flag]) {
+    return { allowed: true, message: "", used: 0, limit: null };
+  }
+  // Lowest tier that includes the feature, for an honest upsell message.
+  const lowest = PLANS.find((p) => !p.contactOnly && p.limits[flag]);
+  const tier = lowest ? lowest.name : "Enterprise";
+  return {
+    allowed: false,
+    used: 0,
+    limit: 0,
+    message: `${FEATURE_LABEL[flag]} is available from the ${tier} plan. Upgrade in Settings → Billing to switch it on.`,
+  };
+}
+
+/** Developer API keys + outbound webhooks (Growth+). */
+export const checkPublicApi = (orgId: string) => checkFeature(orgId, "publicApi");
+/** Per-org custom HTTP actions the agent can call (Enterprise). */
+export const checkCustomActions = (orgId: string) => checkFeature(orgId, "customActions");
+/** Bring-your-own LLM key (Enterprise). */
+export const checkByoLlm = (orgId: string) => checkFeature(orgId, "byoLlm");
+/** Multiple WhatsApp numbers per org (Enterprise). */
+export const checkMultiNumber = (orgId: string) => checkFeature(orgId, "multiNumber");
+/** Embeddable website WhatsApp button widget (paid tiers). */
+export const checkWebWidget = (orgId: string) => checkFeature(orgId, "webWidget");
+/** Predictive lead scoring + churn risk (Pro+). */
+export const checkLeadScoring = (orgId: string) => checkFeature(orgId, "leadScoring");
+
 /** Can this org queue `recipients` more campaign messages this month? */
 export async function checkMessageLimit(
   orgId: string,
