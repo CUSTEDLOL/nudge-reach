@@ -5,6 +5,57 @@ what's next.
 
 ---
 
+## CRM integrations — the employee writes to your CRM (2026-09-04) ✅
+
+Roadmap #5, plan `docs/superpowers/plans/2026-08-29-crm-integrations.md`. One-way
+sync Nudge → Zoho CRM / Salesforce through a queued, retrying job table drained by
+the cron tick; simulation provider for test mode. Setup and what syncs:
+`docs/CRM_INTEGRATIONS.md`.
+
+### Built
+- `CrmConnection` (encrypted tokens, DC/instance, status) + `CrmSyncJob`
+  (unique per org/provider/event/entity, backoff, dead-letter).
+- `src/modules/crm/`: provider interface, Zoho (v8: Leads/upsert on Phone, Notes,
+  Tasks, Lead_Status) and Salesforce (v62: find-or-create Lead, Task, Status)
+  providers, simulation provider, HMAC-signed OAuth state, connections with
+  just-in-time refresh, sync queue + tick, event hooks.
+- Hooks: new contact (WhatsApp or phone), lead qualified, booking captured,
+  payment paid, hand-off requested (+ `crmConversationSummary` ready for the
+  copilot workstream).
+- Routes `/api/integrations/crm/[provider]/{start,callback}`; Integrations →
+  CRM card (connect, sync now, disconnect, last-ten sync log).
+- `scripts/crm-live.ts` verifies the loop in simulation; 9 new test files.
+
+### Founder — to switch on for a client
+Zoho API console client + Salesforce Connected App → four Vercel env vars →
+client clicks Connect on Integrations.
+
+## Voice front desk — the employee picks up the phone (2026-09-04) ✅
+
+Roadmap #6, plan `docs/superpowers/plans/2026-08-29-voice-front-desk.md`, design
+`docs/superpowers/specs/2026-08-29-voice-and-crm-design.md`. ElevenLabs Agents runs
+speech + the loop (LLM pinned via `ELEVENLABS_LLM`, guard-checked); we supply
+per-call context, execute every action through the existing tool handlers, and
+file the transcript. Exotel SIP (India) / Twilio elsewhere; simulation driver for
+test mode. How to switch it on: `docs/VOICE.md`.
+
+### Built
+- `VoiceNumber`, `VoiceCall`, `Conversation.channel`, `FollowUpConfig.reminderCalls`.
+- `src/modules/voice/`: initiation builder, post-call parser + outcome, ElevenLabs +
+  simulation drivers (HMAC verify, SIP outbound call), `fileCall` (contact →
+  voice thread → per-turn messages → VoiceCall → `call.completed` webhook),
+  webhook-tool bridge onto `runTool`, `tickReminderCalls` on the cron tick.
+- Routes: `/api/voice/initiation`, `/api/voice/post-call`, `/api/voice/tools/[tool]`.
+- Settings → Voice (numbers, language, transfer number, reminder-calls opt-in,
+  simulate a call); inbox shows a "Phone call" chip on voice threads.
+- `scripts/voice-setup.ts` creates the shared agent; Voice add-on priced in PRICING.md.
+- 10 new test files (env guard, builders, drivers, routes, reminder tick, form).
+
+### Founder — to switch voice on for a client
+ElevenLabs workspace + keys → run the setup script → post-call webhook secret →
+Exotel KYC + vSIP trunk (or Twilio) → import the number in ElevenLabs → add it in
+Settings → Voice. Reminder calls stay off until the client opts in.
+
 ## Landing-page verification tags (2026-09-02) ✅
 
 - Moved the existing `GTM-WTMGT6DJ` loader to the top of the document `<head>`.

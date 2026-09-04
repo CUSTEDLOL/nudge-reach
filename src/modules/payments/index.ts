@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { crmPaymentPaid } from "@/modules/crm/events";
 import { env } from "@/lib/env";
 import { sendModeFor, type SendMode } from "@/modules/orgs/mode";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
@@ -150,8 +151,14 @@ export async function markPaymentPaid(paymentRequestId: string): Promise<boolean
 
   const row = await prisma.paymentRequest.findUnique({
     where: { id: paymentRequestId },
+    include: { contact: { select: { phoneE164: true } } },
   });
   if (row) {
+    void crmPaymentPaid(
+      row.orgId,
+      { id: row.id, amountMinorUnits: row.amountMinor, currency: row.currency, purpose: row.purpose },
+      { phoneE164: row.contact.phoneE164 }
+    );
     await prisma.note.create({
       data: {
         orgId: row.orgId,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { crmHandoffRequested } from "@/modules/crm/events";
 import { defineTool } from "@/modules/agent/tools/types";
 
 export const HANDOFF_TOOL_NAME = "handoff_to_human";
@@ -25,6 +26,12 @@ export const handoffTool = defineTool({
       where: { id: ctx.conversationId },
       data: { status: "handoff" },
     });
+    void crmHandoffRequested(
+      ctx.orgId,
+      ctx.conversationId,
+      { phoneE164: ctx.contactPhone },
+      input.reason ?? "asked for a person"
+    );
     await prisma.note.create({
       data: {
         orgId: ctx.orgId,

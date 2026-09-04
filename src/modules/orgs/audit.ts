@@ -32,7 +32,8 @@ export type AuditAction =
   | "knowledge.website_imported"
   | "knowledge.file_imported"
   | "knowledge.gbp_imported"
-  | "knowledge.drafts_approved";
+  | "knowledge.drafts_approved"
+  | "voice.number_saved";
 
 /** Human labels for the viewer. */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -61,6 +62,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "knowledge.file_imported": "File imported into knowledge drafts",
   "knowledge.gbp_imported": "Google Business Profile imported into knowledge drafts",
   "knowledge.drafts_approved": "Imported knowledge drafts approved",
+  "voice.number_saved": "Voice number saved",
 };
 
 export function recordAudit(

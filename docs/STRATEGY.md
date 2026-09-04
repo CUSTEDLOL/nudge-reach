@@ -117,3 +117,12 @@ stop and correct:
 
 The distribution — not more features — is the bottleneck. Build the moat, keep it
 demoable in simulation, and get it in front of 10 clinics/salons.
+
+## 10. Roadmap decision (2026-08-29)
+
+The founders decided to widen the employee's hands, not the product's story:
+Instagram/Facebook/TikTok inboxes, voice calls, Shopify (tracking + placing
+orders), AI copilot + conversation summaries, CRM integrations (Zoho, Salesforce),
+and a developer API. Sequencing, gates and scope live in **`docs/ROADMAP.md`**.
+The drift test in §9 still applies to *copy and positioning*: these ship as
+capabilities of the AI Front Desk, never as the headline.

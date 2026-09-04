@@ -10,6 +10,9 @@ import { getCalendarAccount } from "@/modules/calendar";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { getPlan } from "@/modules/billing/plans";
 import { CalendarCard } from "./calendar-card";
+import { CrmCard } from "./crm-card";
+import { crmCardModel } from "./crm-card-model";
+import { listConnections } from "@/modules/crm/connections";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -54,6 +57,15 @@ export default async function IntegrationsPage() {
       orderBy: { createdAt: "desc" },
     }),
     headers(),
+  ]);
+
+  const [crmConnections, crmJobs] = await Promise.all([
+    listConnections(ctx.org.id),
+    prisma.crmSyncJob.findMany({
+      where: { orgId: ctx.org.id },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+    }),
   ]);
 
   const host = headerList.get("host") ?? "nudgeagent.app";
@@ -170,6 +182,9 @@ export default async function IntegrationsPage() {
           simulated={calendarAccount?.simulated ?? false}
           hasFrontDesk={planHasAiFrontDesk(ctx.org.plan)}
         />
+
+        {/* CRM sync: Zoho / Salesforce (one-way, queued) */}
+        <CrmCard model={crmCardModel(crmConnections, crmJobs, simulation)} canManage={canManage} />
 
         {/* Outbound webhooks (real — Zapier/Make/n8n/custom) */}
         <WebhooksCard

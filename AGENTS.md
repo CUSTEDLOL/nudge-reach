@@ -49,7 +49,10 @@ Signup) for scale. Founder-led direct sales into the sharpened beachhead —
 cosmetic-dental; NOT generic salons/gyms, which are blast-first + low-ticket) —
 then a reseller/white-label channel. Markets: India → Malaysia → Singapore → UAE.
 
-Full detail + competitive analysis: **`docs/STRATEGY.md`** (beachhead in §5a);
+Full detail + competitive analysis: **`docs/STRATEGY.md`** (beachhead in §5a;
+roadmap decision in §10 → **`docs/ROADMAP.md`**: Instagram/Facebook/TikTok, voice,
+Shopify, copilot, CRM integrations, developer API — capabilities of the employee,
+never the headline);
 go-live compliance in **`docs/META_COMPLIANCE_INBOUND.md`** +
 **`docs/META_COMPLIANCE_MARKETING.md`**. Do not re-open these decisions; do not
 slide back to "WhatsApp CRM" copy or campaign-blast-first framing.

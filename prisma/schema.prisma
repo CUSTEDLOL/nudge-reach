@@ -82,6 +82,10 @@ model Org {
   followUpConfig   FollowUpConfig?
   knowledgeEntries KnowledgeEntry[]
   ownerQuestions   OwnerQuestion[]
+  voiceNumbers     VoiceNumber[]
+  voiceCalls       VoiceCall[]
+  crmConnections   CrmConnection[]
+  crmSyncJobs      CrmSyncJob[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -333,6 +337,7 @@ model Conversation {
   org                Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   contactId          String
   contact            Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel            String                @default("whatsapp") // whatsapp | voice
   lastInboundAt      DateTime?
   status             String                @default("open") // open | pending | resolved | handoff (legacy: closed)
   // Membership.userId of the assigned agent (null = unassigned).
@@ -610,6 +615,8 @@ model FollowUpConfig {
   noShowRebook      Boolean  @default(true)
   postServiceReview Boolean  @default(true)
   leadNudge         Boolean  @default(true)
+  // Outbound reminder / no-show calls via the voice front desk (opt-in per client).
+  reminderCalls     Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -744,4 +751,93 @@ model OwnerQuestion {
 
   @@index([orgId, status])
   @@index([orgId, questionKey])
+}
+
+// ---------------------------------------------------------------------------
+// Voice front desk — the number the AI answers and every call it handles.
+// ---------------------------------------------------------------------------
+
+model VoiceNumber {
+  id            String   @id @default(cuid())
+  orgId         String
+  org           Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  phoneE164     String   @unique          // the DID customers dial
+  provider      String                    // "exotel" | "twilio" | "sim"
+  elevenPhoneId String?                   // ElevenLabs phone-number id (agent_phone_number_id)
+  label         String   @default("Main line")
+  transferTo    String?                   // human transfer target (E.164)
+  language      String   @default("en")   // "en" | "hi" (hinglish)
+  voiceId       String?                   // ElevenLabs voice id; null = default
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model VoiceCall {
+  id             String    @id @default(cuid())
+  orgId          String
+  org            Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId      String?
+  conversationId String?
+  direction      String                    // "inbound" | "outbound"
+  fromE164       String
+  toE164         String
+  providerCallId String?   @unique         // ElevenLabs conversation_id
+  status         String    @default("in_progress") // in_progress | completed | failed | no_answer
+  durationSecs   Int?
+  transcript     Json?                     // [{ role, message, t, toolCalls }]
+  summary        String?
+  outcome        String?                   // booked | lead | handoff | info
+  purpose        String    @default("inbound") // inbound | reminder | no_show
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+
+  @@index([orgId, startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// CRM integrations — one-way sync Nudge → the client's CRM (Zoho, Salesforce).
+// ---------------------------------------------------------------------------
+
+model CrmConnection {
+  id                    String    @id @default(cuid())
+  orgId                 String
+  org                   Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider              String              // "zoho" | "salesforce" | "sim"
+  accountLabel          String    @default("")
+  apiDomain             String    @default("") // Zoho api_domain / Salesforce instance_url
+  accountsServer        String    @default("") // Zoho accounts-server used for refresh; "" for Salesforce
+  refreshTokenEncrypted String
+  accessTokenEncrypted  String?
+  accessTokenExpiresAt  DateTime?
+  status                String    @default("connected") // connected | error | disconnected
+  lastError             String?
+  lastSyncAt            DateTime?
+  simulated             Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([orgId, provider])
+}
+
+model CrmSyncJob {
+  id         String    @id @default(cuid())
+  orgId      String
+  org        Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider   String
+  event      String    // contact.created | lead.qualified | booking.created | payment.paid | handoff.requested | conversation.summary
+  entityId   String    // the Nudge id the event is about
+  payload    Json
+  status     String    @default("pending") // pending | done | dead
+  attempts   Int       @default(0)
+  nextRunAt  DateTime  @default(now())
+  externalId String?
+  error      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([orgId, provider, event, entityId])
+  @@index([status, nextRunAt])
 }
