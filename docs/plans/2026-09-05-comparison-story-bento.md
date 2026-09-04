@@ -196,4 +196,3 @@ Ask a reviewer to inspect only the branch diff for requirement fidelity, credibl
 git add PROGRESS.md
 git commit -m "docs: record comparison story redesign"
 ```
-
