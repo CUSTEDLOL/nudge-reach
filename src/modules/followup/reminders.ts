@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { sendApprovedTemplate } from "@/modules/followup/send";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import { recordContactEvent } from "@/modules/contacts/events";
 
 const HOUR = 3_600_000;
 
@@ -95,6 +96,10 @@ export async function tickBookingReminders(
         await prisma.bookingRequest.update({
           where: { id: b.id },
           data: { reviewAskedAt: now, status: "completed" },
+        });
+        recordContactEvent(cfg.orgId, "booking_status", {
+          contactId: b.contactId,
+          props: { status: "completed", bookingRequestId: b.id },
         });
         if (r.ok) result.reviews++;
       }

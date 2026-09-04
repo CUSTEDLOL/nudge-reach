@@ -28,6 +28,10 @@ vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/lib/env", () => ({
   env: { SEND_MODE: "simulation" },
 }));
+const { recordContactEvent } = vi.hoisted(() => ({
+  recordContactEvent: vi.fn(),
+}));
+vi.mock("@/modules/contacts/events", () => ({ recordContactEvent }));
 
 import {
   createPaymentLink,
@@ -109,6 +113,11 @@ describe("markPaymentPaid", () => {
     });
     expect(await markPaymentPaid("pr_1")).toBe(true);
     expect(prisma.note.create).toHaveBeenCalledTimes(1);
+    // E0: settlement emits a payment_paid event for the scoring history.
+    expect(recordContactEvent).toHaveBeenCalledWith("org1", "payment_paid", {
+      contactId: "c1",
+      props: { paymentRequestId: "pr_1", amountMinor: 50_000, currency: "INR" },
+    });
 
     // Second delivery of the same webhook: status no longer "created".
     prisma.paymentRequest.updateMany.mockResolvedValueOnce({ count: 0 });

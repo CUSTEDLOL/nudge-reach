@@ -14,6 +14,7 @@ import { firstName, toPreview } from "@/modules/inbox/format";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
+import { recordContactEvent } from "@/modules/contacts/events";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -334,6 +335,10 @@ export async function setLeadStageAction(
       data: { leadStage: stage },
     });
     if (updated.count === 0) return { ok: false, message: "Contact not found." };
+    recordContactEvent(org.id, "lead_stage_changed", {
+      contactId,
+      props: { to: stage, source: "manual" },
+    });
 
     revalidateInbox(conversationId || undefined);
     revalidatePath("/contacts");

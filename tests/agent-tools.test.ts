@@ -13,6 +13,11 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+const { recordContactEvent } = vi.hoisted(() => ({
+  recordContactEvent: vi.fn(),
+}));
+vi.mock("@/modules/contacts/events", () => ({ recordContactEvent }));
+
 import { runTool, toolDefs, calledHandoff, HANDOFF_TOOL_NAME } from "@/modules/agent/tools";
 import { buildAgentSystemPrompt, TOOL_GUIDANCE } from "@/modules/agent/prompt";
 
@@ -81,6 +86,11 @@ describe("runTool — validation & error containment (never throws)", () => {
     });
     expect(r.isError).toBeUndefined();
     expect(r.result).toMatch(/qualified/i);
+    // E0: qualifying a lead emits a stage-change event for the scoring history.
+    expect(recordContactEvent).toHaveBeenCalledWith("org1", "lead_stage_changed", {
+      contactId: "c1",
+      props: { to: "QUALIFIED", source: "agent" },
+    });
   });
 
   it("requires a lead interest", async () => {

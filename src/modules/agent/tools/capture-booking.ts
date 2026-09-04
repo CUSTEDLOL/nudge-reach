@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { crmBookingCreated } from "@/modules/crm/events";
+import { recordContactEvent } from "@/modules/contacts/events";
 import { defineTool } from "@/modules/agent/tools/types";
 import { bookAppointment, type CalendarSlot } from "@/modules/calendar";
 import { fireBookingCreated } from "@/modules/automation/triggers";
@@ -70,6 +71,10 @@ export const captureBookingTool = defineTool({
       },
     });
     void crmBookingCreated(ctx.orgId, booking, { phoneE164: ctx.contactPhone });
+    recordContactEvent(ctx.orgId, "booking_status", {
+      contactId: ctx.contactId,
+      props: { status: booking.status, bookingRequestId: booking.id },
+    });
 
     if (ctx.contactName === ctx.contactPhone) {
       await prisma.contact.update({

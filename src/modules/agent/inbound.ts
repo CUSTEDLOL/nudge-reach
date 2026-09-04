@@ -4,6 +4,7 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import { isStopMessage } from "@/modules/whatsapp/webhook-verify";
 import { sendMessage } from "@/modules/messaging";
 import { crmContactCreated } from "@/modules/crm/events";
+import { recordContactEvent } from "@/modules/contacts/events";
 import { buildHistory, generateAgentActionReply } from "@/modules/agent/reply";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { runInboundAutomations } from "@/modules/automation/engine";
@@ -66,6 +67,10 @@ export async function handleInboundMessage(
     await prisma.contact.update({
       where: { id: contact.id },
       data: { optedIn: false, optedOutAt: new Date() },
+    });
+    recordContactEvent(orgId, "opted_out", {
+      contactId: contact.id,
+      props: { source: "stop" },
     });
     return { optedOut: true };
   }

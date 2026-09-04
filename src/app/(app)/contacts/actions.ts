@@ -9,6 +9,7 @@ import { handleInboundMessage } from "@/modules/agent/inbound";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { checkContactLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
+import { recordContactEvent } from "@/modules/contacts/events";
 import { fireContactCreated, fireTagAdded } from "@/modules/automation/triggers";
 
 export interface ActionResult {
@@ -269,6 +270,12 @@ export async function updateContact(
   } catch {
     return { ok: false, message: "That number is already in your contacts." };
   }
+  if (data.leadStage) {
+    recordContactEvent(org.id, "lead_stage_changed", {
+      contactId: id,
+      props: { to: data.leadStage, source: "manual" },
+    });
+  }
   revalidateContact(id);
   return { ok: true, message: "Contact updated." };
 }
@@ -289,6 +296,10 @@ export async function optOutContact(
   });
   if (res.count > 0 && contact) {
     recordAudit(ctx, "contact.opted_out", `${contact.name} (${contact.phoneE164})`);
+    recordContactEvent(ctx.org.id, "opted_out", {
+      contactId: id,
+      props: { source: "manual" },
+    });
   }
   revalidateContact(id);
   return res.count > 0
@@ -511,6 +522,12 @@ export async function bulkSetStage(formData: FormData): Promise<ActionResult> {
     where: { id: { in: ids }, orgId: org.id },
     data: { leadStage: stage as LeadStage },
   });
+  for (const contactId of ids) {
+    recordContactEvent(org.id, "lead_stage_changed", {
+      contactId,
+      props: { to: stage, source: "manual" },
+    });
+  }
   revalidatePath("/contacts");
   return {
     ok: true,

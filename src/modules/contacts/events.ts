@@ -21,14 +21,20 @@ export function recordContactEvent(
   type: ContactEventType,
   opts: { contactId?: string | null; props?: Record<string, unknown> } = {}
 ): void {
-  void prisma.contactEvent
-    .create({
-      data: {
-        orgId,
-        type,
-        contactId: opts.contactId ?? null,
-        props: (opts.props ?? {}) as object,
-      },
-    })
-    .catch((err) => console.error("[contact-event] write failed", err));
+  try {
+    void prisma.contactEvent
+      .create({
+        data: {
+          orgId,
+          type,
+          contactId: opts.contactId ?? null,
+          props: (opts.props ?? {}) as object,
+        },
+      })
+      .catch((err) => console.error("[contact-event] write failed", err));
+  } catch (err) {
+    // Even a synchronous throw (e.g. a partially mocked client) must never
+    // reach the product flow that emitted the event.
+    console.error("[contact-event] write failed", err);
+  }
 }
