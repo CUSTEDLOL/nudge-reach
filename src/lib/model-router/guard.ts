@@ -18,3 +18,18 @@ export function assertRuntimeModelAllowed(model: string): void {
     }
   }
 }
+
+/**
+ * E3 BYO-LLM: the curated model allow-list per provider. Hand-set — a junk
+ * or luxury model id is rejected at save time AND at call time. Platform-paid
+ * calls never consult this; they stay on the guarded RUNTIME_MODEL above.
+ */
+export const BYOK_ALLOWED_MODELS: Record<string, string[]> = {
+  anthropic: ["claude-sonnet-5", "claude-haiku-4-5"],
+  openai: ["gpt-5.2", "gpt-5-mini"],
+  google: ["gemini-3-pro", "gemini-3-flash"],
+};
+
+export function isByokModelAllowed(provider: string, model: string): boolean {
+  return (BYOK_ALLOWED_MODELS[provider] ?? []).includes(model);
+}

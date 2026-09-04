@@ -88,6 +88,7 @@ model Org {
   crmSyncJobs            CrmSyncJob[]
   contactEvents          ContactEvent[]
   customActions          CustomAction[]
+  llmAccount             LlmAccount?
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -727,6 +728,8 @@ model AiUsage {
   costMicroUsd   Int
   // True when the tokens are synthetic estimates (simulation / keyless).
   synthetic      Boolean  @default(false)
+  // True when the call ran on the org's own BYO key (E3) — their cost, shown for visibility.
+  byok           Boolean  @default(false)
   createdAt      DateTime @default(now())
 
   @@index([orgId, createdAt])
@@ -884,4 +887,19 @@ model CustomAction {
   updatedAt       DateTime @updatedAt
 
   @@unique([orgId, name])
+}
+
+// E3 BYO-LLM: an enterprise org's own AI provider + key. One per org; the
+// model-router's byok resolution consults it per call. Key AES-encrypted at
+// rest (crypto.ts pattern, same as calendar/WhatsApp tokens); "sim" sentinel
+// means simulation (no real key, invariant 4).
+model LlmAccount {
+  id              String   @id @default(cuid())
+  orgId           String   @unique
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider        String // anthropic | openai | google
+  model           String // must be on guard.ts BYOK_ALLOWED_MODELS
+  apiKeyEncrypted String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

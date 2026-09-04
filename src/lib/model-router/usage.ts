@@ -21,11 +21,20 @@ export interface Attribution {
   purpose: UsagePurpose;
 }
 
-/** Micro-USD per million tokens, hand-set from the public price sheet. */
-const PRICES_MICRO_USD_PER_MTOK: Record<string, { input: number; output: number }> = {
-  sonnet: { input: 3_000_000, output: 15_000_000 },
-  haiku: { input: 1_000_000, output: 5_000_000 },
-};
+/**
+ * Micro-USD per million tokens, hand-set from the public price sheets.
+ * Matched by substring against the model id (E3: multi-provider). BYO usage
+ * is still priced for visibility — the customer pays their provider, but the
+ * dashboard should show what their AI costs.
+ */
+const PRICES_MICRO_USD_PER_MTOK: [match: string, price: { input: number; output: number }][] = [
+  ["haiku", { input: 1_000_000, output: 5_000_000 }],
+  ["sonnet", { input: 3_000_000, output: 15_000_000 }],
+  ["gpt-5-mini", { input: 250_000, output: 2_000_000 }],
+  ["gpt-5", { input: 1_250_000, output: 10_000_000 }],
+  ["gemini-3-flash", { input: 300_000, output: 2_500_000 }],
+  ["gemini-3-pro", { input: 2_000_000, output: 12_000_000 }],
+];
 
 /** Unknown models are priced as Sonnet — overcounting beats undercounting. */
 export function computeCostMicroUsd(
@@ -33,8 +42,8 @@ export function computeCostMicroUsd(
   inputTokens: number,
   outputTokens: number
 ): number {
-  const tier = model.includes("haiku") ? "haiku" : "sonnet";
-  const price = PRICES_MICRO_USD_PER_MTOK[tier];
+  const entry = PRICES_MICRO_USD_PER_MTOK.find(([match]) => model.includes(match));
+  const price = entry?.[1] ?? PRICES_MICRO_USD_PER_MTOK.find(([m]) => m === "sonnet")![1];
   return Math.round(
     (inputTokens * price.input + outputTokens * price.output) / 1_000_000
   );
@@ -50,7 +59,7 @@ export function recordUsage(
   model: string,
   inputTokens: number,
   outputTokens: number,
-  synthetic = false
+  opts: { synthetic?: boolean; byok?: boolean } = {}
 ): void {
   void prisma.aiUsage
     .create({
@@ -62,7 +71,8 @@ export function recordUsage(
         inputTokens,
         outputTokens,
         costMicroUsd: computeCostMicroUsd(model, inputTokens, outputTokens),
-        synthetic,
+        synthetic: opts.synthetic ?? false,
+        byok: opts.byok ?? false,
       },
     })
     .catch(() => {
@@ -82,6 +92,6 @@ export function recordSyntheticUsage(
     model,
     estimateTokens(promptText),
     estimateTokens(replyText),
-    true
+    { synthetic: true }
   );
 }
