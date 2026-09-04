@@ -148,16 +148,21 @@ model AuditLog {
 // "demo-agent-*" ids are allowed for seeded teammates used in assignment
 // dropdowns). The org owner gets an OWNER membership backfilled lazily.
 model Membership {
-  id                String   @id @default(cuid())
-  orgId             String
-  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  userId            String
-  email             String
-  displayName       String?
-  role              OrgRole  @default(AGENT)
+  id                 String   @id @default(cuid())
+  orgId              String
+  org                Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId             String
+  email              String
+  displayName        String?
+  role               OrgRole  @default(AGENT)
+  // E4b: WhatsApp numbers this member may see in the inbox. Empty = all
+  // numbers (the default). Only enforced for AGENT role — owners/admins
+  // always see everything. Conversations with no number (sim, voice,
+  // pre-multi-number) stay visible to everyone.
+  whatsappAccountIds String[] @default([])
   // Per-member notification toggles (Settings → Notifications).
-  notificationPrefs Json     @default("{}")
-  createdAt         DateTime @default(now())
+  notificationPrefs  Json     @default("{}")
+  createdAt          DateTime @default(now())
 
   @@unique([orgId, userId])
   @@index([userId])

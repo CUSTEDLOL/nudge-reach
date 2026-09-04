@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseInboxFilter } from "@/modules/inbox/filters";
+import { allowedNumberIds, numberAccessClause } from "@/modules/inbox/access";
 import {
   getThreadSnapshot,
   listConversationSummaries,
@@ -49,7 +50,9 @@ export default async function InboxThreadPage({
         data: { unreadCount: 0 },
       }),
       prisma.conversation.findFirst({
-        where: { id, orgId: org.id },
+        where: {
+          AND: [{ id, orgId: org.id }, numberAccessClause(await allowedNumberIds(org.id, userId))],
+        },
         include: {
           contact: { include: { tags: { include: { tag: true } } } },
           notes: { orderBy: { createdAt: "desc" }, take: 50 },
@@ -57,7 +60,7 @@ export default async function InboxThreadPage({
         },
       }),
       listConversationSummaries(org.id, filter, q, userId),
-      getThreadSnapshot(id, org.id),
+      getThreadSnapshot(id, org.id, userId),
       prisma.tag.findMany({ where: { orgId: org.id }, orderBy: { name: "asc" } }),
       prisma.membership.findMany({
         where: { orgId: org.id },

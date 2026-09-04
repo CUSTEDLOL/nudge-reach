@@ -222,3 +222,54 @@ export async function revokeInviteAction(
     };
   }
 }
+
+/**
+ * E4b: limit an AGENT to specific WhatsApp numbers (empty = all numbers).
+ * Enforced server-side in the inbox queries, not just hidden UI.
+ */
+export async function updateMemberNumbersAction(
+  formData: FormData
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const membershipId = String(formData.get("membershipId") ?? "");
+    const ids = formData.getAll("accountIds").map(String).filter(Boolean);
+
+    const target = await prisma.membership.findFirst({
+      where: { id: membershipId, orgId: ctx.org.id },
+      select: { id: true, role: true },
+    });
+    if (!target) return { ok: false, message: "That member wasn't found." };
+    if (target.role !== "AGENT" && ids.length > 0) {
+      return { ok: false, message: "Owners and admins always see all numbers." };
+    }
+
+    // Only this org's numbers can be granted (scoped lookup, not trusted input).
+    const valid = ids.length
+      ? (
+          await prisma.whatsappAccount.findMany({
+            where: { orgId: ctx.org.id, id: { in: ids } },
+            select: { id: true },
+          })
+        ).map((a) => a.id)
+      : [];
+
+    await prisma.membership.update({
+      where: { id: target.id },
+      data: { whatsappAccountIds: valid },
+    });
+    revalidatePath("/settings/team");
+    return {
+      ok: true,
+      message: valid.length
+        ? `Limited to ${valid.length} number${valid.length === 1 ? "" : "s"}.`
+        : "Member can see all numbers.",
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't update numbers.",
+    };
+  }
+}

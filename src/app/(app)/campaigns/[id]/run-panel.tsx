@@ -31,6 +31,8 @@ function toLocalInputValue(date: Date): string {
 export function RunPanel({
   campaignId,
   audiences,
+  numbers = [],
+  defaultNumberId,
   defaultAudienceId,
   ratePaise,
   currencySymbol = "₹",
@@ -38,6 +40,9 @@ export function RunPanel({
 }: {
   campaignId: string;
   audiences: AudienceOption[];
+  /** E4b: shown when the org has >1 WhatsApp number. */
+  numbers?: { id: string; displayName: string; isDefault: boolean }[];
+  defaultNumberId?: string | null;
   defaultAudienceId?: string | null;
   ratePaise: number;
   currencySymbol?: string;
@@ -117,6 +122,24 @@ export function RunPanel({
               ))}
             </Select>
           </Field>
+
+          {numbers.length > 1 && (
+            <Field label="Send from" htmlFor="run-number" className="min-w-48">
+              <Select
+                id="run-number"
+                name="whatsappAccountId"
+                defaultValue={
+                  defaultNumberId ?? numbers.find((n) => n.isDefault)?.id ?? numbers[0].id
+                }
+              >
+                {numbers.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
 
           <div className="text-sm text-neutral-600">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">

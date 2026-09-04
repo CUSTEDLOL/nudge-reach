@@ -79,6 +79,14 @@ export default async function CampaignPage({
   const ratePaise = getMessageRateMinor(currency);
   const currencySymbol = CURRENCY_INFO[currency].symbol;
   const simulation = isSimulated(org);
+  // E4b: the launch panel's "send from" picker (only meaningful with >1).
+  const orgNumbers = (
+    await prisma.whatsappAccount.findMany({
+      where: { orgId: org.id },
+      select: { id: true, displayName: true, isDefault: true },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+    })
+  );
 
   let audiences: { id: string; name: string; optedInCount: number }[] = [];
   if (campaign.status === "TEMPLATE_APPROVED" || isScheduled) {
@@ -194,6 +202,8 @@ export default async function CampaignPage({
           <RunPanel
             campaignId={campaign.id}
             audiences={audiences}
+            numbers={orgNumbers}
+            defaultNumberId={campaign.whatsappAccountId}
             defaultAudienceId={campaign.audienceId}
             ratePaise={ratePaise}
               currencySymbol={currencySymbol}

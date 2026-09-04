@@ -17,6 +17,7 @@ import { SectionHeader } from "../section-header";
 import { InviteForm } from "./invite-form";
 import { MemberRoleSelect } from "./role-select";
 import { RevokeInviteButton } from "./revoke-invite-button";
+import { MemberNumbersSelect } from "./numbers-select";
 
 export const metadata: Metadata = { title: "Team settings" };
 
@@ -34,7 +35,7 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", {
 
 export default async function TeamSettingsPage() {
   const ctx = await requireOrgContext();
-  const [members, invites] = await Promise.all([
+  const [members, invites, numbers] = await Promise.all([
     prisma.membership.findMany({
       where: { orgId: ctx.org.id },
       orderBy: { createdAt: "asc" },
@@ -43,7 +44,14 @@ export default async function TeamSettingsPage() {
       where: { orgId: ctx.org.id, status: "pending" },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.whatsappAccount.findMany({
+      where: { orgId: ctx.org.id },
+      select: { id: true, displayName: true },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+    }),
   ]);
+  // E4b: per-member number access only matters with 2+ numbers.
+  const showNumbers = numbers.length > 1;
 
   const canManage = hasRole(ctx.role, "ADMIN");
 
@@ -60,6 +68,7 @@ export default async function TeamSettingsPage() {
               <TableRow className="border-t-0 hover:bg-transparent">
                 <TableHead>Member</TableHead>
                 <TableHead>Role</TableHead>
+                {showNumbers && <TableHead>Numbers</TableHead>}
                 <TableHead className="hidden sm:table-cell">Joined</TableHead>
               </TableRow>
             </TableHeader>
@@ -108,6 +117,20 @@ export default async function TeamSettingsPage() {
                         </Badge>
                       )}
                     </TableCell>
+                    {showNumbers && (
+                      <TableCell>
+                        {member.role === "AGENT" ? (
+                          <MemberNumbersSelect
+                            membershipId={member.id}
+                            numbers={numbers}
+                            selected={member.whatsappAccountIds}
+                            disabled={!canManage}
+                          />
+                        ) : (
+                          <span className="text-xs text-neutral-400">all numbers</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden whitespace-nowrap text-xs text-neutral-500 sm:table-cell">
                       {dateFmt.format(member.createdAt)}
                     </TableCell>

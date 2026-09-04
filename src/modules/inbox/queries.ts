@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { allowedNumberIds, numberAccessClause } from "@/modules/inbox/access";
 import {
   buildConversationWhere,
   type InboxFilter,
@@ -46,8 +47,12 @@ export async function listConversationSummaries(
   q: string,
   userId: string
 ): Promise<ConversationSummary[]> {
+  // E4b: restricted members only see their numbers' conversations.
+  const allowed = await allowedNumberIds(orgId, userId);
   const rows = await prisma.conversation.findMany({
-    where: buildConversationWhere(orgId, filter, q, userId),
+    where: {
+      AND: [buildConversationWhere(orgId, filter, q, userId), numberAccessClause(allowed)],
+    },
     include: { contact: { select: { id: true, name: true, phoneE164: true } } },
     orderBy: [
       { lastMessageAt: { sort: "desc", nulls: "last" } },
@@ -72,10 +77,13 @@ export async function listConversationSummaries(
 /** Messages + the live bits of the conversation the thread pane polls. */
 export async function getThreadSnapshot(
   conversationId: string,
-  orgId: string
+  orgId: string,
+  /** E4b: pass the caller's userId to enforce per-number access. */
+  userId?: string
 ): Promise<ThreadSnapshot | null> {
+  const allowed = userId ? await allowedNumberIds(orgId, userId) : null;
   const conversation = await prisma.conversation.findFirst({
-    where: { id: conversationId, orgId },
+    where: { AND: [{ id: conversationId, orgId }, numberAccessClause(allowed)] },
     select: {
       status: true,
       lastInboundAt: true,

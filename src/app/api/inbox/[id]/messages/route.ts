@@ -17,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const snapshot = await getThreadSnapshot(id, auth.orgId);
+  const snapshot = await getThreadSnapshot(id, auth.orgId, auth.userId);
   if (!snapshot) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }

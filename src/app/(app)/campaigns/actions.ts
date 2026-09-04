@@ -449,6 +449,25 @@ function consentConfirmed(formData: FormData): boolean {
  * TEMPLATE_APPROVED ones (from-template, or already approved) start sending
  * immediately. Admin-gated: agents can't send marketing (spec §3.1).
  */
+/** E4b: persist the "send from" number chosen at launch (org-scoped). */
+async function applyCampaignNumber(
+  orgId: string,
+  campaignId: string,
+  formData: FormData
+): Promise<void> {
+  const id = String(formData.get("whatsappAccountId") ?? "");
+  if (!id) return;
+  const account = await prisma.whatsappAccount.findFirst({
+    where: { id, orgId },
+    select: { id: true },
+  });
+  if (!account) return;
+  await prisma.campaign.updateMany({
+    where: { id: campaignId, orgId },
+    data: { whatsappAccountId: account.id },
+  });
+}
+
 export async function launchCampaignAction(
   formData: FormData
 ): Promise<ActionResult> {
@@ -471,6 +490,7 @@ export async function launchCampaignAction(
     if (!campaign.audienceId) {
       return { ok: false, message: "Pick an audience first." };
     }
+    await applyCampaignNumber(ctx.org.id, campaign.id, formData);
 
     if (campaign.status === "DRAFT") {
       await submitTemplateForApproval(campaign.id, ctx.org.id);
@@ -540,6 +560,7 @@ export async function scheduleCampaignAction(
       select: { id: true, status: true, audienceId: true },
     });
     if (!campaign) return { ok: false, message: "Campaign not found." };
+    await applyCampaignNumber(ctx.org.id, campaign.id, formData);
     if (campaign.status !== "TEMPLATE_APPROVED") {
       return {
         ok: false,
