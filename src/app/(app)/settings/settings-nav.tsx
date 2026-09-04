@@ -14,6 +14,7 @@ import {
   ScrollText,
   Users,
   Wand2,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -27,6 +28,7 @@ const items = [
   { href: "/settings/concierge", label: "Concierge", icon: Wand2 },
   { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone },
   { href: "/settings/voice", label: "Voice", icon: PhoneCall },
+  { href: "/settings/custom-actions", label: "Agent actions", icon: Zap },
   { href: "/settings/notifications", label: "Notifications", icon: Bell },
   { href: "/settings/billing", label: "Billing", icon: CreditCard },
   { href: "/settings/data", label: "Data", icon: Database },

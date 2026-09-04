@@ -5,6 +5,32 @@ what's next.
 
 ---
 
+## E2 — Custom agent actions (2026-09-04) ✅
+
+Third enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E2):
+the agent can call the client's own backend mid-conversation.
+
+### Built
+- `CustomAction` table (RLS'd, unique per org+name): slug name, model-facing
+  description, JSON-schema input form, https URL, GET/POST, optional encrypted
+  bearer secret, per-action timeout, enable toggle. Max 10 per org.
+- Executor (`agent/tools/custom.ts`): validates model args against the
+  org-authored schema; reuses the outbound-webhook SSRF guards verbatim
+  (https-only, DNS-resolve-then-block private ranges, no redirects); signs
+  POSTs with `x-nudge-signature`; caps responses at 4KB; every failure is a
+  model-recoverable isError string. **Simulated orgs never touch the network**
+  — the executor returns a labeled echo (invariant 4).
+- Registry: `runTool(ctx, call, extraTools)` — built-ins always win name
+  collisions; reserved names rejected at save. Voice tool bridge untouched.
+- Prompt: a generated "BUSINESS-SPECIFIC ACTIONS" block appends to
+  TOOL_GUIDANCE only when the org has enabled actions — orgs without any get a
+  byte-identical prompt to before.
+- Settings → Agent actions (`/settings/custom-actions`, ADMIN, Enterprise-
+  gated): CRUD, enable/pause, Test button showing the raw output. Audit-logged.
+
+### Founders must do manually
+- Nothing — Enterprise/front_desk orgs see the page; others see the upsell.
+
 ## E1 — Developer API + webhooks (2026-09-04) ✅
 
 Second enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E1).
