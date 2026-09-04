@@ -15,61 +15,80 @@ const text = html
   .replace(/\s+/g, " ")
   .trim();
 
-describe("landing-page comparison section", () => {
-  it("turns one late-night enquiry into a complete Nudge outcome", () => {
-    expect(text).toContain("THE DIFFERENCE ISN'T MORE FEATURES.");
-    expect(text).toContain("It's who does the work.");
-    expect(text).toContain("Hi, is Saturday available?");
-    expect(text).toContain("11:47 PM");
-    expect(text).toContain("Nudge AI Front Desk");
+describe("landing-page competitor decision ledger", () => {
+  it("compares every option through the same three buyer questions", () => {
+    expect(text).toContain("COMPETITOR ANALYSIS");
+    expect(text).toContain("FOUR WAYS TO RUN WHATSAPP.");
     expect(text).toContain(
-      "Booked. Deposit collected. Follow-up handled."
+      "Compare what each handles, what stays with you, and who it fits."
     );
 
-    for (const step of [
-      "Replied",
-      "Calendar checked",
-      "Deposit received",
-      "Follow-up ready",
+    for (const heading of [
+      "Option",
+      "What it handles",
+      "What you still own",
+      "Best for",
     ]) {
-      expect(text).toContain(step);
+      expect(text).toContain(heading);
     }
   });
 
-  it("compares operating models without denying competitor capabilities", () => {
-    expect(text).toContain("Meta's AI");
-    expect(text).toContain("A capable agent for incoming conversations.");
-    expect(text).toContain("You connect + oversee");
+  it("states capabilities, ownership and best fit for all four choices", () => {
+    const approvedCopy = [
+      "Nudge AI Front Desk",
+      "Managed service",
+      "Replies, bookings, deposits and quiet-lead recovery.",
+      "Set the rules. Nudge configures and runs it.",
+      "Owners who want the outcome managed.",
+      "Meta Business Agent",
+      "Native WhatsApp AI",
+      "Questions, recommendations, qualification and appointments.",
+      "Setup, connected workflows and ongoing oversight.",
+      "Simple AI inside WhatsApp.",
+      "WhatsApp CRM tools",
+      "WATI · AiSensy · Interakt",
+      "Inbox, campaigns, AI agents and automations.",
+      "Workflow design, integrations and daily operation.",
+      "Teams that want platform control.",
+      "Human receptionist",
+      "Traditional hire",
+      "Conversations, exceptions and manual follow-up.",
+      "Hiring, training, scheduling and cover.",
+      "Businesses needing human judgment.",
+    ];
 
-    expect(text).toContain("CRM tools");
+    for (const copy of approvedCopy) {
+      expect(text).toContain(copy);
+    }
+
     expect(text).toContain(
-      "Powerful software for building WhatsApp workflows."
+      "Capabilities, services and pricing vary by provider, plan and market."
     );
-    expect(text).toContain("WATI · AiSensy · Interakt");
-    expect(text).toContain("Your team or partner operates");
-
-    expect(text).toContain("Human receptionist");
-    expect(text).toContain("A capable person behind the desk.");
-    expect(text).toContain("You hire + train + cover shifts");
-
-    expect(source).not.toContain("No real-system action");
-    expect(source).not.toContain("Inbound only");
-    expect(source).not.toContain("Doesn't collect payment");
   });
 
-  it("uses a static, semantic card structure that stacks on mobile", () => {
+  it("uses semantic desktop and mobile structures without horizontal scrolling", () => {
     expect(html).toContain('id="compare"');
-    expect(html).toContain(
-      'aria-label="How Nudge handles the same enquiry compared with alternatives"'
-    );
-    expect(html.match(/<article/g)).toHaveLength(4);
-    expect(html.match(/aria-labelledby=/g)).toHaveLength(4);
-    expect(text).toContain("With Nudge, the front desk is the product.");
+    expect(html).toContain("<table");
+    expect(html).toContain("<caption");
+    expect(html.match(/<th[^>]*scope="col"/g)).toHaveLength(4);
+    expect(html.match(/<th[^>]*scope="row"/g)).toHaveLength(4);
+    expect(html.match(/<dl/g)).toHaveLength(4);
+    expect(source).toContain("lg:table");
+    expect(source).toContain("lg:hidden");
 
-    expect(source).not.toContain("<table");
-    expect(source).not.toContain('scope="col"');
-    expect(source).not.toContain("Swipe to compare");
     expect(source).not.toContain("overflow-x-auto");
+    expect(source).not.toContain("min-w-[");
     expect(source).not.toContain("useState");
+  });
+
+  it("removes the rejected bento and tiny decorative clutter", () => {
+    expect(source).not.toContain("JOURNEY_STEPS");
+    expect(source).not.toContain("linear-gradient");
+    expect(source).not.toContain("Hi, is Saturday available?");
+    expect(source).not.toContain("backdropWord");
+    expect(source).not.toContain("CARD_MOTION");
+    expect(source).not.toContain("hover:");
+    expect(source).not.toContain("text-[10px]");
+    expect(source.match(/rounded-\[1\.75rem\]/g)).toHaveLength(1);
   });
 });
