@@ -121,7 +121,8 @@ type FeatureFlag =
   | "byoLlm"
   | "multiNumber"
   | "webWidget"
-  | "leadScoring";
+  | "leadScoring"
+  | "voiceAgent";
 
 const FEATURE_LABEL: Record<FeatureFlag, string> = {
   publicApi: "API keys + webhooks",
@@ -130,6 +131,7 @@ const FEATURE_LABEL: Record<FeatureFlag, string> = {
   multiNumber: "Multiple WhatsApp numbers",
   webWidget: "The website widget",
   leadScoring: "Lead scoring",
+  voiceAgent: "The voice front desk",
 };
 
 async function checkFeature(orgId: string, flag: FeatureFlag): Promise<LimitCheck> {
@@ -160,6 +162,8 @@ export const checkMultiNumber = (orgId: string) => checkFeature(orgId, "multiNum
 export const checkWebWidget = (orgId: string) => checkFeature(orgId, "webWidget");
 /** Predictive lead scoring + churn risk (Pro+). */
 export const checkLeadScoring = (orgId: string) => checkFeature(orgId, "leadScoring");
+/** Voice front desk — the AI answers the phone (front_desk/enterprise). */
+export const checkVoiceAgent = (orgId: string) => checkFeature(orgId, "voiceAgent");
 
 /** Can this org queue `recipients` more campaign messages this month? */
 export async function checkMessageLimit(

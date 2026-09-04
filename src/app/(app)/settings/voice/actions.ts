@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
+import { checkVoiceAgent } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { SIM_TRANSCRIPT } from "@/modules/voice/drivers/simulation";
 import { fileCall } from "@/modules/voice/file-call";
@@ -17,6 +18,8 @@ export async function saveVoiceNumberAction(formData: FormData): Promise<ActionR
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    const gate = await checkVoiceAgent(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
     const data = parseVoiceNumberForm(formData);
     await prisma.voiceNumber.upsert({
       where: { phoneE164: data.phoneE164 },
@@ -47,6 +50,10 @@ export async function toggleReminderCallsAction(enabled: boolean): Promise<Actio
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    if (enabled) {
+      const gate = await checkVoiceAgent(ctx.org.id);
+      if (!gate.allowed) return { ok: false, message: gate.message };
+    }
     await prisma.followUpConfig.upsert({
       where: { orgId: ctx.org.id },
       create: { orgId: ctx.org.id, enabled: true, reminderCalls: enabled },
@@ -62,6 +69,8 @@ export async function toggleReminderCallsAction(enabled: boolean): Promise<Actio
 /** Test mode: drop a scripted call into the inbox so the owner sees what a call looks like. */
 export async function simulateCallAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
+  const gate = await checkVoiceAgent(ctx.org.id);
+  if (!gate.allowed) return { ok: false, message: gate.message };
   const number = await prisma.voiceNumber.findFirst({ where: { orgId: ctx.org.id } });
   await fileCall(
     ctx.org.id,

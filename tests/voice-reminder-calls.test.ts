@@ -7,7 +7,8 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/db", () => ({
   prisma: {
-    followUpConfig: { findMany: vi.fn(async () => [{ orgId: "org1", enabled: true, reminderCalls: true }]) },
+    // E7 fix: the tick now reads the org's plan and skips non-voiceAgent tiers.
+    followUpConfig: { findMany: vi.fn(async () => [{ orgId: "org1", enabled: true, reminderCalls: true, org: { plan: "front_desk" } }]) },
     voiceNumber: {
       findFirst: vi.fn(async () => ({
         id: "vn1", orgId: "org1", phoneE164: "+918000000001", elevenPhoneId: "pn",

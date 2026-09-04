@@ -37,6 +37,8 @@ export interface PlanLimits {
   webWidget: boolean;
   /** Predictive lead scoring + churn risk (Pro+). */
   leadScoring: boolean;
+  /** Voice front desk — the AI answers the phone (front_desk/enterprise). */
+  voiceAgent: boolean;
 }
 
 export type PlanId =
@@ -122,6 +124,7 @@ export const PLANS: Plan[] = [
       multiNumber: false,
       webWidget: false,
       leadScoring: false,
+      voiceAgent: false,
     },
   },
   {
@@ -148,6 +151,7 @@ export const PLANS: Plan[] = [
       multiNumber: false,
       webWidget: true,
       leadScoring: false,
+      voiceAgent: false,
     },
   },
   {
@@ -174,6 +178,7 @@ export const PLANS: Plan[] = [
       multiNumber: false,
       webWidget: true,
       leadScoring: false,
+      voiceAgent: false,
     },
     highlighted: true,
   },
@@ -200,6 +205,7 @@ export const PLANS: Plan[] = [
       multiNumber: false,
       webWidget: true,
       leadScoring: true,
+      voiceAgent: false,
     },
   },
   {
@@ -226,6 +232,7 @@ export const PLANS: Plan[] = [
       multiNumber: true,
       webWidget: true,
       leadScoring: true,
+      voiceAgent: true,
     },
     flagship: true,
   },
@@ -253,6 +260,7 @@ export const PLANS: Plan[] = [
       multiNumber: true,
       webWidget: true,
       leadScoring: true,
+      voiceAgent: true,
     },
     contactOnly: true,
   },

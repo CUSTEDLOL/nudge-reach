@@ -12,7 +12,7 @@ import {
  * workstream gates on one of these booleans — this test is the contract.
  */
 const MATRIX: Record<
-  "publicApi" | "webWidget" | "leadScoring" | "customActions" | "byoLlm" | "multiNumber",
+  "publicApi" | "webWidget" | "leadScoring" | "customActions" | "byoLlm" | "multiNumber" | "voiceAgent",
   Record<PlanId, boolean>
 > = {
   publicApi: {
@@ -31,6 +31,9 @@ const MATRIX: Record<
     free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
   },
   multiNumber: {
+    free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
+  },
+  voiceAgent: {
     free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
   },
 };

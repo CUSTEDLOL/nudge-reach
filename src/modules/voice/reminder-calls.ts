@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getPlan } from "@/modules/billing/plans";
 import { ensureAgentProfile } from "@/modules/agent/profile";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { voiceDriverFor } from "@/modules/voice";
@@ -22,8 +23,13 @@ export function isCallingHour(now: Date, timezone: string): boolean {
 
 export async function tickReminderCalls(now: Date = new Date()) {
   const result = { reminders: 0, noShows: 0, skipped: 0 };
-  const configs = await prisma.followUpConfig.findMany({ where: { enabled: true, reminderCalls: true } });
+  const configs = await prisma.followUpConfig.findMany({
+    where: { enabled: true, reminderCalls: true },
+    include: { org: { select: { plan: true } } },
+  });
   for (const cfg of configs) {
+    // E7 fix: reminder calls only run for plans with the voiceAgent flag.
+    if (!getPlan(cfg.org.plan).limits.voiceAgent) continue;
     const [org, number] = await Promise.all([
       prisma.org.findUnique({ where: { id: cfg.orgId }, select: { id: true, timezone: true, simulated: true } }),
       prisma.voiceNumber.findFirst({ where: { orgId: cfg.orgId, enabled: true } }),

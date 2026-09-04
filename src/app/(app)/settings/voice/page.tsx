@@ -3,6 +3,9 @@ import { PhoneIncoming, PhoneOutgoing, Waypoints } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrg } from "@/modules/orgs/auth";
+import { checkVoiceAgent } from "@/modules/billing/limits";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SectionHeader } from "../section-header";
@@ -30,6 +33,23 @@ const HOW_IT_WORKS = [
 
 export default async function VoiceSettingsPage() {
   const org = await requireOrg();
+  // E7 fix: the voice front desk is a front_desk/enterprise feature.
+  const gate = await checkVoiceAgent(org.id);
+  if (!gate.allowed) {
+    return (
+      <section className="flex flex-col gap-4">
+        <SectionHeader
+          title="Phone calls"
+          description="Your AI Front Desk picks up the phone too."
+        />
+        <EmptyState
+          icon={<Lock className="h-5 w-5" aria-hidden />}
+          title="An AI Front Desk feature"
+          description={gate.message}
+        />
+      </section>
+    );
+  }
   const [numbers, followUp] = await Promise.all([
     prisma.voiceNumber.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "asc" } }),
     prisma.followUpConfig.findUnique({ where: { orgId: org.id } }),
