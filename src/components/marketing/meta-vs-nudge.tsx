@@ -73,7 +73,10 @@ export function MetaVsNudge() {
           <p className="min-w-0 text-left text-[14px] font-bold leading-snug text-ink sm:text-[15px]">
             Hi, is Saturday available?
           </p>
-          <time className="shrink-0 self-end text-[10px] font-bold uppercase tracking-[0.08em] text-ink/45">
+          <time
+            dateTime="23:47"
+            className="shrink-0 self-end text-[10px] font-bold uppercase tracking-[0.08em] text-ink/45"
+          >
             11:47 PM
           </time>
         </div>
@@ -112,14 +115,11 @@ export function MetaVsNudge() {
                 Nudge AI Front Desk
               </h3>
               <p className="mt-6 max-w-2xl text-balance font-display text-[clamp(2rem,4.1vw,3.65rem)] font-black uppercase leading-[0.95] tracking-[-0.045em] text-ink">
-                Booked. Deposit collected. Follow-up handled.
+                Booked. Deposit collected.{" "}
+                <span className="whitespace-nowrap">Follow-up</span> handled.
               </p>
 
-              <ol className="relative mt-9 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-                <span
-                  aria-hidden
-                  className="absolute left-[8%] right-[8%] top-1/2 hidden -translate-y-1/2 border-t-[3px] border-dashed border-ink/30 sm:block"
-                />
+              <ol className="relative mt-9 grid grid-cols-2 gap-3 before:absolute before:left-[8%] before:right-[8%] before:top-1/2 before:hidden before:-translate-y-1/2 before:border-t-[3px] before:border-dashed before:border-ink/30 before:content-[''] sm:grid-cols-4 sm:gap-4 sm:before:block">
                 {JOURNEY_STEPS.map((step, index) => {
                   const Icon = step.icon;
 
