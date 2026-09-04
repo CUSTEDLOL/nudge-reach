@@ -75,7 +75,7 @@ export function MetaVsNudge() {
           </p>
           <time
             dateTime="23:47"
-            className="shrink-0 self-end text-[10px] font-bold uppercase tracking-[0.08em] text-ink/45"
+            className="shrink-0 self-end text-[10px] font-bold uppercase tracking-[0.08em] text-ink/60"
           >
             11:47 PM
           </time>
@@ -186,7 +186,7 @@ export function MetaVsNudge() {
                         {alternative.description}
                       </p>
                       {"examples" in alternative ? (
-                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.09em] text-ink/60 sm:text-[11px]">
+                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.09em] text-ink/75 sm:text-[11px]">
                           {alternative.examples}
                         </p>
                       ) : null}
