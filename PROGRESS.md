@@ -5,6 +5,38 @@ what's next.
 
 ---
 
+## Founder admin panel — /admin (2026-09-05) ✅
+
+Plan: `docs/plans/2026-09-05-admin-panel.md`. Built on branch `admin-panel`
+in an isolated worktree; every commit gated (tsc, lint, full suite, build)
+and every page verified live against the dev DB.
+
+- **Gate:** `FOUNDER_EMAILS` env allowlist (new env-schema entry), checked
+  server-side in the layout AND every page. Unset ⇒ panel off for everyone
+  (fails closed); non-founders (even logged in) get a plain 404. Proven live
+  in all three directions.
+- **Pages:** Overview (orgs by plan, live/test, signups/day, active orgs,
+  message volume, AI cost with BYOK split, bookings, payments; 7/30/90d) ·
+  Orgs (searchable by name/member email, 50-row cursor pages, cost +
+  activity columns) · Org detail (team, numbers, template statuses, usage,
+  events, audit trail) · Events & demand (event types/day pivot, signups by
+  vertical — the ad-decision view) · Ops (heartbeats, AI-cost alerts over
+  35% of plan, stuck/rejected templates, webhook failures).
+- **One mutation:** change plan — validated, confirm-gated, and written to
+  the org's AuditLog as `founder:<email>` (`modules/admin/set-plan`, shared
+  semantics with `npm run plan:set`).
+- **Rules enforced by tests** (11 new across 5 files): the gate fails
+  closed; admin queries never select message bodies (privacy); pagination/
+  pivot/cost-alert math correct.
+- `src/modules/admin` is the repo's single cross-org module; everything
+  else stays tenant-scoped (invariant 5).
+
+### Founders must do manually
+- Vercel: set `FOUNDER_EMAILS=visheshjain1705@gmail.com,<dhairya's email>`
+  (also added locally to the worktree `.env.local` for testing).
+- Merge `admin-panel` → main when ready (no schema changes; zero conflict
+  surface expected with e4b/e8 work).
+
 ## E4b + E7 fix + E8 — access walls, voice gating, chat summaries (2026-09-05) ✅
 
 ### E4b — per-number staff access + campaign picker
