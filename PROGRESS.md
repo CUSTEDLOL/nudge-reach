@@ -5,6 +5,42 @@ what's next.
 
 ---
 
+## E4 — Multiple WhatsApp numbers per org (2026-09-04) ✅
+
+Fifth enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E4,
+detailed plan `docs/plans/2026-09-04-e4-multi-number.md`).
+
+### Design decisions (founder-confirmed)
+- **Sticky routing, one thread per customer:** the conversation remembers the
+  number the customer last wrote to; every reply (agent, inbox, follow-ups,
+  automations) leaves from it. Cross-number history stays in one thread.
+- **Numbers first, access later:** per-number staff visibility is E4b.
+- Templates stay org-scoped via the default number's WABA (multi-WABA sync
+  deferred). Campaigns send from the default number; the per-campaign picker
+  ships with E4b (schema + queue already honor `Campaign.whatsappAccountId`).
+
+### Built
+- Schema: `WhatsappAccount.orgId` no longer unique; `phoneNumberId` globally
+  unique (webhook routing key); `isDefault` (exactly one per org, enforced in
+  code). `Conversation`/`Campaign` gain `whatsappAccountId`. Idempotent
+  `npm run backfill:multi-number`.
+- `accounts.ts`: list/default/set-default/disconnect; save upserts by phone
+  number — 2nd+ number plan-gated on `multiNumber`, numbers claimed by another
+  org refused, disconnecting the default promotes the oldest survivor, stale
+  ids fall back to the default so sends never dead-end.
+- Routing: webhook stamps the receiving account on the conversation; all six
+  outbound paths pass the conversation's (or campaign's) number through
+  `SendOptions.whatsappAccountId` into credential resolution.
+- UI: Settings → WhatsApp lists numbers (default badge, set-default,
+  disconnect); inbox thread header shows "via <number>" when an org has >1.
+- 11 new tests (account rules + sticky routing) — 569 total.
+
+### Founders must do manually
+- Run `npm run backfill:multi-number` after deploy (idempotent; already run on
+  the dev DB).
+- Per-number live/test mode is still org-level; per-number staff walls and the
+  campaign number picker are E4b.
+
 ## E3 — BYO-LLM: OpenAI / Google / Anthropic on the customer's key (2026-09-04) ✅
 
 Fourth enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E3).

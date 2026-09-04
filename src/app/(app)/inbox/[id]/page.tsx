@@ -31,6 +31,12 @@ export default async function InboxThreadPage({
   const filter = parseInboxFilter(sp.filter);
   const q = sp.q ?? "";
 
+  // E4: show which number a thread is on, but only when the org has several.
+  const orgNumbers = await prisma.whatsappAccount.findMany({
+    where: { orgId: org.id },
+    select: { id: true, displayName: true },
+  });
+
   // One parallel batch instead of three serial round-trips to the DB — the
   // thread snapshot and list are keyed off `id`/`org.id`, so nothing here
   // depends on another query's result. Marking the thread read rides along
@@ -128,6 +134,12 @@ export default async function InboxThreadPage({
           contactPhone={contact.phoneE164}
           conversationStatus={conversation.status}
           channel={conversation.channel}
+          numberLabel={
+            orgNumbers.length > 1
+              ? (orgNumbers.find((n) => n.id === conversation.whatsappAccountId)
+                  ?.displayName ?? null)
+              : null
+          }
           templates={templates}
           simulation={isSimulated(org)}
           backHref={backHref}

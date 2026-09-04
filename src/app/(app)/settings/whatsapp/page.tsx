@@ -6,8 +6,10 @@ import {
   Smartphone,
 } from "lucide-react";
 import { isSimulated } from "@/modules/orgs/mode";
-import { requireOrg } from "@/modules/orgs/auth";
-import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
+import { requireOrgContext } from "@/modules/orgs/auth";
+import { listWhatsappAccounts } from "@/modules/whatsapp/accounts";
+import { getPlan } from "@/modules/billing/plans";
+import { NumbersList } from "./numbers-list";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -44,9 +46,13 @@ const SETUP_NEEDS = [
 ];
 
 export default async function WhatsappSettingsPage() {
-  const org = await requireOrg();
-  const account = await getWhatsappAccount(org.id);
+  const ctx = await requireOrgContext();
+  const org = ctx.org;
+  const accounts = await listWhatsappAccounts(org.id);
+  const account = accounts[0] ?? null;
   const simulation = isSimulated(org);
+  const canManage = ctx.role === "OWNER" || ctx.role === "ADMIN";
+  const multiNumberAllowed = getPlan(org.plan).limits.multiNumber;
 
   return (
     <section className="flex flex-col gap-4">
@@ -56,17 +62,17 @@ export default async function WhatsappSettingsPage() {
       />
 
       {account ? (
-        <Card className="p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="success">Connected</Badge>
-            <p className="text-sm font-semibold text-neutral-900">
-              {account.displayName}
-            </p>
-          </div>
-          <p className="mt-2 font-mono text-xs text-neutral-500">
-            WABA {account.wabaId} · Phone {account.phoneNumberId}
-          </p>
-        </Card>
+        <NumbersList
+          numbers={accounts.map((a) => ({
+            id: a.id,
+            displayName: a.displayName,
+            phoneNumberId: a.phoneNumberId,
+            wabaId: a.wabaId,
+            isDefault: a.isDefault,
+            status: a.status,
+          }))}
+          canManage={canManage}
+        />
       ) : (
         <Card className="p-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -137,7 +143,10 @@ export default async function WhatsappSettingsPage() {
         <div className="border-t border-neutral-100 px-5 py-5">
           <p className="mb-4 text-sm text-neutral-500">
             From your Meta developer app: WhatsApp → API Setup.
-            {account && " Saving here replaces the current connection."}
+            {account &&
+              (multiNumberAllowed
+                ? " A new phone number ID adds another number; re-entering an existing one updates it."
+                : " Re-entering your number's details updates the connection. Additional numbers are an Enterprise feature.")}
           </p>
           <ConnectForm />
         </div>
