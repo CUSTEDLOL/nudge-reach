@@ -6,6 +6,7 @@ import type {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { sendMessage } from "@/modules/messaging";
 import { isWithinServiceWindow } from "@/modules/agent/window";
 import { campaignContentSchema } from "@/modules/campaign/schema";
@@ -294,13 +295,17 @@ async function executeSteps(
         log: toJson(log),
       },
     });
-    if (!result.ok) return outcome(runId, "FAILED", log, replyText);
+    if (!result.ok) {
+      void dispatchWebhook(ctx.orgId, "automation.run", { runId, status: "FAILED" });
+      return outcome(runId, "FAILED", log, replyText);
+    }
   }
 
   await prisma.automationRun.update({
     where: { id: runId },
     data: { status: "COMPLETED", log: toJson(log) },
   });
+  void dispatchWebhook(ctx.orgId, "automation.run", { runId, status: "COMPLETED" });
   return outcome(runId, "COMPLETED", log, replyText);
 }
 

@@ -100,8 +100,16 @@ export function ApiKeysCard({
               API keys
             </CardTitle>
             <CardDescription>
-              Programmatic access for the upcoming public API. Keys are hashed
-              at rest — the full key is shown once at creation.
+              Programmatic access to the{" "}
+              <a
+                href="https://github.com/CUSTEDLOL/nudge-reach/blob/main/docs/API.md"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-neutral-700"
+              >
+                Nudge REST API
+              </a>
+              . Keys are hashed at rest — the full key is shown once at creation.
             </CardDescription>
           </div>
           {canManage &&

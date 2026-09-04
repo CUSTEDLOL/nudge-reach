@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { canSendMarketing } from "@/modules/consent";
+import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { orgSendMode, type SendMode } from "@/modules/orgs/mode";
 import { getWhatsappCredentials } from "@/modules/whatsapp/accounts";
 import { WhatsappLiveDriver } from "@/modules/messaging/drivers/whatsapp-live";
@@ -76,5 +77,16 @@ export async function sendMessage(
     }
   }
 
-  return resolveDriver(channel, mode).send(recipient, payload, credentials);
+  const result = await resolveDriver(channel, mode).send(recipient, payload, credentials);
+
+  // E1: message.sent goes to integrators' webhooks. Fire-and-forget after the
+  // send so a slow endpoint never delays a customer-facing message.
+  if (result.ok && options.orgId) {
+    void dispatchWebhook(options.orgId, "message.sent", {
+      to: recipient.address,
+      kind: payload.kind,
+      providerMessageId: result.providerMessageId ?? null,
+    });
+  }
+  return result;
 }

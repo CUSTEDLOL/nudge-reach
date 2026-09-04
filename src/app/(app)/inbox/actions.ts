@@ -15,6 +15,7 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 import { recordContactEvent } from "@/modules/contacts/events";
+import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -305,6 +306,10 @@ export async function assignConversationAction(
       data: { assignedToUserId },
     });
     if (updated.count === 0) return { ok: false, message: "Conversation not found." };
+    void dispatchWebhook(org.id, "conversation.assigned", {
+      conversationId,
+      assignedToUserId,
+    });
 
     revalidateInbox(conversationId);
     return {

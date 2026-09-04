@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   "/api/webhooks",
   // voice front desk: ElevenLabs webhooks + tool calls carry their own secrets
   "/api/voice",
+  // public developer API: nk_live_ key auth inside resolveApiKeyOrg, never cookies
+  "/api/v1",
   "/api/cron",
   "/api/waitlist",
   "/api/access",

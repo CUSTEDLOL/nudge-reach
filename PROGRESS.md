@@ -5,6 +5,28 @@ what's next.
 
 ---
 
+## E1 — Developer API + webhooks (2026-09-04) ✅
+
+Second enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E1).
+
+### Built
+- Public REST API under `/api/v1` (Growth+ via the `publicApi` flag), authed by
+  the existing `nk_live_` keys through the new `resolveApiKeyOrg` doorway
+  (JSON 401/403/429 — never a login redirect; 120 req/min per key).
+- Endpoints: `me`, `contacts` (list/create/get/patch — E.164-normalized,
+  plan-limited, **consent can never be resurrected via the API**),
+  `conversations` (+ `/messages`), `templates`, `bookings`,
+  `messages` (free-form gated by the 24h window in code; templates must be
+  Meta-APPROVED; MARKETING consent enforced inside `sendMessage`).
+- The three advertised-but-silent webhook events now fire: `message.sent`
+  (send choke point), `conversation.assigned` (inbox), `automation.run`
+  (engine terminal states) — all 7 events real.
+- `docs/API.md` (auth, pagination, endpoints, HMAC verification snippet);
+  API-keys card links to it. `/api/v1` added to the auth-proxy public list.
+
+### Founders must do manually
+- Nothing — works in simulation; live sends need only the org's WhatsApp number.
+
 ## E0 — Enterprise foundation (2026-09-04) ✅
 
 First workstream of the enterprise track (`docs/plans/2026-09-04-enterprise-track.md`);
