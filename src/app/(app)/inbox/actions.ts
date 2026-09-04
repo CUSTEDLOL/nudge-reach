@@ -15,6 +15,7 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 import { recordContactEvent } from "@/modules/contacts/events";
+import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 
 /**
@@ -503,5 +504,40 @@ export async function simulateInboundAction(
     return { ok: true, message: "Message received — the agent replied.", conversationId };
   } catch {
     return { ok: false, message: "The simulated message failed — try again." };
+  }
+}
+
+export interface SummarizeActionResult extends ActionResult {
+  summary?: string;
+  sample?: boolean;
+}
+
+/** E8: AI summary of the thread, saved as an internal note. Any role. */
+export async function summarizeConversationAction(
+  formData: FormData
+): Promise<SummarizeActionResult> {
+  try {
+    const { org } = await requireOrgContext();
+    const conversationId = String(formData.get("conversationId") ?? "");
+    const rate = checkRateLimit(`summarize:${org.id}`, RATE_LIMITS.aiSuggest);
+    if (!rate.allowed) {
+      return {
+        ok: false,
+        message: `Too many summaries at once — try again in ${rate.retryAfterSeconds}s.`,
+      };
+    }
+    const r = await summarizeConversation(org.id, conversationId);
+    if (!r.ok) return { ok: false, message: r.error ?? "Couldn't summarize." };
+    revalidateInbox(conversationId);
+    return {
+      ok: true,
+      message: r.sample
+        ? "Sample summary added to notes (offline mode)."
+        : "Summary added to internal notes.",
+      summary: r.summary,
+      sample: r.sample,
+    };
+  } catch {
+    return { ok: false, message: "Couldn't summarize — try again." };
   }
 }

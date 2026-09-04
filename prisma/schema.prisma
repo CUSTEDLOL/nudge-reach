@@ -744,7 +744,7 @@ model AiUsage {
   orgId          String
   org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   conversationId String?
-  purpose        String // agent_reply | suggest | distill | ingest | campaign_copy
+  purpose        String // agent_reply | suggest | distill | ingest | campaign_copy | summary
   model          String
   inputTokens    Int
   outputTokens   Int

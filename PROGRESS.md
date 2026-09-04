@@ -5,6 +5,33 @@ what's next.
 
 ---
 
+## E4b + E7 fix + E8 — access walls, voice gating, chat summaries (2026-09-05) ✅
+
+### E4b — per-number staff access + campaign picker
+- `Membership.whatsappAccountIds` (empty = all; AGENT-only) enforced INSIDE the
+  inbox queries (`modules/inbox/access.ts`) — list, thread page and both poll
+  routes; number-less conversations (sim, voice, legacy) stay visible.
+  Owners/admins always see everything. Team page: per-agent number chips.
+- Campaign launch/schedule accept a "Send from" number (org-validated);
+  RunPanel shows the picker when an org has >1 numbers.
+
+### E7 fix — voice front desk plan-gated
+- Voice had shipped with NO plan gate. New `voiceAgent` flag
+  (front_desk/enterprise) gates the settings page, save/toggle/simulate
+  actions, and the reminder-call cron tick per org. Matrix test row added.
+
+### E8 — AI chat summaries
+- One click on a thread ("AI summary" in the notes panel) → 3–5 line brief
+  (what the customer wants / what was agreed / what's open), saved as an
+  internal note by "AI Assistant" and synced to the client's CRM via the
+  waiting `crmConversationSummary` hook.
+- Runs through the model-router doorway: BYO-LLM orgs pay their own provider;
+  usage metered as purpose `summary`. Keyless/simulation returns a labeled
+  deterministic sample (invariant 4). Org-level rate limit.
+
+### Founders must do manually
+- Nothing for any of the three.
+
 ## E6 — Lead scoring + churn risk (2026-09-04) ✅
 
 Final active workstream of the enterprise track (head plan §E6). Deterministic,

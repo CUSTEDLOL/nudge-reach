@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ExternalLink, Plus, StickyNote } from "lucide-react";
+import { ExternalLink, Plus, StickyNote , Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { formatRelativeTime } from "@/modules/inbox/format";
 import {
   addContactTagAction,
   addNoteAction,
+  summarizeConversationAction,
   assignConversationAction,
   removeContactTagAction,
   setConversationStatusAction,
@@ -68,6 +69,7 @@ export function ContextPanel({
   unpadded = false,
 }: ContextPanelProps) {
   const { toast } = useToast();
+  const [summarizing, setSummarizing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [noteBody, setNoteBody] = useState("");
 
@@ -288,9 +290,36 @@ export function ContextPanel({
 
       {/* Notes */}
       <section aria-label="Internal notes">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-400">
-          Internal notes
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+            Internal notes
+          </h3>
+          {/* E8: one-click AI summary, saved as a note below. */}
+          <button
+            type="button"
+            disabled={summarizing}
+            onClick={() =>
+              startTransition(async () => {
+                setSummarizing(true);
+                try {
+                  const result = await summarizeConversationAction(
+                    fields({})
+                  );
+                  toast({
+                    tone: result.ok ? "success" : "error",
+                    description: result.message,
+                  });
+                } finally {
+                  setSummarizing(false);
+                }
+              })
+            }
+            className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50"
+          >
+            <Sparkles className="h-3 w-3" aria-hidden />
+            {summarizing ? "Summarizing…" : "AI summary"}
+          </button>
+        </div>
         <form
           className="mt-2"
           onSubmit={(e) => {

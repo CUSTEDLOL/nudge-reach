@@ -13,7 +13,8 @@ export type UsagePurpose =
   | "suggest"
   | "distill"
   | "ingest"
-  | "campaign_copy";
+  | "campaign_copy"
+  | "summary";
 
 export interface Attribution {
   orgId: string;
