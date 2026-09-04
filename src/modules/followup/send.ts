@@ -30,6 +30,14 @@ export async function sendApprovedTemplate(
     return { ok: false, error: `template ${template.metaStatus.toLowerCase()}` };
   }
 
+  // E4: follow-ups leave from the conversation's own number when known.
+  const convo = conversationId
+    ? await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { whatsappAccountId: true },
+      })
+    : null;
+
   const firstName = contact.name.split(" ")[0] || contact.name;
   const sent = await sendMessage(
     "whatsapp",
@@ -45,7 +53,7 @@ export async function sendApprovedTemplate(
       language: template.language,
       bodyParams: [firstName],
     },
-    { orgId: contact.orgId }
+    { orgId: contact.orgId, whatsappAccountId: convo?.whatsappAccountId }
   );
   if (!sent.ok) {
     return { ok: false, blockedByConsent: sent.blockedByConsent, error: sent.error };

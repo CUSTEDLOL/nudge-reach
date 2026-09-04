@@ -29,6 +29,11 @@ function resolveDriver(channel: Channel, mode: SendMode): ChannelDriver {
 export interface SendOptions {
   /** Org whose connected WhatsApp number should send this (live mode). */
   orgId?: string;
+  /**
+   * E4: which of the org's numbers sends this. Omit/null = the org default.
+   * A stale id falls back to the default inside credential resolution.
+   */
+  whatsappAccountId?: string | null;
 }
 
 /**
@@ -67,7 +72,7 @@ export async function sendMessage(
   // the env single-number credentials inside the driver when none are stored.
   let credentials: SenderCredentials | undefined;
   if (channel === "whatsapp" && mode === "live" && options.orgId) {
-    const creds = await getWhatsappCredentials(options.orgId);
+    const creds = await getWhatsappCredentials(options.orgId, options.whatsappAccountId);
     if (creds) {
       credentials = {
         phoneNumberId: creds.phoneNumberId,

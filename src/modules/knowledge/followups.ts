@@ -54,6 +54,7 @@ export async function sendKnowledgeFollowUps(
     where: { orgId, id: { in: waiting.map((w) => w.conversationId) } },
     select: {
       id: true,
+      whatsappAccountId: true,
       lastInboundAt: true,
       contact: {
         select: { phoneE164: true, optedIn: true, optedOutAt: true },
@@ -84,7 +85,7 @@ export async function sendKnowledgeFollowUps(
           optedOutAt: convo.contact.optedOutAt,
         },
         { kind: "text", text },
-        { orgId }
+        { orgId, whatsappAccountId: convo.whatsappAccountId }
       );
       await prisma.conversationMessage.create({
         data: {

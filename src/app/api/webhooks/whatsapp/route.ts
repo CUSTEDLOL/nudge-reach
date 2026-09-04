@@ -177,6 +177,8 @@ async function processInbound(
     // is enabled (see lib/agent/inbound.ts).
     await handleInboundMessage(account.orgId, inbound.from, text, {
       metaMessageId: inbound.id,
+      // E4: the number the customer wrote to — replies leave from it.
+      whatsappAccountId: account.id,
     });
   }
 }

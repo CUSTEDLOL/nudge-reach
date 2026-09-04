@@ -112,7 +112,7 @@ export async function processQueue(campaignId: string): Promise<number> {
         bodyParams: [message.contact.name.split(" ")[0]],
         headerImageUrl: campaign.product.photoUrl ?? undefined,
       },
-      { orgId: campaign.orgId }
+      { orgId: campaign.orgId, whatsappAccountId: campaign.whatsappAccountId }
     );
 
     await prisma.message.update({

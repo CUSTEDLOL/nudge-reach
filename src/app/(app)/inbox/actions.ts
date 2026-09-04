@@ -82,7 +82,7 @@ export async function sendTextAction(
         optedOutAt: conversation.contact.optedOutAt,
       },
       { kind: "text", text },
-      { orgId: org.id }
+      { orgId: org.id, whatsappAccountId: conversation.whatsappAccountId }
     );
     if (!result.ok) {
       return { ok: false, message: result.error ?? "The message didn't send — try again." };
@@ -168,7 +168,7 @@ export async function sendTemplateAction(
         language: template.language,
         bodyParams: [name],
       },
-      { orgId: org.id }
+      { orgId: org.id, whatsappAccountId: conversation.whatsappAccountId }
     );
 
     if (result.blockedByConsent) {

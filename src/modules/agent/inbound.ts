@@ -34,7 +34,7 @@ export async function handleInboundMessage(
   orgId: string,
   fromPhone: string,
   text: string,
-  opts: { metaMessageId?: string } = {}
+  opts: { metaMessageId?: string; whatsappAccountId?: string } = {}
 ): Promise<InboundResult> {
   // Meta's webhook always sends `from` with the country code but no "+"
   // (e.g. "919876543210", "971501234567") — so a bare digit string is an
@@ -87,12 +87,15 @@ export async function handleInboundMessage(
       lastMessageAt: now,
       lastMessagePreview: toPreview(text),
       unreadCount: 1,
+      // E4 sticky routing: remember which number the customer wrote to.
+      ...(opts.whatsappAccountId ? { whatsappAccountId: opts.whatsappAccountId } : {}),
     },
     update: {
       lastInboundAt: now,
       lastMessageAt: now,
       lastMessagePreview: toPreview(text),
       unreadCount: { increment: 1 },
+      ...(opts.whatsappAccountId ? { whatsappAccountId: opts.whatsappAccountId } : {}),
     },
   });
 
@@ -196,7 +199,7 @@ export async function handleInboundMessage(
       optedOutAt: contact.optedOutAt,
     },
     { kind: "text", text: replyText },
-    { orgId }
+    { orgId, whatsappAccountId: conversation.whatsappAccountId }
   );
 
   await prisma.conversationMessage.create({

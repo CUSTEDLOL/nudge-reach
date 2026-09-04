@@ -371,7 +371,7 @@ async function sendMessageStep(
       optedOutAt: contact.optedOutAt,
     },
     { kind: "text", text },
-    { orgId: contact.orgId }
+    { orgId: contact.orgId, whatsappAccountId: conversation.whatsappAccountId }
   );
   if (!sent.ok) return { ok: false, detail: sent.error ?? "Send failed." };
 
@@ -405,6 +405,7 @@ async function sendTemplateStep(
   }
 
   const firstName = contact.name.split(" ")[0] || contact.name;
+  const conversation = await ensureConversation(contact);
   const sent = await sendMessage(
     "whatsapp",
     {
@@ -419,7 +420,7 @@ async function sendTemplateStep(
       language: template.language,
       bodyParams: [firstName],
     },
-    { orgId: contact.orgId }
+    { orgId: contact.orgId, whatsappAccountId: conversation.whatsappAccountId }
   );
   if (!sent.ok) {
     return {
@@ -434,7 +435,6 @@ async function sendTemplateStep(
   const body = parsed.success
     ? parsed.data.body.replaceAll("{{1}}", firstName)
     : `Sent template "${template.name}"`;
-  const conversation = await ensureConversation(contact);
   await recordOutbound(conversation.id, contact.id, body, sent.providerMessageId);
   return {
     ok: true,
