@@ -5,6 +5,16 @@ what's next.
 
 ---
 
+## Landing comparison clarity pass (2026-09-04) ✅
+
+- Replaced the animated competitor leaderboard, scores, and filters with one
+  direct feature-by-feature comparison table.
+- Compares Nudge with Meta's free AI, CRM tools (WATI, AiSensy, Interakt), and
+  a human receptionist across eight plain-language front-desk outcomes.
+- Highlights Nudge's done-for-you column, keeps row labels sticky on narrow
+  screens, and uses semantic table headers for accessibility.
+- Added a focused render/content regression test.
+
 ## E3 — BYO-LLM: OpenAI / Google / Anthropic on the customer's key (2026-09-04) ✅
 
 Fourth enterprise workstream (`docs/plans/2026-09-04-enterprise-track.md` §E3).
