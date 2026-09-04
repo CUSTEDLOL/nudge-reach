@@ -87,6 +87,7 @@ model Org {
   crmConnections         CrmConnection[]
   crmSyncJobs            CrmSyncJob[]
   contactEvents          ContactEvent[]
+  customActions          CustomAction[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -860,4 +861,27 @@ model ContactEvent {
 
   @@index([orgId, type, createdAt])
   @@index([orgId, contactId, createdAt])
+}
+
+// A per-org HTTP action the AI agent can call mid-conversation (enterprise
+// track E2): "check order status" → GET https://client-backend/…. The
+// executor validates the model's arguments against inputSchema, reuses the
+// outbound-webhook SSRF guards, signs requests, and truncates responses.
+// Simulated orgs never make network calls (invariant 4).
+model CustomAction {
+  id              String   @id @default(cuid())
+  orgId           String
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name            String // slug the model calls, e.g. "check_order_status"
+  description     String // shown to the model — when to use this action
+  inputSchema     Json     @default("{\"type\":\"object\",\"properties\":{}}")
+  url             String
+  method          String   @default("POST") // GET | POST
+  secretEncrypted String? // optional bearer secret for the client's API
+  timeoutMs       Int      @default(8000)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, name])
 }

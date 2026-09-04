@@ -110,6 +110,11 @@ export const TOOL_GUIDANCE = [
 
 export interface AgentPromptOptions {
   withTools?: boolean;
+  /**
+   * The org's enabled custom actions (E2) — appended to TOOL_GUIDANCE so the
+   * model knows when to reach for them. Names + descriptions only.
+   */
+  customTools?: { name: string; description: string }[];
   /** Categorized digest from `modules/knowledge` — the primary source of truth. */
   knowledgeDigest?: string;
   /** Together with `timezone`, adds a TODAY line so conditional facts resolve. */
@@ -165,6 +170,16 @@ export function buildAgentSystemPrompt(
     profile.doNots.trim() ? `- Also avoid: ${profile.doNots.trim()}` : "",
     handoffRule,
     ...(options.withTools ? ["", TOOL_GUIDANCE] : []),
+    ...(options.withTools && options.customTools?.length
+      ? [
+          "",
+          [
+            "BUSINESS-SPECIFIC ACTIONS (this business connected its own systems — use them for live answers instead of guessing):",
+            ...options.customTools.map((t) => `- \`${t.name}\`: ${t.description}`),
+            "- If such an action fails, answer from the business information you have and offer to follow up — never invent the data it would have returned.",
+          ].join("\n"),
+        ]
+      : []),
   ]
     .filter(Boolean)
     .join("\n");

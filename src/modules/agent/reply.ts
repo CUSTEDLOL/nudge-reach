@@ -11,6 +11,7 @@ import {
   toolDefs,
   type ToolContext,
 } from "@/modules/agent/tools";
+import { loadCustomTools } from "@/modules/agent/tools/custom";
 
 export interface AgentReply {
   text: string;
@@ -55,16 +56,22 @@ export async function generateAgentActionReply(
   ctx: ToolContext,
   promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
 ): Promise<AgentActionReply> {
+  // The org's own connected actions (E2) ride alongside the built-ins.
+  const customTools = await loadCustomTools(ctx.orgId);
   const system = buildAgentSystemPrompt(profile, {
     ...promptOptions,
     withTools: true,
+    customTools: customTools.map((t) => ({
+      name: t.def.name,
+      description: t.def.description,
+    })),
   });
 
   const { text, toolCalls } = await runAgent({
     system,
     messages: history,
-    tools: toolDefs(),
-    runTool: (call) => runTool(ctx, call),
+    tools: [...toolDefs(), ...customTools.map((t) => t.def)],
+    runTool: (call) => runTool(ctx, call, customTools),
     maxTokens: 500,
     maxSteps: 5,
     attribution: {
