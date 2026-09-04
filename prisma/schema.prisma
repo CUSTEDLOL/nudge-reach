@@ -28,83 +28,84 @@ enum LeadStage {
 // One org per user for MVP (PRD §3). ownerUserId is the Supabase Auth user id.
 // Teams arrive via Membership rows; ownerUserId stays the canonical owner.
 model Org {
-  id          String     @id @default(cuid())
-  name        String
-  ownerUserId String     @unique
+  id                     String            @id @default(cuid())
+  name                   String
+  ownerUserId            String            @unique
   // Business vertical picked during onboarding (e.g. "boutique", "restaurant").
-  vertical    String?
+  vertical               String?
   // Set when the onboarding wizard completes (or is skipped).
-  onboardedAt DateTime?
+  onboardedAt            DateTime?
   // Per-org test mode: sends, approvals, calendar and payments stay mocked
   // until a real WhatsApp number is connected. SEND_MODE=simulation still
   // mocks everything globally (invariant #4); this only matters in live.
-  simulated   Boolean    @default(true)
+  simulated              Boolean           @default(true)
   // AI Front Desk trial for self-serve signups; cleared when a subscription
   // activates, expired to Free by the cron tick.
-  trialEndsAt DateTime?
+  trialEndsAt            DateTime?
   // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
-  settings    Json       @default("{}")
+  settings               Json              @default("{}")
   // Globalization (spec: global outreach). Defaults preserve the original
   // India-first behavior for existing rows.
-  currency    String     @default("INR") // "INR" | "USD"
-  dialCode    String     @default("+91") // default country code for bare phone numbers
-  timezone    String     @default("Asia/Kolkata")
+  currency               String            @default("INR") // "INR" | "USD"
+  dialCode               String            @default("+91") // default country code for bare phone numbers
+  timezone               String            @default("Asia/Kolkata")
   // Billing (spec: real usage + Razorpay when keys present). plan defaults to
   // the free tier; the paid fields fill in after a successful subscription.
-  plan                   String    @default("free") // free | starter | growth | pro
-  subscriptionStatus     String    @default("inactive") // inactive | active | past_due | cancelled
+  plan                   String            @default("free") // free | starter | growth | pro
+  subscriptionStatus     String            @default("inactive") // inactive | active | past_due | cancelled
   razorpayCustomerId     String?
   razorpaySubscriptionId String?
   currentPeriodEnd       DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  contacts    Contact[]
-  audiences   Audience[]
-  products    Product[]
-  campaigns   Campaign[]
-  whatsappAccounts WhatsappAccount[]
-  agentProfile     AgentProfile?
-  conversations    Conversation[]
-  memberships      Membership[]
-  invites          Invite[]
-  tags             Tag[]
-  notes            Note[]
-  automations      Automation[]
-  automationRuns   AutomationRun[]
-  apiKeys          ApiKey[]
-  templates        Template[]
-  webhookEndpoints WebhookEndpoint[]
-  auditLogs        AuditLog[]
-  aiUsage          AiUsage[]
-  bookingRequests  BookingRequest[]
-  paymentRequests  PaymentRequest[]
-  calendarAccount  CalendarAccount?
-  followUpConfig   FollowUpConfig?
-  knowledgeEntries KnowledgeEntry[]
-  ownerQuestions   OwnerQuestion[]
-  voiceNumbers     VoiceNumber[]
-  voiceCalls       VoiceCall[]
-  crmConnections   CrmConnection[]
-  crmSyncJobs      CrmSyncJob[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  contacts               Contact[]
+  audiences              Audience[]
+  products               Product[]
+  campaigns              Campaign[]
+  whatsappAccounts       WhatsappAccount[]
+  agentProfile           AgentProfile?
+  conversations          Conversation[]
+  memberships            Membership[]
+  invites                Invite[]
+  tags                   Tag[]
+  notes                  Note[]
+  automations            Automation[]
+  automationRuns         AutomationRun[]
+  apiKeys                ApiKey[]
+  templates              Template[]
+  webhookEndpoints       WebhookEndpoint[]
+  auditLogs              AuditLog[]
+  aiUsage                AiUsage[]
+  bookingRequests        BookingRequest[]
+  paymentRequests        PaymentRequest[]
+  calendarAccount        CalendarAccount?
+  followUpConfig         FollowUpConfig?
+  knowledgeEntries       KnowledgeEntry[]
+  ownerQuestions         OwnerQuestion[]
+  voiceNumbers           VoiceNumber[]
+  voiceCalls             VoiceCall[]
+  crmConnections         CrmConnection[]
+  crmSyncJobs            CrmSyncJob[]
+  contactEvents          ContactEvent[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
 // signed JSON to `url` when subscribed events fire. Consumed by Zapier/Make/
 // n8n/custom endpoints. Secret signs the payload (HMAC-SHA256).
 model WebhookEndpoint {
-  id           String   @id @default(cuid())
-  orgId        String
-  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  url          String
-  secret       String
+  id             String            @id @default(cuid())
+  orgId          String
+  org            Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  url            String
+  secret         String
   // Subscribed event names, e.g. ["message.received","campaign.completed"].
-  events       String[]
-  enabled      Boolean  @default(true)
-  lastStatus   Int?
+  events         String[]
+  enabled        Boolean           @default(true)
+  lastStatus     Int?
   lastDeliveryAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deliveries   WebhookDelivery[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deliveries     WebhookDelivery[]
 
   @@index([orgId])
 }
@@ -115,7 +116,7 @@ model WebhookDelivery {
   endpointId String
   endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
   event      String
-  status     Int?            // HTTP status, null if the request never completed
+  status     Int? // HTTP status, null if the request never completed
   ok         Boolean         @default(false)
   error      String?
   createdAt  DateTime        @default(now())
@@ -363,7 +364,7 @@ model ConversationMessage {
   id             String       @id @default(cuid())
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  direction      String       // "inbound" | "outbound"
+  direction      String // "inbound" | "outbound"
   body           String
   metaMessageId  String?
   createdAt      DateTime     @default(now())
@@ -443,27 +444,27 @@ enum CampaignStatus {
 }
 
 model Campaign {
-  id        String         @id @default(cuid())
-  orgId     String
-  org       Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name      String
-  status    CampaignStatus @default(DRAFT)
+  id               String         @id @default(cuid())
+  orgId            String
+  org              Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name             String
+  status           CampaignStatus @default(DRAFT)
   // The editable campaign fields in the PRD §7 JSON shape (header, body,
   // footer, buttons, sampleName, …). Meta template rows come in Phase 3.
-  content    Json
-  audienceId String?
-  audience   Audience?      @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  content          Json
+  audienceId       String?
+  audience         Audience?      @relation(fields: [audienceId], references: [id], onDelete: SetNull)
   // When status is SCHEDULED, the cron tick enqueues the campaign once
   // scheduledAt is due (spec §M4).
-  scheduledAt DateTime?
+  scheduledAt      DateTime?
   // Library Template id this campaign was created from, if any (display only).
   sourceTemplateId String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  templates  Template[]
-  messages   Message[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  templates        Template[]
+  messages         Message[]
 
   @@index([orgId])
 }
@@ -508,30 +509,30 @@ model WebhookEvent {
 // Consent is data, not UI: optedIn + optedOutAt drive the consent gate
 // (lib/consent.ts). optedOutAt set means permanently excluded from marketing.
 model Contact {
-  id          String            @id @default(cuid())
-  orgId       String
-  org         Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  name        String
-  phoneE164   String
-  email       String?
-  optedIn     Boolean           @default(false)
-  optInSource String            @default("manual")
-  optedOutAt  DateTime?
+  id               String            @id @default(cuid())
+  orgId            String
+  org              Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name             String
+  phoneE164        String
+  email            String?
+  optedIn          Boolean           @default(false)
+  optInSource      String            @default("manual")
+  optedOutAt       DateTime?
   // CRM pipeline stage (spec §3.2).
-  leadStage   LeadStage         @default(NEW)
+  leadStage        LeadStage         @default(NEW)
   // Membership.userId of the assigned agent (null = unassigned).
   assignedToUserId String?
   // Last time the org messaged this contact (any channel/path).
   lastContactedAt  DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  audiences   AudienceContact[]
-  messages    Message[]
-  conversations Conversation[]
-  tags        ContactTag[]
-  notes       Note[]
-  bookingRequests BookingRequest[]
-  paymentRequests PaymentRequest[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  audiences        AudienceContact[]
+  messages         Message[]
+  conversations    Conversation[]
+  tags             ContactTag[]
+  notes            Note[]
+  bookingRequests  BookingRequest[]
+  paymentRequests  PaymentRequest[]
 
   @@unique([orgId, phoneE164])
   @@index([orgId])
@@ -544,30 +545,30 @@ model Contact {
 // does NOT hit an external calendar yet (that's a later per-vertical tool), so
 // it is deliberately low-risk and reversible.
 model BookingRequest {
-  id             String   @id @default(cuid())
-  orgId          String
-  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  contactId      String
-  contact        Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  conversationId String?
+  id               String    @id @default(cuid())
+  orgId            String
+  org              Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId        String
+  contact          Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  conversationId   String?
   // Free-text as the customer stated it (e.g. "tomorrow 8pm"), plus a parsed
   // party size when given. We keep the raw text so staff see exactly what was asked.
-  name           String
-  requestedFor   String
-  partySize      Int?
-  notes          String?
-  status         String   @default("pending") // pending | confirmed | declined | no_show | completed
+  name             String
+  requestedFor     String
+  partySize        Int?
+  notes            String?
+  status           String    @default("pending") // pending | confirmed | declined | no_show | completed
   // Parsed appointment instant (when we could resolve one) — powers the T-24h/
   // T-2h reminders and no-show detection. Null when only free text is known.
-  scheduledFor   DateTime?
+  scheduledFor     DateTime?
   // Real calendar event id when the agent booked into a connected calendar.
-  calendarEventId String?
+  calendarEventId  String?
   // Revenue-Recovery follow-up idempotency stamps (5.2): set once each fires.
   reminder24SentAt DateTime?
   reminder2SentAt  DateTime?
   reviewAskedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([orgId, status])
   @@index([contactId])
@@ -579,25 +580,25 @@ model BookingRequest {
 // org paying US); this is the org's customer paying THEM. Provider "simulation"
 // rows demo end-to-end with zero keys (invariant #4).
 model PaymentRequest {
-  id             String   @id @default(cuid())
-  orgId          String
-  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  contactId      String
-  contact        Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  conversationId String?
+  id               String    @id @default(cuid())
+  orgId            String
+  org              Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId        String
+  contact          Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  conversationId   String?
   // Optional link back to the booking this deposit secures.
   bookingRequestId String?
   // Minor units (paise for INR). Currency follows the org's currency.
-  amountMinor    Int
-  currency       String   @default("INR")
-  purpose        String
-  status         String   @default("created") // created | paid | cancelled | expired
-  provider       String // razorpay | simulation
-  providerLinkId String? // Razorpay payment-link id (plink_…)
-  shortUrl       String
-  paidAt         DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  amountMinor      Int
+  currency         String    @default("INR")
+  purpose          String
+  status           String    @default("created") // created | paid | cancelled | expired
+  provider         String // razorpay | simulation
+  providerLinkId   String? // Razorpay payment-link id (plink_…)
+  shortUrl         String
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([orgId, status])
   @@index([contactId])
@@ -697,10 +698,10 @@ model KnowledgeEntry {
   id        String   @id @default(cuid())
   orgId     String
   org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  category  String   // menu_services | pricing | hours | location | policies | payments | faq | other
+  category  String // menu_services | pricing | hours | location | policies | payments | faq | other
   fact      String
-  condition String?  // plain-language applicability, e.g. "weekends only"
-  source    String   // owner_answer | questionnaire | manual | import
+  condition String? // plain-language applicability, e.g. "weekends only"
+  source    String // owner_answer | questionnaire | manual | import
   status    String   @default("active") // active | draft (imported, awaiting review) | archived
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -761,13 +762,13 @@ model VoiceNumber {
   id            String   @id @default(cuid())
   orgId         String
   org           Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  phoneE164     String   @unique          // the DID customers dial
-  provider      String                    // "exotel" | "twilio" | "sim"
-  elevenPhoneId String?                   // ElevenLabs phone-number id (agent_phone_number_id)
+  phoneE164     String   @unique // the DID customers dial
+  provider      String // "exotel" | "twilio" | "sim"
+  elevenPhoneId String? // ElevenLabs phone-number id (agent_phone_number_id)
   label         String   @default("Main line")
-  transferTo    String?                   // human transfer target (E.164)
-  language      String   @default("en")   // "en" | "hi" (hinglish)
-  voiceId       String?                   // ElevenLabs voice id; null = default
+  transferTo    String? // human transfer target (E.164)
+  language      String   @default("en") // "en" | "hi" (hinglish)
+  voiceId       String? // ElevenLabs voice id; null = default
   enabled       Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -781,15 +782,15 @@ model VoiceCall {
   org            Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   contactId      String?
   conversationId String?
-  direction      String                    // "inbound" | "outbound"
+  direction      String // "inbound" | "outbound"
   fromE164       String
   toE164         String
-  providerCallId String?   @unique         // ElevenLabs conversation_id
+  providerCallId String?   @unique // ElevenLabs conversation_id
   status         String    @default("in_progress") // in_progress | completed | failed | no_answer
   durationSecs   Int?
-  transcript     Json?                     // [{ role, message, t, toolCalls }]
+  transcript     Json? // [{ role, message, t, toolCalls }]
   summary        String?
-  outcome        String?                   // booked | lead | handoff | info
+  outcome        String? // booked | lead | handoff | info
   purpose        String    @default("inbound") // inbound | reminder | no_show
   startedAt      DateTime  @default(now())
   endedAt        DateTime?
@@ -805,7 +806,7 @@ model CrmConnection {
   id                    String    @id @default(cuid())
   orgId                 String
   org                   Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  provider              String              // "zoho" | "salesforce" | "sim"
+  provider              String // "zoho" | "salesforce" | "sim"
   accountLabel          String    @default("")
   apiDomain             String    @default("") // Zoho api_domain / Salesforce instance_url
   accountsServer        String    @default("") // Zoho accounts-server used for refresh; "" for Salesforce
@@ -823,21 +824,40 @@ model CrmConnection {
 }
 
 model CrmSyncJob {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   orgId      String
-  org        Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   provider   String
-  event      String    // contact.created | lead.qualified | booking.created | payment.paid | handoff.requested | conversation.summary
-  entityId   String    // the Nudge id the event is about
+  event      String // contact.created | lead.qualified | booking.created | payment.paid | handoff.requested | conversation.summary
+  entityId   String // the Nudge id the event is about
   payload    Json
-  status     String    @default("pending") // pending | done | dead
-  attempts   Int       @default(0)
-  nextRunAt  DateTime  @default(now())
+  status     String   @default("pending") // pending | done | dead
+  attempts   Int      @default(0)
+  nextRunAt  DateTime @default(now())
   externalId String?
   error      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([orgId, provider, event, entityId])
   @@index([status, nextRunAt])
+}
+
+// Append-only contact/business event history (enterprise track E0,
+// docs/plans/2026-09-04-enterprise-track.md). E6 lead-scoring reads it;
+// writes are fire-and-forget and must never break the flow that emits
+// them. Message volumes are NOT events (too hot) — derive those from
+// ConversationMessage/Message directly. contactId is a plain string on
+// purpose — history must survive contact deletion.
+model ContactEvent {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId String?
+  type      String // lead_stage_changed | opted_out | booking_status | payment_paid | widget_click | ...
+  props     Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([orgId, type, createdAt])
+  @@index([orgId, contactId, createdAt])
 }
