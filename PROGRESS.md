@@ -5,18 +5,19 @@ what's next.
 
 ---
 
-## Landing comparison story redesign (2026-09-05) ✅
+## Landing competitor decision ledger (2026-09-05) ✅
 
-- Replaced the dense comparison matrix with one late-night enquiry and four
-  easy-to-scan operating-model cards.
-- Shows Nudge carrying the lead through reply, real-calendar check, deposit and
-  follow-up; the Meta, CRM-tool and human cards explain who owns the remaining
-  work without making brittle capability-denial claims.
-- Uses the landing page's saturated bento cards, ink borders, hard shadows and
-  ghost words; desktop is asymmetric and mobile stacks vertically with no
-  horizontal scrolling.
-- Reworked the focused render/content test around the story, credible copy,
-  semantic articles and mobile-safe static structure.
+- Replaced the rejected card/bento comparison with one continuous competitor
+  board covering four equally visible options.
+- Every option answers the same three buyer questions: what it handles, what the
+  buyer still owns and who it best fits. Copy describes operating responsibility
+  without brittle feature-denial claims.
+- Desktop uses a concise semantic table; tablet and mobile use labelled
+  definition rows generated from the same data, with no horizontal scrolling.
+- Kept only the landing page's outer ink border, rounded frame, hard shadow and
+  headline typography; removed gradients, ghost words, stickers and tiny pills.
+- Reworked the focused render/content test around the shared comparison model,
+  responsive semantics, readable copy and removal of the abandoned bento.
 
 ## E3 — BYO-LLM: OpenAI / Google / Anthropic on the customer's key (2026-09-04) ✅
 
