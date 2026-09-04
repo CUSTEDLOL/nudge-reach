@@ -12,6 +12,8 @@ import {
 
 export interface ConversationSummary {
   id: string;
+  /** "whatsapp" | "voice" */
+  channel: string;
   status: string;
   unreadCount: number;
   assignedToUserId: string | null;
@@ -56,6 +58,7 @@ export async function listConversationSummaries(
 
   return rows.map((c) => ({
     id: c.id,
+    channel: c.channel,
     status: c.status,
     unreadCount: c.unreadCount,
     assignedToUserId: c.assignedToUserId,

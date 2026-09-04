@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
 
 /**
  * Environment schema. Kept separate from lib/env.ts (which parses
@@ -35,6 +36,31 @@ export const envSchema = z
 
     // Pricing config (estimate shown to retailers; verify against Meta)
     WHATSAPP_MARKETING_RATE_INR: z.coerce.number().positive().default(0.99),
+
+    // Voice (ElevenLabs Agents + carrier). All optional: without them every org
+    // uses the simulation voice driver. The model ElevenLabs runs is held to
+    // the same cheap-tier rule as RUNTIME_MODEL.
+    ELEVENLABS_API_KEY: z.string().optional(),
+    ELEVENLABS_AGENT_ID: z.string().optional(),
+    ELEVENLABS_WEBHOOK_SECRET: z.string().optional(),
+    ELEVENLABS_LLM: z
+      .string()
+      .default("claude-haiku-4-5")
+      .superRefine((model, ctx) => {
+        try {
+          assertRuntimeModelAllowed(model);
+        } catch (e) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: (e as Error).message });
+        }
+      }),
+    VOICE_INITIATION_SECRET: z.string().optional(),
+    VOICE_TOOLS_SECRET: z.string().optional(),
+
+    // CRM integrations (optional — without keys the simulation provider is used)
+    ZOHO_CLIENT_ID: z.string().optional(),
+    ZOHO_CLIENT_SECRET: z.string().optional(),
+    SALESFORCE_CLIENT_ID: z.string().optional(),
+    SALESFORCE_CLIENT_SECRET: z.string().optional(),
 
     // Payments — Razorpay for INR orgs (optional; free mode without keys)
     RAZORPAY_KEY_ID: z.string().optional(),

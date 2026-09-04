@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { isStopMessage } from "@/modules/whatsapp/webhook-verify";
 import { sendMessage } from "@/modules/messaging";
+import { crmContactCreated } from "@/modules/crm/events";
 import { buildHistory, generateAgentActionReply } from "@/modules/agent/reply";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { runInboundAutomations } from "@/modules/automation/engine";
@@ -44,6 +45,10 @@ export async function handleInboundMessage(
 
   // Find or create the contact (an inbound message is not marketing opt-in,
   // but it does open a service conversation).
+  const existingContact = await prisma.contact.findUnique({
+    where: { orgId_phoneE164: { orgId, phoneE164 } },
+    select: { id: true },
+  });
   const contact = await prisma.contact.upsert({
     where: { orgId_phoneE164: { orgId, phoneE164 } },
     create: {
@@ -54,6 +59,7 @@ export async function handleInboundMessage(
     },
     update: {},
   });
+  if (!existingContact) void crmContactCreated(orgId, contact, "WhatsApp (Nudge)");
 
   // Opt-out always wins, and we never auto-reply to it.
   if (isStopMessage(text)) {

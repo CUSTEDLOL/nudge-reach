@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { crmLeadQualified } from "@/modules/crm/events";
 import { defineTool } from "@/modules/agent/tools/types";
 
 export const captureLeadTool = defineTool({
@@ -35,6 +36,7 @@ export const captureLeadTool = defineTool({
       where: { id: ctx.contactId },
       data: { leadStage: "QUALIFIED", ...(knownName ? { name: knownName } : {}) },
     });
+    void crmLeadQualified(ctx.orgId, { id: ctx.contactId, phoneE164: ctx.contactPhone });
     const interest = input.interest.trim().replace(/[.。]\s*$/, "");
     const detail = input.details?.trim();
     await prisma.note.create({

@@ -75,6 +75,18 @@ India **1.0×** · Malaysia **~1.9×** · UAE **~2.5×** · Singapore **~3.0×**
 is the tightest market — keep it pinned at ~one month's salary; that is the
 strongest anchor we have.
 
+### Voice add-on — the employee also picks up the phone
+
+| Market | Monthly (incl. 300 min) | Per extra minute |
+|---|---|---|
+| 🇮🇳 India | ₹5,999 | ₹15 |
+| 🇲🇾 Malaysia | RM 399 | RM 1.20 |
+| 🇦🇪 UAE | AED 299 | AED 0.90 |
+| 🇸🇬 Singapore | S$199 | S$0.60 |
+
+Cost ≈ ₹8.5–12/min (ElevenLabs + carrier + LLM). Add-on to the flagship only;
+never sold standalone. Setup and mechanics: `docs/VOICE.md`.
+
 ---
 
 ## 3. The self-serve tiers (kept, unchanged from STRATEGY.md §6)

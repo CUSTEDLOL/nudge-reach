@@ -98,6 +98,7 @@ describe("markPaymentPaid", () => {
   it("flips created→paid once and notes it; retries are no-ops", async () => {
     prisma.paymentRequest.updateMany.mockResolvedValueOnce({ count: 1 });
     prisma.paymentRequest.findUnique.mockResolvedValue({
+      contact: { phoneE164: "+919876543210" },
       id: "pr_1",
       orgId: "org1",
       contactId: "c1",

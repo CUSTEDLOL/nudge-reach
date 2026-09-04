@@ -37,6 +37,7 @@ export function ThreadPane({
   contactName,
   contactPhone,
   conversationStatus,
+  channel = "whatsapp",
   templates,
   simulation,
   backHref,
@@ -47,6 +48,8 @@ export function ThreadPane({
   contactName: string;
   contactPhone: string;
   conversationStatus: string;
+  /** "whatsapp" | "voice" — voice threads are call transcripts. */
+  channel?: string;
   templates: LibraryTemplate[];
   simulation: boolean;
   backHref: string;
@@ -112,6 +115,7 @@ export function ThreadPane({
         <div className="flex shrink-0 items-center gap-1.5">
           {/* Status badges hide below sm so the contact name keeps room —
               the same status lives in the details drawer and the list. */}
+          {channel === "voice" && <Badge tone="info">Phone call</Badge>}
           {status === "handoff" && (
             <Badge tone="warning" className="max-sm:hidden">
               Needs human

@@ -21,6 +21,7 @@ export const WEBHOOK_EVENTS = [
   { value: "booking.created", label: "Appointment booked" },
   { value: "conversation.assigned", label: "Conversation assigned to an agent" },
   { value: "automation.run", label: "Automation executed" },
+  { value: "call.completed", label: "Phone call completed" },
 ] as const;
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]["value"];

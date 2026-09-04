@@ -127,6 +127,7 @@ export default async function InboxThreadPage({
           contactName={contact.name}
           contactPhone={contact.phoneE164}
           conversationStatus={conversation.status}
+          channel={conversation.channel}
           templates={templates}
           simulation={isSimulated(org)}
           backHref={backHref}
