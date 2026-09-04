@@ -14,6 +14,7 @@
     "eval:agent": "npx esbuild scripts/agent-eval.ts --bundle --platform=node --format=cjs --outfile=.next/agent-eval.cjs --external:@prisma/client --external:@anthropic-ai/sdk && node .next/agent-eval.cjs",
     "db:studio": "prisma studio",
     "preflight:live": "npx esbuild scripts/preflight-live.ts --bundle --platform=node --format=cjs --outfile=.next/preflight-live.cjs && node .next/preflight-live.cjs",
+    "backfill:multi-number": "npx esbuild scripts/backfill-multi-number.ts --bundle --platform=node --format=cjs --outfile=.next/backfill-multi-number.cjs --external:@prisma/client && node .next/backfill-multi-number.cjs",
     "plan:set": "npx esbuild scripts/set-plan.ts --bundle --platform=node --format=cjs --outfile=.next/set-plan.cjs --external:@prisma/client && node .next/set-plan.cjs",
     "postinstall": "prisma generate"
   },

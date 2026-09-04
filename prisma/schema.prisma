@@ -341,6 +341,9 @@ model Conversation {
   contactId          String
   contact            Contact               @relation(fields: [contactId], references: [id], onDelete: Cascade)
   channel            String                @default("whatsapp") // whatsapp | voice
+  // E4 sticky routing: the number the contact last wrote to; replies leave
+  // from it. Null = org default (pre-multi-number rows, sim orgs, voice).
+  whatsappAccountId  String?
   lastInboundAt      DateTime?
   status             String                @default("open") // open | pending | resolved | handoff (legacy: closed)
   // Membership.userId of the assigned agent (null = unassigned).
@@ -374,9 +377,13 @@ model ConversationMessage {
   @@index([conversationId])
 }
 
+// E4 multi-number: an org may connect several numbers (2nd+ gated on the
+// multiNumber plan flag). Exactly one isDefault per org, enforced in
+// accounts.ts. phoneNumberId is globally unique — it is the inbound webhook's
+// routing key.
 model WhatsappAccount {
   id                   String   @id @default(cuid())
-  orgId                String   @unique // one connected number per org (MVP)
+  orgId                String
   org                  Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   wabaId               String
   phoneNumberId        String
@@ -384,8 +391,12 @@ model WhatsappAccount {
   accessTokenEncrypted String
   qualityRating        String?
   status               String   @default("connected")
+  isDefault            Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+
+  @@unique([phoneNumberId])
+  @@index([orgId])
 }
 
 enum TemplateStatus {
@@ -446,27 +457,29 @@ enum CampaignStatus {
 }
 
 model Campaign {
-  id               String         @id @default(cuid())
-  orgId            String
-  org              Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  productId        String
-  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name             String
-  status           CampaignStatus @default(DRAFT)
+  id                String         @id @default(cuid())
+  orgId             String
+  org               Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // E4: the number this campaign sends from. Null = org default at send time.
+  whatsappAccountId String?
+  name              String
+  status            CampaignStatus @default(DRAFT)
   // The editable campaign fields in the PRD §7 JSON shape (header, body,
   // footer, buttons, sampleName, …). Meta template rows come in Phase 3.
-  content          Json
-  audienceId       String?
-  audience         Audience?      @relation(fields: [audienceId], references: [id], onDelete: SetNull)
+  content           Json
+  audienceId        String?
+  audience          Audience?      @relation(fields: [audienceId], references: [id], onDelete: SetNull)
   // When status is SCHEDULED, the cron tick enqueues the campaign once
   // scheduledAt is due (spec §M4).
-  scheduledAt      DateTime?
+  scheduledAt       DateTime?
   // Library Template id this campaign was created from, if any (display only).
-  sourceTemplateId String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  templates        Template[]
-  messages         Message[]
+  sourceTemplateId  String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  templates         Template[]
+  messages          Message[]
 
   @@index([orgId])
 }
