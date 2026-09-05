@@ -53,6 +53,27 @@ call**, which drops a scripted transcript into the inbox.
   language (English or Hindi/Hinglish), transfer number, the ElevenLabs
   phone-number id (needed for outbound reminder calls).
 
+## Call minutes (the spend ceiling)
+
+Every package includes call minutes per calendar month. When they run out the
+AI **stops answering that org's number**: the initiation webhook returns 402
+and hands back no agent, so the call never becomes a billable conversation.
+Outbound reminder calls draw on the same allowance. Each call rounds up to a
+whole minute; the month resets on the 1st. WhatsApp is unaffected either way.
+
+- **Per plan:** `PlanLimits.voiceMinutesPerMonth` in `modules/billing/plans.ts`
+  — 100 on AI Front Desk, 0 on tiers without voice, `null` = unlimited
+  (Enterprise, where the allowance is a bespoke term).
+- **Per client:** `npm run voice:minutes -- --org <id-or-owner-email> --minutes 300`
+  overrides the plan for one org; `--minutes plan` clears the override.
+  The client sees the meter on Settings → Voice but cannot raise it.
+- **Per call:** the shared agent is created with `max_duration_seconds: 480`
+  (8 minutes) and a 10-second silence timeout, so one forgotten open line
+  can cost at most ~8 minutes.
+
+Sizing a package: at roughly ₹9–12 (~S$0.15) an all-in minute, 100 minutes
+costs on the order of ₹1,000. Check `docs/PRICING.md` before quoting.
+
 ## Compliance
 - Inbound answering: unrestricted.
 - Outbound reminder / no-show calls are transactional: only to customers with a

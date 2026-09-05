@@ -16,7 +16,8 @@
     "preflight:live": "npx esbuild scripts/preflight-live.ts --bundle --platform=node --format=cjs --outfile=.next/preflight-live.cjs && node .next/preflight-live.cjs",
     "backfill:multi-number": "npx esbuild scripts/backfill-multi-number.ts --bundle --platform=node --format=cjs --outfile=.next/backfill-multi-number.cjs --external:@prisma/client && node .next/backfill-multi-number.cjs",
     "plan:set": "npx esbuild scripts/set-plan.ts --bundle --platform=node --format=cjs --outfile=.next/set-plan.cjs --external:@prisma/client && node .next/set-plan.cjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "voice:minutes": "npx esbuild scripts/set-voice-minutes.ts --bundle --platform=node --format=cjs --outfile=.next/set-voice-minutes.cjs --external:@prisma/client && node .next/set-voice-minutes.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { voiceUsage } from "@/modules/voice/usage";
 import { SectionHeader } from "../section-header";
 import { ReminderCallsToggle, SimulateCallButton, VoiceNumberForm, VoiceNumberList } from "./voice-form";
 
@@ -50,9 +52,10 @@ export default async function VoiceSettingsPage() {
       </section>
     );
   }
-  const [numbers, followUp] = await Promise.all([
+  const [numbers, followUp, usage] = await Promise.all([
     prisma.voiceNumber.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "asc" } }),
     prisma.followUpConfig.findUnique({ where: { orgId: org.id } }),
+    voiceUsage(org.id),
   ]);
   const simulation = isSimulated(org);
 
@@ -84,6 +87,42 @@ export default async function VoiceSettingsPage() {
             <SimulateCallButton />
           </div>
         )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Call minutes this month</CardTitle>
+          <CardDescription>
+            {usage.limit === null
+              ? "Your plan includes unlimited call minutes."
+              : `Your plan includes ${usage.limit} minutes a month. They reset on the 1st.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-neutral-900">
+              {usage.used} {usage.limit === null ? "minutes used" : `of ${usage.limit} minutes used`}
+            </p>
+            {usage.limit !== null && (
+              <Badge tone={usage.exhausted ? "warning" : usage.remaining !== null && usage.remaining <= 10 ? "info" : "neutral"}>
+                {usage.exhausted ? "No minutes left" : `${usage.remaining} left`}
+              </Badge>
+            )}
+          </div>
+          {usage.limit !== null && (
+            <Progress
+              className="mt-3"
+              value={Math.min(usage.used, usage.limit)}
+              max={usage.limit}
+              label="Call minutes used this month"
+            />
+          )}
+          <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+            {usage.exhausted
+              ? "Your AI has stopped answering calls until the 1st. Talk to us to add minutes — WhatsApp keeps working as normal."
+              : "Every call counts as whole minutes. When the minutes run out the AI stops answering calls; WhatsApp is unaffected."}
+          </p>
+        </CardContent>
       </Card>
 
       <Card>

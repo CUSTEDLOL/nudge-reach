@@ -5,6 +5,32 @@ what's next.
 
 ---
 
+## Voice call-minute allowance — the spend ceiling (2026-09-05) ✅
+
+Founder ask: packages carry call minutes, and "if they burn out, the call cannot
+be placed from that point". Built as a plan limit, not a bolt-on, so any package
+maps to a number without a code change. Prices deliberately untouched — they are
+still being decided.
+
+### Built
+- `PlanLimits.voiceMinutesPerMonth` on all six plans (100 on AI Front Desk, 0
+  where there's no voice, null = unlimited) + `Org.voiceMinutesOverride` for a
+  bespoke deal.
+- `modules/voice/usage.ts`: resolves the allowance (override ?? plan), counts the
+  month's calls with each call rounded up to a whole minute, reports what's left.
+- **Hard cutoff:** `/api/voice/initiation` returns 402 with no agent config once
+  the minutes are gone, so the call never becomes a billable conversation;
+  `tickReminderCalls` skips orgs in the same state.
+- Settings → Voice shows "X of Y minutes used" with a bar and an honest
+  out-of-minutes message. Read-only — the client can't raise their own ceiling.
+- `npm run voice:minutes -- --org <id|owner-email> --minutes <n|plan>`.
+- The shared ElevenLabs agent is now created with `max_duration_seconds: 480`
+  and a 10s silence timeout instead of relying on their 10-minute default.
+
+### Exposure after this
+One call caps at ~8 minutes (~₹75). A client cannot exceed their package's
+minutes at all. 606 tests green.
+
 ## E4b + E7 fix + E8 — access walls, voice gating, chat summaries (2026-09-05) ✅
 
 ### E4b — per-number staff access + campaign picker
