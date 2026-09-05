@@ -5,6 +5,29 @@ what's next.
 
 ---
 
+## CRM sync finished — every stage change reaches the CRM (2026-09-05) ✅
+
+Audit after merging the enterprise track found the gap: lead stages change in six
+places (agent, inbox, contacts table ×2, public API ×2) and each recorded a
+ContactEvent, but only the agent's path reached the CRM. Opt-outs reached it from
+nowhere at all.
+
+### Built
+- `modules/crm/contact-events.ts` bridges the ContactEvent history into the sync
+  queue, so **every** site that changes a stage or records an opt-out now syncs,
+  with no per-site wiring. Stage jobs keyed `<contactId>:<STAGE>` so each
+  transition syncs once; LOST is not pushed (never overwrite the client's
+  pipeline with our guess); opt-outs land as a "do not message" note.
+- `CrmEvent` gains `lead.stage_changed` and `contact.opted_out`.
+- Removed the agent's direct `crmLeadQualified` call so stage sync has exactly
+  one path; deleted the now-dead helper.
+- `scripts/crm-live.ts` now proves the bridge end to end (verified against the
+  real DB: contact.created + lead.stage_changed both synced).
+
+### Deliberately not synced
+Imported and hand-added contacts. The CRM is the client's system of record;
+only leads the AI produced are worth writing into it.
+
 ## "Call your AI" — test the voice front desk from the browser (2026-09-05) ✅
 
 Founder needed to hear the voice agent without paying for a number or minutes.

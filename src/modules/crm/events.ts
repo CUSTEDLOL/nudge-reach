@@ -26,10 +26,6 @@ export function crmContactCreated(
   });
 }
 
-export function crmLeadQualified(orgId: string, contact: { id: string; phoneE164: string }) {
-  return safe(orgId, "lead.qualified", contact.id, { kind: "stage", phoneE164: contact.phoneE164, stage: "qualified" });
-}
-
 export function crmBookingCreated(
   orgId: string,
   booking: { id: string; name: string; requestedFor: string; scheduledFor: Date | null },

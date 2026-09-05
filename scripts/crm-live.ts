@@ -36,13 +36,28 @@ async function main() {
   await prisma.contact.deleteMany({ where: { orgId: org.id, phoneE164: phone } });
 
   await handleInboundMessage(org.id, phone, "I'd like to book a table for 4 tomorrow at 8pm, under Rahul. Yes please book it.");
+
+  // A stage change made anywhere in the product (inbox, contacts table, public
+  // API) must reach the CRM too — it travels via the ContactEvent history.
+  const { recordContactEvent } = await import("@/modules/contacts/events");
+  const contact = await prisma.contact.findFirst({ where: { orgId: org.id, phoneE164: phone } });
+  if (contact) {
+    await prisma.contact.update({ where: { id: contact.id }, data: { leadStage: "WON" } });
+    recordContactEvent(org.id, "lead_stage_changed", { contactId: contact.id, props: { to: "WON", source: "script" } });
+    await new Promise((r) => setTimeout(r, 400)); // fire-and-forget write
+  }
   // one job per connection lane per tick — drain a few times
   const ticks = [];
   for (let i = 0; i < 4; i++) ticks.push(await tickCrmSync());
   const jobs = await prisma.crmSyncJob.findMany({ where: { orgId: org.id, provider: "sim" }, orderBy: { createdAt: "asc" } });
   console.log("ticks:", JSON.stringify(ticks));
   console.log("jobs:", jobs.map((j) => `${j.event}=${j.status}:${j.externalId}`).join(", "));
-  const ok = jobs.length >= 1 && jobs.every((j) => j.status === "done" && j.externalId?.startsWith("sim_"));
+  const sawStageChange = jobs.some((j) => j.event === "lead.stage_changed");
+  const ok =
+    jobs.length >= 2 &&
+    sawStageChange &&
+    jobs.every((j) => j.status === "done" && j.externalId?.startsWith("sim_"));
+  if (!sawStageChange) console.log("   ✗ no lead.stage_changed job — the ContactEvent bridge did not fire");
   console.log(ok ? "✅ CRM sync verified in simulation" : "❌ CRM sync failed");
 
   await prisma.crmSyncJob.deleteMany({ where: { orgId: org.id, provider: "sim" } });

@@ -8,6 +8,8 @@ export type CrmProviderKey = "zoho" | "salesforce" | "sim";
 export type CrmEvent =
   | "contact.created"
   | "lead.qualified"
+  | "lead.stage_changed"
+  | "contact.opted_out"
   | "booking.created"
   | "payment.paid"
   | "handoff.requested"
