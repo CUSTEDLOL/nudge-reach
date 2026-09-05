@@ -15,7 +15,12 @@ vi.mock("@/lib/db", () => ({
         language: "en", voiceId: null, transferTo: null, enabled: true,
       })),
     },
-    org: { findUnique: vi.fn(async () => ({ id: "org1", timezone: "Asia/Kolkata", simulated: true })) },
+    org: {
+      findUnique: vi.fn(async () => ({
+        id: "org1", timezone: "Asia/Kolkata", simulated: true,
+        plan: "front_desk", voiceMinutesOverride: null,
+      })),
+    },
     bookingRequest: {
       findMany: vi.fn(async () => [
         {
@@ -32,6 +37,7 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(async (args: Record<string, unknown>) => { state.updated.push(args); return {}; }),
     },
     voiceCall: {
+      findMany: vi.fn(async () => []),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => { state.created.push(data); return { id: "vc" }; }),
     },
     knowledgeEntry: { findMany: vi.fn(async () => []) },

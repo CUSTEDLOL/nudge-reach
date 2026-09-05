@@ -14,6 +14,8 @@ vi.mock("@/lib/db", () => ({
           : null
       ),
     },
+    org: { findUnique: vi.fn(async () => ({ plan: "front_desk", voiceMinutesOverride: null })) },
+    voiceCall: { findMany: vi.fn(async () => []) },
     contact: { findUnique: vi.fn(async () => ({ name: "Priya", phoneE164: "+919876543210" })) },
     knowledgeEntry: { findMany: vi.fn(async () => [{ category: "hours", fact: "Open 9–7", condition: null }]) },
   },

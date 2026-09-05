@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { ensureAgentProfile } from "@/modules/agent/profile";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { buildCallInit } from "@/modules/voice/initiation";
+import { voiceUsage } from "@/modules/voice/usage";
 
 /**
  * ElevenLabs "conversation initiation client data" webhook — fires when a
@@ -45,6 +46,16 @@ export async function POST(request: Request) {
   const profile = await ensureAgentProfile(number.orgId);
   if (!profile || !profile.enabled) {
     return NextResponse.json({ error: "agent disabled" }, { status: 404 });
+  }
+
+  // The package's call minutes are a hard ceiling: with none left we hand back
+  // no agent, so the call never becomes a billable conversation.
+  const usage = await voiceUsage(number.orgId, 1);
+  if (usage.exhausted) {
+    return NextResponse.json(
+      { error: "call minutes exhausted", used: usage.used, limit: usage.limit },
+      { status: 402 }
+    );
   }
 
   const [contact, entries] = await Promise.all([
