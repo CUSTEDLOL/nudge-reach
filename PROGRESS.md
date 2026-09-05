@@ -5,6 +5,23 @@ what's next.
 
 ---
 
+## "Call your AI" — test the voice front desk from the browser (2026-09-05) ✅
+
+Founder needed to hear the voice agent without paying for a number or minutes.
+Settings → Voice now has a **Call your AI** button: mic in the browser, real
+agent, real knowledge base, real tools — no carrier, no phone number. Runs on
+ElevenLabs' free tier. Steps: `docs/VOICE.md` → "Test it free".
+
+### Built
+- `startBrowserCallAction`: plan gate + minute check, then mints a 15-minute
+  ElevenLabs signed URL server-side. The browser never sees the API key.
+- `browser-call.tsx` using `@elevenlabs/react` (ConversationProvider +
+  useConversation), mic permission requested before the URL is minted.
+- The initiation webhook now serves conversations with no dialled number, but
+  only for the workspace named by `VOICE_TEST_ORG_ID` — a browser call cannot
+  identify a tenant, so we refuse rather than guess (invariant 5).
+- Browser calls draw on the same monthly minute allowance as phone calls.
+
 ## Voice call-minute allowance — the spend ceiling (2026-09-05) ✅
 
 Founder ask: packages carry call minutes, and "if they burn out, the call cannot

@@ -4,7 +4,7 @@ vi.mock("@/lib/env", () => ({ env: { VOICE_INITIATION_SECRET: "s3cret", SEND_MOD
 vi.mock("@/lib/db", () => ({
   prisma: {
     voiceNumber: {
-      findUnique: vi.fn(async ({ where }: { where: { phoneE164: string } }) =>
+      findFirst: vi.fn(async ({ where }: { where: { phoneE164: string } }) =>
         where.phoneE164 === "+918000000001"
           ? {
               id: "vn1", orgId: "org1", phoneE164: "+918000000001", language: "en", voiceId: null,

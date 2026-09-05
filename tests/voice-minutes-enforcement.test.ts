@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({ plan: "front_desk", override: null as number |
 vi.mock("@/lib/db", () => ({
   prisma: {
     voiceNumber: {
-      findUnique: vi.fn(async ({ where }: { where: { phoneE164: string } }) =>
+      findFirst: vi.fn(async ({ where }: { where: { phoneE164: string } }) =>
         where.phoneE164 === "+918000000001"
           ? {
               id: "vn1", orgId: "org1", phoneE164: "+918000000001", language: "en", voiceId: null,
@@ -17,7 +17,11 @@ vi.mock("@/lib/db", () => ({
       ),
     },
     org: {
-      findUnique: vi.fn(async () => ({ plan: state.plan, voiceMinutesOverride: state.override })),
+      findUnique: vi.fn(async ({ select }: { select?: Record<string, boolean> }) =>
+        select?.plan
+          ? { plan: state.plan, voiceMinutesOverride: state.override }
+          : { id: "org1", timezone: "Asia/Kolkata" }
+      ),
     },
     voiceCall: { findMany: vi.fn(async () => state.callSecs.map((s) => ({ durationSecs: s }))) },
     contact: { findUnique: vi.fn(async () => null) },

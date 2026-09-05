@@ -29,6 +29,27 @@ Without ElevenLabs keys, or for an org in test mode, the simulation driver is
 used: outbound calls return a fake id and Settings → Voice offers **Simulate a
 call**, which drops a scripted transcript into the inbox.
 
+## Test it free, without a phone number
+
+The whole loop can be exercised on ElevenLabs' free tier (~15 agent minutes a
+month, no card) with no carrier and no number:
+
+1. Sign up at elevenlabs.io, then Profile → **API keys** → create one.
+2. Put it in `.env.local` as `ELEVENLABS_API_KEY`, and invent two secrets:
+   `VOICE_INITIATION_SECRET` and `VOICE_TOOLS_SECRET` (any long random strings).
+3. Run the setup script (command in `scripts/voice-setup.ts`). It creates the
+   shared agent and prints `ELEVENLABS_AGENT_ID` — add that to `.env.local` too.
+4. Set `VOICE_TEST_ORG_ID` to the workspace you want to test with (its org id).
+   A browser conversation carries no dialled number, so this names the single
+   workspace such a call may reach — we refuse rather than guess a tenant.
+5. Restart the app, open **Settings → Voice**, and press **Call your AI**. Allow
+   the microphone. You are talking to your own front desk, with your knowledge
+   base, tone and language, and its bookings land in your inbox.
+
+Costs nothing until you connect a real number. For a genuine over-the-phone
+test on the free tier, a Twilio trial number works too (trial calls play a
+short notice first and can only reach your own verified number).
+
 ## One-time setup (platform)
 1. ElevenLabs workspace with SIP trunking and post-call webhooks enabled.
 2. `.env.local` / Vercel: `ELEVENLABS_API_KEY`, `VOICE_TOOLS_SECRET`,

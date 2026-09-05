@@ -55,6 +55,11 @@ export const envSchema = z
       }),
     VOICE_INITIATION_SECRET: z.string().optional(),
     VOICE_TOOLS_SECRET: z.string().optional(),
+    // Browser / dashboard test calls carry no dialled number, so they cannot
+    // identify a tenant on their own. This names the single workspace such a
+    // conversation is allowed to reach — a founder demo switch, never a client
+    // feature. Unset = browser test calls are refused.
+    VOICE_TEST_ORG_ID: z.string().optional(),
 
     // CRM integrations (optional — without keys the simulation provider is used)
     ZOHO_CLIENT_ID: z.string().optional(),

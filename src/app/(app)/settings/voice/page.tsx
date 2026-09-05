@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { voiceUsage } from "@/modules/voice/usage";
 import { SectionHeader } from "../section-header";
 import { ReminderCallsToggle, SimulateCallButton, VoiceNumberForm, VoiceNumberList } from "./voice-form";
+import { BrowserCallButton } from "./browser-call";
 
 export const metadata: Metadata = { title: "Voice settings" };
 
@@ -81,12 +82,13 @@ export default async function VoiceSettingsPage() {
                 : "Add a number below to start answering calls"}
           </p>
         </div>
-        {simulation && (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <p className="text-sm text-neutral-500">See what a call looks like in your inbox:</p>
-            <SimulateCallButton />
-          </div>
-        )}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-neutral-500">
+            Hear it for yourself — no phone number needed:
+          </p>
+          <BrowserCallButton />
+          {simulation && <SimulateCallButton />}
+        </div>
       </Card>
 
       <Card>

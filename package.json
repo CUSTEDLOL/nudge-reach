@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
+    "@elevenlabs/react": "^1.15.1",
     "@google/genai": "^2.21.0",
     "@gsap/react": "^2.1.2",
     "@prisma/client": "^6.19.3",
