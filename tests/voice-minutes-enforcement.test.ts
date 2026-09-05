@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/env", () => ({ env: { VOICE_INITIATION_SECRET: "s3cret", SEND_MODE: "live" } }));
+vi.mock("@/lib/env", () => ({ env: { VOICE_INITIATION_SECRET: "s3cret", VOICE_TOOLS_SECRET: "tool-secret", SEND_MODE: "live" } }));
 
 const state = vi.hoisted(() => ({ plan: "front_desk", override: null as number | null, callSecs: [] as number[] }));
 vi.mock("@/lib/db", () => ({

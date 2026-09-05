@@ -16,12 +16,23 @@ const db = vi.hoisted(() => {
           calls.push(row);
           return row;
         }),
+        update: vi.fn(async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+          const row = calls.find((candidate) => candidate.id === where.id)!;
+          Object.assign(row, data);
+          return row;
+        }),
       },
       contact: {
         findUnique: vi.fn(async () => null),
         upsert: vi.fn(async () => ({ id: "c1", name: "+919876543210", optedIn: false, optedOutAt: null })),
       },
-      conversation: { upsert: vi.fn(async () => ({ id: "cv1" })), update: vi.fn(async () => ({})) },
+      conversation: {
+        upsert: vi.fn(async (args: { create: Record<string, unknown>; update: Record<string, unknown> }) => {
+          void args;
+          return { id: "cv1" };
+        }),
+        update: vi.fn(async () => ({})),
+      },
       conversationMessage: {
         createMany: vi.fn(async ({ data }: { data: Record<string, unknown>[] }) => {
           messages.push(...data);
@@ -70,6 +81,9 @@ describe("fileCall", () => {
         create: expect.objectContaining({ channel: "voice", orgId: "org1", contactId: "c1" }),
       })
     );
+    const conversationWrite = db.prisma.conversation.upsert.mock.calls[0][0];
+    expect(conversationWrite.create).not.toHaveProperty("lastInboundAt");
+    expect(conversationWrite.update).not.toHaveProperty("lastInboundAt");
     expect(db.messages.map((m) => m.direction)).toEqual(["outbound", "inbound", "outbound"]);
     expect(db.calls[0]).toMatchObject({ outcome: "booked", durationSecs: 30, purpose: "inbound", status: "completed" });
     expect(dispatchWebhook).toHaveBeenCalledWith("org1", "call.completed", expect.objectContaining({ outcome: "booked" }));
@@ -79,5 +93,25 @@ describe("fileCall", () => {
     await fileCall("org1", call, "inbound");
     await fileCall("org1", call, "inbound");
     expect(db.prisma.voiceCall.create).toHaveBeenCalledTimes(1);
+    expect(db.prisma.conversation.upsert).toHaveBeenCalledTimes(1);
+    expect(db.prisma.conversationMessage.createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("completes the existing outbound call row instead of dropping its transcript", async () => {
+    db.calls.push({
+      id: "vc-outbound",
+      providerCallId: "conv_1",
+      status: "in_progress",
+      contactId: "c1",
+      conversationId: null,
+    });
+    await fileCall("org1", { ...call, direction: "outbound", fromE164: call.toE164, toE164: call.fromE164 }, "reminder");
+    expect(db.prisma.voiceCall.create).not.toHaveBeenCalled();
+    expect(db.prisma.voiceCall.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "vc-outbound" },
+        data: expect.objectContaining({ status: "completed", durationSecs: 30, purpose: "reminder" }),
+      })
+    );
   });
 });

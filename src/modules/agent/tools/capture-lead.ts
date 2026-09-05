@@ -39,6 +39,7 @@ export const captureLeadTool = defineTool({
     recordContactEvent(ctx.orgId, "lead_stage_changed", {
       contactId: ctx.contactId,
       props: { to: "QUALIFIED", source: "agent" },
+      ...(ctx.externalSync === false ? { syncCrm: false } : {}),
     });
     const interest = input.interest.trim().replace(/[.。]\s*$/, "");
     const detail = input.details?.trim();

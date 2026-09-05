@@ -37,7 +37,8 @@ export const captureBookingTool = defineTool({
   async handler(ctx, input) {
     const partyLabel = input.party_size ? `, party of ${input.party_size}` : "";
     const summary = `Booking: ${input.name}${partyLabel}`;
-    const description = [`Booked via WhatsApp for ${ctx.contactPhone}.`, input.notes]
+    const channel = ctx.channel === "voice" ? "phone" : "WhatsApp";
+    const description = [`Booked via ${channel} for ${ctx.contactPhone}.`, input.notes]
       .filter(Boolean)
       .join(" ");
 
@@ -70,7 +71,9 @@ export const captureBookingTool = defineTool({
         calendarEventId: booked ? outcome.eventId ?? null : null,
       },
     });
-    void crmBookingCreated(ctx.orgId, booking, { phoneE164: ctx.contactPhone });
+    if (ctx.externalSync !== false) {
+      void crmBookingCreated(ctx.orgId, booking, { phoneE164: ctx.contactPhone });
+    }
     recordContactEvent(ctx.orgId, "booking_status", {
       contactId: ctx.contactId,
       props: { status: booking.status, bookingRequestId: booking.id },

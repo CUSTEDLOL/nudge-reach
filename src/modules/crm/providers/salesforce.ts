@@ -18,12 +18,12 @@ function splitName(name: string) {
 }
 
 export function sfLeadBody(lead: CrmLead) {
+  const description = [`Source: ${lead.source}`, lead.description].filter(Boolean).join("\n");
   return {
     ...splitName(lead.name),
     Phone: lead.phoneE164,
     Company: lead.name.trim() || "Unknown",
-    LeadSource: lead.source,
-    ...(lead.description ? { Description: lead.description } : {}),
+    Description: description,
   };
 }
 
@@ -43,7 +43,8 @@ export function sfStatus(stage: CrmStage): string {
     new: "Open - Not Contacted",
     qualified: "Working - Contacted",
     booked: "Working - Contacted",
-    paid: "Closed - Converted",
+    // REST updates cannot convert a Lead. Payment is also logged as an activity.
+    paid: "Working - Contacted",
   }[stage];
 }
 

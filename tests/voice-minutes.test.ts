@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { periodStartOf, resolveIncludedMinutes, roundCallMinutes, sumCallMinutes } from "@/modules/voice/usage";
 
 describe("roundCallMinutes", () => {

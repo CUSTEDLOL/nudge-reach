@@ -108,8 +108,45 @@ export const TOOL_GUIDANCE = [
   "- Only take an action when it clearly fits. A simple question just needs a helpful answer — no tool.",
 ].join("\n");
 
+/** Phone-specific actions. A call does not open Meta's WhatsApp service window. */
+export function voiceToolGuidance(canTransfer: boolean): string {
+  const handoff = canTransfer
+    ? '- If the caller asks for a person, says "human", or is upset, say "Let me connect you" and call `transfer_to_number` immediately. Do not make them explain why first.'
+    : "- If the caller asks for a person or is upset, explain that no one can take the call now, confirm their name and number, and call `ask_owner` with the callback request.";
+  return [
+    "TAKING ACTION (you have phone tools):",
+    "- FIRST-ACTION RULE: on clear buying intent, call `capture_lead` before saying anything or asking any follow-up question. This is mandatory, even when the caller also wants an appointment. Do not wait for a name, date, time, or complete booking details. Capture the lead now, then continue helping. If a fact needs checking, use `ask_owner` too — never drop a real enquiry.",
+    "- For a booking: collect the name and requested time, plus party size when relevant. Confirm them once, then call `capture_booking_request`. Say the team will confirm; never claim the slot is guaranteed.",
+    handoff,
+    "- If a business fact is missing, do not guess or say the business does not offer it. Call `ask_owner`, then say the team will follow up.",
+    "- If the caller asks to pay, confirm the amount and purpose only when both come from the business knowledge. Call `ask_owner` so the team can send approved payment details after the call. A phone call does not give permission to send a free-form WhatsApp message.",
+    "- Use a tool only when it clearly fits. A simple question needs a helpful spoken answer, not a tool.",
+    "- When the caller says goodbye or has nothing else, say a short goodbye and call `end_call`.",
+  ].join("\n");
+}
+
+export const VOICE_MANNERS = [
+  "PHONE MANNERS (you are speaking, not typing):",
+  "- Reply in one or two short spoken sentences, each under 20 words. Ask one question at a time.",
+  "- Plain speech only: no emojis, no markdown, no bullet points, no headings, no symbols.",
+  "- Say numbers and prices in words as a person would (\"three hundred rupees\", \"five thirty pm\") — never symbols like ₹ or digit strings.",
+  "- Never read out a web link or claim that a message was sent unless a tool confirms it.",
+  "- Never list more than three items aloud. Offer to have the team follow up with full details.",
+  "- Confirm names, dates, times and phone numbers back to the caller before saving. Read phone numbers back digit by digit.",
+  "- If the caller speaks Hindi or Hinglish, reply the same way. Match their language.",
+  "- If you did not catch something, ask them to repeat it — never guess a name or a time.",
+].join("\n");
+
 export interface AgentPromptOptions {
   withTools?: boolean;
+  /**
+   * "voice" builds the prompt for a live phone call (ElevenLabs runs it):
+   * spoken manners, no emojis/markdown/links, numbers in words, and the
+   * phone tool set (transfer_to_number / end_call instead of a chat hand-off).
+   */
+  channel?: "whatsapp" | "voice";
+  /** Voice only: whether a human transfer number is configured. */
+  canTransfer?: boolean;
   /**
    * The org's enabled custom actions (E2) — appended to TOOL_GUIDANCE so the
    * model knows when to reach for them. Names + descriptions only.
@@ -127,12 +164,15 @@ export function buildAgentSystemPrompt(
   options: AgentPromptOptions = {}
 ): string {
   const identity = agentIdentity(profile.vertical);
+  const voice = options.channel === "voice";
   const digest = options.knowledgeDigest?.trim() ?? "";
   const blob = profile.businessInfo.trim();
   const hasTime = Boolean(options.now && options.timezone);
 
   const handoffRule = options.withTools
-    ? "- If the customer is upset, wants something you cannot handle, or explicitly asks for a person, use the handoff tool (see below)."
+    ? voice
+      ? "- If the caller is upset, wants something you cannot handle, or explicitly asks for a person, follow the transfer instructions below."
+      : "- If the customer is upset, wants something you cannot handle, or explicitly asks for a person, use the handoff tool (see below)."
     : `- If the customer is upset, wants something you cannot handle, or explicitly asks for a person, reply with exactly "${HANDOFF_SENTINEL}" and nothing else, so a human takes over.`;
 
   const knowledgeSections = digest
@@ -147,7 +187,9 @@ export function buildAgentSystemPrompt(
       ];
 
   return [
-    `You are the WhatsApp assistant for "${profile.businessName}", a ${identity.noun}. You reply to customers on WhatsApp.`,
+    voice
+      ? `You are the phone assistant for "${profile.businessName}", a ${identity.noun}. You are speaking with a customer on a live phone call.`
+      : `You are the WhatsApp assistant for "${profile.businessName}", a ${identity.noun}. You reply to customers on WhatsApp.`,
     ...(hasTime
       ? [`TODAY: ${formatNowLine(options.now!, options.timezone!)}.`]
       : []),
@@ -156,7 +198,10 @@ export function buildAgentSystemPrompt(
     "",
     ...knowledgeSections,
     "",
-    `TONE: ${profile.tone}. Keep replies short and natural for WhatsApp — a sentence or two, no long paragraphs, no markdown headings.`,
+    voice
+      ? `TONE: ${profile.tone}. Speak the way a warm, efficient receptionist talks on the phone.`
+      : `TONE: ${profile.tone}. Keep replies short and natural for WhatsApp — a sentence or two, no long paragraphs, no markdown headings.`,
+    ...(voice ? ["", VOICE_MANNERS] : []),
     "",
     "RULES:",
     `- Only help with ${profile.businessName}. If the customer asks about anything unrelated (general knowledge, other businesses, advice, or open-ended chit-chat), politely say you can only help with ${profile.businessName} and offer what you can help with. Do NOT answer off-topic questions — you are not a general assistant.`,
@@ -169,7 +214,7 @@ export function buildAgentSystemPrompt(
     "- Never promise a confirmed booking or order yourself — say the team will confirm.",
     profile.doNots.trim() ? `- Also avoid: ${profile.doNots.trim()}` : "",
     handoffRule,
-    ...(options.withTools ? ["", TOOL_GUIDANCE] : []),
+    ...(options.withTools ? ["", voice ? voiceToolGuidance(options.canTransfer ?? false) : TOOL_GUIDANCE] : []),
     ...(options.withTools && options.customTools?.length
       ? [
           "",

@@ -7,12 +7,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 const { create } = vi.hoisted(() => ({ create: vi.fn() }));
+const syncContactEventToCrm = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/lib/db", () => ({ prisma: { contactEvent: { create } } }));
+vi.mock("@/modules/crm/contact-events", () => ({ syncContactEventToCrm }));
 
 import { recordContactEvent } from "@/modules/contacts/events";
 
 beforeEach(() => {
   create.mockReset();
+  syncContactEventToCrm.mockClear();
 });
 
 describe("recordContactEvent", () => {
@@ -48,5 +51,16 @@ describe("recordContactEvent", () => {
       .not.toThrow();
     // Let the rejected promise settle — an unhandled rejection would fail the run.
     await new Promise((r) => setTimeout(r, 0));
+  });
+
+  it("can keep a test action out of the CRM while preserving local history", async () => {
+    create.mockResolvedValue({ id: "ev3" });
+    recordContactEvent("org1", "lead_stage_changed", {
+      contactId: "c1",
+      props: { to: "QUALIFIED" },
+      syncCrm: false,
+    });
+    await vi.waitFor(() => expect(create).toHaveBeenCalledOnce());
+    expect(syncContactEventToCrm).not.toHaveBeenCalled();
   });
 });

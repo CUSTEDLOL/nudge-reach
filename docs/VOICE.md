@@ -12,9 +12,10 @@ as a transcript. Design: `docs/superpowers/specs/2026-08-29-voice-and-crm-design
    language and voice for this one call.
 3. During the call the agent uses webhook tools — `POST /api/voice/tools/{name}`
    with `Authorization: Bearer VOICE_TOOLS_SECRET` — which run the same handlers
-   as the WhatsApp agent: `capture_booking_request`, `capture_lead`, `ask_owner`,
-   `send_payment_link`. Hand-off is ElevenLabs' `transfer_to_number` to the
-   number in Settings → Voice.
+   as the WhatsApp agent: `capture_booking_request`, `capture_lead`, and
+   `ask_owner`. A phone call does not open WhatsApp's 24-hour service window,
+   so payment requests become team follow-ups instead of an unapproved message.
+   Hand-off is ElevenLabs' `transfer_to_number` to the number in Settings → Voice.
 4. After hang-up ElevenLabs posts the transcript to `POST /api/voice/post-call`
    (HMAC `elevenlabs-signature`). We file it: contact, a `voice` conversation,
    one message per turn, a `VoiceCall` row (duration, summary, outcome), the
@@ -38,7 +39,8 @@ month, no card) with no carrier and no number:
 2. Put it in `.env.local` as `ELEVENLABS_API_KEY`, and invent two secrets:
    `VOICE_INITIATION_SECRET` and `VOICE_TOOLS_SECRET` (any long random strings).
 3. Run the setup script (command in `scripts/voice-setup.ts`). It creates the
-   shared agent and prints `ELEVENLABS_AGENT_ID` — add that to `.env.local` too.
+   shared agent and standalone webhook tools, enables the permitted per-call
+   overrides, and prints `ELEVENLABS_AGENT_ID` — add that to `.env.local` too.
 4. Set `VOICE_TEST_ORG_ID` to the workspace you want to test with (its org id).
    A browser conversation carries no dialled number, so this names the single
    workspace such a call may reach — we refuse rather than guess a tenant.
@@ -55,9 +57,10 @@ short notice first and can only reach your own verified number).
 2. `.env.local` / Vercel: `ELEVENLABS_API_KEY`, `VOICE_TOOLS_SECRET`,
    `VOICE_INITIATION_SECRET` (any long random strings), `ELEVENLABS_LLM`
    (default `claude-haiku-4-5`; Opus/Fable are rejected by the guard).
-3. Run `scripts/voice-setup.ts` (command in the file header). It creates the
-   shared agent with the pinned LLM, system tools and our webhook tools, and
-   prints `ELEVENLABS_AGENT_ID` → add it to the env.
+3. Run `scripts/voice-setup.ts` (command in the file header). It creates or
+   updates the shared agent with the pinned LLM, current system-tool schema,
+   standalone webhook tools, and enabled per-call overrides. It prints
+   `ELEVENLABS_AGENT_ID` → add it to the env.
 4. ElevenLabs → Agents → Settings → Post-call webhooks → add
    `https://nudgeagent.app/api/voice/post-call`; copy the secret into
    `ELEVENLABS_WEBHOOK_SECRET`. Redeploy.
@@ -96,12 +99,23 @@ Sizing a package: at roughly ₹9–12 (~S$0.15) an all-in minute, 100 minutes
 costs on the order of ₹1,000. Check `docs/PRICING.md` before quoting.
 
 ## Compliance
+- Every opener identifies the agent as AI and says the call may be recorded
+  and shared with the business team;
+  the browser tester gives the same disclosure before microphone access.
 - Inbound answering: unrestricted.
 - Outbound reminder / no-show calls are transactional: only to customers with a
   booking, inside calling hours, never to `optedOutAt` contacts. No promotional
   calls, ever (DND rules).
 - The runtime model on calls is pinned by `ELEVENLABS_LLM` and guard-checked at
   boot and in the setup script.
+
+## Verify the trained prompt
+
+`npm run eval:voice` runs the production phone prompt against the guarded
+runtime model without making calls or writing to the database. It checks
+grounding, lead and booking tool choice, safe payment follow-up, hand-off,
+off-topic refusal, prompt injection, and spoken-output formatting. Set
+`EVAL_RUNS=5` for a higher-confidence pass.
 
 ## Pricing
 Cost ≈ ₹8.5–12/min all-in. Sold as the **Voice add-on**: ₹5,999/mo including

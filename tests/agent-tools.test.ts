@@ -98,6 +98,18 @@ describe("runTool — validation & error containment (never throws)", () => {
     expect(r.isError).toBe(true);
   });
 
+  it("keeps a browser-test lead event out of CRM sync", async () => {
+    await runTool({ ...ctx, externalSync: false }, {
+      name: "capture_lead",
+      input: { interest: "wants a cleaning" },
+    });
+    expect(recordContactEvent).toHaveBeenLastCalledWith("org1", "lead_stage_changed", {
+      contactId: "c1",
+      props: { to: "QUALIFIED", source: "agent" },
+      syncCrm: false,
+    });
+  });
+
   it("runs handoff with no args", async () => {
     const r = await runTool(ctx, { name: HANDOFF_TOOL_NAME, input: {} });
     expect(r.isError).toBeUndefined();

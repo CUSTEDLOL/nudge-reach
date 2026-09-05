@@ -2,11 +2,13 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { isVoiceTool, runVoiceTool } from "@/modules/voice/tools";
+import { verifyVoiceToolToken, type VoiceCallSource } from "@/modules/voice/tool-token";
 
 /**
  * Webhook tools for the voice agent. `org_id` comes from the dynamic
- * variables we set at call start (from the dialled number) and the route is
- * bearer-gated, so a caller cannot act on another business without the secret.
+ * variables we set at call start. The bearer authenticates ElevenLabs; a
+ * short-lived HMAC additionally binds tenant, caller and call source so browser
+ * clients cannot edit those variables to act on another workspace.
  */
 
 function bearerOk(header: string | null): boolean {
@@ -26,12 +28,36 @@ export async function POST(
   if (!isVoiceTool(tool)) return NextResponse.json({ error: "unknown tool" }, { status: 404 });
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const { org_id, contact_phone, conversation_id: _conversationId, ...input } = body;
+  const {
+    org_id,
+    contact_phone,
+    call_source,
+    tool_token,
+    conversation_id: _conversationId,
+    ...input
+  } = body;
   void _conversationId;
-  if (typeof org_id !== "string" || typeof contact_phone !== "string") {
-    return NextResponse.json({ error: "org_id and contact_phone required" }, { status: 400 });
+  if (
+    typeof org_id !== "string" ||
+    typeof contact_phone !== "string" ||
+    (call_source !== "phone" && call_source !== "browser") ||
+    typeof tool_token !== "string"
+  ) {
+    return NextResponse.json({ error: "invalid call context" }, { status: 400 });
   }
   const digits = contact_phone.replace(/[^\d]/g, "");
-  const out = await runVoiceTool(tool, org_id, `+${digits}`, input);
+  if (!digits) return NextResponse.json({ error: "invalid caller" }, { status: 400 });
+  const normalizedPhone = `+${digits}`;
+  const source = call_source as VoiceCallSource;
+  if (
+    !verifyVoiceToolToken(
+      tool_token,
+      { orgId: org_id, contactPhone: normalizedPhone, source },
+      env.VOICE_TOOLS_SECRET ?? ""
+    )
+  ) {
+    return NextResponse.json({ error: "invalid call token" }, { status: 401 });
+  }
+  const out = await runVoiceTool(tool, org_id, normalizedPhone, source, input);
   return NextResponse.json({ result: out.result });
 }

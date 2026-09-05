@@ -9,6 +9,11 @@ import { SIM_TRANSCRIPT } from "@/modules/voice/drivers/simulation";
 import { fileCall } from "@/modules/voice/file-call";
 import { env } from "@/lib/env";
 import { voiceUsage } from "@/modules/voice/usage";
+import { ensureAgentProfile } from "@/modules/agent/profile";
+import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
+import { buildCallInit } from "@/modules/voice/initiation";
+import { createVoiceToolToken } from "@/modules/voice/tool-token";
+import type { CallInit } from "@/modules/voice/types";
 import { parseVoiceNumberForm } from "./validate";
 
 export interface ActionResult {
@@ -86,9 +91,10 @@ export async function simulateCallAction(): Promise<ActionResult> {
       transcript: SIM_TRANSCRIPT,
       summary: "Priya booked tomorrow at 5pm.",
       callSuccessful: true,
-      dynamicVariables: { org_id: ctx.org.id, purpose: "inbound" },
+      dynamicVariables: { org_id: ctx.org.id, purpose: "inbound", call_source: "browser" },
     },
-    "inbound"
+    "inbound",
+    "browser"
   );
   revalidatePath("/inbox");
   return { ok: true, message: "A sample call landed in your inbox." };
@@ -97,6 +103,8 @@ export async function simulateCallAction(): Promise<ActionResult> {
 export interface BrowserCallResult extends ActionResult {
   /** Short-lived (15 min) ElevenLabs WebSocket URL — never the API key. */
   signedUrl?: string;
+  /** Server-built tenant context; browser sends it as allowed SDK overrides. */
+  callInit?: CallInit;
 }
 
 /**
@@ -116,7 +124,7 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
   const usage = await voiceUsage(ctx.org.id, 1);
   if (usage.exhausted) return { ok: false, message: usage.message };
 
-  if (!env.ELEVENLABS_API_KEY || !env.ELEVENLABS_AGENT_ID) {
+  if (!env.ELEVENLABS_API_KEY || !env.ELEVENLABS_AGENT_ID || !env.VOICE_TOOLS_SECRET) {
     return { ok: false, message: "Voice isn't configured yet — add the ElevenLabs keys and run the setup script." };
   }
   if (env.VOICE_TEST_ORG_ID !== ctx.org.id) {
@@ -126,6 +134,47 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
     };
   }
 
+  const [number, profile, entries] = await Promise.all([
+    prisma.voiceNumber.findFirst({ where: { orgId: ctx.org.id, enabled: true } }),
+    ensureAgentProfile(ctx.org.id),
+    prisma.knowledgeEntry.findMany({
+      where: { orgId: ctx.org.id, status: "active" },
+      select: { category: true, fact: true, condition: true },
+      orderBy: { createdAt: "asc" },
+      take: 400,
+    }),
+  ]);
+  if (!profile?.enabled) {
+    return { ok: false, message: "Turn on the AI Front Desk before starting a browser call." };
+  }
+
+  const browserCaller = "+999000000000";
+  const callInit = buildCallInit({
+    org: { id: ctx.org.id, timezone: ctx.org.timezone },
+    number: {
+      phoneE164: number?.phoneE164 ?? "browser",
+      language: number?.language ?? "en",
+      voiceId: number?.voiceId ?? null,
+      transferTo: number?.transferTo ?? null,
+    },
+    profile: {
+      vertical: profile.vertical,
+      businessName: profile.businessName,
+      businessInfo: profile.businessInfo,
+      tone: profile.tone,
+      doNots: profile.doNots,
+    },
+    knowledgeDigest: buildKnowledgeDigest(entries),
+    contact: { name: "Browser test caller", phoneE164: browserCaller },
+    source: "browser",
+    toolToken: createVoiceToolToken(
+      { orgId: ctx.org.id, contactPhone: browserCaller, source: "browser" },
+      env.VOICE_TOOLS_SECRET
+    ),
+    purpose: "inbound",
+    now: new Date(),
+  });
+
   const res = await fetch(
     `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(env.ELEVENLABS_AGENT_ID)}`,
     { headers: { "xi-api-key": env.ELEVENLABS_API_KEY } }
@@ -134,5 +183,5 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
   if (!res.ok || !json.signed_url) {
     return { ok: false, message: `ElevenLabs refused the call (HTTP ${res.status}). Check the API key and agent id.` };
   }
-  return { ok: true, message: "Connecting…", signedUrl: json.signed_url };
+  return { ok: true, message: "Connecting…", signedUrl: json.signed_url, callInit };
 }

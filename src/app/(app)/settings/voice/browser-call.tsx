@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
+import type { Language } from "@elevenlabs/client";
 import { Mic, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,13 +29,27 @@ function BrowserCallInner() {
     setStarting(true);
     try {
       // Ask for the mic first: a denied prompt should fail before we mint a URL.
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
       const result = await startBrowserCallAction();
-      if (!result.ok || !result.signedUrl) {
+      if (!result.ok || !result.signedUrl || !result.callInit) {
         toast({ description: result.message, tone: "error" });
         return;
       }
-      conversation.startSession({ signedUrl: result.signedUrl, connectionType: "websocket" });
+      const config = result.callInit.conversation_config_override;
+      conversation.startSession({
+        signedUrl: result.signedUrl,
+        connectionType: "websocket",
+        dynamicVariables: result.callInit.dynamic_variables,
+        overrides: {
+          agent: {
+            prompt: config.agent.prompt,
+            firstMessage: config.agent.first_message,
+            language: config.agent.language as Language,
+          },
+          ...(config.tts ? { tts: { voiceId: config.tts.voice_id } } : {}),
+        },
+      });
     } catch {
       toast({
         description: "We couldn't reach your microphone. Allow mic access and try again.",
@@ -60,10 +75,15 @@ function BrowserCallInner() {
   }
 
   return (
-    <Button type="button" variant="secondary" loading={connecting} onClick={start}>
-      <Mic className="h-4 w-4" aria-hidden />
-      Call your AI
-    </Button>
+    <div className="flex flex-col items-start gap-1.5">
+      <Button type="button" variant="secondary" loading={connecting} onClick={start}>
+        <Mic className="h-4 w-4" aria-hidden />
+        Call your AI
+      </Button>
+      <p className="max-w-xs text-xs leading-relaxed text-neutral-500">
+        You&apos;ll speak with an AI assistant. The test call may be recorded and shared with your business team through the inbox.
+      </p>
+    </div>
   );
 }
 

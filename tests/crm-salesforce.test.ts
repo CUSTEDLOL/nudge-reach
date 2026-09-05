@@ -5,13 +5,14 @@ import { salesforceProvider, sfLeadBody, sfStatus, sfTaskBody, soqlByPhone } fro
 describe("salesforce builders", () => {
   it("builds lead, task, status, soql", () => {
     expect(sfLeadBody({ phoneE164: "+919876543210", name: "Priya Sharma", source: "WhatsApp (Nudge)", description: "d" })).toEqual({
-      FirstName: "Priya", LastName: "Sharma", Phone: "+919876543210", Company: "Priya Sharma", LeadSource: "WhatsApp (Nudge)", Description: "d",
+      FirstName: "Priya", LastName: "Sharma", Phone: "+919876543210", Company: "Priya Sharma", Description: "Source: WhatsApp (Nudge)\nd",
     });
     expect(sfTaskBody("00Q1", { kind: "task", title: "Appointment", body: "tomorrow 5pm", dueAt: new Date("2026-09-02T00:00:00Z"), priority: "high" })).toEqual({
       Subject: "Appointment", Description: "tomorrow 5pm", ActivityDate: "2026-09-02", Priority: "High", Status: "Not Started", WhoId: "00Q1",
     });
     expect(sfTaskBody("00Q1", { kind: "note", title: "Deposit", body: "paid" })).toMatchObject({ Status: "Completed", Priority: "Normal" });
     expect(sfStatus("qualified")).toBe("Working - Contacted");
+    expect(sfStatus("paid")).toBe("Working - Contacted");
     expect(soqlByPhone("+919876543210")).toBe("SELECT Id FROM Lead WHERE Phone = '+919876543210' LIMIT 1");
   });
   it("upsertLead queries by phone then creates", async () => {

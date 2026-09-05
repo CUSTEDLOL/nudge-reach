@@ -61,7 +61,7 @@ export async function handleInboundMessage(
     },
     update: {},
   });
-  if (!existingContact) void crmContactCreated(orgId, contact, "WhatsApp (Nudge)");
+  if (!existingContact) await crmContactCreated(orgId, contact, "WhatsApp (Nudge)");
 
   // Opt-out always wins, and we never auto-reply to it.
   if (isStopMessage(text)) {

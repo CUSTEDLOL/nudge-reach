@@ -20,7 +20,7 @@ const HOW_IT_WORKS = [
   {
     icon: PhoneIncoming,
     title: "Answers every call",
-    body: "Same knowledge, same tone as your WhatsApp front desk. Books, takes leads, sends payment links.",
+    body: "Same knowledge and tone as WhatsApp. Books, takes leads, and records payment requests for safe follow-up.",
   },
   {
     icon: PhoneOutgoing,

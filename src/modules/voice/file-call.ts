@@ -4,6 +4,7 @@ import { crmContactCreated } from "@/modules/crm/events";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { outcomeOf } from "@/modules/voice/transcript";
 import type { PostCall } from "@/modules/voice/types";
+import type { VoiceCallSource } from "@/modules/voice/tool-token";
 
 const PREVIEW = 80;
 
@@ -16,11 +17,19 @@ const PREVIEW = 80;
 export async function fileCall(
   orgId: string,
   call: PostCall,
-  purpose: "inbound" | "reminder" | "no_show"
+  purpose: "inbound" | "reminder" | "no_show",
+  source: VoiceCallSource = "phone"
 ): Promise<{ voiceCallId: string; conversationId: string; contactId: string }> {
   const existing = await prisma.voiceCall.findUnique({
     where: { providerCallId: call.providerCallId },
   });
+  if (existing?.status === "completed" && existing.conversationId && existing.contactId) {
+    return {
+      voiceCallId: existing.id,
+      conversationId: existing.conversationId,
+      contactId: existing.contactId,
+    };
+  }
   const customerE164 = call.direction === "inbound" ? call.fromE164 : call.toE164;
 
   const existingContact = await prisma.contact.findUnique({
@@ -32,7 +41,9 @@ export async function fileCall(
     create: { orgId, phoneE164: customerE164, name: customerE164, optInSource: "voice" },
     update: {},
   });
-  if (!existingContact) void crmContactCreated(orgId, contact, "Phone (Nudge)");
+  if (!existingContact && source === "phone") {
+    await crmContactCreated(orgId, contact, "Phone (Nudge)");
+  }
   const now = new Date();
   const summary = call.summary ?? call.transcript.at(-1)?.message ?? "Phone call";
   const conversation = await prisma.conversation.upsert({
@@ -41,22 +52,16 @@ export async function fileCall(
       orgId,
       contactId: contact.id,
       channel: "voice",
-      lastInboundAt: now,
       lastMessageAt: now,
       lastMessagePreview: summary.slice(0, PREVIEW),
       unreadCount: 1,
     },
     update: {
-      lastInboundAt: now,
       lastMessageAt: now,
       lastMessagePreview: summary.slice(0, PREVIEW),
       unreadCount: { increment: 1 },
     },
   });
-  if (existing) {
-    return { voiceCallId: existing.id, conversationId: conversation.id, contactId: contact.id };
-  }
-
   await prisma.conversationMessage.createMany({
     data: call.transcript
       .filter((t) => t.message.trim().length > 0)
@@ -69,24 +74,25 @@ export async function fileCall(
   });
 
   const outcome = outcomeOf(call.transcript);
-  const voiceCall = await prisma.voiceCall.create({
-    data: {
-      orgId,
-      contactId: contact.id,
-      conversationId: conversation.id,
-      direction: call.direction,
-      fromE164: call.fromE164,
-      toE164: call.toE164,
-      providerCallId: call.providerCallId,
-      status: "completed",
-      durationSecs: call.durationSecs,
-      transcript: call.transcript as unknown as Prisma.InputJsonValue,
-      summary: call.summary,
-      outcome,
-      purpose,
-      endedAt: now,
-    },
-  });
+  const data = {
+    orgId,
+    contactId: contact.id,
+    conversationId: conversation.id,
+    direction: call.direction,
+    fromE164: call.fromE164,
+    toE164: call.toE164,
+    providerCallId: call.providerCallId,
+    status: "completed",
+    durationSecs: call.durationSecs,
+    transcript: call.transcript as unknown as Prisma.InputJsonValue,
+    summary: call.summary,
+    outcome,
+    purpose,
+    endedAt: now,
+  };
+  const voiceCall = existing
+    ? await prisma.voiceCall.update({ where: { id: existing.id }, data })
+    : await prisma.voiceCall.create({ data });
   if (outcome === "handoff") {
     await prisma.conversation.update({ where: { id: conversation.id }, data: { status: "handoff" } });
   }

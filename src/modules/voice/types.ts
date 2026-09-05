@@ -22,6 +22,9 @@ export interface CallInitInput {
   };
   knowledgeDigest: string;
   contact: { name: string; phoneE164: string };
+  source: "phone" | "browser";
+  /** HMAC-scopes the dynamic tenant and caller fields used by webhook tools. */
+  toolToken: string;
   purpose: "inbound" | "reminder" | "no_show";
   booking?: { requestedFor: string; name: string };
   now: Date;

@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({ testOrg: "org1" as string | undefined }));
 vi.mock("@/lib/env", () => ({
   env: {
     get VOICE_INITIATION_SECRET() { return "s3cret"; },
+    VOICE_TOOLS_SECRET: "tool-secret",
     get VOICE_TEST_ORG_ID() { return state.testOrg; },
     SEND_MODE: "live",
   },
@@ -55,6 +56,7 @@ describe("browser / no-phone conversations", () => {
     // it borrows the org's own number settings so the test sounds like the real line
     expect(json.conversation_config_override.agent.language).toBe("hi");
     expect(json.conversation_config_override.tts).toEqual({ voice_id: "v1" });
+    expect(json.conversation_config_override.agent.prompt.prompt).not.toContain("call `transfer_to_number`");
   });
 
   it("refuses when no test workspace is configured — never guesses a tenant", async () => {

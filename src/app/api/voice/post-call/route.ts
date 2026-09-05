@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyElevenLabsSignature } from "@/modules/voice/drivers/elevenlabs";
 import { fileCall } from "@/modules/voice/file-call";
 import { parsePostCall } from "@/modules/voice/transcript";
+import { verifyVoiceToolToken, type VoiceCallSource } from "@/modules/voice/tool-token";
 
 /** ElevenLabs post-call webhook (HMAC-signed): the transcript lands in the inbox. */
 export async function POST(request: Request) {
@@ -30,12 +31,30 @@ export async function POST(request: Request) {
   const number = businessNumber
     ? await prisma.voiceNumber.findUnique({ where: { phoneE164: businessNumber } })
     : null;
-  const orgId = number?.orgId ?? (call.dynamicVariables.org_id || null);
+  const dynamicOrgId = call.dynamicVariables.org_id;
+  const dynamicSource: VoiceCallSource =
+    call.dynamicVariables.call_source === "browser" ? "browser" : "phone";
+  const customerPhone = call.direction === "inbound" ? call.fromE164 : call.toE164;
+  const fallbackValid = Boolean(
+    !number &&
+      dynamicOrgId &&
+      customerPhone &&
+      call.dynamicVariables.tool_token &&
+      env.VOICE_TOOLS_SECRET &&
+      verifyVoiceToolToken(
+        call.dynamicVariables.tool_token,
+        { orgId: dynamicOrgId, contactPhone: customerPhone, source: dynamicSource },
+        env.VOICE_TOOLS_SECRET,
+        Math.floor(Date.now() / 1000),
+        60 * 60
+      )
+  );
+  const orgId = number?.orgId ?? (fallbackValid ? dynamicOrgId : null);
   if (!orgId) return NextResponse.json({ ok: true, ignored: true });
 
   const purpose =
     (["inbound", "reminder", "no_show"] as const).find((p) => p === call.dynamicVariables.purpose) ??
     "inbound";
-  await fileCall(orgId, call, purpose);
+  await fileCall(orgId, call, purpose, number ? "phone" : dynamicSource);
   return NextResponse.json({ ok: true });
 }

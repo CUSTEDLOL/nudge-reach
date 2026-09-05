@@ -5,6 +5,8 @@ import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { voiceDriverFor } from "@/modules/voice";
 import { buildCallInit } from "@/modules/voice/initiation";
 import { voiceUsage } from "@/modules/voice/usage";
+import { createVoiceToolToken } from "@/modules/voice/tool-token";
+import { env } from "@/lib/env";
 
 /**
  * Outbound reminder calls (moat 2, by phone). Opt-in per client
@@ -76,6 +78,12 @@ export async function tickReminderCalls(now: Date = new Date()) {
         },
         knowledgeDigest: digest,
         contact: { name: booking.contact.name, phoneE164: booking.contact.phoneE164 },
+        source: "phone",
+        toolToken: createVoiceToolToken(
+          { orgId: org.id, contactPhone: booking.contact.phoneE164, source: "phone" },
+          env.VOICE_TOOLS_SECRET ?? "",
+          Math.floor(now.getTime() / 1000)
+        ),
         purpose: "reminder",
         booking: { requestedFor: booking.requestedFor, name: booking.name },
         now,

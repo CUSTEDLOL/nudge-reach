@@ -12,6 +12,10 @@ export interface ToolContext {
   /** Current stored contact name (equals the phone when we don't know it yet). */
   contactName: string;
   contactPhone: string;
+  /** Where this action originated; used for accurate calendar/CRM attribution. */
+  channel?: "whatsapp" | "voice";
+  /** False for browser test calls, which must not write into a client's CRM. */
+  externalSync?: boolean;
 }
 
 export interface AgentTool {

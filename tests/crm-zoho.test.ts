@@ -3,12 +3,11 @@ vi.mock("@/lib/env", () => ({ env: { ZOHO_CLIENT_ID: "cid", ZOHO_CLIENT_SECRET: 
 import { zohoLeadBody, zohoNoteBody, zohoProvider, zohoStage, zohoTaskBody } from "@/modules/crm/providers/zoho";
 
 describe("zoho builders", () => {
-  it("builds an upsert-on-phone lead", () => {
+  it("builds a portable lead without requiring a custom source picklist", () => {
     expect(
       zohoLeadBody({ phoneE164: "+919876543210", name: "Priya Sharma", source: "WhatsApp (Nudge)", description: "Ad: Hair PRP" })
     ).toEqual({
-      data: [{ Last_Name: "Sharma", First_Name: "Priya", Phone: "+919876543210", Lead_Source: "WhatsApp (Nudge)", Description: "Ad: Hair PRP" }],
-      duplicate_check_fields: ["Phone"],
+      data: [{ Last_Name: "Sharma", First_Name: "Priya", Phone: "+919876543210", Description: "Source: WhatsApp (Nudge)\nAd: Hair PRP" }],
     });
     expect(zohoLeadBody({ phoneE164: "+91", name: "+91", source: "s" }).data[0].Last_Name).toBe("+91");
   });
@@ -18,26 +17,43 @@ describe("zoho builders", () => {
     });
     const t = zohoTaskBody("L1", { kind: "task", title: "Call back", body: "asked for a human", dueAt: new Date("2026-09-02T00:00:00Z"), priority: "high" });
     expect(t.data[0]).toMatchObject({ Subject: "Call back", Description: "asked for a human", Due_Date: "2026-09-02", Priority: "High", What_Id: { id: "L1" }, $se_module: "Leads" });
-    expect(zohoStage("qualified")).toBe("Qualified");
+    expect(zohoStage("qualified")).toBe("Pre-Qualified");
   });
   it("auth url targets the data centre and asks for offline access", () => {
     const url = zohoProvider.authUrl({ state: "st", redirectUri: "https://x/cb", dc: "in" });
     expect(url.startsWith("https://accounts.zoho.in/oauth/v2/auth?")).toBe(true);
     expect(url).toContain("access_type=offline");
-    expect(url).toContain("scope=ZohoCRM.modules.leads.ALL%2CZohoCRM.modules.notes.ALL%2CZohoCRM.modules.tasks.ALL");
+    expect(url).toContain("ZohoSearch.securesearch.READ");
   });
   it("upsertLead posts to the connection's api domain with the bearer token", async () => {
-    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ code: "SUCCESS", details: { id: "L9" } }] }), { status: 200 })
-    );
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: [{ code: "SUCCESS", details: { id: "L9" } }] }), { status: 201 })
+      );
     const r = await zohoProvider.upsertLead(
       { id: "c", orgId: "o", provider: "zoho", apiDomain: "https://www.zohoapis.in", accountsServer: "https://accounts.zoho.in", accessToken: "tok" },
       { phoneE164: "+919876543210", name: "Priya", source: "WhatsApp (Nudge)" }
     );
     expect(r).toEqual({ externalId: "L9" });
-    const [url, init] = spy.mock.calls[0];
-    expect(String(url)).toBe("https://www.zohoapis.in/crm/v8/Leads/upsert");
+    expect(String(spy.mock.calls[0][0])).toContain("/crm/v8/Leads/search?phone=");
+    const [url, init] = spy.mock.calls[1];
+    expect(String(url)).toBe("https://www.zohoapis.in/crm/v8/Leads");
     expect((init as RequestInit).headers).toMatchObject({ Authorization: "Zoho-oauthtoken tok" });
+    spy.mockRestore();
+  });
+
+  it("reuses the existing phone match instead of creating a duplicate", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: "L8" }] }), { status: 200 }));
+    const result = await zohoProvider.upsertLead(
+      { id: "c", orgId: "o", provider: "zoho", apiDomain: "https://www.zohoapis.in", accountsServer: "https://accounts.zoho.in", accessToken: "tok" },
+      { phoneE164: "+919876543210", name: "Priya", source: "Phone (Nudge)" }
+    );
+    expect(result).toEqual({ externalId: "L8" });
+    expect(spy).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });
 });

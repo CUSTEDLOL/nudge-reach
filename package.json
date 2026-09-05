@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:rls": "npx esbuild scripts/enable-rls.ts --bundle --platform=node --format=cjs --outfile=.next/enable-rls.cjs --external:@prisma/client && node .next/enable-rls.cjs",
     "eval:agent": "npx esbuild scripts/agent-eval.ts --bundle --platform=node --format=cjs --outfile=.next/agent-eval.cjs --external:@prisma/client --external:@anthropic-ai/sdk && node .next/agent-eval.cjs",
+    "eval:voice": "npx esbuild scripts/voice-eval.ts --bundle --platform=node --format=cjs --outfile=.next/voice-eval.cjs --external:@anthropic-ai/sdk && SKIP_ENV_VALIDATION=1 PROJECT_ROOT=$PWD node .next/voice-eval.cjs",
     "db:studio": "prisma studio",
     "preflight:live": "npx esbuild scripts/preflight-live.ts --bundle --platform=node --format=cjs --outfile=.next/preflight-live.cjs && node .next/preflight-live.cjs",
     "backfill:multi-number": "npx esbuild scripts/backfill-multi-number.ts --bundle --platform=node --format=cjs --outfile=.next/backfill-multi-number.cjs --external:@prisma/client && node .next/backfill-multi-number.cjs",

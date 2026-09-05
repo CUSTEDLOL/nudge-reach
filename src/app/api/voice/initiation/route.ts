@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { ensureAgentProfile } from "@/modules/agent/profile";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { buildCallInit } from "@/modules/voice/initiation";
+import { createVoiceToolToken } from "@/modules/voice/tool-token";
 import { voiceUsage } from "@/modules/voice/usage";
 
 /**
@@ -28,12 +29,17 @@ export async function POST(request: Request) {
   if (!secretOk(request.headers.get("x-nudge-voice-secret"))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  if (!env.VOICE_TOOLS_SECRET) {
+    return NextResponse.json({ error: "voice tools not configured" }, { status: 503 });
+  }
   const body = (await request.json().catch(() => ({}))) as {
     caller_id?: string;
     called_number?: string;
   };
   const called = e164(body.called_number);
   const caller = e164(body.caller_id);
+  const source = called && caller ? "phone" : "browser";
+  const contactPhone = caller || "+999000000000";
 
   // A phone call names the business by the number it dialled. A browser or
   // dashboard test call names nothing, so it may only reach the one workspace
@@ -107,7 +113,12 @@ export async function POST(request: Request) {
       doNots: profile.doNots,
     },
     knowledgeDigest: buildKnowledgeDigest(entries),
-    contact: { name: contact?.name ?? caller, phoneE164: caller },
+    contact: { name: contact?.name ?? contactPhone, phoneE164: contactPhone },
+    source,
+    toolToken: createVoiceToolToken(
+      { orgId: number.orgId, contactPhone, source },
+      env.VOICE_TOOLS_SECRET
+    ),
     purpose: "inbound",
     now: new Date(),
   });

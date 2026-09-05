@@ -20,7 +20,12 @@ export type ContactEventType =
 export function recordContactEvent(
   orgId: string,
   type: ContactEventType,
-  opts: { contactId?: string | null; props?: Record<string, unknown> } = {}
+  opts: {
+    contactId?: string | null;
+    props?: Record<string, unknown>;
+    /** Browser/simulation actions stay in Nudge and must not pollute a live CRM. */
+    syncCrm?: boolean;
+  } = {}
 ): void {
   try {
     void prisma.contactEvent
@@ -35,7 +40,7 @@ export function recordContactEvent(
       .catch((err) => console.error("[contact-event] write failed", err));
     // Same history, second consumer: stage changes and opt-outs reach the
     // client's CRM from every site that emits them, not just the agent's.
-    void syncContactEventToCrm(orgId, type, opts);
+    if (opts.syncCrm !== false) void syncContactEventToCrm(orgId, type, opts);
   } catch (err) {
     // Even a synchronous throw (e.g. a partially mocked client) must never
     // reach the product flow that emitted the event.

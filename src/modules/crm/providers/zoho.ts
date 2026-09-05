@@ -7,7 +7,8 @@ import type { CrmActivity, CrmLead, CrmProvider, CrmStage } from "@/modules/crm/
  * stored on the connection. Pure body builders are unit-tested.
  */
 
-const SCOPES = "ZohoCRM.modules.leads.ALL,ZohoCRM.modules.notes.ALL,ZohoCRM.modules.tasks.ALL";
+const SCOPES =
+  "ZohoCRM.modules.leads.ALL,ZohoCRM.modules.notes.ALL,ZohoCRM.modules.tasks.ALL,ZohoSearch.securesearch.READ";
 
 function splitName(name: string): { First_Name?: string; Last_Name: string } {
   const parts = name.trim().split(/\s+/);
@@ -17,17 +18,16 @@ function splitName(name: string): { First_Name?: string; Last_Name: string } {
 
 export function zohoLeadBody(lead: CrmLead) {
   const { First_Name, Last_Name } = splitName(lead.name);
+  const description = [`Source: ${lead.source}`, lead.description].filter(Boolean).join("\n");
   return {
     data: [
       {
         Last_Name,
         ...(First_Name ? { First_Name } : {}),
         Phone: lead.phoneE164,
-        Lead_Source: lead.source,
-        ...(lead.description ? { Description: lead.description } : {}),
+        Description: description,
       },
     ],
-    duplicate_check_fields: ["Phone"],
   };
 }
 
@@ -56,7 +56,31 @@ export function zohoTaskBody(leadId: string, a: CrmActivity) {
 }
 
 export function zohoStage(stage: CrmStage): string {
-  return { new: "Not Contacted", qualified: "Qualified", booked: "Qualified", paid: "Qualified" }[stage];
+  return {
+    new: "Not Contacted",
+    qualified: "Pre-Qualified",
+    booked: "Pre-Qualified",
+    paid: "Pre-Qualified",
+  }[stage];
+}
+
+async function zohoSearchLead(
+  conn: { apiDomain: string; accessToken: string },
+  phoneE164: string
+): Promise<string | null> {
+  const res = await fetch(
+    `${conn.apiDomain}/crm/v8/Leads/search?phone=${encodeURIComponent(phoneE164)}`,
+    { headers: { Authorization: `Zoho-oauthtoken ${conn.accessToken}` } }
+  );
+  if (res.status === 204) return null;
+  const json = (await res.json().catch(() => ({}))) as {
+    data?: Array<{ id?: string }>;
+    message?: string;
+  };
+  if (!res.ok) {
+    throw new Error(`zoho lead search: HTTP ${res.status} ${json.message ?? ""}`.trim());
+  }
+  return json.data?.[0]?.id ?? null;
 }
 
 async function zohoFetch(
@@ -146,7 +170,11 @@ export const zohoProvider: CrmProvider = {
     return { accessToken: j.access_token, expiresInSecs: j.expires_in ?? 3600 };
   },
   async upsertLead(conn, lead) {
-    const first = await zohoFetch(conn, "Leads/upsert", zohoLeadBody(lead));
+    const existingId = await zohoSearchLead(conn, lead.phoneE164);
+    if (existingId) {
+      return { externalId: existingId };
+    }
+    const first = await zohoFetch(conn, "Leads", zohoLeadBody(lead));
     return { externalId: first.details?.id ?? "" };
   },
   async updateStage(conn, externalId, stage) {

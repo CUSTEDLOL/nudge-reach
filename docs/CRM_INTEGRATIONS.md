@@ -8,8 +8,8 @@ Design: `docs/superpowers/specs/2026-08-29-voice-and-crm-design.md` (Part B).
 
 | Nudge event | Zoho CRM | Salesforce |
 |---|---|---|
-| New contact from an inbound WhatsApp message or phone call | `Leads/upsert` on `Phone` (`Lead_Source` = "WhatsApp (Nudge)" / "Phone (Nudge)") | find `Lead` by `Phone`, else create (`LeadSource`) |
-| Lead stage changed **anywhere** — agent, inbox, contacts table, public API | `Lead_Status` (Qualified / Not Contacted) | `Status` (Working - Contacted / Open) |
+| New contact from an inbound WhatsApp message or phone call | search `Lead` by phone, reuse or create; Nudge source is preserved in `Description` on creation | find `Lead` by `Phone`, reuse or create; Nudge source is preserved in `Description` on creation |
+| Lead stage changed **anywhere** — agent, inbox, contacts table, public API | `Lead_Status` (Pre-Qualified / Not Contacted) | `Status` (Working - Contacted / Open); paid is logged as an activity, never an unsafe forced conversion |
 | Contact opts out (STOP or manual) | Note: "Opted out of messages" | Task (Completed) |
 | Booking captured | Task "Appointment: name — when" (+ due date) | Task (Not Started, `ActivityDate`) |
 | Payment paid | Note "Payment received" | Task (Completed) |
@@ -43,7 +43,8 @@ Design: `docs/superpowers/specs/2026-08-29-voice-and-crm-design.md` (Part B).
 3. Client: Integrations → CRM → **Connect Zoho CRM** (data centre `in`; use
    `?dc=us|eu` in the connect link for other regions) → consent → back to
    Integrations with "connected". Scopes requested:
-   `ZohoCRM.modules.leads.ALL, ZohoCRM.modules.notes.ALL, ZohoCRM.modules.tasks.ALL`.
+   `ZohoCRM.modules.leads.ALL, ZohoCRM.modules.notes.ALL, ZohoCRM.modules.tasks.ALL, ZohoSearch.securesearch.READ`.
+   Existing connections must reconnect once to grant the added phone-search scope.
 
 ## Setup — Salesforce
 1. A Salesforce org → Setup → App Manager → **New Connected App** → enable

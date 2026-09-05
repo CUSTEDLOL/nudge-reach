@@ -5,6 +5,54 @@ what's next.
 
 ---
 
+## Voice + CRM direct-client hardening (2026-09-05) ✅
+
+Final QA found release blockers in the provider boundary rather than the core
+feature code. Voice is now trained for spoken calls and wired to ElevenLabs'
+current API; CRM writes no longer assume client-specific picklists.
+
+### Voice
+- Dedicated phone prompt: short speech, one question at a time, numbers spoken
+  naturally, Hindi/Hinglish matching, mandatory first-action lead capture,
+  confirmation-before-booking, safe callback/transfer behavior, and no URLs or
+  false "sent on WhatsApp" claims.
+- Every opener discloses that the caller is speaking to AI and that the call may
+  be recorded/shared with the business team. Phone calls do not open Meta's
+  WhatsApp service window; payment requests are recorded for approved follow-up.
+- `voice-setup.ts` now creates standalone webhook tools, assigns `tool_ids`,
+  configures current built-in system tools, enables prompt/opener/language/voice
+  overrides, and updates an existing agent idempotently.
+- Browser calls now receive the authenticated workspace's real prompt directly.
+  Short-lived HMAC call tokens bind every tool request and number-less post-call
+  webhook to one org/caller/source; browser tests cannot write into the client's
+  CRM, and browser-only calls never attempt unsupported phone transfer.
+- Post-call retries no longer inflate unread counts. Existing outbound call rows
+  are completed with their transcript instead of silently discarding it, and a
+  voice call never changes WhatsApp's `lastInboundAt` service-window timestamp.
+
+### CRM
+- Zoho now searches by phone before creating a lead (with the required search
+  scope) instead of relying on `Phone` being configured as a unique field.
+- Zoho uses the standard `Pre-Qualified` status; Salesforce no longer attempts
+  an invalid REST conversion for a paid lead. Provider-specific Nudge source
+  values live in `Description`, not restricted/custom source picklists.
+- New phone leads enter the CRM even when the voice agent uses a tool before the
+  post-call webhook, and WhatsApp contact-create enqueue ordering is deterministic.
+
+### Verification
+- `npm test`: **628/628 passed**.
+- `npm run lint`: clean.
+- `npm run build`: production build passed.
+- `npm run eval:voice`: **27/27 live model runs passed** across clinic grounding,
+  unknown facts, lead capture, complete/incomplete bookings, transfer, payment
+  safety, off-topic scope and prompt injection. Extra lead stress: **5/5**.
+
+### Founder actions before the first real call
+- Add the ElevenLabs env values, deploy, run `scripts/voice-setup.ts`, and add the
+  post-call webhook as documented in `docs/VOICE.md`.
+- Connect the carrier number. Reconnect any existing Zoho connection once so it
+  grants `ZohoSearch.securesearch.READ`.
+
 ## CRM sync finished — every stage change reaches the CRM (2026-09-05) ✅
 
 Audit after merging the enterprise track found the gap: lead stages change in six

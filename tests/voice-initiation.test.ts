@@ -7,6 +7,8 @@ const base = {
   profile: { vertical: "clinic", businessName: "BrightSmile Dental", businessInfo: "", tone: "Warm", doNots: "" },
   knowledgeDigest: "- Hours: Mon–Sat 9am–7pm\n- Consultation ₹500",
   contact: { name: "+919876543210", phoneE164: "+919876543210" },
+  source: "phone" as const,
+  toolToken: "v1.123.signature",
   purpose: "inbound" as const,
   now: new Date("2026-09-01T04:30:00Z"),
 };
@@ -15,11 +17,16 @@ describe("buildCallInit", () => {
   it("greets as the business, carries the knowledge digest and tenant ids", () => {
     const init = buildCallInit(base);
     expect(init.conversation_config_override.agent.first_message).toContain("BrightSmile Dental");
+    expect(init.conversation_config_override.agent.first_message).toContain("AI assistant");
+    expect(init.conversation_config_override.agent.first_message).toContain("may be recorded");
+    expect(init.conversation_config_override.agent.first_message).toContain("shared with the business team");
     expect(init.conversation_config_override.agent.prompt.prompt).toContain("Consultation ₹500");
-    expect(init.conversation_config_override.agent.prompt.prompt).toContain("You are on a phone call");
+    expect(init.conversation_config_override.agent.prompt.prompt).toContain("PHONE MANNERS");
     expect(init.dynamic_variables.org_id).toBe("org1");
     expect(init.dynamic_variables.contact_phone).toBe("+919876543210");
     expect(init.dynamic_variables.transfer_to).toBe("+919800000000");
+    expect(init.dynamic_variables.call_source).toBe("phone");
+    expect(init.dynamic_variables.tool_token).toBe("v1.123.signature");
     expect(init.conversation_config_override.agent.language).toBe("en");
     expect(init.conversation_config_override.tts).toBeUndefined();
   });
@@ -35,5 +42,6 @@ describe("buildCallInit", () => {
     expect(init.conversation_config_override.tts).toEqual({ voice_id: "voice_123" });
     expect(init.conversation_config_override.agent.first_message).toContain("Rahul");
     expect(init.conversation_config_override.agent.first_message).toContain("tomorrow 5pm");
+    expect(init.conversation_config_override.agent.first_message).toContain("AI assistant");
   });
 });
