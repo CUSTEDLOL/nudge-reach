@@ -39,6 +39,13 @@ export interface PlanLimits {
   leadScoring: boolean;
   /** Voice front desk — the AI answers the phone (front_desk/enterprise). */
   voiceAgent: boolean;
+  /**
+   * Call minutes included per calendar month. 0 = no voice, null = unlimited.
+   * When they run out the AI stops answering for that org (enforced in the
+   * call-initiation webhook), so a runaway number can't outrun the package.
+   * An org can override this for a bespoke deal — see `npm run voice:minutes`.
+   */
+  voiceMinutesPerMonth: number | null;
 }
 
 export type PlanId =
@@ -125,6 +132,7 @@ export const PLANS: Plan[] = [
       webWidget: false,
       leadScoring: false,
       voiceAgent: false,
+      voiceMinutesPerMonth: 0,
     },
   },
   {
@@ -152,6 +160,7 @@ export const PLANS: Plan[] = [
       webWidget: true,
       leadScoring: false,
       voiceAgent: false,
+      voiceMinutesPerMonth: 0,
     },
   },
   {
@@ -179,6 +188,7 @@ export const PLANS: Plan[] = [
       webWidget: true,
       leadScoring: false,
       voiceAgent: false,
+      voiceMinutesPerMonth: 0,
     },
     highlighted: true,
   },
@@ -206,6 +216,7 @@ export const PLANS: Plan[] = [
       webWidget: true,
       leadScoring: true,
       voiceAgent: false,
+      voiceMinutesPerMonth: 0,
     },
   },
   {
@@ -233,6 +244,7 @@ export const PLANS: Plan[] = [
       webWidget: true,
       leadScoring: true,
       voiceAgent: true,
+      voiceMinutesPerMonth: 100,
     },
     flagship: true,
   },
@@ -261,6 +273,7 @@ export const PLANS: Plan[] = [
       webWidget: true,
       leadScoring: true,
       voiceAgent: true,
+      voiceMinutesPerMonth: null,
     },
     contactOnly: true,
   },
