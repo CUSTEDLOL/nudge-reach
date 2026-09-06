@@ -11,6 +11,56 @@ touched. Expected time: ~45 minutes for all phases.
 
 ---
 
+## Adaptive workspace smoke test (10–15 min)
+
+Run this after pulling the 2026-09-06 dashboard revamp. It is safe in simulation
+mode: onboarding changes presentation and recommendations only.
+
+1. Apply the additive preference column once, then start the app:
+   ```bash
+   npm run db:push
+   npm run dev
+   ```
+   ✅ Prisma reports the schema in sync; the app starts without a missing-column
+   error for `Membership.uiPreferences`.
+2. Open <http://localhost:3000/login> and sign in with the demo-org credentials
+   listed under Conventions above.
+3. Open <http://localhost:3000/onboarding?customize=1>.
+   ✅ One question appears at a time with visible progress, Back, and Skip.
+   Choose answers, reload midway, and confirm the saved step resumes. Complete
+   the flow and confirm the summary describes priorities, shortcuts, and setup
+   without claiming anything was switched on.
+4. Open <http://localhost:3000/dashboard>.
+   ✅ The order is: **Needs your attention → Today's operations → AI Front Desk
+   activity → Business pulse → setup (only if incomplete) → Recent activity**.
+   Handoffs appear first; an empty queue says “You're caught up” instead of
+   disappearing. No section requires horizontal scrolling.
+5. On desktop, collapse and expand the sidebar, then reload.
+   ✅ The preference persists. The active marker follows deep routes such as
+   `/settings/voice`, `/templates`, and `/automations`. Press Cmd/Ctrl+K, type
+   `leads`, open the result, then reopen and press Escape; focus returns to the
+   trigger.
+6. Resize to 375px, 768px, 1024px, and 1440px.
+   ✅ At 375px the bottom bar contains exactly Today, Inbox, Front Desk, Leads,
+   and More. More opens a full-width sheet with a visible close control. Text
+   wraps, touch targets remain usable, and `document.documentElement.scrollWidth`
+   equals `document.documentElement.clientWidth`.
+7. Open Settings at mobile width.
+   ✅ A labelled native selector replaces the old horizontally scrolling row;
+   Follow-ups and Integrations appear only in the main navigation.
+8. In a private window, open <http://localhost:3000/demo> to enter as a demo
+   agent, then visit Today.
+   ✅ Owner questions, setup, follow-up controls, campaigns, analytics,
+   integrations, settings, and business-wide outcome metrics are absent. Inbox
+   activity remains available; assigned-number restrictions are enforced by the
+   server queries.
+9. Enable the OS/browser “Reduce motion” preference and repeat onboarding plus
+   the command menu.
+   ✅ Directional motion is removed/reduced and every control remains usable by
+   keyboard, including Escape close and visible focus.
+
+---
+
 ## Phase 0 — Setup (5 min, once)
 
 1. `cd ~/Desktop/NUDGE/WhatsAppCRM && git pull`
