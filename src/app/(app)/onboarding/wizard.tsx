@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { VERTICALS } from "@/modules/dashboard/verticals";
+import type {
+  UiPreferences,
+  WorkspaceProfile,
+} from "@/modules/dashboard/workspace-profile";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -41,6 +45,9 @@ export interface WizardProps {
   whatsappDisplayName: string | null;
   simulationMode: boolean;
   contactCount: number;
+  initialProfile: WorkspaceProfile;
+  initialUiPreferences: UiPreferences;
+  customizing: boolean;
 }
 
 export function OnboardingWizard(props: WizardProps) {

@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { presetForDialCode } from "@/modules/billing/money";
 import { getOnboardingSnapshot } from "@/modules/dashboard/queries";
+import {
+  parseUiPreferences,
+  parseWorkspaceProfile,
+} from "@/modules/dashboard/workspace-profile";
 import { OnboardingWizard } from "./wizard";
 
 export const metadata = { title: "Get started — Nudge" };
@@ -11,9 +15,17 @@ export const metadata = { title: "Get started — Nudge" };
  * has never onboarded AND has zero contacts; finishing or skipping sets
  * Org.onboardedAt so it never traps a working account.
  */
-export default async function OnboardingPage() {
-  const { org } = await requireOrgContext();
-  if (org.onboardedAt) {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customize?: string }>;
+}) {
+  const [{ org, membership }, params] = await Promise.all([
+    requireOrgContext(),
+    searchParams,
+  ]);
+  const customizing = params.customize === "1";
+  if (org.onboardedAt && !customizing) {
     redirect("/dashboard");
   }
 
@@ -32,6 +44,9 @@ export default async function OnboardingPage() {
         whatsappDisplayName={snapshot.whatsappDisplayName}
         simulationMode={snapshot.simulationMode}
         contactCount={snapshot.contactCount}
+        initialProfile={parseWorkspaceProfile(org.settings)}
+        initialUiPreferences={parseUiPreferences(membership.uiPreferences)}
+        customizing={customizing}
       />
     </div>
   );

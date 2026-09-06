@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  startTransition,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Sidebar, type SidebarUser } from "@/components/features/app-shell/sidebar";
 import { Topbar } from "@/components/features/app-shell/topbar";
 import { BottomNav, isThreadRoute } from "@/components/features/app-shell/bottom-nav";
 import type { AppRole } from "@/components/features/app-shell/nav";
+import { saveSidebarCollapsedAction } from "@/app/(app)/shell-actions";
 
 /**
  * App chrome: dark sidebar on desktop (lg+), fixed bottom navigation on
@@ -44,6 +51,9 @@ export function AppShell({
 
   function updateSidebar(collapsed: boolean) {
     setSidebarCollapsed(collapsed);
+    startTransition(() => {
+      void saveSidebarCollapsedAction(collapsed);
+    });
   }
 
   return (

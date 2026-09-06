@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
+import { parseUiPreferences } from "@/modules/dashboard/workspace-profile";
 import { AppShell } from "@/components/features/app-shell/shell";
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -19,6 +20,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         user={{ name, email }}
         role={role}
         simulation={isSimulated(org)}
+        initialSidebarCollapsed={
+          parseUiPreferences(membership.uiPreferences).sidebarCollapsed
+        }
       >
         {children}
       </AppShell>
