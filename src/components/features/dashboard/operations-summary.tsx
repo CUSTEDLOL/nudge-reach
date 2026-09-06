@@ -35,9 +35,11 @@ function operationDetail(
 export function OperationsSummary({
   items,
   currency,
+  showDescription = true,
 }: {
   items: OperationsSummaryItem[];
   currency: string;
+  showDescription?: boolean;
 }) {
   return (
     <section aria-labelledby="operations-heading" className="min-w-0">
@@ -48,9 +50,11 @@ export function OperationsSummary({
         >
           Today&apos;s operations
         </h2>
-        <p className="mt-0.5 text-sm text-neutral-600">
-          A quick read on the work moving through your front desk.
-        </p>
+        {showDescription && (
+          <p className="mt-0.5 text-sm text-neutral-600">
+            A quick read on the work moving through your front desk.
+          </p>
+        )}
       </div>
       <Card className="grid min-w-0 grid-cols-1 gap-px overflow-hidden bg-neutral-200 shadow-none sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => {

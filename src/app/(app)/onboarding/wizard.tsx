@@ -302,6 +302,11 @@ export function OnboardingWizard(props: WizardProps) {
                     )
                   }
                 />
+                <ChoiceBackControl
+                  onBack={goBack}
+                  pending={saving}
+                  disabled={step === 1}
+                />
               </QuestionFrame>
             )}
 
@@ -326,6 +331,7 @@ export function OnboardingWizard(props: WizardProps) {
                     )
                   }
                 />
+                <ChoiceBackControl onBack={goBack} pending={saving} />
               </QuestionFrame>
             )}
 
@@ -350,6 +356,7 @@ export function OnboardingWizard(props: WizardProps) {
                     )
                   }
                 />
+                <ChoiceBackControl onBack={goBack} pending={saving} />
               </QuestionFrame>
             )}
 
@@ -374,6 +381,7 @@ export function OnboardingWizard(props: WizardProps) {
                     )
                   }
                 />
+                <ChoiceBackControl onBack={goBack} pending={saving} />
               </QuestionFrame>
             )}
 
@@ -443,6 +451,7 @@ export function OnboardingWizard(props: WizardProps) {
                     )
                   }
                 />
+                <ChoiceBackControl onBack={goBack} pending={saving} />
               </QuestionFrame>
             )}
 
@@ -643,6 +652,31 @@ function SelectionMark({ selected }: { selected: boolean }) {
     >
       {selected && <Check className="h-3 w-3" />}
     </span>
+  );
+}
+
+function ChoiceBackControl({
+  onBack,
+  pending,
+  disabled = false,
+}: {
+  onBack: () => void;
+  pending: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="mt-6 border-t border-neutral-100 pt-5">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onBack}
+        disabled={pending || disabled}
+        className="min-h-11"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back
+      </Button>
+    </div>
   );
 }
 

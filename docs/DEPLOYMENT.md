@@ -14,6 +14,11 @@ export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 > Nudge is now positioned as an **AI Front Desk** — the AI employee books into a
 > real Google Calendar and runs a Revenue-Recovery follow-up engine — on top of
 > the existing self-serve CRM/inbox/campaigns tiers. Concretely, for a deploy:
+> - **2026-09-06 dashboard update:** `Membership.uiPreferences` is a new
+>   additive JSON column. This repository deliberately uses Prisma schema push
+>   rather than checked-in migration files. Run **`npm run db:push` followed by
+>   `npm run db:rls` before deploying the updated application code**; reversing
+>   that order can make membership resolution fail on the missing column.
 > - **New tables:** `CalendarAccount`, `FollowUpConfig`, plus new fields on
 >   `BookingRequest` (`scheduledFor`, `calendarEventId`, `reminder24SentAt`,
 >   `reminder2SentAt`, `reviewAskedAt`). **You must re-run `npm run db:push`
@@ -136,7 +141,8 @@ npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \
   --outfile=.next/seed-demo.cjs --external:@prisma/client && node .next/seed-demo.cjs
 ```
 
-> **Re-run both `db:push` and `db:rls` after every schema change**, not just on
+> **Run both `db:push` and `db:rls` before application deployment after every
+> schema change**, not just on
 > first setup. The AI Front Desk work added `CalendarAccount` and
 > `FollowUpConfig` (plus new `BookingRequest` fields); those tables were created
 > with RLS **off**, so a deploy that ran `db:push` but skipped `db:rls` would

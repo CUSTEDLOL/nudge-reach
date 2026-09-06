@@ -14,6 +14,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { ShortcutKey } from "@/modules/dashboard/workspace-profile";
 
 export type AppRole = "OWNER" | "ADMIN" | "AGENT";
 
@@ -169,6 +170,20 @@ export function navGroupsForRole(role: AppRole): NavGroup[] {
 
 export function navItemsForRole(role: AppRole): NavItem[] {
   return navGroupsForRole(role).flatMap((group) => [...group.items]);
+}
+
+/** Resolve per-member onboarding preferences without bypassing role visibility. */
+export function suggestedNavItemsForRole(
+  role: AppRole,
+  shortcutKeys: readonly ShortcutKey[]
+): NavItem[] {
+  const allowedByKey = new Map(
+    navItemsForRole(role).map((item) => [item.key, item])
+  );
+  return shortcutKeys.flatMap((key) => {
+    const item = allowedByKey.get(key);
+    return item ? [item] : [];
+  });
 }
 
 export function mobilePrimaryItemsForRole(role: AppRole): NavItem[] {

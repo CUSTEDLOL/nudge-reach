@@ -18,6 +18,7 @@ import {
   buildAttentionQueue,
   buildOperationsSummary,
   estimateRevenueInfluencedInr,
+  shouldRedirectToOnboarding,
 } from "@/modules/dashboard/stats";
 import {
   deriveWorkspaceDefaults,
@@ -40,7 +41,13 @@ export default async function DashboardPage() {
     allowedWhatsappAccountIds
   );
 
-  if (!org.onboardedAt && data.contactCount === 0) {
+  if (
+    shouldRedirectToOnboarding({
+      role: membership.role,
+      onboardedAt: org.onboardedAt,
+      contactCount: data.contactCount,
+    })
+  ) {
     redirect("/onboarding");
   }
 
@@ -107,9 +114,16 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <AttentionQueueSection queue={attention} />
+      <AttentionQueueSection
+        queue={attention}
+        showDescription={workspaceDefaults.showSectionDescriptions}
+      />
 
-      <OperationsSummary items={visibleOperations} currency={org.currency} />
+      <OperationsSummary
+        items={visibleOperations}
+        currency={org.currency}
+        showDescription={workspaceDefaults.showSectionDescriptions}
+      />
 
       <FrontDeskSummary
         openConversations={data.openConversationCount}
@@ -130,6 +144,7 @@ export default async function DashboardPage() {
           optedInContacts={data.optedInContactCount}
           totalContacts={data.contactCount}
           currency={org.currency}
+          showDescription={workspaceDefaults.showSectionDescriptions}
         />
       )}
 

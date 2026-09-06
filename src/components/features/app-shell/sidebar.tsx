@@ -17,8 +17,10 @@ import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
   isNavItemActive,
   navGroupsForRole,
+  suggestedNavItemsForRole,
   type AppRole,
 } from "@/components/features/app-shell/nav";
+import type { ShortcutKey } from "@/modules/dashboard/workspace-profile";
 
 export type SidebarUser = { name: string; email: string };
 
@@ -29,6 +31,7 @@ export function Sidebar({
   user,
   collapsed,
   onCollapsedChange,
+  suggestedShortcuts = [],
 }: {
   role?: AppRole;
   simulation?: boolean;
@@ -36,9 +39,11 @@ export function Sidebar({
   user: SidebarUser;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
+  suggestedShortcuts?: ShortcutKey[];
 }) {
   const pathname = usePathname();
   const groups = navGroupsForRole(role);
+  const suggestedItems = suggestedNavItemsForRole(role, suggestedShortcuts);
 
   return (
     <aside
@@ -94,6 +99,41 @@ export function Sidebar({
               {simulation ? "Test workspace" : "Live workspace"}
             </p>
           </div>
+        )}
+
+        {!collapsed && suggestedItems.length > 0 && (
+          <nav aria-label="Suggested shortcuts" className="mt-3">
+            <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+              Suggested for you
+            </p>
+            <ul className="space-y-1">
+              {suggestedItems.map((item) => {
+                const active = isNavItemActive(pathname, item);
+                const Icon = item.icon;
+                return (
+                  <li key={item.key}>
+                    <Link
+                      href={item.href}
+                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex h-10 items-center gap-2.5 rounded-xl border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-500",
+                        active
+                          ? "border-brand-200 bg-brand-50 text-brand-700"
+                          : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:text-neutral-900"
+                      )}
+                    >
+                      <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
+                      <span data-suggested-label="true" className="truncate">
+                        {item.label}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
         )}
 
         <nav aria-label="Main navigation" className="mt-4 min-h-0 flex-1 overflow-y-auto">

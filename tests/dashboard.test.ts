@@ -7,6 +7,7 @@ import {
   dayBoundsInTimezone,
   estimateRevenueInfluencedInr,
   parseAvgOrderValueInr,
+  shouldRedirectToOnboarding,
   DEFAULT_AVG_ORDER_VALUE_INR,
   type AttentionQueueInput,
   type ChecklistInput,
@@ -243,6 +244,52 @@ describe("buildAttentionQueue", () => {
       setupRemaining: -2,
     });
     expect(queue.allClear).toBe(true);
+  });
+});
+
+describe("shouldRedirectToOnboarding", () => {
+  it("sends a fresh owner or admin through discovery", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        role: "OWNER",
+        onboardedAt: null,
+        contactCount: 0,
+      })
+    ).toBe(true);
+    expect(
+      shouldRedirectToOnboarding({
+        role: "ADMIN",
+        onboardedAt: null,
+        contactCount: 0,
+      })
+    ).toBe(true);
+  });
+
+  it("never traps an agent in an admin-only onboarding flow", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        role: "AGENT",
+        onboardedAt: null,
+        contactCount: 0,
+      })
+    ).toBe(false);
+  });
+
+  it("leaves established workspaces on Today", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        role: "OWNER",
+        onboardedAt: new Date("2026-09-06T00:00:00.000Z"),
+        contactCount: 0,
+      })
+    ).toBe(false);
+    expect(
+      shouldRedirectToOnboarding({
+        role: "OWNER",
+        onboardedAt: null,
+        contactCount: 12,
+      })
+    ).toBe(false);
   });
 });
 

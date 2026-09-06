@@ -23,6 +23,13 @@ describe("Today page hierarchy", () => {
     expect(source).not.toContain("prisma.");
   });
 
+  it("applies the member's chosen guidance level to dashboard explanations", () => {
+    const source = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
+    expect(source).toContain(
+      "showDescription={workspaceDefaults.showSectionDescriptions}"
+    );
+  });
+
   it("uses a loading state shaped like the vertical Today hierarchy", () => {
     const source = readFileSync("src/app/(app)/dashboard/loading.tsx", "utf8");
     expect(source).toContain('aria-label="Loading Today workspace"');

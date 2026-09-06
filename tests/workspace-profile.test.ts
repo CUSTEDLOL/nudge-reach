@@ -106,6 +106,62 @@ describe("workspace profile", () => {
       "front-desk",
     ]);
   });
+
+  it("uses role and team shape to choose genuinely useful shortcuts", () => {
+    const salesperson = deriveWorkspaceDefaults({
+      ...DEFAULT_WORKSPACE_PROFILE,
+      role: "sales",
+      primaryOutcome: "follow-up",
+    });
+    const departmentOwner = deriveWorkspaceDefaults({
+      ...DEFAULT_WORKSPACE_PROFILE,
+      teamShape: "departments",
+    });
+
+    expect(salesperson.shortcuts).toEqual(["leads", "followups", "inbox"]);
+    expect(departmentOwner.shortcuts).toEqual([
+      "analytics",
+      "front-desk",
+      "inbox",
+    ]);
+  });
+
+  it("uses the customer journey and current systems to order recommendations", () => {
+    const defaults = deriveWorkspaceDefaults({
+      ...DEFAULT_WORKSPACE_PROFILE,
+      primaryOutcome: "payments",
+      journey: "quote-follow-up",
+      systems: ["google-calendar"],
+    });
+
+    expect(defaults.attentionOrder.slice(0, 4)).toEqual([
+      "handoff",
+      "owner-question",
+      "payment",
+      "followup",
+    ]);
+    expect(defaults.setupOrder.slice(0, 4)).toEqual([
+      "teach-front-desk",
+      "try-front-desk",
+      "configure-followups",
+      "connect-calendar",
+    ]);
+  });
+
+  it("turns direct guidance into a concise dashboard without hiding features", () => {
+    expect(
+      deriveWorkspaceDefaults({
+        ...DEFAULT_WORKSPACE_PROFILE,
+        guidance: "direct",
+      }).showSectionDescriptions
+    ).toBe(false);
+    expect(
+      deriveWorkspaceDefaults({
+        ...DEFAULT_WORKSPACE_PROFILE,
+        guidance: "guided",
+      }).showSectionDescriptions
+    ).toBe(true);
+  });
 });
 
 describe("member UI preferences", () => {

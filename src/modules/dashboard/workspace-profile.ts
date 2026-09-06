@@ -186,6 +186,7 @@ export interface WorkspaceDefaults {
   attentionOrder: AttentionKind[];
   shortcuts: ShortcutKey[];
   setupOrder: SetupTaskKey[];
+  showSectionDescriptions: boolean;
 }
 
 export interface UiPreferences {
@@ -439,6 +440,49 @@ const SHORTCUTS_BY_OUTCOME: Record<PrimaryOutcome, ShortcutKey[]> = {
   support: ["inbox", "front-desk", "leads"],
 };
 
+const SHORTCUTS_BY_ROLE: Record<WorkspaceRole, ShortcutKey[]> = {
+  owner: [],
+  manager: ["today"],
+  sales: ["leads"],
+  "front-desk": ["inbox"],
+  support: ["inbox"],
+  admin: ["integrations", "settings"],
+};
+
+const SHORTCUTS_BY_TEAM: Record<TeamShape, ShortcutKey[]> = {
+  solo: [],
+  "small-team": ["inbox"],
+  departments: ["analytics"],
+};
+
+const ATTENTION_BY_JOURNEY: Record<CustomerJourney, AttentionKind> = {
+  "enquiry-booking-payment": "booking",
+  "consultation-booking": "owner-question",
+  "quote-follow-up": "followup",
+  "support-repeat": "unread",
+};
+
+const SETUP_BY_OUTCOME: Partial<Record<PrimaryOutcome, SetupTaskKey>> = {
+  bookings: "connect-calendar",
+  "follow-up": "configure-followups",
+  "fewer-no-shows": "configure-followups",
+};
+
+const SETUP_BY_JOURNEY: Record<CustomerJourney, SetupTaskKey> = {
+  "enquiry-booking-payment": "connect-calendar",
+  "consultation-booking": "connect-calendar",
+  "quote-follow-up": "configure-followups",
+  "support-repeat": "teach-front-desk",
+};
+
+const SETUP_BY_SYSTEM: Partial<Record<ConnectedSystem, SetupTaskKey>> = {
+  whatsapp: "connect-whatsapp",
+  "google-calendar": "connect-calendar",
+  crm: "import-contacts",
+  spreadsheets: "import-contacts",
+  none: "connect-whatsapp",
+};
+
 const DEFAULT_SETUP_ORDER: SetupTaskKey[] = [
   "teach-front-desk",
   "try-front-desk",
@@ -451,21 +495,44 @@ const DEFAULT_SETUP_ORDER: SetupTaskKey[] = [
 export function deriveWorkspaceDefaults(
   profile: WorkspaceProfile
 ): WorkspaceDefaults {
-  const setupOrder = [...DEFAULT_SETUP_ORDER];
-  if (profile.primaryOutcome === "follow-up" || profile.primaryOutcome === "fewer-no-shows") {
-    const followups = setupOrder.indexOf("configure-followups");
-    setupOrder.splice(followups, 1);
-    setupOrder.splice(2, 0, "configure-followups");
+  const unique = <T extends string>(items: T[]): T[] => Array.from(new Set(items));
+  const attentionOrder = [...ATTENTION_BY_OUTCOME[profile.primaryOutcome]];
+  const journeyPriority = ATTENTION_BY_JOURNEY[profile.journey];
+  const journeyIndex = attentionOrder.indexOf(journeyPriority);
+  if (journeyIndex > 3) {
+    attentionOrder.splice(journeyIndex, 1);
+    attentionOrder.splice(3, 0, journeyPriority);
   }
-  if (profile.primaryOutcome === "bookings") {
-    const calendar = setupOrder.indexOf("connect-calendar");
-    setupOrder.splice(calendar, 1);
-    setupOrder.splice(2, 0, "connect-calendar");
-  }
+
+  const shortcuts = unique([
+    ...SHORTCUTS_BY_ROLE[profile.role],
+    ...SHORTCUTS_BY_TEAM[profile.teamShape],
+    ...SHORTCUTS_BY_OUTCOME[profile.primaryOutcome],
+  ]).slice(0, 3);
+
+  const setupPriorities = [
+    SETUP_BY_OUTCOME[profile.primaryOutcome],
+    SETUP_BY_JOURNEY[profile.journey],
+    ...profile.systems.map((system) => SETUP_BY_SYSTEM[system]),
+  ].filter((task): task is SetupTaskKey => task !== undefined);
+  const setupOrder = [
+    "teach-front-desk" as const,
+    "try-front-desk" as const,
+    ...unique([
+      ...setupPriorities.filter(
+        (task) => task !== "teach-front-desk" && task !== "try-front-desk"
+      ),
+      ...DEFAULT_SETUP_ORDER.filter(
+        (task) => task !== "teach-front-desk" && task !== "try-front-desk"
+      ),
+    ]),
+  ];
+
   return {
-    attentionOrder: [...ATTENTION_BY_OUTCOME[profile.primaryOutcome]],
-    shortcuts: [...SHORTCUTS_BY_OUTCOME[profile.primaryOutcome]],
+    attentionOrder,
+    shortcuts,
     setupOrder,
+    showSectionDescriptions: profile.guidance !== "direct",
   };
 }
 

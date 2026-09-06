@@ -19,6 +19,7 @@ mode: onboarding changes presentation and recommendations only.
 1. Apply the additive preference column once, then start the app:
    ```bash
    npm run db:push
+   npm run db:rls
    npm run dev
    ```
    ✅ Prisma reports the schema in sync; the app starts without a missing-column
@@ -29,7 +30,8 @@ mode: onboarding changes presentation and recommendations only.
    ✅ One question appears at a time with visible progress, Back, and Skip.
    Choose answers, reload midway, and confirm the saved step resumes. Complete
    the flow and confirm the summary describes priorities, shortcuts, and setup
-   without claiming anything was switched on.
+   without claiming anything was switched on. Every choice screen keeps a Back
+   control visible; the first one is disabled because there is no prior answer.
 4. Open <http://localhost:3000/dashboard>.
    ✅ The order is: **Needs your attention → Today's operations → AI Front Desk
    activity → Business pulse → setup (only if incomplete) → Recent activity**.
@@ -39,7 +41,8 @@ mode: onboarding changes presentation and recommendations only.
    ✅ The preference persists. The active marker follows deep routes such as
    `/settings/voice`, `/templates`, and `/automations`. Press Cmd/Ctrl+K, type
    `leads`, open the result, then reopen and press Escape; focus returns to the
-   trigger.
+   trigger. Expand the sidebar and confirm the three **Suggested for you**
+   shortcuts match the questionnaire summary.
 6. Resize to 375px, 768px, 1024px, and 1440px.
    ✅ At 375px the bottom bar contains exactly Today, Inbox, Front Desk, Leads,
    and More. More opens a full-width sheet with a visible close control. Text
@@ -53,7 +56,8 @@ mode: onboarding changes presentation and recommendations only.
    ✅ Owner questions, setup, follow-up controls, campaigns, analytics,
    integrations, settings, and business-wide outcome metrics are absent. Inbox
    activity remains available; assigned-number restrictions are enforced by the
-   server queries.
+   server queries. A fresh agent is not redirected into the admin-only
+   onboarding questionnaire.
 9. Enable the OS/browser “Reduce motion” preference and repeat onboarding plus
    the command menu.
    ✅ Directional motion is removed/reduced and every control remains usable by

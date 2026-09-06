@@ -44,6 +44,7 @@ vi.mock("@/modules/orgs/auth", () => {
 
 import {
   completeOnboardingAction,
+  saveBusinessProfileAction,
   saveWorkspaceProfileStepAction,
 } from "@/app/(app)/onboarding/actions";
 
@@ -103,6 +104,21 @@ describe("personalized onboarding actions", () => {
     expect(orgUpdate).not.toHaveBeenCalled();
   });
 
+  it("does not expose database errors while autosaving", async () => {
+    requireOrgContext.mockResolvedValue(context("OWNER"));
+    transaction.mockRejectedValueOnce(new Error("database password leaked"));
+
+    const result = await saveWorkspaceProfileStepAction({
+      primaryOutcome: "follow-up",
+      lastCompletedStep: 2,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "Couldn't save your answer — please try again.",
+    });
+  });
+
   it("writes shared answers and personal shortcuts only to the caller context", async () => {
     requireOrgContext.mockResolvedValue(context("ADMIN"));
 
@@ -158,5 +174,40 @@ describe("personalized onboarding actions", () => {
     });
     expect(agentProfileUpsert).not.toHaveBeenCalled();
     expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves business identity without activating the AI front desk", async () => {
+    requireOrgContext.mockResolvedValue(context("OWNER"));
+    const formData = new FormData();
+    formData.set("businessName", "Aster Clinic");
+    formData.set("vertical", "clinic");
+    formData.set("country", "IN");
+
+    const result = await saveBusinessProfileAction(formData);
+
+    expect(result.ok).toBe(true);
+    expect(agentProfileUpsert).toHaveBeenCalledWith({
+      where: { orgId: "org-1" },
+      create: {
+        orgId: "org-1",
+        enabled: false,
+        vertical: "clinic",
+        businessName: "Aster Clinic",
+      },
+      update: { vertical: "clinic", businessName: "Aster Clinic" },
+    });
+  });
+
+  it("does not expose database errors while finishing", async () => {
+    requireOrgContext.mockResolvedValue(context("OWNER"));
+    transaction.mockRejectedValueOnce(new Error("database password leaked"));
+
+    const result = await completeOnboardingAction(new FormData());
+
+    expect(result).toEqual({
+      ok: false,
+      message: "Couldn't finish setup — please try again.",
+    });
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

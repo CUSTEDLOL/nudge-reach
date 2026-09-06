@@ -79,7 +79,13 @@ function AttentionRow({ item }: { item: AttentionItem }) {
   );
 }
 
-export function AttentionQueueSection({ queue }: { queue: AttentionQueue }) {
+export function AttentionQueueSection({
+  queue,
+  showDescription = true,
+}: {
+  queue: AttentionQueue;
+  showDescription?: boolean;
+}) {
   return (
     <section aria-labelledby="attention-heading" className="min-w-0">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -90,9 +96,11 @@ export function AttentionQueueSection({ queue }: { queue: AttentionQueue }) {
           >
             Needs your attention
           </h2>
-          <p className="mt-0.5 text-sm text-neutral-600">
-            The few things where a person can make the difference.
-          </p>
+          {showDescription && (
+            <p className="mt-0.5 text-sm text-neutral-600">
+              The few things where a person can make the difference.
+            </p>
+          )}
         </div>
         {!queue.allClear && (
           <Badge tone={queue.items.some((item) => item.urgent) ? "danger" : "neutral"}>

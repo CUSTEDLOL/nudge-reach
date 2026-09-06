@@ -21,8 +21,10 @@ workspace.
   plain-language AI Front Desk summary, four business outcomes, incomplete
   setup, then recent activity. It is deliberately not a bento dashboard.
 - Deterministic workspace priorities based on a resumable onboarding
-  questionnaire. Answers change presentation and recommended setup only—they
-  never enable a campaign, automation, integration, or live message.
+  questionnaire. Role/team answers create visible, role-safe sidebar shortcuts;
+  outcome/journey/systems order attention and setup recommendations; guidance
+  controls section explanation density. These changes never enable a campaign,
+  automation, integration, or live message.
 - Grouped settings navigation with a native mobile selector instead of the long
   horizontal strip.
 - Role-aware Today content. Agents see only permitted navigation/actions, and
@@ -32,11 +34,16 @@ workspace.
 
 - All dashboard reads remain organization-scoped. No consent, send, model,
   automation, or 24-hour-window code changed.
+- Saving business identity creates a disabled Front Desk profile; activation
+  remains an explicit owner decision. Agents are never redirected into the
+  admin-only onboarding flow, and database errors are not surfaced to users.
+- The Today handoff action now opens a dedicated, org-scoped **Needs human**
+  inbox filter rather than silently falling back to Open.
 - `Membership.uiPreferences` is a new additive JSON field. Apply it with
-  `npm run db:push` before starting the updated app after deployment.
+  `npm run db:push` and `npm run db:rls` before deploying the updated app.
 - Manual owner, agent, keyboard, responsive, and reduced-motion checks are in
   `docs/TESTING_ENTERPRISE.md` under “Adaptive workspace smoke test.”
-- Automated verification: 111 test files / 666 tests pass; TypeScript and the
+- Automated verification: 112 test files / 681 tests pass; TypeScript and the
   production build pass; lint has zero errors (one pre-existing warning remains
   in the unchanged voice-minute test).
 

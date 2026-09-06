@@ -39,18 +39,28 @@ export async function saveWorkspaceProfileStepAction(
     };
   }
 
+  let settings: Record<string, unknown>;
+  let profile: WorkspaceProfile;
+  let uiPreferencesJson: Prisma.InputJsonObject;
   try {
-    const settings = mergeWorkspaceProfile(ctx.org.settings, patch);
-    const profile = parseWorkspaceProfile(settings);
+    settings = mergeWorkspaceProfile(ctx.org.settings, patch);
+    profile = parseWorkspaceProfile(settings);
     const defaults = deriveWorkspaceDefaults(profile);
     const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
       pinnedShortcuts: defaults.shortcuts,
     });
-    const uiPreferencesJson: Prisma.InputJsonObject = {
+    uiPreferencesJson = {
       sidebarCollapsed: uiPreferences.sidebarCollapsed,
       pinnedShortcuts: uiPreferences.pinnedShortcuts,
     };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Choose a valid answer.",
+    };
+  }
 
+  try {
     await prisma.$transaction([
       prisma.org.update({
         where: { id: ctx.org.id },
@@ -65,13 +75,10 @@ export async function saveWorkspaceProfileStepAction(
     revalidatePath("/onboarding");
     revalidatePath("/dashboard");
     return { ok: true, message: "Saved.", profile };
-  } catch (err) {
+  } catch {
     return {
       ok: false,
-      message:
-        err instanceof Error
-          ? err.message
-          : "Couldn't save your answer — please try again.",
+      message: "Couldn't save your answer — please try again.",
     };
   }
 }
@@ -125,11 +132,16 @@ export async function saveBusinessProfileAction(
           : {}),
       },
     });
-    // The AI employee introduces itself as this business from the first
-    // message; the owner refines tone and facts on AI Agent → Setup.
+    // Save the identity the AI will eventually use, but onboarding is
+    // discovery only: activation remains an explicit owner action in Setup.
     await prisma.agentProfile.upsert({
       where: { orgId: ctx.org.id },
-      create: { orgId: ctx.org.id, enabled: true, vertical, businessName: name },
+      create: {
+        orgId: ctx.org.id,
+        enabled: false,
+        vertical,
+        businessName: name,
+      },
       update: { vertical, businessName: name },
     });
   } catch {
@@ -155,19 +167,27 @@ export async function completeOnboardingAction(
   const next = String(formData.get("next") ?? "dashboard");
   try {
     requireRole(ctx, "ADMIN");
-    const settings = mergeWorkspaceProfile(ctx.org.settings, {
-      lastCompletedStep: 8,
-    });
-    const profile = parseWorkspaceProfile(settings);
-    const defaults = deriveWorkspaceDefaults(profile);
-    const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
-      pinnedShortcuts: defaults.shortcuts,
-    });
-    const uiPreferencesJson: Prisma.InputJsonObject = {
-      sidebarCollapsed: uiPreferences.sidebarCollapsed,
-      pinnedShortcuts: uiPreferences.pinnedShortcuts,
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Not allowed.",
     };
+  }
 
+  const settings = mergeWorkspaceProfile(ctx.org.settings, {
+    lastCompletedStep: 8,
+  });
+  const profile = parseWorkspaceProfile(settings);
+  const defaults = deriveWorkspaceDefaults(profile);
+  const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
+    pinnedShortcuts: defaults.shortcuts,
+  });
+  const uiPreferencesJson: Prisma.InputJsonObject = {
+    sidebarCollapsed: uiPreferences.sidebarCollapsed,
+    pinnedShortcuts: uiPreferences.pinnedShortcuts,
+  };
+
+  try {
     await prisma.$transaction([
       prisma.org.update({
         where: { id: ctx.org.id },
@@ -183,13 +203,10 @@ export async function completeOnboardingAction(
     ]);
     revalidatePath("/dashboard");
     revalidatePath("/onboarding");
-  } catch (err) {
+  } catch {
     return {
       ok: false,
-      message:
-        err instanceof Error
-          ? err.message
-          : "Couldn't finish setup — please try again.",
+      message: "Couldn't finish setup — please try again.",
     };
   }
   redirect(next === "contacts" ? "/contacts" : "/dashboard");

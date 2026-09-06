@@ -19,6 +19,20 @@ const READ_STATUSES = ["READ", "CLICKED"] as const;
 
 type DashboardRole = "OWNER" | "ADMIN" | "AGENT";
 
+/** Discovery changes organization-wide settings, so only members who can
+ * complete it should ever be redirected into the wizard. */
+export function shouldRedirectToOnboarding(input: {
+  role: DashboardRole;
+  onboardedAt: Date | null;
+  contactCount: number;
+}): boolean {
+  return (
+    input.role !== "AGENT" &&
+    input.onboardedAt === null &&
+    nonNegativeInteger(input.contactCount) === 0
+  );
+}
+
 export interface AttentionQueueInput {
   role: DashboardRole;
   attentionOrder: AttentionKind[];

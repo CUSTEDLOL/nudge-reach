@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/ui/toast";
 /** Authenticated app shell: dark sidebar + topbar + toasts (spec §3.6). */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { org, role, email, membership } = await requireOrgContext();
+  const uiPreferences = parseUiPreferences(membership.uiPreferences);
 
   const name =
     membership.displayName ||
@@ -20,9 +21,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         user={{ name, email }}
         role={role}
         simulation={isSimulated(org)}
-        initialSidebarCollapsed={
-          parseUiPreferences(membership.uiPreferences).sidebarCollapsed
-        }
+        initialSidebarCollapsed={uiPreferences.sidebarCollapsed}
+        suggestedShortcuts={uiPreferences.pinnedShortcuts}
       >
         {children}
       </AppShell>

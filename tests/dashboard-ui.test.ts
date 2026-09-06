@@ -25,6 +25,34 @@ describe("Today dashboard UI", () => {
     expect(html).toContain('href="/inbox/try"');
   });
 
+  it("supports the concise view selected during onboarding", () => {
+    const attention = renderToStaticMarkup(
+      h(AttentionQueueSection, {
+        showDescription: false,
+        queue: {
+          items: [],
+          totalCount: 0,
+          hiddenCount: 0,
+          allClear: true,
+        },
+      })
+    );
+    const operations = renderToStaticMarkup(
+      h(OperationsSummary, {
+        showDescription: false,
+        currency: "INR",
+        items: [],
+      })
+    );
+
+    expect(attention).not.toContain(
+      "The few things where a person can make the difference."
+    );
+    expect(operations).not.toContain(
+      "A quick read on the work moving through your front desk."
+    );
+  });
+
   it("labels urgent work and progressively reveals overflow rows", () => {
     const handoff = {
       kind: "handoff" as const,

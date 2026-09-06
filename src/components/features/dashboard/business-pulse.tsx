@@ -11,6 +11,7 @@ export function BusinessPulse({
   optedInContacts,
   totalContacts,
   currency,
+  showDescription = true,
 }: {
   bookingsThisMonth: number;
   leadsChasedThisMonth: number;
@@ -19,6 +20,7 @@ export function BusinessPulse({
   optedInContacts: number;
   totalContacts: number;
   currency: string;
+  showDescription?: boolean;
 }) {
   const metrics = [
     {
@@ -53,9 +55,11 @@ export function BusinessPulse({
           >
             Business pulse
           </h2>
-          <p className="mt-0.5 text-sm text-neutral-600">
-            Outcome signals for this month, without the reporting noise.
-          </p>
+          {showDescription && (
+            <p className="mt-0.5 text-sm text-neutral-600">
+              A concise mix of this month&apos;s activity and current totals.
+            </p>
+          )}
         </div>
         <Link
           href="/analytics"
