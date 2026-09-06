@@ -1,45 +1,189 @@
 import {
+  BarChart3,
+  BellRing,
+  Blocks,
   Bot,
+  House,
   Inbox,
-  LayoutDashboard,
   Megaphone,
   Settings,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
-/** Mirrors the upcoming Prisma `OrgRole` enum — kept local so the shell
- *  doesn't depend on the schema landing first. */
 export type AppRole = "OWNER" | "ADMIN" | "AGENT";
 
+export type NavKey =
+  | "today"
+  | "inbox"
+  | "leads"
+  | "front-desk"
+  | "followups"
+  | "campaigns"
+  | "analytics"
+  | "integrations"
+  | "settings";
+
 export type NavItem = {
+  key: NavKey;
   label: string;
+  mobileLabel: string;
   href: string;
   icon: LucideIcon;
-  /** Hidden in the sidebar for AGENT role (server-checked by modules too). */
+  activePrefixes: readonly string[];
   hideForAgent?: boolean;
 };
 
-/** Single source of truth for the app sidebar. Deliberately short: the
- *  flagship owner needs six things, not a cockpit. The AI Agent (training +
- *  setup, /agent) is top-level — it IS the product. The power tools
- *  (Integrations, Auto-replies, Templates) live under Settings/Campaigns;
- *  Analytics is folded into the Dashboard. */
-export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Chats", href: "/inbox", icon: Inbox },
-  { label: "AI Agent", href: "/agent", icon: Bot },
-  { label: "Contacts", href: "/contacts", icon: Users },
-  { label: "Campaigns", href: "/campaigns", icon: Megaphone },
-  { label: "Settings", href: "/settings", icon: Settings, hideForAgent: true },
+export type NavGroup = {
+  label: "Workspace" | "Automation" | "Insights" | "Manage";
+  items: readonly NavItem[];
+};
+
+export const NAV_GROUPS: readonly NavGroup[] = [
+  {
+    label: "Workspace",
+    items: [
+      {
+        key: "today",
+        label: "Today",
+        mobileLabel: "Today",
+        href: "/dashboard",
+        icon: House,
+        activePrefixes: ["/dashboard"],
+      },
+      {
+        key: "inbox",
+        label: "Inbox",
+        mobileLabel: "Inbox",
+        href: "/inbox",
+        icon: Inbox,
+        activePrefixes: ["/inbox"],
+      },
+      {
+        key: "leads",
+        label: "Leads",
+        mobileLabel: "Leads",
+        href: "/contacts",
+        icon: Users,
+        activePrefixes: ["/contacts", "/segments"],
+      },
+    ],
+  },
+  {
+    label: "Automation",
+    items: [
+      {
+        key: "front-desk",
+        label: "AI Front Desk",
+        mobileLabel: "Front Desk",
+        href: "/agent",
+        icon: Bot,
+        activePrefixes: ["/agent", "/knowledge"],
+      },
+      {
+        key: "followups",
+        label: "Follow-ups",
+        mobileLabel: "Follow-ups",
+        href: "/automations",
+        icon: BellRing,
+        activePrefixes: ["/automations"],
+        hideForAgent: true,
+      },
+      {
+        key: "campaigns",
+        label: "Campaigns",
+        mobileLabel: "Campaigns",
+        href: "/campaigns",
+        icon: Megaphone,
+        activePrefixes: ["/campaigns", "/templates"],
+      },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      {
+        key: "analytics",
+        label: "Analytics",
+        mobileLabel: "Analytics",
+        href: "/analytics",
+        icon: BarChart3,
+        activePrefixes: ["/analytics"],
+        hideForAgent: true,
+      },
+    ],
+  },
+  {
+    label: "Manage",
+    items: [
+      {
+        key: "integrations",
+        label: "Integrations",
+        mobileLabel: "Integrations",
+        href: "/integrations",
+        icon: Blocks,
+        activePrefixes: ["/integrations"],
+        hideForAgent: true,
+      },
+      {
+        key: "settings",
+        label: "Settings",
+        mobileLabel: "Settings",
+        href: "/settings",
+        icon: Settings,
+        activePrefixes: ["/settings"],
+        hideForAgent: true,
+      },
+    ],
+  },
 ];
 
-export function navItemsForRole(role: AppRole): NavItem[] {
-  return role === "AGENT"
-    ? NAV_ITEMS.filter((item) => !item.hideForAgent)
-    : NAV_ITEMS;
+const MOBILE_PRIMARY_KEYS: readonly NavKey[] = [
+  "today",
+  "inbox",
+  "front-desk",
+  "leads",
+];
+
+export function navGroupsForRole(role: AppRole): NavGroup[] {
+  return NAV_GROUPS.flatMap((group) => {
+    const items = group.items.filter(
+      (item) => role !== "AGENT" || !item.hideForAgent
+    );
+    return items.length > 0 ? [{ ...group, items }] : [];
+  });
 }
 
-export function isNavItemActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+export function navItemsForRole(role: AppRole): NavItem[] {
+  return navGroupsForRole(role).flatMap((group) => [...group.items]);
+}
+
+export function mobilePrimaryItemsForRole(role: AppRole): NavItem[] {
+  const items = navItemsForRole(role);
+  return MOBILE_PRIMARY_KEYS.flatMap((key) => {
+    const item = items.find((candidate) => candidate.key === key);
+    return item ? [item] : [];
+  });
+}
+
+function cleanPathname(pathname: string): string {
+  return pathname.split(/[?#]/, 1)[0] || "/";
+}
+
+function routeMatches(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function activeNavKey(pathname: string): NavKey | null {
+  const clean = cleanPathname(pathname);
+  for (const item of NAV_GROUPS.flatMap((group) => group.items)) {
+    if (item.activePrefixes.some((prefix) => routeMatches(clean, prefix))) {
+      return item.key;
+    }
+  }
+  return null;
+}
+
+export function isNavItemActive(pathname: string, item: NavItem): boolean {
+  return activeNavKey(pathname) === item.key;
 }
