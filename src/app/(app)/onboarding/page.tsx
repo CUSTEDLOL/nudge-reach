@@ -10,11 +10,8 @@ import { OnboardingWizard } from "./wizard";
 
 export const metadata = { title: "Get started — Nudge" };
 
-/**
- * 3-step setup wizard (spec §M1). The dashboard redirects here when the org
- * has never onboarded AND has zero contacts; finishing or skipping sets
- * Org.onboardedAt so it never traps a working account.
- */
+/** First-run discovery and setup. The dashboard redirects here only for a new,
+ * empty org; completed owners can return with ?customize=1. */
 export default async function OnboardingPage({
   searchParams,
 }: {
@@ -35,19 +32,17 @@ export default async function OnboardingPage({
   const isAutoName = org.name === "My shop" || org.name.endsWith("'s shop");
 
   return (
-    <div className="mx-auto w-full max-w-2xl py-4">
-      <OnboardingWizard
-        orgName={isAutoName ? "" : org.name}
-        vertical={org.vertical}
-        country={presetForDialCode(org.dialCode)?.code ?? ""}
-        whatsappConnected={snapshot.whatsappConnected}
-        whatsappDisplayName={snapshot.whatsappDisplayName}
-        simulationMode={snapshot.simulationMode}
-        contactCount={snapshot.contactCount}
-        initialProfile={parseWorkspaceProfile(org.settings)}
-        initialUiPreferences={parseUiPreferences(membership.uiPreferences)}
-        customizing={customizing}
-      />
-    </div>
+    <OnboardingWizard
+      orgName={isAutoName ? "" : org.name}
+      vertical={org.vertical}
+      country={presetForDialCode(org.dialCode)?.code ?? ""}
+      whatsappConnected={snapshot.whatsappConnected}
+      whatsappDisplayName={snapshot.whatsappDisplayName}
+      simulationMode={snapshot.simulationMode}
+      contactCount={snapshot.contactCount}
+      initialProfile={parseWorkspaceProfile(org.settings)}
+      initialUiPreferences={parseUiPreferences(membership.uiPreferences)}
+      customizing={customizing}
+    />
   );
 }

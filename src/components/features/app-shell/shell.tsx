@@ -8,7 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
+import { FlaskConical, LogOut } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Avatar } from "@/components/ui/avatar";
+import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import { Sidebar, type SidebarUser } from "@/components/features/app-shell/sidebar";
 import { Topbar } from "@/components/features/app-shell/topbar";
 import { BottomNav, isThreadRoute } from "@/components/features/app-shell/bottom-nav";
@@ -56,14 +59,46 @@ export function AppShell({
     });
   }
 
+  if (pathname === "/onboarding") {
+    return (
+      <div className="min-h-dvh overflow-x-clip bg-[#f7f8f7]">
+        <SkipLink />
+        <header className="flex h-16 items-center justify-between border-b border-neutral-200 bg-white px-4 sm:px-6">
+          <BrandMark />
+          <div className="flex items-center gap-2 sm:gap-3">
+            {simulation && (
+              <span className="hidden items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 sm:flex">
+                <FlaskConical className="h-3.5 w-3.5" aria-hidden />
+                Safe test workspace
+              </span>
+            )}
+            <Avatar name={user.name} size="sm" />
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                aria-label="Sign out"
+                title="Sign out"
+                className="grid h-11 w-11 place-items-center rounded-xl text-neutral-500 outline-none transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:ring-2 focus-visible:ring-brand-500"
+              >
+                <LogOut className="h-4 w-4" aria-hidden />
+              </button>
+            </form>
+          </div>
+        </header>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-5xl px-4 py-4 outline-none sm:px-6 lg:px-8"
+        >
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh overflow-x-clip bg-[#f7f8f7]">
-      <a
-        href="#main-content"
-        className="fixed left-3 top-3 z-[120] -translate-y-20 rounded-lg bg-neutral-950 px-4 py-2 text-sm font-medium text-white outline-none transition-transform focus:translate-y-0"
-      >
-        Skip to content
-      </a>
+      <SkipLink />
       <Sidebar
         role={role}
         simulation={simulation}
@@ -93,5 +128,16 @@ export function AppShell({
       </div>
       <BottomNav role={role} user={user} simulation={simulation} />
     </div>
+  );
+}
+
+function SkipLink() {
+  return (
+    <a
+      href="#main-content"
+      className="fixed left-3 top-3 z-[120] -translate-y-20 rounded-lg bg-neutral-950 px-4 py-2 text-sm font-medium text-white outline-none transition-transform focus:translate-y-0"
+    >
+      Skip to content
+    </a>
   );
 }

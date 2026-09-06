@@ -5,16 +5,14 @@ export default function OnboardingLoading() {
     <div
       aria-busy="true"
       aria-label="Loading setup"
-      className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-4"
+      className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-2 sm:py-6"
     >
       <div>
         <Skeleton className="h-7 w-56" />
         <Skeleton className="mt-2 h-4 w-80 max-w-full" />
       </div>
-      <div className="flex items-center gap-2">
-        <Skeleton className="h-7 w-full" />
-      </div>
-      <Skeleton className="h-72 w-full rounded-2xl" />
+      <Skeleton className="h-1.5 w-full rounded-full" />
+      <Skeleton className="h-[31rem] w-full rounded-2xl" />
     </div>
   );
 }
