@@ -193,19 +193,21 @@ describe("buildAttentionQueue", () => {
     expect(queue.items).toHaveLength(4);
     expect(queue.totalCount).toBe(7);
     expect(queue.hiddenCount).toBe(3);
+    expect(queue.hiddenItems?.map((item) => item.kind)).toEqual([
+      "owner-question",
+      "followup",
+      "setup",
+    ]);
     expect(queue.allClear).toBe(false);
   });
 
   it("does not expose admin-only work to an agent", () => {
     const queue = buildAttentionQueue({ ...full, role: "AGENT" });
-    expect(queue.items.map((item) => item.kind)).toEqual([
-      "handoff",
-      "payment",
-      "booking",
-      "unread",
-    ]);
-    expect(queue.totalCount).toBe(4);
+    expect(queue.items.map((item) => item.kind)).toEqual(["handoff", "unread"]);
+    expect(queue.totalCount).toBe(2);
     expect(queue.items.map((item) => item.kind)).not.toContain("owner-question");
+    expect(queue.items.map((item) => item.kind)).not.toContain("booking");
+    expect(queue.items.map((item) => item.kind)).not.toContain("payment");
     expect(queue.items.map((item) => item.kind)).not.toContain("followup");
     expect(queue.items.map((item) => item.kind)).not.toContain("setup");
   });

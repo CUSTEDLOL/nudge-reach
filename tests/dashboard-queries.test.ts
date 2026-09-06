@@ -67,7 +67,12 @@ describe("getDashboardData operational snapshot", () => {
 
   it("loads every attention and operations count inside the caller org", async () => {
     const now = new Date("2026-09-06T12:00:00.000Z");
-    const data = await getDashboardData("org-a", "Asia/Kolkata", now);
+    const data = await getDashboardData(
+      "org-a",
+      "Asia/Kolkata",
+      now,
+      ["wa-1"]
+    );
 
     expect(data).toMatchObject({
       handoffCount: 2,
@@ -86,6 +91,27 @@ describe("getDashboardData operational snapshot", () => {
     expect(db.ownerQuestionCount).toHaveBeenCalledWith({
       where: { orgId: "org-a", status: "pending" },
     });
+    expect(db.conversationCount).toHaveBeenCalledWith({
+      where: {
+        orgId: "org-a",
+        status: "handoff",
+        OR: [
+          { whatsappAccountId: { in: ["wa-1"] } },
+          { whatsappAccountId: null },
+        ],
+      },
+    });
+    expect(db.conversationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          orgId: "org-a",
+          OR: [
+            { whatsappAccountId: { in: ["wa-1"] } },
+            { whatsappAccountId: null },
+          ],
+        }),
+      })
+    );
     expect(db.bookingRequestCount).toHaveBeenCalledWith({
       where: {
         orgId: "org-a",

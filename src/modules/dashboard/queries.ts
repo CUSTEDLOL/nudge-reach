@@ -17,6 +17,7 @@ import {
   getRecoveryMetrics,
   type RecoveryMetrics,
 } from "@/modules/followup/metrics";
+import { numberAccessClause } from "@/modules/inbox/access";
 
 export interface RecentConversation {
   id: string;
@@ -63,10 +64,12 @@ export interface DashboardData {
 export async function getDashboardData(
   orgId: string,
   timezone: string = "UTC",
-  now: Date = new Date()
+  now: Date = new Date(),
+  allowedWhatsappAccountIds: string[] | null = null
 ): Promise<DashboardData> {
   const simulationMode = (await orgSendMode(orgId)) === "simulation";
   const today = dayBoundsInTimezone(timezone, now);
+  const conversationAccess = numberAccessClause(allowedWhatsappAccountIds);
 
   const [
     contactCount,
@@ -96,10 +99,14 @@ export async function getDashboardData(
     prisma.contact.count({ where: { orgId, leadStage: "WON" } }),
     // "handoff" threads live under Open with a "Needs human" badge (spec §3.2).
     prisma.conversation.count({
-      where: { orgId, status: { in: ["open", "handoff"] } },
+      where: {
+        orgId,
+        status: { in: ["open", "handoff"] },
+        ...conversationAccess,
+      },
     }),
     prisma.conversation.aggregate({
-      where: { orgId },
+      where: { orgId, ...conversationAccess },
       _sum: { unreadCount: true },
     }),
     prisma.campaign.count({
@@ -114,10 +121,10 @@ export async function getDashboardData(
     prisma.automation.count({ where: { orgId } }),
     prisma.automation.count({ where: { orgId, enabled: true } }),
     prisma.whatsappAccount.count({ where: { orgId } }),
-    prisma.conversation.count({ where: { orgId } }),
+    prisma.conversation.count({ where: { orgId, ...conversationAccess } }),
     prisma.knowledgeEntry.count({ where: { orgId, status: "active" } }),
     prisma.conversation.findMany({
-      where: { orgId },
+      where: { orgId, ...conversationAccess },
       orderBy: [
         { lastMessageAt: { sort: "desc", nulls: "last" } },
         { updatedAt: "desc" },
@@ -146,7 +153,7 @@ export async function getDashboardData(
       },
     }),
     prisma.conversation.count({
-      where: { orgId, status: "handoff" },
+      where: { orgId, status: "handoff", ...conversationAccess },
     }),
     prisma.ownerQuestion.count({
       where: { orgId, status: "pending" },

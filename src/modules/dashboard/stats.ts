@@ -44,6 +44,7 @@ export interface AttentionQueue {
   items: AttentionItem[];
   totalCount: number;
   hiddenCount: number;
+  hiddenItems?: AttentionItem[];
   allClear: boolean;
 }
 
@@ -57,12 +58,7 @@ const ATTENTION_FALLBACK_ORDER: AttentionKind[] = [
   "setup",
 ];
 
-const AGENT_ATTENTION = new Set<AttentionKind>([
-  "handoff",
-  "unread",
-  "booking",
-  "payment",
-]);
+const AGENT_ATTENTION = new Set<AttentionKind>(["handoff", "unread"]);
 
 function nonNegativeInteger(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
@@ -177,6 +173,7 @@ export function buildAttentionQueue(
     items,
     totalCount,
     hiddenCount: Math.max(0, totalCount - items.length),
+    ...(totalCount > items.length ? { hiddenItems: ordered.slice(4) } : {}),
     allClear: totalCount === 0,
   };
 }
