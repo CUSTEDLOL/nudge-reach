@@ -4,20 +4,18 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { FlaskConical, LogOut, MoreHorizontal } from "lucide-react";
+import { FlaskConical, LogOut, MoreHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { useMounted, useOverlay } from "@/components/ui/overlay";
 import {
   isNavItemActive,
-  navItemsForRole,
+  mobilePrimaryItemsForRole,
+  navGroupsForRole,
   type AppRole,
-  type NavItem,
+  type NavGroup,
 } from "@/components/features/app-shell/nav";
 import type { SidebarUser } from "@/components/features/app-shell/sidebar";
-
-/** First N nav items get a fixed slot in the bottom bar; the rest live in "More". */
-const CORE_COUNT = 4;
 
 /** /inbox/[id] is a full-screen chat — the bar would crowd the composer there. */
 export function isThreadRoute(pathname: string): boolean {
@@ -25,9 +23,8 @@ export function isThreadRoute(pathname: string): boolean {
 }
 
 /**
- * Mobile-only (< lg) fixed bottom navigation: Dashboard, Inbox, Contacts,
- * Campaigns + a "More" sheet with the remaining sections and the user block.
- * Desktop keeps the dark sidebar; this bar replaces the old hamburger drawer.
+ * Mobile-only (< lg) fixed bottom navigation: Today, Inbox, Front Desk, Leads,
+ * and a grouped More sheet. Desktop uses the adaptive sidebar.
  */
 export function BottomNav({
   role = "OWNER",
@@ -43,10 +40,15 @@ export function BottomNav({
 
   if (isThreadRoute(pathname)) return null;
 
-  const items = navItemsForRole(role);
-  const core = items.slice(0, CORE_COUNT);
-  const rest = items.slice(CORE_COUNT);
-  const moreActive = rest.some((item) => isNavItemActive(pathname, item.href));
+  const primary = mobilePrimaryItemsForRole(role);
+  const primaryKeys = new Set(primary.map((item) => item.key));
+  const secondaryGroups = navGroupsForRole(role).flatMap((group) => {
+    const items = group.items.filter((item) => !primaryKeys.has(item.key));
+    return items.length > 0 ? [{ ...group, items }] : [];
+  });
+  const moreActive = secondaryGroups.some((group) =>
+    group.items.some((item) => isNavItemActive(pathname, item))
+  );
 
   return (
     <>
@@ -55,8 +57,8 @@ export function BottomNav({
         className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         <div className="mx-auto grid h-16 max-w-lg grid-cols-5">
-          {core.map((item) => {
-            const active = isNavItemActive(pathname, item.href);
+          {primary.map((item) => {
+            const active = isNavItemActive(pathname, item);
             const Icon = item.icon;
             return (
               <Link
@@ -64,7 +66,7 @@ export function BottomNav({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400/60",
+                  "flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500",
                   active ? "text-brand-700" : "text-neutral-500 active:text-neutral-800"
                 )}
               >
@@ -76,7 +78,7 @@ export function BottomNav({
                 >
                   <Icon className="h-5 w-5" aria-hidden />
                 </span>
-                {item.label}
+                {item.mobileLabel}
               </Link>
             );
           })}
@@ -87,7 +89,7 @@ export function BottomNav({
             aria-expanded={moreOpen}
             aria-haspopup="dialog"
             className={cn(
-              "flex flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400/60",
+              "flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500",
               moreActive || moreOpen
                 ? "text-brand-700"
                 : "text-neutral-500 active:text-neutral-800"
@@ -109,7 +111,7 @@ export function BottomNav({
       <MoreSheet
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
-        items={rest}
+        groups={secondaryGroups}
         pathname={pathname}
         user={user}
         simulation={simulation}
@@ -118,18 +120,18 @@ export function BottomNav({
   );
 }
 
-/** Bottom sheet listing the non-core sections + account block. */
+/** Bottom sheet listing grouped secondary destinations + account block. */
 function MoreSheet({
   open,
   onClose,
-  items,
+  groups,
   pathname,
   user,
   simulation,
 }: {
   open: boolean;
   onClose: () => void;
-  items: NavItem[];
+  groups: NavGroup[];
   pathname: string;
   user: SidebarUser;
   simulation: boolean;
@@ -153,51 +155,74 @@ function MoreSheet({
         aria-modal="true"
         aria-label="More sections"
         tabIndex={-1}
-        className="animate-rise relative w-full rounded-t-2xl border border-black/5 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lift outline-none"
+        className="relative max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-neutral-200 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lift outline-none motion-safe:animate-rise"
       >
         <div
           aria-hidden
           className="mx-auto mt-2.5 h-1 w-9 rounded-full bg-neutral-200"
         />
+        <div className="flex items-center justify-between px-4 pb-1 pt-2">
+          <div>
+            <p className="text-base font-semibold text-neutral-950">More</p>
+            <p className="text-xs text-neutral-500">
+              Everything else in your workspace
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close more menu"
+            className="grid h-11 w-11 place-items-center rounded-xl text-neutral-500 outline-none transition-colors active:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
         {simulation && (
           <p className="mx-4 mt-3 flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700">
             <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Test mode — nothing reaches real customers
           </p>
         )}
-        <nav aria-label="More sections" className="p-2 pt-3">
-          {items.length === 0 && (
+        <nav aria-label="More sections" className="p-2 pt-1">
+          {groups.length === 0 && (
             <p className="px-3 py-2 text-sm text-neutral-500">
               Everything you can access is on the bar below.
             </p>
           )}
-          {items.map((item) => {
-            const active = isNavItemActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50",
-                  active
-                    ? "bg-brand-50 text-brand-700"
-                    : "text-neutral-700 active:bg-neutral-100"
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "h-4.5 w-4.5 shrink-0",
-                    active ? "text-brand-600" : "text-neutral-400"
-                  )}
-                  aria-hidden
-                />
-                {item.label}
-              </Link>
-            );
-          })}
+          {groups.map((group) => (
+            <section key={group.label}>
+              <h2 className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+                {group.label}
+              </h2>
+              {group.items.map((item) => {
+                const active = isNavItemActive(pathname, item);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-500",
+                      active
+                        ? "bg-brand-50 text-brand-800"
+                        : "text-neutral-700 active:bg-neutral-100"
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-[18px] w-[18px] shrink-0",
+                        active ? "text-brand-700" : "text-neutral-400"
+                      )}
+                      aria-hidden
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </section>
+          ))}
         </nav>
         <div className="flex items-center gap-2.5 border-t border-neutral-100 px-4 py-3">
           <Avatar name={user.name} size="sm" />
@@ -210,7 +235,7 @@ function MoreSheet({
           <form action="/auth/signout" method="post">
             <button
               type="submit"
-              className="flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-neutral-600 outline-none transition-colors duration-150 hover:bg-black/5 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+              className="flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-neutral-600 outline-none transition-colors duration-150 hover:bg-black/5 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <LogOut className="h-4 w-4" aria-hidden />
               Sign out

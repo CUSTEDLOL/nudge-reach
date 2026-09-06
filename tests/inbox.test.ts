@@ -16,7 +16,15 @@ const ME = "user_me";
 
 describe("parseInboxFilter", () => {
   it("accepts every known filter", () => {
-    for (const f of ["all", "open", "mine", "unassigned", "resolved", "unread"]) {
+    for (const f of [
+      "all",
+      "open",
+      "handoff",
+      "mine",
+      "unassigned",
+      "resolved",
+      "unread",
+    ]) {
       expect(parseInboxFilter(f)).toBe(f);
     }
   });
@@ -28,7 +36,15 @@ describe("parseInboxFilter", () => {
 
 describe("buildConversationWhere (spec §M2 filters)", () => {
   it("always scopes to the org", () => {
-    for (const f of ["all", "open", "mine", "unassigned", "resolved", "unread"] as const) {
+    for (const f of [
+      "all",
+      "open",
+      "handoff",
+      "mine",
+      "unassigned",
+      "resolved",
+      "unread",
+    ] as const) {
       expect(buildConversationWhere(ORG, f, "", ME).orgId).toBe(ORG);
     }
   });
@@ -36,6 +52,11 @@ describe("buildConversationWhere (spec §M2 filters)", () => {
   it("open includes handoff (shows the Needs-human badge under Open)", () => {
     const where = buildConversationWhere(ORG, "open", "", ME);
     expect(where.status).toEqual({ in: ["open", "handoff"] });
+  });
+
+  it("handoff isolates conversations waiting for a person", () => {
+    const where = buildConversationWhere(ORG, "handoff", "", ME);
+    expect(where.status).toBe("handoff");
   });
 
   it("resolved treats legacy closed rows as resolved", () => {

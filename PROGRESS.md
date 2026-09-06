@@ -87,6 +87,47 @@ current API; CRM writes no longer assume client-specific picklists.
 - Connect the carrier number. Reconnect any existing Zoho connection once so it
   grants `ZohoSearch.securesearch.READ`.
 
+## Adaptive operations workspace — dashboard, navigation, onboarding (2026-09-06) ✅
+
+The authenticated product now leads with the operating question a clinic owner
+actually has: **what needs my attention now?** The redesign keeps every existing
+capability, but replaces the feature-heavy cockpit with a calmer, predictable
+workspace.
+
+### Built
+
+- A light, collapsible desktop sidebar grouped into Workspace, Automation,
+  Insights, and Manage; a five-item mobile bar with an accessible More sheet;
+  and an honest Cmd/Ctrl+K jump menu. Deep routes keep their parent active.
+- A single-flow Today page: ranked customer blockers, today's operations, a
+  plain-language AI Front Desk summary, four business outcomes, incomplete
+  setup, then recent activity. It is deliberately not a bento dashboard.
+- Deterministic workspace priorities based on a resumable onboarding
+  questionnaire. Role/team answers create visible, role-safe sidebar shortcuts;
+  outcome/journey/systems order attention and setup recommendations; guidance
+  controls section explanation density. These changes never enable a campaign,
+  automation, integration, or live message.
+- Grouped settings navigation with a native mobile selector instead of the long
+  horizontal strip.
+- Role-aware Today content. Agents see only permitted navigation/actions, and
+  conversation counts and recents honor their assigned WhatsApp numbers.
+
+### Safety and deployment
+
+- All dashboard reads remain organization-scoped. No consent, send, model,
+  automation, or 24-hour-window code changed.
+- Saving business identity creates a disabled Front Desk profile; activation
+  remains an explicit owner decision. Agents are never redirected into the
+  admin-only onboarding flow, and database errors are not surfaced to users.
+- The Today handoff action now opens a dedicated, org-scoped **Needs human**
+  inbox filter rather than silently falling back to Open.
+- `Membership.uiPreferences` is a new additive JSON field. Apply it with
+  `npm run db:push` and `npm run db:rls` before deploying the updated app.
+- Manual owner, agent, keyboard, responsive, and reduced-motion checks are in
+  `docs/TESTING_ENTERPRISE.md` under “Adaptive workspace smoke test.”
+- Automated verification: 112 test files / 681 tests pass; TypeScript and the
+  production build pass; lint has zero errors (one pre-existing warning remains
+  in the unchanged voice-minute test).
 ## CRM sync finished — every stage change reaches the CRM (2026-09-05) ✅
 
 Audit after merging the enterprise track found the gap: lead stages change in six

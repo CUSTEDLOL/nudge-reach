@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 /**
  * Inbox list filters (spec §M2), pure and unit-tested. Semantics:
  * - open       → status open OR handoff (handoff shows a "Needs human" badge)
+ * - handoff    → only conversations waiting for a person
  * - mine       → assigned to the caller, not yet resolved
  * - unassigned → no assignee, not yet resolved
  * - resolved   → resolved (legacy "closed" rows count as resolved)
@@ -13,6 +14,7 @@ import type { Prisma } from "@prisma/client";
 export const INBOX_FILTERS = [
   "all",
   "open",
+  "handoff",
   "mine",
   "unassigned",
   "resolved",
@@ -24,6 +26,7 @@ export type InboxFilter = (typeof INBOX_FILTERS)[number];
 export const INBOX_FILTER_LABELS: Record<InboxFilter, string> = {
   all: "All",
   open: "Open",
+  handoff: "Needs human",
   mine: "Mine",
   unassigned: "Unassigned",
   resolved: "Resolved",
@@ -51,6 +54,9 @@ export function buildConversationWhere(
   switch (filter) {
     case "open":
       where.status = { in: ["open", "handoff"] };
+      break;
+    case "handoff":
+      where.status = "handoff";
       break;
     case "mine":
       where.assignedToUserId = userId;

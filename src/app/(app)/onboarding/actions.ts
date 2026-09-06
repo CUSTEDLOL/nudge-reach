@@ -2,14 +2,85 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
 import { isVertical } from "@/modules/dashboard/verticals";
+import {
+  deriveWorkspaceDefaults,
+  mergeUiPreferences,
+  mergeWorkspaceProfile,
+  parseWorkspaceProfile,
+  type WorkspaceProfile,
+} from "@/modules/dashboard/workspace-profile";
 
 export interface ActionResult {
   ok: boolean;
   message: string;
+}
+
+export interface WorkspaceProfileActionResult extends ActionResult {
+  profile?: WorkspaceProfile;
+}
+
+/** Autosave one or more validated discovery answers. Presentation defaults are
+ * written for the current member only and never change their role or sends. */
+export async function saveWorkspaceProfileStepAction(
+  patch: unknown
+): Promise<WorkspaceProfileActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Not allowed.",
+    };
+  }
+
+  let settings: Record<string, unknown>;
+  let profile: WorkspaceProfile;
+  let uiPreferencesJson: Prisma.InputJsonObject;
+  try {
+    settings = mergeWorkspaceProfile(ctx.org.settings, patch);
+    profile = parseWorkspaceProfile(settings);
+    const defaults = deriveWorkspaceDefaults(profile);
+    const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
+      pinnedShortcuts: defaults.shortcuts,
+    });
+    uiPreferencesJson = {
+      sidebarCollapsed: uiPreferences.sidebarCollapsed,
+      pinnedShortcuts: uiPreferences.pinnedShortcuts,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Choose a valid answer.",
+    };
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.org.update({
+        where: { id: ctx.org.id },
+        data: { settings: settings as Prisma.InputJsonValue },
+      }),
+      prisma.membership.update({
+        where: { id: ctx.membership.id },
+        data: { uiPreferences: uiPreferencesJson },
+      }),
+    ]);
+
+    revalidatePath("/onboarding");
+    revalidatePath("/dashboard");
+    return { ok: true, message: "Saved.", profile };
+  } catch {
+    return {
+      ok: false,
+      message: "Couldn't save your answer — please try again.",
+    };
+  }
 }
 
 /** Step 1: business name + vertical → Org. Admin-gated (renames the org). */
@@ -61,11 +132,16 @@ export async function saveBusinessProfileAction(
           : {}),
       },
     });
-    // The AI employee introduces itself as this business from the first
-    // message; the owner refines tone and facts on AI Agent → Setup.
+    // Save the identity the AI will eventually use, but onboarding is
+    // discovery only: activation remains an explicit owner action in Setup.
     await prisma.agentProfile.upsert({
       where: { orgId: ctx.org.id },
-      create: { orgId: ctx.org.id, enabled: true, vertical, businessName: name },
+      create: {
+        orgId: ctx.org.id,
+        enabled: false,
+        vertical,
+        businessName: name,
+      },
       update: { vertical, businessName: name },
     });
   } catch {
@@ -79,15 +155,6 @@ export async function saveBusinessProfileAction(
   return { ok: true, message: "Saved — nice to meet you!" };
 }
 
-async function markOnboarded(orgId: string): Promise<void> {
-  await prisma.org.update({
-    where: { id: orgId },
-    data: { onboardedAt: new Date() },
-  });
-  revalidatePath("/dashboard");
-  revalidatePath("/onboarding");
-}
-
 /**
  * Finish (or skip) the wizard — sets Org.onboardedAt so the dashboard stops
  * redirecting here. `next=contacts` lands on the import flow, anything else
@@ -99,9 +166,48 @@ export async function completeOnboardingAction(
   const ctx = await requireOrgContext();
   const next = String(formData.get("next") ?? "dashboard");
   try {
-    await markOnboarded(ctx.org.id);
+    requireRole(ctx, "ADMIN");
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Not allowed.",
+    };
+  }
+
+  const settings = mergeWorkspaceProfile(ctx.org.settings, {
+    lastCompletedStep: 8,
+  });
+  const profile = parseWorkspaceProfile(settings);
+  const defaults = deriveWorkspaceDefaults(profile);
+  const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
+    pinnedShortcuts: defaults.shortcuts,
+  });
+  const uiPreferencesJson: Prisma.InputJsonObject = {
+    sidebarCollapsed: uiPreferences.sidebarCollapsed,
+    pinnedShortcuts: uiPreferences.pinnedShortcuts,
+  };
+
+  try {
+    await prisma.$transaction([
+      prisma.org.update({
+        where: { id: ctx.org.id },
+        data: {
+          onboardedAt: new Date(),
+          settings: settings as Prisma.InputJsonValue,
+        },
+      }),
+      prisma.membership.update({
+        where: { id: ctx.membership.id },
+        data: { uiPreferences: uiPreferencesJson },
+      }),
+    ]);
+    revalidatePath("/dashboard");
+    revalidatePath("/onboarding");
   } catch {
-    return { ok: false, message: "Couldn't finish setup — please try again." };
+    return {
+      ok: false,
+      message: "Couldn't finish setup — please try again.",
+    };
   }
   redirect(next === "contacts" ? "/contacts" : "/dashboard");
 }

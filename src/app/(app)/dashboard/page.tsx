@@ -1,620 +1,162 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import { Bot } from "lucide-react";
+import { AttentionQueueSection } from "@/components/features/dashboard/attention-queue";
+import { BusinessPulse } from "@/components/features/dashboard/business-pulse";
+import { FrontDeskSummary } from "@/components/features/dashboard/front-desk-summary";
+import { OperationsSummary } from "@/components/features/dashboard/operations-summary";
+import { RecentActivity } from "@/components/features/dashboard/recent-activity";
+import { SetupProgress } from "@/components/features/dashboard/setup-progress";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
-  ArrowRight,
-  BookOpen,
-  Bot,
-  Check,
-  HelpCircle,
-  Megaphone,
-  MessagesSquare,
-  Plug,
-  UserPlus,
-  type LucideIcon,
-} from "lucide-react";
-import { prisma } from "@/lib/db";
-import { requireOrgContext } from "@/modules/orgs/auth";
-import { getDashboardData } from "@/modules/dashboard/queries";
-import { getRecoveryMetrics } from "@/modules/followup/metrics";
-import type { RecentCampaign, RecentConversation } from "@/modules/dashboard/queries";
-import {
-  estimateRevenueInfluencedInr,
-  type Checklist,
-} from "@/modules/dashboard/stats";
-import {
-  formatCount,
-  formatMajorAmount,
-  formatPercent,
-  formatRelativeTime,
   greetingForHour,
   hourInTimezone,
 } from "@/modules/dashboard/format";
-import { cn } from "@/lib/cn";
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { buttonVariants } from "@/components/ui/button";
+import { getDashboardData } from "@/modules/dashboard/queries";
+import {
+  buildAttentionQueue,
+  buildOperationsSummary,
+  estimateRevenueInfluencedInr,
+  shouldRedirectToOnboarding,
+} from "@/modules/dashboard/stats";
+import {
+  deriveWorkspaceDefaults,
+  parseWorkspaceProfile,
+} from "@/modules/dashboard/workspace-profile";
+import { requireOrgContext } from "@/modules/orgs/auth";
 
 export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
-  const data = await getDashboardData(org.id);
-  const recovery = await getRecoveryMetrics(org.id);
-  const [pendingQuestions, handoffCount] = await Promise.all([
-    prisma.ownerQuestion.count({
-      where: { orgId: org.id, status: "pending" },
-    }),
-    prisma.conversation.count({
-      where: { orgId: org.id, status: "handoff" },
-    }),
-  ]);
+  const now = new Date();
+  const isAgent = membership.role === "AGENT";
+  const allowedWhatsappAccountIds =
+    isAgent && membership.whatsappAccountIds.length > 0
+      ? membership.whatsappAccountIds
+      : null;
+  const data = await getDashboardData(
+    org.id,
+    org.timezone,
+    now,
+    allowedWhatsappAccountIds
+  );
 
-  // First visit with an empty workspace → guided setup (spec §M1).
-  if (!org.onboardedAt && data.contactCount === 0) {
+  if (
+    shouldRedirectToOnboarding({
+      role: membership.role,
+      onboardedAt: org.onboardedAt,
+      contactCount: data.contactCount,
+    })
+  ) {
     redirect("/onboarding");
   }
 
+  const profile = parseWorkspaceProfile(org.settings);
+  const workspaceDefaults = deriveWorkspaceDefaults(profile);
+  const attention = buildAttentionQueue({
+    role: membership.role,
+    attentionOrder: workspaceDefaults.attentionOrder,
+    handoffCount: data.handoffCount,
+    ownerQuestionCount: data.ownerQuestionCount,
+    unreadMessageCount: data.unreadMessageCount,
+    pendingBookingCount: data.pendingBookingCount,
+    pendingPaymentCount: data.pendingPaymentCount,
+    followupsEnabled: data.recovery.enabled,
+    setupRemaining: data.checklist.total - data.checklist.completed,
+  });
+  const operations = buildOperationsSummary({
+    bookingsToday: data.bookingsToday,
+    pendingBookings: data.pendingBookingCount,
+    openConversations: data.openConversationCount,
+    followUpsThisMonth: data.recovery.followUpsThisMonth,
+    pendingPayments: data.pendingPaymentCount,
+    pendingPaymentAmountMinor: data.pendingPaymentAmountMinor,
+  });
+  const visibleOperations = isAgent
+    ? operations.filter((item) => item.key === "conversations")
+    : operations;
   const firstName =
     (membership.displayName || email.split("@")[0] || "there").split(/\s+/)[0];
-  const revenueInr = estimateRevenueInfluencedInr(
-    data.wonContactCount,
-    org.settings
-  );
   const today = new Intl.DateTimeFormat("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",
-  }).format(new Date());
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="animate-rise" style={{ animationDelay: "0ms" }}>
-        <PageHeader
-          className="mb-0"
-          title={`${greetingForHour(hourInTimezone(org.timezone))}, ${firstName}`}
-          description={`${today}. Here's how ${org.name} is doing.`}
-          actions={
-            <Link href="/inbox/try" className={buttonVariants()}>
-              <Bot className="h-4 w-4" aria-hidden />
-              Try your AI
-            </Link>
-          }
-        />
-      </div>
-
-      {(handoffCount > 0 || pendingQuestions > 0) && (
-        <section
-          aria-label="Needs you"
-          className="animate-rise grid gap-3 sm:grid-cols-2"
-          style={{ animationDelay: "60ms" }}
-        >
-          {handoffCount > 0 && (
-            <NeedsYouCard
-              href="/inbox"
-              icon={<MessagesSquare className="h-4 w-4" aria-hidden />}
-              count={handoffCount}
-              title={`chat${handoffCount === 1 ? "" : "s"} waiting for a human`}
-              description="Your AI handed these over. Jump in when you can."
-            />
-          )}
-          {pendingQuestions > 0 && (
-            <NeedsYouCard
-              href="/agent"
-              icon={<HelpCircle className="h-4 w-4" aria-hidden />}
-              count={pendingQuestions}
-              title={`question${pendingQuestions === 1 ? "" : "s"} your AI couldn't answer`}
-              description="Answer once and it learns the answer forever."
-            />
-          )}
-        </section>
-      )}
-
-      {!data.checklist.allDone && (
-        <div className="animate-rise" style={{ animationDelay: "100ms" }}>
-          <ChecklistCard checklist={data.checklist} orgName={org.name} />
-        </div>
-      )}
-
-      {/* This month: the outcomes an owner actually cares about. */}
-      <section
-        aria-label="This month"
-        className="animate-rise grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        style={{ animationDelay: "140ms" }}
-      >
-        <WinTile
-          label="Bookings"
-          value={formatCount(recovery.bookingsThisMonth)}
-          hint="Booked this month"
-          accent
-        />
-        <WinTile
-          label="Leads chased"
-          value={formatCount(recovery.followUpsThisMonth)}
-          hint={recovery.enabled ? "Follow-ups sent" : "Turn on Revenue Recovery"}
-        />
-        <WinTile
-          label="Revenue influenced"
-          value={formatMajorAmount(revenueInr, org.currency)}
-          hint={`${formatCount(data.wonContactCount)} won`}
-        />
-        <WinTile
-          label="Opted-in contacts"
-          value={formatCount(data.optedInContactCount)}
-          hint={`${formatCount(data.contactCount)} total`}
-        />
-      </section>
-
-      <div className="animate-rise" style={{ animationDelay: "180ms" }}>
-        <MessageHealthCard rates={data.rates} />
-      </div>
-
-      <section
-        className="animate-rise grid grid-cols-1 items-start gap-6 lg:grid-cols-3"
-        style={{ animationDelay: "220ms" }}
-      >
-        <RecentConversationsCard
-          conversations={data.recentConversations}
-          className="lg:col-span-2"
-        />
-        <div className="flex flex-col gap-6">
-          <QuickActionsCard />
-          <RecentCampaignsCard campaigns={data.recentCampaigns} />
-        </div>
-      </section>
-    </div>
+    timeZone: org.timezone,
+  }).format(now);
+  const revenueInfluenced = estimateRevenueInfluencedInr(
+    data.wonContactCount,
+    org.settings
   );
-}
 
-/* ------------------------------------------------------------------ */
-/* Needs you: the single attention area                                */
-/* ------------------------------------------------------------------ */
-
-function NeedsYouCard({
-  href,
-  icon,
-  count,
-  title,
-  description,
-}: {
-  href: string;
-  icon: ReactNode;
-  count: number;
-  title: string;
-  description: string;
-}) {
   return (
-    <Link
-      href={href}
-      className="group flex items-center gap-3.5 rounded-2xl border border-neutral-200 bg-white px-5 py-4 transition-colors duration-150 hover:border-neutral-300"
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold text-neutral-900">
-          {count} {title}
-        </p>
-        <p className="mt-0.5 text-xs text-neutral-500">{description}</p>
-      </div>
-      <ArrowRight
-        className="h-4 w-4 shrink-0 text-neutral-400 transition-colors group-hover:text-brand-600"
-        aria-hidden
-      />
-    </Link>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Win tile: one quiet outcome number, green accent on the primary     */
-/* ------------------------------------------------------------------ */
-
-function WinTile({
-  label,
-  value,
-  hint,
-  accent = false,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <p className="text-sm font-medium text-neutral-500">{label}</p>
-      <p
-        className={cn(
-          "mt-2 text-[2rem] font-bold leading-none tracking-tight",
-          accent ? "text-brand-600" : "text-neutral-900"
-        )}
-      >
-        {value}
-      </p>
-      <p className="mt-2 text-xs text-neutral-400">{hint}</p>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Message health: the analytics summary, folded onto the dashboard    */
-/* ------------------------------------------------------------------ */
-
-function MessageHealthCard({
-  rates,
-}: {
-  rates: {
-    sentTotal: number;
-    deliveredRate: number | null;
-    readRate: number | null;
-  };
-}) {
-  const metrics = [
-    { label: "Sent", value: formatCount(rates.sentTotal) },
-    { label: "Delivered", value: formatPercent(rates.deliveredRate) },
-    { label: "Read", value: formatPercent(rates.readRate) },
-  ];
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <CardTitle>Message health</CardTitle>
-          <CardDescription className="mt-0.5">
-            How your broadcasts and follow-ups are landing.
-          </CardDescription>
-        </div>
-        <Link
-          href="/analytics"
-          className="shrink-0 text-xs font-medium text-brand-700 transition-colors duration-150 hover:text-brand-800"
-        >
-          View details →
-        </Link>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {metrics.map((m) => (
-          <div
-            key={m.label}
-            className="rounded-xl border border-neutral-200 p-3.5"
-          >
-            <p className="text-xl font-semibold text-neutral-900">
-              {m.value}
-            </p>
-            <p className="mt-0.5 text-xs text-neutral-500">{m.label}</p>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Onboarding checklist                                                */
-/* ------------------------------------------------------------------ */
-
-function ChecklistCard({
-  checklist,
-  orgName,
-}: {
-  checklist: Checklist;
-  orgName: string;
-}) {
-  return (
-    <Card className="p-6">
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <div>
-          <CardTitle>Finish setting up {orgName}</CardTitle>
-          <CardDescription className="mt-0.5">
-            {`${checklist.completed} of ${checklist.total} steps done. Your AI Front Desk is almost on shift.`}
-          </CardDescription>
-        </div>
-        <div className="flex w-44 items-center gap-2">
-          <Progress
-            value={checklist.completed}
-            max={checklist.total}
-            label="Setup progress"
-          />
-          <span className="shrink-0 text-xs font-medium text-neutral-500">
-            {checklist.completed}/{checklist.total}
-          </span>
-        </div>
-      </div>
-
-      <ol className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        {checklist.items.map((item, index) => (
-          <li key={item.key}>
-            <Link
-              href={item.href}
-              className={cn(
-                "group flex h-full flex-col gap-2 rounded-xl border p-3 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50",
-                item.done
-                  ? "border-emerald-100 bg-emerald-50/50"
-                  : "border-neutral-200 bg-white hover:border-brand-300 hover:bg-brand-50/40"
-              )}
-            >
-              <span className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
-                    item.done
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-brand-50 text-brand-700"
-                  )}
-                >
-                  {item.done ? (
-                    <Check className="h-3.5 w-3.5" aria-hidden />
-                  ) : (
-                    index + 1
-                  )}
-                </span>
-                {!item.done && (
-                  <ArrowRight
-                    className="h-3.5 w-3.5 text-neutral-300 transition-colors duration-150 group-hover:text-brand-500"
-                    aria-hidden
-                  />
-                )}
-              </span>
-              <span
-                className={cn(
-                  "text-sm font-medium",
-                  item.done ? "text-emerald-800" : "text-neutral-900"
-                )}
-              >
-                {item.title}
-              </span>
-              <span className="text-xs leading-relaxed text-neutral-500">
-                {item.description}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ol>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Recent conversations                                                */
-/* ------------------------------------------------------------------ */
-
-function RecentConversationsCard({
-  conversations,
-  className,
-}: {
-  conversations: RecentConversation[];
-  className?: string;
-}) {
-  return (
-    <Card className={className}>
-      <div className="flex items-center justify-between p-5 pb-0">
-        <div>
-          <CardTitle>Recent chats</CardTitle>
-          <CardDescription className="mt-0.5">
-            The latest customer chats your Front Desk handled.
-          </CardDescription>
-        </div>
-        <Link
-          href="/inbox"
-          className="shrink-0 text-xs font-medium text-brand-700 transition-colors duration-150 hover:text-brand-800"
-        >
-          View all →
-        </Link>
-      </div>
-
-      {conversations.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-            <MessagesSquare className="h-5 w-5" aria-hidden />
-          </span>
-          <p className="text-sm font-semibold text-neutral-900">
-            No conversations yet
+    <div className="flex min-w-0 flex-col gap-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-neutral-500">{today}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-[1.75rem]">
+            {greetingForHour(hourInTimezone(org.timezone, now))}, {firstName}
+          </h1>
+          <p className="mt-1 text-base leading-6 text-neutral-600">
+            Here&apos;s what needs you at {org.name} today.
           </p>
-          <p className="max-w-xs text-sm text-neutral-500">
-            When customers message your WhatsApp, your AI answers here.
-          </p>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          <Badge tone={data.simulationMode ? "info" : "success"}>
+            {data.simulationMode ? "Test workspace" : "Live workspace"}
+          </Badge>
           <Link
             href="/inbox/try"
-            className={buttonVariants({
-              variant: "secondary",
-              size: "sm",
-              className: "mt-1",
-            })}
+            className={buttonVariants({ className: "ml-auto sm:ml-0" })}
           >
-            Try your AI
+            <Bot className="h-4 w-4" aria-hidden />
+            Test Front Desk
           </Link>
         </div>
-      ) : (
-        <ul className="mt-2 px-2 pb-2">
-          {conversations.map((c) => (
-            <li key={c.id} className="border-t border-neutral-100 first:border-t-0">
-              <Link
-                href={`/inbox/${c.id}`}
-                className="flex items-center gap-3 rounded-xl px-3 py-3 outline-none transition-colors duration-150 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-400/50"
-              >
-                <Avatar name={c.contactName} size="md" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium text-neutral-900">
-                      {c.contactName}
-                    </p>
-                    {c.status === "handoff" && (
-                      <Badge tone="warning">Needs human</Badge>
-                    )}
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-neutral-500">
-                    {c.lastMessagePreview ?? "No messages yet"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-xs text-neutral-400">
-                    {formatRelativeTime(c.lastMessageAt)}
-                  </span>
-                  {c.unreadCount > 0 && (
-                    <Badge tone="brand">{c.unreadCount} new</Badge>
-                  )}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      </header>
+
+      <AttentionQueueSection
+        queue={attention}
+        showDescription={workspaceDefaults.showSectionDescriptions}
+      />
+
+      <OperationsSummary
+        items={visibleOperations}
+        currency={org.currency}
+        showDescription={workspaceDefaults.showSectionDescriptions}
+      />
+
+      <FrontDeskSummary
+        openConversations={data.openConversationCount}
+        bookingsThisMonth={data.recovery.bookingsThisMonth}
+        followUpsThisMonth={data.recovery.followUpsThisMonth}
+        handoffCount={data.handoffCount}
+        followupsEnabled={data.recovery.enabled}
+        simulationMode={data.simulationMode}
+        showBusinessOutcomes={!isAgent}
+      />
+
+      {!isAgent && (
+        <BusinessPulse
+          bookingsThisMonth={data.recovery.bookingsThisMonth}
+          leadsChasedThisMonth={data.recovery.followUpsThisMonth}
+          revenueInfluenced={revenueInfluenced}
+          wonContacts={data.wonContactCount}
+          optedInContacts={data.optedInContactCount}
+          totalContacts={data.contactCount}
+          currency={org.currency}
+          showDescription={workspaceDefaults.showSectionDescriptions}
+        />
       )}
-    </Card>
-  );
-}
 
-/* ------------------------------------------------------------------ */
-/* Quick actions                                                       */
-/* ------------------------------------------------------------------ */
-
-const QUICK_ACTIONS: {
-  label: string;
-  description: string;
-  href: string;
-  icon: LucideIcon;
-}[] = [
-  {
-    label: "Train your AI",
-    description: "Teach it a new answer",
-    href: "/agent",
-    icon: BookOpen,
-  },
-  {
-    label: "Try your AI",
-    description: "Message it as a customer",
-    href: "/inbox/try",
-    icon: Bot,
-  },
-  {
-    label: "Connect WhatsApp",
-    description: "Link your business number",
-    href: "/settings/whatsapp",
-    icon: Plug,
-  },
-  {
-    label: "Add contact",
-    description: "Save an opted-in customer",
-    href: "/contacts?new=1",
-    icon: UserPlus,
-  },
-];
-
-function QuickActionsCard() {
-  return (
-    <Card className="p-5">
-      <CardTitle>Quick actions</CardTitle>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        {QUICK_ACTIONS.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="group flex flex-col rounded-xl border border-neutral-200 p-3 outline-none transition-colors duration-150 hover:border-neutral-300 focus-visible:ring-2 focus-visible:ring-brand-400/50"
-          >
-            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 transition-colors group-hover:text-brand-600">
-              <action.icon className="h-4 w-4" aria-hidden />
-            </span>
-            <span className="text-sm font-medium text-neutral-900">
-              {action.label}
-            </span>
-            <span className="mt-0.5 text-xs text-neutral-500">
-              {action.description}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Recent campaigns                                                    */
-/* ------------------------------------------------------------------ */
-
-const CAMPAIGN_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
-  DRAFT: { label: "Draft", tone: "neutral" },
-  SCHEDULED: { label: "Scheduled", tone: "info" },
-  TEMPLATE_PENDING: { label: "Pending approval", tone: "warning" },
-  TEMPLATE_APPROVED: { label: "Ready to send", tone: "success" },
-  SENDING: { label: "Sending", tone: "brand" },
-  SENT: { label: "Sent", tone: "success" },
-  FAILED: { label: "Failed", tone: "danger" },
-};
-
-function campaignMeta(c: RecentCampaign): string {
-  if (c.status === "SCHEDULED" && c.scheduledAt) {
-    return `Scheduled ${new Intl.DateTimeFormat("en-IN", {
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(c.scheduledAt)}`;
-  }
-  const when = formatRelativeTime(c.createdAt);
-  return c.recipientCount > 0
-    ? `${formatCount(c.recipientCount)} recipients · ${when}`
-    : `Created ${when}`;
-}
-
-function RecentCampaignsCard({ campaigns }: { campaigns: RecentCampaign[] }) {
-  return (
-    <Card>
-      <div className="flex items-center justify-between p-5 pb-0">
-        <CardTitle>Recent campaigns</CardTitle>
-        <Link
-          href="/campaigns"
-          className="shrink-0 text-xs font-medium text-brand-700 transition-colors duration-150 hover:text-brand-800"
-        >
-          View all →
-        </Link>
-      </div>
-
-      {campaigns.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-            <Megaphone className="h-5 w-5" aria-hidden />
-          </span>
-          <p className="text-sm font-semibold text-neutral-900">
-            No campaigns yet
-          </p>
-          <p className="max-w-xs text-sm text-neutral-500">
-            Turn one product photo into a ready-to-send broadcast.
-          </p>
-          <Link
-            href="/campaigns/new"
-            className={buttonVariants({ size: "sm", className: "mt-1" })}
-          >
-            Create a campaign
-          </Link>
-        </div>
-      ) : (
-        <ul className="mt-2 px-2 pb-2">
-          {campaigns.map((c) => {
-            const status = CAMPAIGN_STATUS[c.status] ?? CAMPAIGN_STATUS.DRAFT;
-            return (
-              <li
-                key={c.id}
-                className="border-t border-neutral-100 first:border-t-0"
-              >
-                <Link
-                  href={`/campaigns/${c.id}`}
-                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 outline-none transition-colors duration-150 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-brand-400/50"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-neutral-900">
-                      {c.name}
-                    </p>
-                    <p className="mt-0.5 text-xs text-neutral-400">
-                      {campaignMeta(c)}
-                    </p>
-                  </div>
-                  <Badge tone={status.tone} className="shrink-0">
-                    {status.label}
-                  </Badge>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      {!isAgent && !data.checklist.allDone && (
+        <SetupProgress checklist={data.checklist} orgName={org.name} />
       )}
-    </Card>
+
+      <RecentActivity
+        conversations={data.recentConversations}
+        campaigns={data.recentCampaigns}
+        showCampaigns={!isAgent}
+      />
+    </div>
   );
 }

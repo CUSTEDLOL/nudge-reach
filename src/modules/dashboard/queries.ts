@@ -9,9 +9,15 @@ import { orgSendMode } from "@/modules/orgs/mode";
 import {
   buildChecklist,
   computeMessageRates,
+  dayBoundsInTimezone,
   type Checklist,
   type MessageRates,
 } from "@/modules/dashboard/stats";
+import {
+  getRecoveryMetrics,
+  type RecoveryMetrics,
+} from "@/modules/followup/metrics";
+import { numberAccessClause } from "@/modules/inbox/access";
 
 export interface RecentConversation {
   id: string;
@@ -37,6 +43,12 @@ export interface DashboardData {
   wonContactCount: number;
   openConversationCount: number;
   unreadMessageCount: number;
+  handoffCount: number;
+  ownerQuestionCount: number;
+  bookingsToday: number;
+  pendingBookingCount: number;
+  pendingPaymentCount: number;
+  pendingPaymentAmountMinor: number;
   campaignsSentCount: number;
   scheduledCampaignCount: number;
   automationCount: number;
@@ -44,12 +56,20 @@ export interface DashboardData {
   rates: MessageRates;
   checklist: Checklist;
   simulationMode: boolean;
+  recovery: RecoveryMetrics;
   recentConversations: RecentConversation[];
   recentCampaigns: RecentCampaign[];
 }
 
-export async function getDashboardData(orgId: string): Promise<DashboardData> {
+export async function getDashboardData(
+  orgId: string,
+  timezone: string = "UTC",
+  now: Date = new Date(),
+  allowedWhatsappAccountIds: string[] | null = null
+): Promise<DashboardData> {
   const simulationMode = (await orgSendMode(orgId)) === "simulation";
+  const today = dayBoundsInTimezone(timezone, now);
+  const conversationAccess = numberAccessClause(allowedWhatsappAccountIds);
 
   const [
     contactCount,
@@ -67,16 +87,26 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     knowledgeFactCount,
     conversations,
     campaigns,
+    handoffCount,
+    ownerQuestionCount,
+    bookingsToday,
+    pendingBookingCount,
+    pendingPaymentAggregate,
+    recovery,
   ] = await Promise.all([
     prisma.contact.count({ where: { orgId } }),
     prisma.contact.count({ where: { orgId, optedIn: true } }),
     prisma.contact.count({ where: { orgId, leadStage: "WON" } }),
     // "handoff" threads live under Open with a "Needs human" badge (spec §3.2).
     prisma.conversation.count({
-      where: { orgId, status: { in: ["open", "handoff"] } },
+      where: {
+        orgId,
+        status: { in: ["open", "handoff"] },
+        ...conversationAccess,
+      },
     }),
     prisma.conversation.aggregate({
-      where: { orgId },
+      where: { orgId, ...conversationAccess },
       _sum: { unreadCount: true },
     }),
     prisma.campaign.count({
@@ -91,10 +121,10 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     prisma.automation.count({ where: { orgId } }),
     prisma.automation.count({ where: { orgId, enabled: true } }),
     prisma.whatsappAccount.count({ where: { orgId } }),
-    prisma.conversation.count({ where: { orgId } }),
+    prisma.conversation.count({ where: { orgId, ...conversationAccess } }),
     prisma.knowledgeEntry.count({ where: { orgId, status: "active" } }),
     prisma.conversation.findMany({
-      where: { orgId },
+      where: { orgId, ...conversationAccess },
       orderBy: [
         { lastMessageAt: { sort: "desc", nulls: "last" } },
         { updatedAt: "desc" },
@@ -122,6 +152,28 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
         _count: { select: { messages: true } },
       },
     }),
+    prisma.conversation.count({
+      where: { orgId, status: "handoff", ...conversationAccess },
+    }),
+    prisma.ownerQuestion.count({
+      where: { orgId, status: "pending" },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        orgId,
+        status: "confirmed",
+        scheduledFor: { gte: today.start, lt: today.end },
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: { orgId, status: "pending" },
+    }),
+    prisma.paymentRequest.aggregate({
+      where: { orgId, status: "created" },
+      _count: { _all: true },
+      _sum: { amountMinor: true },
+    }),
+    getRecoveryMetrics(orgId, now),
   ]);
 
   const countsByStatus: Record<string, number> = {};
@@ -135,6 +187,13 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     wonContactCount,
     openConversationCount,
     unreadMessageCount: unreadAggregate._sum.unreadCount ?? 0,
+    handoffCount,
+    ownerQuestionCount,
+    bookingsToday,
+    pendingBookingCount,
+    pendingPaymentCount: pendingPaymentAggregate._count._all,
+    pendingPaymentAmountMinor:
+      pendingPaymentAggregate._sum.amountMinor ?? 0,
     campaignsSentCount,
     scheduledCampaignCount,
     automationCount,
@@ -150,6 +209,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
       conversationCount,
     }),
     simulationMode,
+    recovery,
     recentConversations: conversations.map((c) => ({
       id: c.id,
       contactName: c.contact.name,

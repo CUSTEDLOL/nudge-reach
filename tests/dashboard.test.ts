@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAttentionQueue,
   buildChecklist,
+  buildOperationsSummary,
   computeMessageRates,
+  dayBoundsInTimezone,
   estimateRevenueInfluencedInr,
   parseAvgOrderValueInr,
+  shouldRedirectToOnboarding,
   DEFAULT_AVG_ORDER_VALUE_INR,
+  type AttentionQueueInput,
   type ChecklistInput,
 } from "@/modules/dashboard/stats";
 import {
@@ -149,6 +154,219 @@ describe("buildChecklist", () => {
       expect(item.title.length).toBeGreaterThan(0);
       expect(item.description.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("buildAttentionQueue", () => {
+  const full: AttentionQueueInput = {
+    role: "OWNER",
+    attentionOrder: [
+      "payment",
+      "booking",
+      "unread",
+      "owner-question",
+      "handoff",
+      "followup",
+      "setup",
+    ],
+    handoffCount: 2,
+    ownerQuestionCount: 3,
+    unreadMessageCount: 8,
+    pendingBookingCount: 4,
+    pendingPaymentCount: 5,
+    followupsEnabled: false,
+    setupRemaining: 2,
+  };
+
+  it("keeps urgent handoffs first and uses the chosen outcome for the rest", () => {
+    const queue = buildAttentionQueue(full);
+    expect(queue.items.map((item) => item.kind)).toEqual([
+      "handoff",
+      "payment",
+      "booking",
+      "unread",
+    ]);
+    expect(queue.items[0]).toMatchObject({ urgent: true, count: 2 });
+  });
+
+  it("caps visible rows at four while exposing every matching area", () => {
+    const queue = buildAttentionQueue(full);
+    expect(queue.items).toHaveLength(4);
+    expect(queue.totalCount).toBe(7);
+    expect(queue.hiddenCount).toBe(3);
+    expect(queue.hiddenItems?.map((item) => item.kind)).toEqual([
+      "owner-question",
+      "followup",
+      "setup",
+    ]);
+    expect(queue.allClear).toBe(false);
+  });
+
+  it("does not expose admin-only work to an agent", () => {
+    const queue = buildAttentionQueue({ ...full, role: "AGENT" });
+    expect(queue.items.map((item) => item.kind)).toEqual(["handoff", "unread"]);
+    expect(queue.totalCount).toBe(2);
+    expect(queue.items.map((item) => item.kind)).not.toContain("owner-question");
+    expect(queue.items.map((item) => item.kind)).not.toContain("booking");
+    expect(queue.items.map((item) => item.kind)).not.toContain("payment");
+    expect(queue.items.map((item) => item.kind)).not.toContain("followup");
+    expect(queue.items.map((item) => item.kind)).not.toContain("setup");
+  });
+
+  it("returns a stable positive state when nothing needs action", () => {
+    const queue = buildAttentionQueue({
+      ...full,
+      handoffCount: 0,
+      ownerQuestionCount: 0,
+      unreadMessageCount: 0,
+      pendingBookingCount: 0,
+      pendingPaymentCount: 0,
+      followupsEnabled: true,
+      setupRemaining: 0,
+    });
+    expect(queue).toEqual({
+      items: [],
+      totalCount: 0,
+      hiddenCount: 0,
+      allClear: true,
+    });
+  });
+
+  it("clamps invalid negative counts instead of presenting impossible work", () => {
+    const queue = buildAttentionQueue({
+      ...full,
+      handoffCount: -2,
+      ownerQuestionCount: -1,
+      unreadMessageCount: -8,
+      pendingBookingCount: -4,
+      pendingPaymentCount: -5,
+      followupsEnabled: true,
+      setupRemaining: -2,
+    });
+    expect(queue.allClear).toBe(true);
+  });
+});
+
+describe("shouldRedirectToOnboarding", () => {
+  it("sends a fresh owner or admin through discovery", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        role: "OWNER",
+        onboardedAt: null,
+        contactCount: 0,
+      })
+    ).toBe(true);
+    expect(
+      shouldRedirectToOnboarding({
+        role: "ADMIN",
+        onboardedAt: null,
+        contactCount: 0,
+      })
+    ).toBe(true);
+  });
+
+  it("never traps an agent in an admin-only onboarding flow", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        role: "AGENT",
+        onboardedAt: null,
+        contactCount: 0,
+      })
+    ).toBe(false);
+  });
+
+  it("leaves established workspaces on Today", () => {
+    expect(
+      shouldRedirectToOnboarding({
+        role: "OWNER",
+        onboardedAt: new Date("2026-09-06T00:00:00.000Z"),
+        contactCount: 0,
+      })
+    ).toBe(false);
+    expect(
+      shouldRedirectToOnboarding({
+        role: "OWNER",
+        onboardedAt: null,
+        contactCount: 12,
+      })
+    ).toBe(false);
+  });
+});
+
+describe("buildOperationsSummary", () => {
+  it("returns honest, clamped operational counts", () => {
+    expect(
+      buildOperationsSummary({
+        bookingsToday: 3,
+        pendingBookings: 2,
+        openConversations: 7,
+        followUpsThisMonth: 12,
+        pendingPayments: 4,
+        pendingPaymentAmountMinor: 152_500,
+      })
+    ).toEqual([
+      {
+        key: "bookings",
+        label: "Appointments today",
+        value: 3,
+        detailCount: 2,
+        detailLabel: "requests to confirm",
+        href: "/inbox",
+      },
+      {
+        key: "conversations",
+        label: "Open conversations",
+        value: 7,
+        href: "/inbox",
+      },
+      {
+        key: "followups",
+        label: "Follow-ups sent",
+        value: 12,
+        href: "/automations",
+      },
+      {
+        key: "payments",
+        label: "Payments awaiting",
+        value: 4,
+        amountMinor: 152_500,
+        href: "/inbox",
+      },
+    ]);
+  });
+
+  it("clamps negative numbers to zero", () => {
+    const summary = buildOperationsSummary({
+      bookingsToday: -1,
+      pendingBookings: -1,
+      openConversations: -1,
+      followUpsThisMonth: -1,
+      pendingPayments: -1,
+      pendingPaymentAmountMinor: -1,
+    });
+    expect(summary.every((item) => item.value === 0)).toBe(true);
+    expect(summary[0]).toMatchObject({ detailCount: 0 });
+    expect(summary[3]).toMatchObject({ amountMinor: 0 });
+  });
+});
+
+describe("dayBoundsInTimezone", () => {
+  it("returns the UTC bounds for the workspace's local calendar day", () => {
+    const bounds = dayBoundsInTimezone(
+      "Asia/Kolkata",
+      new Date("2026-09-06T12:00:00.000Z")
+    );
+    expect(bounds.start.toISOString()).toBe("2026-09-05T18:30:00.000Z");
+    expect(bounds.end.toISOString()).toBe("2026-09-06T18:30:00.000Z");
+  });
+
+  it("falls back to UTC for an invalid timezone", () => {
+    const bounds = dayBoundsInTimezone(
+      "not/a-timezone",
+      new Date("2026-09-06T12:00:00.000Z")
+    );
+    expect(bounds.start.toISOString()).toBe("2026-09-06T00:00:00.000Z");
+    expect(bounds.end.toISOString()).toBe("2026-09-07T00:00:00.000Z");
   });
 });
 
