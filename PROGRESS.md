@@ -5,6 +5,72 @@ what's next.
 
 ---
 
+## CRM sync finished — every stage change reaches the CRM (2026-09-05) ✅
+
+Audit after merging the enterprise track found the gap: lead stages change in six
+places (agent, inbox, contacts table ×2, public API ×2) and each recorded a
+ContactEvent, but only the agent's path reached the CRM. Opt-outs reached it from
+nowhere at all.
+
+### Built
+- `modules/crm/contact-events.ts` bridges the ContactEvent history into the sync
+  queue, so **every** site that changes a stage or records an opt-out now syncs,
+  with no per-site wiring. Stage jobs keyed `<contactId>:<STAGE>` so each
+  transition syncs once; LOST is not pushed (never overwrite the client's
+  pipeline with our guess); opt-outs land as a "do not message" note.
+- `CrmEvent` gains `lead.stage_changed` and `contact.opted_out`.
+- Removed the agent's direct `crmLeadQualified` call so stage sync has exactly
+  one path; deleted the now-dead helper.
+- `scripts/crm-live.ts` now proves the bridge end to end (verified against the
+  real DB: contact.created + lead.stage_changed both synced).
+
+### Deliberately not synced
+Imported and hand-added contacts. The CRM is the client's system of record;
+only leads the AI produced are worth writing into it.
+
+## "Call your AI" — test the voice front desk from the browser (2026-09-05) ✅
+
+Founder needed to hear the voice agent without paying for a number or minutes.
+Settings → Voice now has a **Call your AI** button: mic in the browser, real
+agent, real knowledge base, real tools — no carrier, no phone number. Runs on
+ElevenLabs' free tier. Steps: `docs/VOICE.md` → "Test it free".
+
+### Built
+- `startBrowserCallAction`: plan gate + minute check, then mints a 15-minute
+  ElevenLabs signed URL server-side. The browser never sees the API key.
+- `browser-call.tsx` using `@elevenlabs/react` (ConversationProvider +
+  useConversation), mic permission requested before the URL is minted.
+- The initiation webhook now serves conversations with no dialled number, but
+  only for the workspace named by `VOICE_TEST_ORG_ID` — a browser call cannot
+  identify a tenant, so we refuse rather than guess (invariant 5).
+- Browser calls draw on the same monthly minute allowance as phone calls.
+
+## Voice call-minute allowance — the spend ceiling (2026-09-05) ✅
+
+Founder ask: packages carry call minutes, and "if they burn out, the call cannot
+be placed from that point". Built as a plan limit, not a bolt-on, so any package
+maps to a number without a code change. Prices deliberately untouched — they are
+still being decided.
+
+### Built
+- `PlanLimits.voiceMinutesPerMonth` on all six plans (100 on AI Front Desk, 0
+  where there's no voice, null = unlimited) + `Org.voiceMinutesOverride` for a
+  bespoke deal.
+- `modules/voice/usage.ts`: resolves the allowance (override ?? plan), counts the
+  month's calls with each call rounded up to a whole minute, reports what's left.
+- **Hard cutoff:** `/api/voice/initiation` returns 402 with no agent config once
+  the minutes are gone, so the call never becomes a billable conversation;
+  `tickReminderCalls` skips orgs in the same state.
+- Settings → Voice shows "X of Y minutes used" with a bar and an honest
+  out-of-minutes message. Read-only — the client can't raise their own ceiling.
+- `npm run voice:minutes -- --org <id|owner-email> --minutes <n|plan>`.
+- The shared ElevenLabs agent is now created with `max_duration_seconds: 480`
+  and a 10s silence timeout instead of relying on their 10-minute default.
+
+### Exposure after this
+One call caps at ~8 minutes (~₹75). A client cannot exceed their package's
+minutes at all. 606 tests green.
+
 ## E4b + E7 fix + E8 — access walls, voice gating, chat summaries (2026-09-05) ✅
 
 ### E4b — per-number staff access + campaign picker

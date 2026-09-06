@@ -52,6 +52,8 @@ model Org {
   // Billing (spec: real usage + Razorpay when keys present). plan defaults to
   // the free tier; the paid fields fill in after a successful subscription.
   plan                   String            @default("free") // free | starter | growth | pro
+  // Bespoke voice-minute allowance for this org; null = use the plan's.
+  voiceMinutesOverride   Int?
   subscriptionStatus     String            @default("inactive") // inactive | active | past_due | cancelled
   razorpayCustomerId     String?
   razorpaySubscriptionId String?

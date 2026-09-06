@@ -12,6 +12,10 @@ const PUBLIC_PATHS = [
   "/api/webhooks",
   // voice front desk: ElevenLabs webhooks + tool calls carry their own secrets
   "/api/voice",
+  // CRM OAuth: the provider redirects the browser back here and the callback
+  // authenticates itself with the HMAC-signed state, not a session cookie.
+  // (The /start route still calls requireOrgContext, so it stays protected.)
+  "/api/integrations/crm",
   // public developer API: nk_live_ key auth inside resolveApiKeyOrg, never cookies
   "/api/v1",
   // website widget (E5): embed script + public config/click endpoints

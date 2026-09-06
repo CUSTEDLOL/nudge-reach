@@ -29,6 +29,27 @@ Without ElevenLabs keys, or for an org in test mode, the simulation driver is
 used: outbound calls return a fake id and Settings → Voice offers **Simulate a
 call**, which drops a scripted transcript into the inbox.
 
+## Test it free, without a phone number
+
+The whole loop can be exercised on ElevenLabs' free tier (~15 agent minutes a
+month, no card) with no carrier and no number:
+
+1. Sign up at elevenlabs.io, then Profile → **API keys** → create one.
+2. Put it in `.env.local` as `ELEVENLABS_API_KEY`, and invent two secrets:
+   `VOICE_INITIATION_SECRET` and `VOICE_TOOLS_SECRET` (any long random strings).
+3. Run the setup script (command in `scripts/voice-setup.ts`). It creates the
+   shared agent and prints `ELEVENLABS_AGENT_ID` — add that to `.env.local` too.
+4. Set `VOICE_TEST_ORG_ID` to the workspace you want to test with (its org id).
+   A browser conversation carries no dialled number, so this names the single
+   workspace such a call may reach — we refuse rather than guess a tenant.
+5. Restart the app, open **Settings → Voice**, and press **Call your AI**. Allow
+   the microphone. You are talking to your own front desk, with your knowledge
+   base, tone and language, and its bookings land in your inbox.
+
+Costs nothing until you connect a real number. For a genuine over-the-phone
+test on the free tier, a Twilio trial number works too (trial calls play a
+short notice first and can only reach your own verified number).
+
 ## One-time setup (platform)
 1. ElevenLabs workspace with SIP trunking and post-call webhooks enabled.
 2. `.env.local` / Vercel: `ELEVENLABS_API_KEY`, `VOICE_TOOLS_SECRET`,
@@ -52,6 +73,27 @@ call**, which drops a scripted transcript into the inbox.
 - Nudge → Settings → Voice → *Add or update a number*: the number, carrier,
   language (English or Hindi/Hinglish), transfer number, the ElevenLabs
   phone-number id (needed for outbound reminder calls).
+
+## Call minutes (the spend ceiling)
+
+Every package includes call minutes per calendar month. When they run out the
+AI **stops answering that org's number**: the initiation webhook returns 402
+and hands back no agent, so the call never becomes a billable conversation.
+Outbound reminder calls draw on the same allowance. Each call rounds up to a
+whole minute; the month resets on the 1st. WhatsApp is unaffected either way.
+
+- **Per plan:** `PlanLimits.voiceMinutesPerMonth` in `modules/billing/plans.ts`
+  — 100 on AI Front Desk, 0 on tiers without voice, `null` = unlimited
+  (Enterprise, where the allowance is a bespoke term).
+- **Per client:** `npm run voice:minutes -- --org <id-or-owner-email> --minutes 300`
+  overrides the plan for one org; `--minutes plan` clears the override.
+  The client sees the meter on Settings → Voice but cannot raise it.
+- **Per call:** the shared agent is created with `max_duration_seconds: 480`
+  (8 minutes) and a 10-second silence timeout, so one forgotten open line
+  can cost at most ~8 minutes.
+
+Sizing a package: at roughly ₹9–12 (~S$0.15) an all-in minute, 100 minutes
+costs on the order of ₹1,000. Check `docs/PRICING.md` before quoting.
 
 ## Compliance
 - Inbound answering: unrestricted.

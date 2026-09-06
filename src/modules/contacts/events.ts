@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { syncContactEventToCrm } from "@/modules/crm/contact-events";
 
 /**
  * Event types recorded so far (E0). The column is a plain string — later
@@ -32,6 +33,9 @@ export function recordContactEvent(
         },
       })
       .catch((err) => console.error("[contact-event] write failed", err));
+    // Same history, second consumer: stage changes and opt-outs reach the
+    // client's CRM from every site that emits them, not just the agent's.
+    void syncContactEventToCrm(orgId, type, opts);
   } catch (err) {
     // Even a synchronous throw (e.g. a partially mocked client) must never
     // reach the product flow that emitted the event.

@@ -4,6 +4,7 @@ import { ensureAgentProfile } from "@/modules/agent/profile";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { voiceDriverFor } from "@/modules/voice";
 import { buildCallInit } from "@/modules/voice/initiation";
+import { voiceUsage } from "@/modules/voice/usage";
 
 /**
  * Outbound reminder calls (moat 2, by phone). Opt-in per client
@@ -37,6 +38,8 @@ export async function tickReminderCalls(now: Date = new Date()) {
     if (!org || !number || !isCallingHour(now, org.timezone)) continue;
     const profile = await ensureAgentProfile(org.id);
     if (!profile?.enabled) continue;
+    // Outbound calls draw on the same monthly allowance as inbound ones.
+    if ((await voiceUsage(org.id, 1, now)).exhausted) continue;
     const entries = await prisma.knowledgeEntry.findMany({
       where: { orgId: org.id, status: "active" },
       select: { category: true, fact: true, condition: true },

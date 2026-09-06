@@ -7,6 +7,8 @@ import { checkVoiceAgent } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { SIM_TRANSCRIPT } from "@/modules/voice/drivers/simulation";
 import { fileCall } from "@/modules/voice/file-call";
+import { env } from "@/lib/env";
+import { voiceUsage } from "@/modules/voice/usage";
 import { parseVoiceNumberForm } from "./validate";
 
 export interface ActionResult {
@@ -90,4 +92,47 @@ export async function simulateCallAction(): Promise<ActionResult> {
   );
   revalidatePath("/inbox");
   return { ok: true, message: "A sample call landed in your inbox." };
+}
+
+export interface BrowserCallResult extends ActionResult {
+  /** Short-lived (15 min) ElevenLabs WebSocket URL — never the API key. */
+  signedUrl?: string;
+}
+
+/**
+ * Talk to this workspace's AI front desk from the browser — no phone number,
+ * no carrier, no per-minute carrier fee. The conversation still runs through
+ * the real agent, so it hears the same knowledge and uses the same tools.
+ *
+ * A browser conversation carries no dialled number, so ElevenLabs cannot tell
+ * us which business it belongs to. VOICE_TEST_ORG_ID names the single
+ * workspace such a call is allowed to reach; we refuse rather than guess.
+ */
+export async function startBrowserCallAction(): Promise<BrowserCallResult> {
+  const ctx = await requireOrgContext();
+  const gate = await checkVoiceAgent(ctx.org.id);
+  if (!gate.allowed) return { ok: false, message: gate.message };
+
+  const usage = await voiceUsage(ctx.org.id, 1);
+  if (usage.exhausted) return { ok: false, message: usage.message };
+
+  if (!env.ELEVENLABS_API_KEY || !env.ELEVENLABS_AGENT_ID) {
+    return { ok: false, message: "Voice isn't configured yet — add the ElevenLabs keys and run the setup script." };
+  }
+  if (env.VOICE_TEST_ORG_ID !== ctx.org.id) {
+    return {
+      ok: false,
+      message: "Browser calls are switched on for one workspace at a time. Ask Nudge to point VOICE_TEST_ORG_ID at this one.",
+    };
+  }
+
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(env.ELEVENLABS_AGENT_ID)}`,
+    { headers: { "xi-api-key": env.ELEVENLABS_API_KEY } }
+  );
+  const json = (await res.json().catch(() => ({}))) as { signed_url?: string; detail?: unknown };
+  if (!res.ok || !json.signed_url) {
+    return { ok: false, message: `ElevenLabs refused the call (HTTP ${res.status}). Check the API key and agent id.` };
+  }
+  return { ok: true, message: "Connecting…", signedUrl: json.signed_url };
 }

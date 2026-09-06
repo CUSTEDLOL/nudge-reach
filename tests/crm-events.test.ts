@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 const enqueueCrmEvent = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("@/modules/crm/sync", () => ({ enqueueCrmEvent }));
-import { crmBookingCreated, crmContactCreated, crmHandoffRequested, crmLeadQualified, crmPaymentPaid } from "@/modules/crm/events";
+import { crmBookingCreated, crmContactCreated, crmHandoffRequested, crmPaymentPaid } from "@/modules/crm/events";
 
 describe("crm events", () => {
   it("maps product events to queue payloads", async () => {
@@ -9,8 +9,6 @@ describe("crm events", () => {
     expect(enqueueCrmEvent).toHaveBeenLastCalledWith("o", "contact.created", "c1", {
       kind: "lead", lead: { phoneE164: "+91", name: "+91", source: "WhatsApp (Nudge)", description: "Ad: PRP" },
     });
-    await crmLeadQualified("o", { id: "c1", phoneE164: "+91" });
-    expect(enqueueCrmEvent).toHaveBeenLastCalledWith("o", "lead.qualified", "c1", { kind: "stage", phoneE164: "+91", stage: "qualified" });
     await crmBookingCreated("o", { id: "b1", name: "Priya", requestedFor: "tomorrow 5pm", scheduledFor: new Date("2026-09-02T11:30:00Z") }, { phoneE164: "+91" });
     expect(enqueueCrmEvent).toHaveBeenLastCalledWith("o", "booking.created", "b1", {
       kind: "activity", phoneE164: "+91",
@@ -27,6 +25,8 @@ describe("crm events", () => {
   });
   it("never throws when the queue fails", async () => {
     enqueueCrmEvent.mockRejectedValueOnce(new Error("db down"));
-    await expect(crmLeadQualified("o", { id: "c", phoneE164: "+91" })).resolves.toBeUndefined();
+    await expect(
+      crmContactCreated("o", { id: "c", phoneE164: "+91", name: "+91" }, "WhatsApp (Nudge)")
+    ).resolves.toBeUndefined();
   });
 });

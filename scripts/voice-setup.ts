@@ -115,6 +115,11 @@ async function main() {
           },
         },
         tts: { model_id: "eleven_flash_v2_5" },
+        // A front-desk call should never run long: hard-stop at 8 minutes and
+        // hang up on ~10s of silence, so a forgotten open line can't burn the
+        // client's minute allowance.
+        conversation: { max_duration_seconds: 480 },
+        turn: { turn_timeout: 10 },
       },
       platform_settings: {
         workspace_overrides: {
