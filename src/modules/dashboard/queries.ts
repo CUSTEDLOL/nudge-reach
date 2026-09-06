@@ -9,9 +9,14 @@ import { orgSendMode } from "@/modules/orgs/mode";
 import {
   buildChecklist,
   computeMessageRates,
+  dayBoundsInTimezone,
   type Checklist,
   type MessageRates,
 } from "@/modules/dashboard/stats";
+import {
+  getRecoveryMetrics,
+  type RecoveryMetrics,
+} from "@/modules/followup/metrics";
 
 export interface RecentConversation {
   id: string;
@@ -37,6 +42,12 @@ export interface DashboardData {
   wonContactCount: number;
   openConversationCount: number;
   unreadMessageCount: number;
+  handoffCount: number;
+  ownerQuestionCount: number;
+  bookingsToday: number;
+  pendingBookingCount: number;
+  pendingPaymentCount: number;
+  pendingPaymentAmountMinor: number;
   campaignsSentCount: number;
   scheduledCampaignCount: number;
   automationCount: number;
@@ -44,12 +55,18 @@ export interface DashboardData {
   rates: MessageRates;
   checklist: Checklist;
   simulationMode: boolean;
+  recovery: RecoveryMetrics;
   recentConversations: RecentConversation[];
   recentCampaigns: RecentCampaign[];
 }
 
-export async function getDashboardData(orgId: string): Promise<DashboardData> {
+export async function getDashboardData(
+  orgId: string,
+  timezone: string = "UTC",
+  now: Date = new Date()
+): Promise<DashboardData> {
   const simulationMode = (await orgSendMode(orgId)) === "simulation";
+  const today = dayBoundsInTimezone(timezone, now);
 
   const [
     contactCount,
@@ -67,6 +84,12 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     knowledgeFactCount,
     conversations,
     campaigns,
+    handoffCount,
+    ownerQuestionCount,
+    bookingsToday,
+    pendingBookingCount,
+    pendingPaymentAggregate,
+    recovery,
   ] = await Promise.all([
     prisma.contact.count({ where: { orgId } }),
     prisma.contact.count({ where: { orgId, optedIn: true } }),
@@ -122,6 +145,28 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
         _count: { select: { messages: true } },
       },
     }),
+    prisma.conversation.count({
+      where: { orgId, status: "handoff" },
+    }),
+    prisma.ownerQuestion.count({
+      where: { orgId, status: "pending" },
+    }),
+    prisma.bookingRequest.count({
+      where: {
+        orgId,
+        status: "confirmed",
+        scheduledFor: { gte: today.start, lt: today.end },
+      },
+    }),
+    prisma.bookingRequest.count({
+      where: { orgId, status: "pending" },
+    }),
+    prisma.paymentRequest.aggregate({
+      where: { orgId, status: "created" },
+      _count: { _all: true },
+      _sum: { amountMinor: true },
+    }),
+    getRecoveryMetrics(orgId, now),
   ]);
 
   const countsByStatus: Record<string, number> = {};
@@ -135,6 +180,13 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
     wonContactCount,
     openConversationCount,
     unreadMessageCount: unreadAggregate._sum.unreadCount ?? 0,
+    handoffCount,
+    ownerQuestionCount,
+    bookingsToday,
+    pendingBookingCount,
+    pendingPaymentCount: pendingPaymentAggregate._count._all,
+    pendingPaymentAmountMinor:
+      pendingPaymentAggregate._sum.amountMinor ?? 0,
     campaignsSentCount,
     scheduledCampaignCount,
     automationCount,
@@ -150,6 +202,7 @@ export async function getDashboardData(orgId: string): Promise<DashboardData> {
       conversationCount,
     }),
     simulationMode,
+    recovery,
     recentConversations: conversations.map((c) => ({
       id: c.id,
       contactName: c.contact.name,
