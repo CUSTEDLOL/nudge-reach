@@ -2,11 +2,15 @@ import {
   BarChart3,
   BellRing,
   Blocks,
+  BookOpen,
   Bot,
   House,
   Inbox,
   Megaphone,
+  MessageSquareText,
+  Plug,
   Settings,
+  UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -37,6 +41,15 @@ export type NavItem = {
 export type NavGroup = {
   label: "Workspace" | "Automation" | "Insights" | "Manage";
   items: readonly NavItem[];
+};
+
+export type AppCommand = {
+  label: string;
+  href: string;
+  group: "Navigate" | "Quick actions";
+  icon: LucideIcon;
+  keywords: readonly string[];
+  hideForAgent?: boolean;
 };
 
 export const NAV_GROUPS: readonly NavGroup[] = [
@@ -164,6 +177,52 @@ export function mobilePrimaryItemsForRole(role: AppRole): NavItem[] {
     const item = items.find((candidate) => candidate.key === key);
     return item ? [item] : [];
   });
+}
+
+const QUICK_COMMANDS: readonly AppCommand[] = [
+  {
+    label: "Teach your Front Desk",
+    href: "/agent/questionnaire",
+    group: "Quick actions",
+    icon: BookOpen,
+    keywords: ["train", "knowledge", "answer"],
+  },
+  {
+    label: "Try your Front Desk",
+    href: "/inbox/try",
+    group: "Quick actions",
+    icon: MessageSquareText,
+    keywords: ["test", "chat", "simulation"],
+  },
+  {
+    label: "Add a lead",
+    href: "/contacts?new=1",
+    group: "Quick actions",
+    icon: UserPlus,
+    keywords: ["contact", "customer", "new"],
+  },
+  {
+    label: "Connect an integration",
+    href: "/integrations",
+    group: "Quick actions",
+    icon: Plug,
+    keywords: ["calendar", "crm", "connect"],
+    hideForAgent: true,
+  },
+];
+
+export function commandsForRole(role: AppRole): AppCommand[] {
+  const navigation = navItemsForRole(role).map<AppCommand>((item) => ({
+    label: item.label,
+    href: item.href,
+    group: "Navigate",
+    icon: item.icon,
+    keywords: [item.mobileLabel, item.key],
+  }));
+  const actions = QUICK_COMMANDS.filter(
+    (command) => role !== "AGENT" || !command.hideForAgent
+  );
+  return [...navigation, ...actions];
 }
 
 function cleanPathname(pathname: string): string {

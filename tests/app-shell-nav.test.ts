@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   activeNavKey,
+  commandsForRole,
   mobilePrimaryItemsForRole,
   navGroupsForRole,
 } from "@/components/features/app-shell/nav";
+import { isThreadRoute } from "@/components/features/app-shell/bottom-nav";
 
 describe("adaptive app navigation", () => {
   it("puts owner destinations in the approved stable group order", () => {
@@ -60,5 +62,32 @@ describe("adaptive app navigation", () => {
 
   it("returns null for routes outside the authenticated navigation", () => {
     expect(activeNavKey("/onboarding")).toBeNull();
+  });
+
+  it("offers honest navigation and quick actions in the command menu", () => {
+    const commands = commandsForRole("OWNER");
+
+    expect(
+      commands.filter((command) => command.group === "Quick actions").map(
+        (command) => [command.label, command.href]
+      )
+    ).toEqual([
+      ["Teach your Front Desk", "/agent/questionnaire"],
+      ["Try your Front Desk", "/inbox/try"],
+      ["Add a lead", "/contacts?new=1"],
+      ["Connect an integration", "/integrations"],
+    ]);
+  });
+
+  it("does not offer admin-only commands to agents", () => {
+    expect(commandsForRole("AGENT").map((command) => command.href)).not.toContain(
+      "/integrations"
+    );
+  });
+
+  it("keeps the mobile bar away from an open inbox thread", () => {
+    expect(isThreadRoute("/inbox/thread-1")).toBe(true);
+    expect(isThreadRoute("/inbox/try")).toBe(true);
+    expect(isThreadRoute("/inbox")).toBe(false);
   });
 });
