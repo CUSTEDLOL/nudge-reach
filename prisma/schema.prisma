@@ -164,6 +164,9 @@ model Membership {
   whatsappAccountIds String[] @default([])
   // Per-member notification toggles (Settings → Notifications).
   notificationPrefs  Json     @default("{}")
+  // Presentation-only workspace preferences. These never grant permissions or
+  // change messaging behavior.
+  uiPreferences      Json     @default("{}")
   createdAt          DateTime @default(now())
 
   @@unique([orgId, userId])
