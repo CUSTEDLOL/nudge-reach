@@ -152,6 +152,12 @@ export interface RunAgentResult {
   toolCalls: ToolInvocation[];
   /** True if the loop hit maxSteps without a clean finish. */
   cappedOut: boolean;
+  /**
+   * Everything the model said across the loop, in order — including a line
+   * spoken before a tool call, which `text` (final step only) drops. Voice
+   * evals read this: on a call the pre-tool line is heard by the caller.
+   */
+  spoken?: string[];
 }
 
 /**
@@ -170,7 +176,7 @@ export async function runAgent({
   attribution,
 }: RunAgentInput): Promise<RunAgentResult> {
   const { driver, rt, byok } = await resolveRuntime(attribution);
-  const { text, toolCalls, cappedOut, usage } = await driver.runAgent(rt, {
+  const { text, toolCalls, cappedOut, usage, spoken } = await driver.runAgent(rt, {
     system,
     messages,
     tools,
@@ -181,5 +187,5 @@ export async function runAgent({
   if (attribution) {
     recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
   }
-  return { text: sanitizeText(text), toolCalls, cappedOut };
+  return { text: sanitizeText(text), toolCalls, cappedOut, spoken: (spoken ?? []).map(sanitizeText) };
 }

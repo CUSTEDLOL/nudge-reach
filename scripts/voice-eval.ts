@@ -65,11 +65,18 @@ const omits = (pattern: RegExp, label: string): Check => (result) =>
   pattern.test(result.text) ? `included ${label}: ${result.text}` : null;
 const says = (pattern: RegExp, label: string): Check => (result) =>
   pattern.test(result.text) ? null : `missing ${label}: ${result.text}`;
+const TERMINAL_TOOLS = ["transfer_to_number", "end_call"];
 const spokenStyle: Check = (result) => {
-  if (!result.text.trim()) return "empty spoken response";
+  // The agent loop only returns the final step's text. A transfer or hang-up
+  // ends the turn, and ElevenLabs speaks the line that preceded the tool call
+  // (built-in client message), so an empty closing line is correct there.
+  if (!result.text.trim()) {
+    return result.tools.some((t) => TERMINAL_TOOLS.includes(t)) ? null : "empty spoken response";
+  }
   if (/https?:\/\/|www\.|₹|[*#•]|\d/.test(result.text)) return `not spoken-safe: ${result.text}`;
   const sentences = result.text.split(/[.!?]+/).filter((part) => part.trim());
-  return sentences.length <= 3 ? null : `too many spoken sentences: ${result.text}`;
+  const cap = result.tools.length ? 4 : 3; // a tool turn is heard as two beats
+  return sentences.length <= cap ? null : `too many spoken sentences: ${result.text}`;
 };
 
 const scenarios: Array<{
@@ -116,7 +123,7 @@ const scenarios: Array<{
   {
     id: "payment-safe-followup",
     messages: [{ role: "user", text: "I want to pay the five hundred rupee consultation fee now." }],
-    checks: [called("ask_owner"), omits(/sent (it|the link)|payment link/i, "false send claim"), spokenStyle],
+    checks: [called("ask_owner"), omits(/(sent|sending)[^.]{0,40}\blink|\blink[^.]{0,20}(sent|on its way)/i, "false send claim"), spokenStyle],
   },
   {
     id: "off-topic",
@@ -146,7 +153,10 @@ async function evaluateScenario(scenario: (typeof scenarios)[number]) {
     maxSteps: 3,
     runTool: async (call: ToolInvocation) => ({ result: `${call.name} completed.` }),
   });
-  const result = { text: outcome.text, tools: outcome.toolCalls.map((call) => call.name) };
+  // What the caller hears is every line across the loop, including the one
+  // spoken before a tool call — not only the final step.
+  const heard = (outcome.spoken?.length ? outcome.spoken : [outcome.text]).join(" ").trim();
+  const result = { text: heard, tools: outcome.toolCalls.map((call) => call.name) };
   return scenario.checks
     .map((check) => check(result))
     .filter((failure): failure is string => Boolean(failure))

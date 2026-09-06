@@ -72,6 +72,8 @@ export interface DriverAgentOutcome {
   text: string;
   toolCalls: ToolInvocation[];
   cappedOut: boolean;
+  /** Every line the model said across the loop, in order (pre-tool lines included). */
+  spoken?: string[];
   usage: DriverUsage;
 }
 

@@ -106,6 +106,7 @@ export const anthropicDriver: LlmDriver = {
       input_schema: t.input_schema as Anthropic.Tool.InputSchema,
     }));
 
+    const spoken: string[] = [];
     for (let step = 0; step < args.maxSteps; step++) {
       const response = await client(rt.apiKey).messages.create({
         model: rt.model,
@@ -116,6 +117,10 @@ export const anthropicDriver: LlmDriver = {
       });
 
       tally(response.usage);
+      {
+        const said = textOf(response.content).trim();
+        if (said) spoken.push(said);
+      }
       const toolUses = response.content.filter(
         (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
       );
@@ -124,6 +129,7 @@ export const anthropicDriver: LlmDriver = {
         return {
           text: textOf(response.content).trim(),
           toolCalls,
+          spoken,
           cappedOut: false,
           usage: { inputTokens, outputTokens },
         };
@@ -162,9 +168,14 @@ export const anthropicDriver: LlmDriver = {
       ],
     });
     tally(closing.usage);
+    {
+      const said = textOf(closing.content).trim();
+      if (said) spoken.push(said);
+    }
     return {
       text: textOf(closing.content).trim(),
       toolCalls,
+      spoken,
       cappedOut: true,
       usage: { inputTokens, outputTokens },
     };

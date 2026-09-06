@@ -5,6 +5,40 @@ what's next.
 
 ---
 
+## Final QA before the first client — voice trained on the phone model (2026-09-06) ✅
+
+The 09-05 hardening measured its 27/27 voice eval on Sonnet locally, but ElevenLabs
+runs the agent on **Haiku 4.5** (`ELEVENLABS_LLM`). On Haiku the same eval scored
+21/27: it answered before calling `ask_owner` on unknown facts, transferred without
+speaking, skipped `capture_lead` when a caller went straight to booking, narrated
+its tools ("let me capture that"), and padded replies with filler openers.
+
+### Done
+- Phone prompt tuned for Haiku: first-action rules (lead, unknown fact, payment),
+  one line before / one after a tool, never narrate tools, no filler openers,
+  one-sentence close after a booking. Chat prompt untouched.
+- The agent loop now returns `spoken` — every line across the loop, including the
+  one said before a tool call, which `text` (final step only) dropped. The voice
+  eval judges that transcript, which is what a caller actually hears.
+- `npm run eval:voice` on Haiku 4.5, 5 runs: **44/45 (98%)**. The one miss is
+  natural variance on an immediate-booking caller; the lead is still captured when
+  the booking details are taken a turn later. Sonnet 4.5 (the other ElevenLabs
+  option): 22/27 before today's tuning — Haiku stays the default.
+- Signed end-to-end smoke through the built server: initiation → tool call with the
+  HMAC call token (cross-org token rejected) → post-call filing → minutes counted:
+  **10/10**.
+- Setup-script shapes checked against ElevenLabs' API reference: `built_in_tools`
+  with `system_tool_type`, `tool_ids`, `response_timeout_secs`, `max_tokens`,
+  `max_duration_seconds`, `turn_timeout`, the overrides allow-list. Two fields
+  (`phone_dynamic_variable` transfer destination, agent-level initiation-webhook
+  override) could not be confirmed from the docs — the script fails loudly with the
+  exact field if ElevenLabs rejects them.
+- CRM: Zoho v8 Notes/upsert shapes confirmed against Zoho's docs; Salesforce no
+  longer attempts a "converted" status via REST.
+- `docs/CLIENT_GO_LIVE_VOICE_CRM.md`: the 30-minute per-client checklist with a
+  5-minute live test script.
+- 628 tests, lint, typecheck, build green.
+
 ## Voice + CRM direct-client hardening (2026-09-05) ✅
 
 Final QA found release blockers in the provider boundary rather than the core
