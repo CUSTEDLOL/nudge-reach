@@ -13,7 +13,7 @@ const { prisma } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
 
-import { orgsList, overviewStats } from "@/modules/admin/queries";
+import { orgsList, orgsWhere, overviewStats } from "@/modules/admin/queries";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -120,5 +120,39 @@ describe("orgsList", () => {
     expect(args.cursor).toEqual({ id: "o99" });
     expect(args.skip).toBe(1);
     expect(JSON.stringify(args.where)).toContain("spice");
+  });
+});
+
+describe("orgsWhere (org list filters)", () => {
+  const now = new Date("2026-09-07T00:00:00Z");
+  it("is empty with no filters", () => {
+    expect(orgsWhere({}, now)).toEqual({});
+  });
+
+  it("search matches id, name, member email and phone-number id", () => {
+    const w = orgsWhere({ search: " glow " }, now) as { OR: unknown[] };
+    expect(w.OR).toHaveLength(4);
+    expect(w.OR[0]).toEqual({ id: "glow" });
+  });
+
+  it("combines plan, mode and state with AND", () => {
+    const w = orgsWhere({ plan: "front_desk", mode: "live", state: "past_due" }, now) as { AND: unknown[] };
+    expect(w.AND).toEqual([
+      { plan: "front_desk" },
+      { simulated: false },
+      { subscriptionStatus: "past_due" },
+    ]);
+  });
+
+  it("trial states exclude paying orgs; suspended checks the timestamp", () => {
+    expect(orgsWhere({ state: "trial" }, now)).toEqual({
+      trialEndsAt: { gte: now },
+      subscriptionStatus: { not: "active" },
+    });
+    expect(orgsWhere({ state: "ended_trial" }, now)).toEqual({
+      trialEndsAt: { lt: now },
+      subscriptionStatus: { not: "active" },
+    });
+    expect(orgsWhere({ state: "suspended" }, now)).toEqual({ suspendedAt: { not: null } });
   });
 });

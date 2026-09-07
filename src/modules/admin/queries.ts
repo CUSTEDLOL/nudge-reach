@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 /**
@@ -117,6 +118,9 @@ export interface OrgRow {
   name: string;
   plan: string;
   simulated: boolean;
+  suspended: boolean;
+  trialEndsAt: Date | null;
+  subscriptionStatus: string;
   vertical: string | null;
   ownerEmail: string | null;
   numbers: number;
@@ -135,24 +139,62 @@ export interface OrgsPage {
 
 const ORGS_PAGE_SIZE = 50;
 
-export async function orgsList(opts: {
+export const ORG_STATES = ["all", "trial", "paying", "past_due", "cancelled", "suspended", "ended_trial"] as const;
+export type OrgState = (typeof ORG_STATES)[number];
+export const ORG_MODES = ["all", "live", "test"] as const;
+export type OrgMode = (typeof ORG_MODES)[number];
+
+export interface OrgsFilter {
   search?: string;
+  plan?: string;
+  mode?: OrgMode;
+  state?: OrgState;
   cursor?: string;
-}): Promise<OrgsPage> {
-  const search = opts.search?.trim();
+}
+
+/** Pure: the Prisma where-clause for the org list filters. Exported for tests. */
+export function orgsWhere(f: OrgsFilter, now = new Date()): Prisma.OrgWhereInput {
+  const and: Prisma.OrgWhereInput[] = [];
+  const search = f.search?.trim();
+  if (search) {
+    and.push({
+      OR: [
+        { id: search },
+        { name: { contains: search, mode: "insensitive" } },
+        { memberships: { some: { email: { contains: search, mode: "insensitive" } } } },
+        { whatsappAccounts: { some: { phoneNumberId: search } } },
+      ],
+    });
+  }
+  if (f.plan && f.plan !== "all") and.push({ plan: f.plan });
+  if (f.mode === "live") and.push({ simulated: false });
+  if (f.mode === "test") and.push({ simulated: true });
+  switch (f.state) {
+    case "trial":
+      and.push({ trialEndsAt: { gte: now }, subscriptionStatus: { not: "active" } });
+      break;
+    case "ended_trial":
+      and.push({ trialEndsAt: { lt: now }, subscriptionStatus: { not: "active" } });
+      break;
+    case "paying":
+      and.push({ subscriptionStatus: "active" });
+      break;
+    case "past_due":
+      and.push({ subscriptionStatus: "past_due" });
+      break;
+    case "cancelled":
+      and.push({ subscriptionStatus: "cancelled" });
+      break;
+    case "suspended":
+      and.push({ suspendedAt: { not: null } });
+      break;
+  }
+  return and.length === 0 ? {} : and.length === 1 ? and[0] : { AND: and };
+}
+
+export async function orgsList(opts: OrgsFilter): Promise<OrgsPage> {
   const orgs = await prisma.org.findMany({
-    where: search
-      ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            {
-              memberships: {
-                some: { email: { contains: search, mode: "insensitive" } },
-              },
-            },
-          ],
-        }
-      : undefined,
+    where: orgsWhere(opts),
     orderBy: { createdAt: "desc" },
     take: ORGS_PAGE_SIZE + 1,
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
@@ -161,6 +203,9 @@ export async function orgsList(opts: {
       name: true,
       plan: true,
       simulated: true,
+      suspendedAt: true,
+      trialEndsAt: true,
+      subscriptionStatus: true,
       vertical: true,
       createdAt: true,
       memberships: {
@@ -202,8 +247,11 @@ export async function orgsList(opts: {
       name: o.name,
       plan: o.plan,
       simulated: o.simulated,
+      suspended: Boolean(o.suspendedAt),
+      trialEndsAt: o.trialEndsAt,
+      subscriptionStatus: o.subscriptionStatus,
       vertical: o.vertical,
-      ownerEmail: o.memberships[0]?.email ?? null,
+      ownerEmail: o.memberships[0]?.email || null,
       numbers: o._count.whatsappAccounts,
       contacts: o._count.contacts,
       members: o._count.memberships,
