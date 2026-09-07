@@ -38,7 +38,25 @@ export type AuditAction =
   | "custom_action.updated"
   | "custom_action.deleted"
   | "llm.connected"
-  | "llm.disconnected";
+  | "llm.disconnected"
+  // Founder panel (src/modules/admin) — actor is "founder:<email>".
+  | "admin.plan_changed"
+  | "admin.trial_changed"
+  | "admin.subscription_changed"
+  | "admin.mode_changed"
+  | "admin.voice_minutes_changed"
+  | "admin.suspended"
+  | "admin.unsuspended"
+  | "admin.overrides_changed"
+  | "admin.member_role_changed"
+  | "admin.member_removed"
+  | "admin.ownership_transferred"
+  | "admin.invite_revoked"
+  | "admin.integration_disconnected"
+  | "admin.integration_changed"
+  | "admin.agent_toggled"
+  | "admin.followups_toggled"
+  | "admin.client_setup";
 
 /** Human labels for the viewer. */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -73,6 +91,23 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "custom_action.deleted": "Custom agent action deleted",
   "llm.connected": "Own AI model connected",
   "llm.disconnected": "Own AI model disconnected",
+  "admin.plan_changed": "Nudge support changed the plan",
+  "admin.trial_changed": "Nudge support changed the trial",
+  "admin.subscription_changed": "Nudge support changed the subscription status",
+  "admin.mode_changed": "Nudge support switched live/test mode",
+  "admin.voice_minutes_changed": "Nudge support changed the call-minute allowance",
+  "admin.suspended": "Nudge support suspended the workspace",
+  "admin.unsuspended": "Nudge support lifted the suspension",
+  "admin.overrides_changed": "Nudge support changed feature overrides",
+  "admin.member_role_changed": "Nudge support changed a member's role",
+  "admin.member_removed": "Nudge support removed a member",
+  "admin.ownership_transferred": "Nudge support transferred ownership",
+  "admin.invite_revoked": "Nudge support revoked an invite",
+  "admin.integration_disconnected": "Nudge support disconnected an integration",
+  "admin.integration_changed": "Nudge support changed an integration",
+  "admin.agent_toggled": "Nudge support switched the AI Front Desk on/off",
+  "admin.followups_toggled": "Nudge support switched follow-ups on/off",
+  "admin.client_setup": "Nudge support ran concierge setup",
 };
 
 export function recordAudit(

@@ -91,3 +91,24 @@ export async function orgDetail(orgId: string) {
 }
 
 export type OrgDetail = NonNullable<Awaited<ReturnType<typeof orgDetail>>>;
+
+/** The strip every org tab shows: identity + the badges that matter. */
+export async function orgHeader(orgId: string) {
+  return prisma.org.findUnique({
+    where: { id: orgId },
+    select: {
+      id: true,
+      name: true,
+      plan: true,
+      simulated: true,
+      suspendedAt: true,
+      trialEndsAt: true,
+      subscriptionStatus: true,
+      vertical: true,
+      currency: true,
+      createdAt: true,
+      memberships: { where: { role: "OWNER" }, select: { email: true }, take: 1 },
+    },
+  });
+}
+export type OrgHeader = NonNullable<Awaited<ReturnType<typeof orgHeader>>>;
