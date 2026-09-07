@@ -17,7 +17,7 @@ what's next.
   blank, a deliberate choice advanced the flow, and Back restored only that
   saved answer. The accessibility tree reported the same pressed/unpressed
   states.
-- Verification: focused onboarding suite **23/23**, full suite **700/700**,
+- Verification: focused onboarding suite **25/25**, full suite **702/702**,
   targeted lint clean, and the Next.js production build passed.
 
 ## Final QA before the first client — voice trained on the phone model (2026-09-06) ✅
