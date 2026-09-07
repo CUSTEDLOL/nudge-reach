@@ -27,3 +27,16 @@ export async function orgSendMode(orgId: string): Promise<SendMode> {
   });
   return org ? sendModeFor(org) : "simulation";
 }
+
+/**
+ * Founder suspension (admin panel). A suspended org keeps its data but the
+ * app redirects to /suspended and sendMessage refuses every outbound message
+ * (agent replies, campaigns, follow-ups) until a founder lifts it.
+ */
+export async function isOrgSuspended(orgId: string): Promise<boolean> {
+  const org = await prisma.org.findUnique({
+    where: { id: orgId },
+    select: { suspendedAt: true },
+  });
+  return Boolean(org?.suspendedAt);
+}

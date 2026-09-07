@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getPlan, PLANS, type Plan } from "@/modules/billing/plans";
+import { getPlan, PLANS, type Plan, type PlanLimits } from "@/modules/billing/plans";
 
 /** The flagship plan (AI Front Desk) — surfaced in gate messages + upsells. */
 export const AI_FRONT_DESK_PLAN = PLANS.find((p) => p.flagship)!;
@@ -50,12 +50,65 @@ export function evaluateLimit(
   };
 }
 
+/** Keys a founder may override per org (Org.featureOverrides). */
+const OVERRIDABLE_FLAGS = [
+  "aiFrontDesk",
+  "publicApi",
+  "customActions",
+  "byoLlm",
+  "multiNumber",
+  "webWidget",
+  "leadScoring",
+  "voiceAgent",
+] as const satisfies readonly (keyof PlanLimits)[];
+const OVERRIDABLE_COUNTS = [
+  "contacts",
+  "teamMembers",
+  "automations",
+  "messagesPerMonth",
+] as const satisfies readonly (keyof PlanLimits)[];
+
+export type FeatureOverrides = Partial<
+  Pick<PlanLimits, (typeof OVERRIDABLE_FLAGS)[number] | (typeof OVERRIDABLE_COUNTS)[number]>
+>;
+
+/**
+ * Bespoke deals (founder panel): a JSON blob on the org merged OVER the plan's
+ * limits. Only known keys with the right type are honoured — a malformed blob
+ * can never widen access by accident. Counts accept a number or null
+ * (unlimited). Pure; unit-tested.
+ */
+export function sanitizeFeatureOverrides(raw: unknown): FeatureOverrides {
+  const out: FeatureOverrides = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  const obj = raw as Record<string, unknown>;
+  // Own properties only — never read through the prototype chain.
+  for (const k of OVERRIDABLE_FLAGS) {
+    if (!Object.hasOwn(obj, k)) continue;
+    if (typeof obj[k] === "boolean") out[k] = obj[k] as boolean;
+  }
+  for (const k of OVERRIDABLE_COUNTS) {
+    if (!Object.hasOwn(obj, k)) continue;
+    const v = obj[k];
+    if (v === null || (typeof v === "number" && Number.isFinite(v) && v >= 0)) {
+      out[k] = v as number | null;
+    }
+  }
+  return out;
+}
+
+export function applyFeatureOverrides(plan: Plan, raw: unknown): Plan {
+  const overrides = sanitizeFeatureOverrides(raw);
+  if (Object.keys(overrides).length === 0) return plan;
+  return { ...plan, limits: { ...plan.limits, ...overrides } };
+}
+
 async function planFor(orgId: string): Promise<Plan> {
   const org = await prisma.org.findUnique({
     where: { id: orgId },
-    select: { plan: true },
+    select: { plan: true, featureOverrides: true },
   });
-  return getPlan(org?.plan ?? "free");
+  return applyFeatureOverrides(getPlan(org?.plan ?? "free"), org?.featureOverrides);
 }
 
 /** Can this org add `adding` more contacts? */

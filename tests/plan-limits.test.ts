@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { evaluateLimit } from "@/modules/billing/limits";
+import {
+  applyFeatureOverrides,
+  evaluateLimit,
+  sanitizeFeatureOverrides,
+} from "@/modules/billing/limits";
 import { getPlan, PLANS, planPrice } from "@/modules/billing/plans";
 
 describe("evaluateLimit", () => {
@@ -74,5 +78,41 @@ describe("plans", () => {
         expect(n).toBeGreaterThan(p!);
       }
     }
+  });
+});
+
+describe("feature overrides (founder panel bespoke deals)", () => {
+  it("returns the plan untouched when there are no overrides", () => {
+    const plan = getPlan("growth");
+    expect(applyFeatureOverrides(plan, {})).toBe(plan);
+    expect(applyFeatureOverrides(plan, null)).toBe(plan);
+    expect(applyFeatureOverrides(plan, "junk")).toBe(plan);
+  });
+
+  it("merges known boolean flags and numeric counts over the plan", () => {
+    const plan = getPlan("pro");
+    expect(plan.limits.byoLlm).toBe(false);
+    const merged = applyFeatureOverrides(plan, { byoLlm: true, contacts: 5000 });
+    expect(merged.limits.byoLlm).toBe(true);
+    expect(merged.limits.contacts).toBe(5000);
+    expect(merged.limits.publicApi).toBe(plan.limits.publicApi);
+    expect(merged.id).toBe("pro");
+  });
+
+  it("ignores unknown keys and wrong types so a bad blob can't widen access", () => {
+    const out = sanitizeFeatureOverrides({
+      voiceAgent: "yes",
+      contacts: -1,
+      messagesPerMonth: null,
+      teamMembers: 3.5,
+      somethingElse: true,
+      __proto__: { publicApi: true },
+    });
+    expect(out).toEqual({ messagesPerMonth: null, teamMembers: 3.5 });
+  });
+
+  it("a null count means unlimited", () => {
+    const merged = applyFeatureOverrides(getPlan("free"), { contacts: null });
+    expect(merged.limits.contacts).toBeNull();
   });
 });

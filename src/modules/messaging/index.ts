@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { canSendMarketing } from "@/modules/consent";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
-import { orgSendMode, type SendMode } from "@/modules/orgs/mode";
+import { isOrgSuspended, orgSendMode, type SendMode } from "@/modules/orgs/mode";
 import { getWhatsappCredentials } from "@/modules/whatsapp/accounts";
 import { WhatsappLiveDriver } from "@/modules/messaging/drivers/whatsapp-live";
 import { WhatsappSimulationDriver } from "@/modules/messaging/drivers/whatsapp-simulation";
@@ -62,6 +62,14 @@ export async function sendMessage(
     };
   }
 
+  // Founder suspension: nothing leaves a suspended workspace, whatever the
+  // caller above (agent, composer, campaign queue, follow-ups).
+  if (options.orgId && (await isOrgSuspended(options.orgId))) {
+    return {
+      ok: false,
+      error: "This workspace is suspended. Contact Nudge support.",
+    };
+  }
   // Per-org test mode: an org without a connected number stays mocked even in
   // a live deployment. Sends with no org fall back to the global mode.
   const mode: SendMode = options.orgId

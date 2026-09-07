@@ -54,6 +54,14 @@ model Org {
   plan                   String            @default("free") // free | starter | growth | pro
   // Bespoke voice-minute allowance for this org; null = use the plan's.
   voiceMinutesOverride   Int?
+  // Founder admin panel controls (src/modules/admin). suspendedAt set ⇒ the
+  // workspace is locked: app redirects to /suspended and sendMessage refuses.
+  suspendedAt            DateTime?
+  // Per-org plan-limit overrides for bespoke deals, merged over the plan's
+  // limits in billing/limits.ts (e.g. {"publicApi":true,"contacts":5000}).
+  featureOverrides       Json              @default("{}")
+  // Internal notes, visible only in the founder panel.
+  founderNotes           String?
   subscriptionStatus     String            @default("inactive") // inactive | active | past_due | cancelled
   razorpayCustomerId     String?
   razorpaySubscriptionId String?
@@ -703,6 +711,8 @@ model WaitlistSignup {
   phoneE164 String
   vertical  String
   source    String   @default("landing")
+  status    String   @default("new") // new | contacted | converted | dismissed
+  notes     String?
   createdAt DateTime @default(now())
 
   @@index([createdAt])
@@ -716,6 +726,8 @@ model AccessRequest {
   email     String
   phoneE164 String
   source    String   @default("hero")
+  status    String   @default("new") // new | contacted | converted | dismissed
+  notes     String?
   createdAt DateTime @default(now())
 
   @@index([createdAt])

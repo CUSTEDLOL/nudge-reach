@@ -27,6 +27,9 @@ export const requireOrgContext = cache(async (): Promise<OrgContext> => {
   }
   const email = claims.email as string | undefined;
   const { org, membership } = await resolveOrgContext(claims.sub, email);
+  if (org.suspendedAt) {
+    redirect("/suspended");
+  }
   return {
     org,
     membership,
