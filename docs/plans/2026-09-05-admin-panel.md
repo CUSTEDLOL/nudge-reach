@@ -124,6 +124,15 @@ src/modules/admin/set-plan.ts   — shared with scripts/set-plan.ts
   assertion green.
 - Founder-manual list: set `FOUNDER_EMAILS` (Vercel + local), decide Dhairya's email.
 
+## v2 (2026-09-07) — shipped
+
+Sidebar shell, org tabs, org controls (trial / subscription / live-test /
+minutes / suspend / feature overrides / notes), team management, integrations
+health + levers, concierge setup from the founder side, leads desk, revenue,
+usage & cost, per-org + global audit. Schema: `Org.suspendedAt`,
+`Org.featureOverrides`, `Org.founderNotes`, `status`/`notes` on
+`AccessRequest` + `WaitlistSignup`. See PROGRESS.md (2026-09-07).
+
 ## Deliberately NOT in v1
 
 Impersonation/login-as-org (big security surface — own workstream if ever), editing org

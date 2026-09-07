@@ -30,6 +30,7 @@ vi.mock("@/modules/agent/profile", () => ({
   ensureAgentProfile: vi.fn().mockResolvedValue(null), // stop before the model
 }));
 vi.mock("@/modules/orgs/mode", () => ({
+  isOrgSuspended: vi.fn().mockResolvedValue(false),
   orgSendMode: vi.fn().mockResolvedValue("live"),
   sendModeFor: vi.fn().mockReturnValue("live"),
   isSimulated: vi.fn().mockReturnValue(false),

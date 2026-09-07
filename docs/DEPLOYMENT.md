@@ -14,6 +14,11 @@ export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 > Nudge is now positioned as an **AI Front Desk** — the AI employee books into a
 > real Google Calendar and runs a Revenue-Recovery follow-up engine — on top of
 > the existing self-serve CRM/inbox/campaigns tiers. Concretely, for a deploy:
+> - **2026-09-07 admin panel v2:** additive nullable columns `Org.suspendedAt`,
+>   `Org.featureOverrides` (JSON, default `{}`), `Org.founderNotes`, and
+>   `status` (default `"new"`) + `notes` on `AccessRequest` / `WaitlistSignup`.
+>   Run **`npm run db:push`** before deploying the app. Set `FOUNDER_EMAILS`
+>   (comma-separated) on Vercel — unset means the `/admin` panel is off.
 > - **2026-09-06 dashboard update:** `Membership.uiPreferences` is a new
 >   additive JSON column. This repository deliberately uses Prisma schema push
 >   rather than checked-in migration files. Run **`npm run db:push` followed by

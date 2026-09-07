@@ -208,6 +208,51 @@ still being decided.
 ### Exposure after this
 One call caps at ~8 minutes (~₹75). A client cannot exceed their package's
 minutes at all. 606 tests green.
+## Founder admin panel v2 — control the platform, not just watch it (2026-09-07) ✅
+
+Branch `admin-panel`, rebased onto main (the founder gate files that had been
+left uncommitted are now in). Every commit gated (tsc, lint, suite, build) and
+every page verified live on the worktree dev server as an allowlisted user.
+
+### Built
+- **Shell:** left sidebar (Platform · Insights · System) with the Nudge
+  wordmark, global org search (name / member email / org id / phone-number id),
+  mobile sheet, founder footer + sign-out. Org pages get an identity strip and
+  tabs: Overview · Team · Integrations · Front Desk · Usage & cost · Audit ·
+  Controls. Overview leads with a needs-attention strip.
+- **Controls (new schema, additive, pushed):** plan · trial (0–180d) ·
+  subscription status · live/test (live requires a connected number) ·
+  call-minute override · **suspend/lift** (`Org.suspendedAt`: app redirects
+  to `/suspended`, `sendMessage` refuses every outbound) · **feature
+  overrides** (`Org.featureOverrides`, sanitized, merged over plan limits in
+  `billing/limits` — bespoke deals without a new plan) · founder-only notes.
+- **Team:** role, remove, transfer ownership (atomic; never ownerless),
+  revoke invite.
+- **Integrations:** WhatsApp numbers, calendar, BYOK model, voice numbers +
+  minutes, CRM + dead jobs, custom actions, API keys, webhooks — with
+  disconnect / revoke / enable levers that call the same module functions the
+  client's settings pages use. No token or key is ever rendered.
+- **Front Desk:** agent + follow-up switches, knowledge/template state, and the
+  one-pass **concierge client setup** run from the founder side (same flagship
+  gate).
+- **Leads:** access requests + waitlist (previously write-only tables) as one
+  pipeline with status + notes; sidebar badge = still new.
+- **Revenue:** book-value MRR per currency/plan, trials ending in 7d, past
+  due, live-but-quiet, AI cost alerts.
+- **Audit:** every founder mutation writes `admin.*` rows to the org's own log
+  (labelled for the client's Settings → Audit); per-org tab + platform-wide
+  page with filters.
+- **Not built, on purpose:** impersonation / "log in as org" — the app resolves
+  one membership per user, so a founder seat inside a client org would hijack
+  the founder's own workspace session. Support happens via these controls.
+
+### Verification
+- 46 new unit tests across gate, controls, team, leads, revenue, usage,
+  overrides and the suspension send-gate; full suite, lint, typecheck, build
+  green (numbers in the commit messages).
+- Deploy note: run `npm run db:push` before the app (new nullable columns on
+  Org / AccessRequest / WaitlistSignup). Set `FOUNDER_EMAILS` on Vercel.
+
 ## Founder admin panel — /admin (2026-09-05) ✅
 
 Plan: `docs/plans/2026-09-05-admin-panel.md`. Built on branch `admin-panel`

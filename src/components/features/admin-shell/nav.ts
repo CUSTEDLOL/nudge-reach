@@ -5,7 +5,7 @@ import {
   LayoutDashboard,
   ScrollText,
   UserPlus,
-  Wallet,
+  Banknote,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,7 +27,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { href: "/admin", label: "Overview", icon: LayoutDashboard },
       { href: "/admin/orgs", label: "Organisations", icon: Building2 },
       { href: "/admin/leads", label: "Leads", icon: UserPlus, badge: "leads" },
-      { href: "/admin/revenue", label: "Revenue", icon: Wallet },
+      { href: "/admin/revenue", label: "Revenue", icon: Banknote },
     ],
   },
   {
