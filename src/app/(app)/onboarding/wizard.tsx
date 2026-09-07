@@ -52,6 +52,7 @@ import {
   saveWorkspaceProfileStepAction,
   type ActionResult,
 } from "./actions";
+import { visibleChoiceValue } from "./question-state";
 
 const QUESTION_COUNT = 7;
 
@@ -290,7 +291,11 @@ export function OnboardingWizard(props: WizardProps) {
               >
                 <ChoiceCards
                   options={ROLE_OPTIONS}
-                  value={profile.role}
+                  value={visibleChoiceValue(
+                    profile.role,
+                    1,
+                    profile.lastCompletedStep
+                  )}
                   disabled={saving}
                   onSelect={(value) =>
                     saveAndAdvance(
@@ -319,7 +324,11 @@ export function OnboardingWizard(props: WizardProps) {
               >
                 <ChoiceCards
                   options={OUTCOME_OPTIONS}
-                  value={profile.primaryOutcome}
+                  value={visibleChoiceValue(
+                    profile.primaryOutcome,
+                    2,
+                    profile.lastCompletedStep
+                  )}
                   disabled={saving}
                   onSelect={(value) =>
                     saveAndAdvance(
@@ -344,7 +353,11 @@ export function OnboardingWizard(props: WizardProps) {
               >
                 <ChoiceCards
                   options={JOURNEY_OPTIONS}
-                  value={profile.journey}
+                  value={visibleChoiceValue(
+                    profile.journey,
+                    3,
+                    profile.lastCompletedStep
+                  )}
                   disabled={saving}
                   onSelect={(value) =>
                     saveAndAdvance(
@@ -369,7 +382,11 @@ export function OnboardingWizard(props: WizardProps) {
               >
                 <ChoiceCards
                   options={TEAM_OPTIONS}
-                  value={profile.teamShape}
+                  value={visibleChoiceValue(
+                    profile.teamShape,
+                    4,
+                    profile.lastCompletedStep
+                  )}
                   disabled={saving}
                   onSelect={(value) =>
                     saveAndAdvance(
@@ -439,7 +456,11 @@ export function OnboardingWizard(props: WizardProps) {
               >
                 <ChoiceCards
                   options={GUIDANCE_OPTIONS}
-                  value={profile.guidance}
+                  value={visibleChoiceValue(
+                    profile.guidance,
+                    6,
+                    profile.lastCompletedStep
+                  )}
                   disabled={saving}
                   onSelect={(value) =>
                     saveAndAdvance(

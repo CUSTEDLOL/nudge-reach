@@ -22,4 +22,16 @@ describe("adaptive onboarding navigation", () => {
     expect(source).toContain('src="/icon.svg"');
     expect(source).not.toContain("<svg");
   });
+
+  it("shows saved values only after their question has been completed", () => {
+    const source = readFileSync(
+      "src/app/(app)/onboarding/wizard.tsx",
+      "utf8"
+    );
+
+    expect(source.match(/value=\{visibleChoiceValue\(/g) ?? []).toHaveLength(5);
+    expect(source).toMatch(
+      /visibleChoiceValue\(\s*profile\.journey,\s*3,\s*profile\.lastCompletedStep\s*\)/
+    );
+  });
 });
