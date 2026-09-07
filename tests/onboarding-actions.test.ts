@@ -176,6 +176,39 @@ describe("personalized onboarding actions", () => {
     expect(transaction).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves the actual answered step when onboarding is skipped", async () => {
+    const ctx = context("OWNER");
+    requireOrgContext.mockResolvedValue({
+      ...ctx,
+      org: {
+        ...ctx.org,
+        settings: {
+          ...ctx.org.settings,
+          workspaceProfile: {
+            primaryOutcome: "follow-up",
+            lastCompletedStep: 2,
+          },
+        },
+      },
+    });
+
+    await expect(completeOnboardingAction(new FormData())).rejects.toThrow(
+      "NEXT_REDIRECT"
+    );
+
+    expect(orgUpdate).toHaveBeenCalledWith({
+      where: { id: "org-1" },
+      data: expect.objectContaining({
+        settings: expect.objectContaining({
+          workspaceProfile: expect.objectContaining({
+            primaryOutcome: "follow-up",
+            lastCompletedStep: 2,
+          }),
+        }),
+      }),
+    });
+  });
+
   it("saves business identity without activating the AI front desk", async () => {
     requireOrgContext.mockResolvedValue(context("OWNER"));
     const formData = new FormData();

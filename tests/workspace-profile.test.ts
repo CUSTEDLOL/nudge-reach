@@ -74,6 +74,27 @@ describe("workspace profile", () => {
     });
   });
 
+  it("does not erase later completed answers when an earlier answer changes", () => {
+    const settings = mergeWorkspaceProfile(
+      {
+        workspaceProfile: {
+          role: "owner",
+          primaryOutcome: "bookings",
+          lastCompletedStep: 6,
+        },
+      },
+      { role: "front-desk", lastCompletedStep: 1 }
+    );
+
+    expect(settings).toMatchObject({
+      workspaceProfile: {
+        role: "front-desk",
+        primaryOutcome: "bookings",
+        lastCompletedStep: 6,
+      },
+    });
+  });
+
   it("always ranks urgent handoffs first while adapting the next priorities", () => {
     const bookings = deriveWorkspaceDefaults({
       ...DEFAULT_WORKSPACE_PROFILE,

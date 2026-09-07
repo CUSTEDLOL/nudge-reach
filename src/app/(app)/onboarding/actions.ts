@@ -174,9 +174,10 @@ export async function completeOnboardingAction(
     };
   }
 
-  const settings = mergeWorkspaceProfile(ctx.org.settings, {
-    lastCompletedStep: 8,
-  });
+  // Completing or skipping exits onboarding, but it must not claim unanswered
+  // discovery questions were completed. `onboardedAt` controls the redirect;
+  // the profile marker records only answers the owner actually saved.
+  const settings = mergeWorkspaceProfile(ctx.org.settings, {});
   const profile = parseWorkspaceProfile(settings);
   const defaults = deriveWorkspaceDefaults(profile);
   const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {

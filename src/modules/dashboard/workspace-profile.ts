@@ -368,9 +368,18 @@ export function mergeWorkspaceProfile(
   const currentSettings = record(settings);
   const currentProfile = parseWorkspaceProfile(settings);
   const patch = parseWorkspaceProfilePatch(input);
+  const lastCompletedStep = Math.max(
+    currentProfile.lastCompletedStep,
+    patch.lastCompletedStep ?? currentProfile.lastCompletedStep
+  );
   return {
     ...currentSettings,
-    workspaceProfile: { ...currentProfile, ...patch, version: 1 },
+    workspaceProfile: {
+      ...currentProfile,
+      ...patch,
+      lastCompletedStep,
+      version: 1,
+    },
   };
 }
 
