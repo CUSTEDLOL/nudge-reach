@@ -150,3 +150,19 @@ export function buildElevenLabsAgentPayload(input: {
     },
   };
 }
+
+/** Workspace-level wiring: post-call transcript webhook + initiation webhook. */
+export function buildWorkspaceSettingsPayload(input: {
+  appUrl: string;
+  initiationSecret: string;
+  postCallWebhookId: string;
+}) {
+  const base = input.appUrl.replace(/\/$/, "");
+  return {
+    webhooks: { post_call_webhook_id: input.postCallWebhookId, send_audio: false },
+    conversation_initiation_client_data_webhook: {
+      url: `${base}/api/voice/initiation`,
+      request_headers: { "x-nudge-voice-secret": input.initiationSecret },
+    },
+  };
+}
