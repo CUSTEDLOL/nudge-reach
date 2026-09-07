@@ -208,3 +208,40 @@ export async function setCustomActionEnabledAction(formData: FormData): Promise<
     await founderSetCustomActionEnabled(orgId, str(formData, "actionId"), str(formData, "enabled") === "true", founder.email, str(formData, "reason"))
   );
 }
+
+// ---- Front Desk (concierge) ----------------------------------------------
+import { founderSetAgentEnabled, founderSetFollowUpsEnabled, founderSetupClient } from "@/modules/admin/concierge";
+
+export async function setupClientAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  const res = await founderSetupClient(
+    orgId,
+    {
+      businessName: str(formData, "businessName"),
+      vertical: str(formData, "vertical"),
+      tone: str(formData, "tone"),
+      doNots: str(formData, "doNots"),
+      hours: str(formData, "hours"),
+      location: str(formData, "location"),
+      services: str(formData, "services"),
+      prices: str(formData, "prices"),
+      policies: str(formData, "policies"),
+      faqs: str(formData, "faqs"),
+    },
+    founder.email
+  );
+  return done(orgId, res);
+}
+
+export async function setAgentEnabledAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderSetAgentEnabled(orgId, str(formData, "enabled") === "true", founder.email, str(formData, "reason")));
+}
+
+export async function setFollowUpsEnabledAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderSetFollowUpsEnabled(orgId, str(formData, "enabled") === "true", founder.email, str(formData, "reason")));
+}
