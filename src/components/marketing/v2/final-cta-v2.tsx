@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import { GetAccessButton } from "@/components/marketing/get-access";
+import { BookDemoButton } from "@/components/marketing/book-demo";
 
 /**
  * The closer — a retro-game night: dithered sky bands in the brand ink-green
@@ -151,25 +151,21 @@ export function FinalCtaV2() {
           className="serif-display max-w-3xl text-[clamp(2rem,4.5vw,4rem)] leading-[1.1] tracking-[-0.015em] text-white"
           style={{ textShadow: "0 2px 12px rgba(5,13,10,0.8)" }}
         >
-          Your front desk clocks in tonight.
+          Your WhatsApp, handled.
         </h2>
         <p
           className="mt-4 max-w-xl text-[16.5px] leading-relaxed text-white/85"
           style={{ textShadow: "0 1px 8px rgba(5,13,10,0.7)" }}
         >
-          Books real appointments, chases quiet leads, collects payments — and
-          we set the whole thing up for you.
+          It answers, books and follows up. You run the business.
         </p>
-        <GetAccessButton
-          source="final-cta"
-          className="group/link mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-[16px] font-semibold text-ink shadow-[0_16px_48px_-12px_rgba(6,193,103,0.45)] transition-all hover:-translate-y-0.5 hover:bg-brand-100"
-        >
-          Get Early Access
+        <BookDemoButton className="group/link mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-[16px] font-semibold text-ink shadow-[0_16px_48px_-12px_rgba(6,193,103,0.45)] transition-all hover:-translate-y-0.5 hover:bg-brand-100">
+          Book a Demo
           <ArrowRight
             className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5"
             aria-hidden
           />
-        </GetAccessButton>
+        </BookDemoButton>
       </div>
     </section>
   );
