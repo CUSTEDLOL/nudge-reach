@@ -5,6 +5,21 @@ what's next.
 
 ---
 
+## Onboarding identity and honest blank states (2026-09-07) ✅
+
+- Replaced the app shell's placeholder chat mark with the official green NUDGE
+  wordmark; compact navigation now uses the matching official U glyph.
+- Unanswered single-choice onboarding questions now render with no selected
+  option. The stored profile defaults remain intact for safe dashboard
+  personalization, while `lastCompletedStep` determines whether an answer is
+  visually restored.
+- Confirmed live at `localhost:3001/onboarding`: the current question began
+  blank, a deliberate choice advanced the flow, and Back restored only that
+  saved answer. The accessibility tree reported the same pressed/unpressed
+  states.
+- Verification: focused onboarding suite **23/23**, full suite **700/700**,
+  targeted lint clean, and the Next.js production build passed.
+
 ## Final QA before the first client — voice trained on the phone model (2026-09-06) ✅
 
 The 09-05 hardening measured its 27/27 voice eval on Sonnet locally, but ElevenLabs
