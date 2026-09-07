@@ -132,3 +132,79 @@ export async function revokeInviteAction(formData: FormData): Promise<AdminActio
   const orgId = str(formData, "orgId");
   return done(orgId, await revokeInvite(orgId, str(formData, "inviteId"), founder.email));
 }
+
+// ---- Integrations ---------------------------------------------------------
+import {
+  founderDisconnectCalendar,
+  founderDisconnectCrm,
+  founderDisconnectLlm,
+  founderDisconnectNumber,
+  founderRevokeApiKey,
+  founderSetCustomActionEnabled,
+  founderSetDefaultNumber,
+  founderSetVoiceNumberEnabled,
+  founderSetWebhookEnabled,
+} from "@/modules/admin/integrations";
+
+export async function disconnectNumberAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderDisconnectNumber(orgId, str(formData, "accountId"), founder.email, str(formData, "reason")));
+}
+
+export async function setDefaultNumberAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderSetDefaultNumber(orgId, str(formData, "accountId"), founder.email));
+}
+
+export async function disconnectCalendarAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderDisconnectCalendar(orgId, founder.email, str(formData, "reason")));
+}
+
+export async function disconnectLlmAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderDisconnectLlm(orgId, founder.email, str(formData, "reason")));
+}
+
+export async function setVoiceNumberEnabledAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(
+    orgId,
+    await founderSetVoiceNumberEnabled(orgId, str(formData, "voiceNumberId"), str(formData, "enabled") === "true", founder.email, str(formData, "reason"))
+  );
+}
+
+export async function disconnectCrmAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderDisconnectCrm(orgId, str(formData, "provider"), founder.email, str(formData, "reason")));
+}
+
+export async function revokeApiKeyAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(orgId, await founderRevokeApiKey(orgId, str(formData, "keyId"), founder.email, str(formData, "reason")));
+}
+
+export async function setWebhookEnabledAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(
+    orgId,
+    await founderSetWebhookEnabled(orgId, str(formData, "endpointId"), str(formData, "enabled") === "true", founder.email, str(formData, "reason"))
+  );
+}
+
+export async function setCustomActionEnabledAction(formData: FormData): Promise<AdminActionResult> {
+  const founder = await requireFounder();
+  const orgId = str(formData, "orgId");
+  return done(
+    orgId,
+    await founderSetCustomActionEnabled(orgId, str(formData, "actionId"), str(formData, "enabled") === "true", founder.email, str(formData, "reason"))
+  );
+}
