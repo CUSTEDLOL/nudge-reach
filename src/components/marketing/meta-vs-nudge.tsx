@@ -130,7 +130,8 @@ export function MetaVsNudge() {
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-display text-[2rem] font-black leading-[1.02] tracking-[-0.03em] text-ink sm:text-[2.9rem]">
-            Why businesses choose Nudge
+            Why businesses choose{" "}
+            <span className="uppercase text-brand-600">Nudge</span>
           </h2>
           <p className="mt-4 text-[16.5px] leading-relaxed text-ink/60">
             It does the whole job, not just the replies.
