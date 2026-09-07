@@ -148,6 +148,36 @@ export async function archiveFactAction(id: string): Promise<ActionResult> {
   }
 }
 
+/** Bulk archive up to 200 selected facts — same org/role rules as the single. */
+const BULK_ARCHIVE_CAP = 200;
+
+export async function archiveFactsAction(ids: string[]): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const unique = [...new Set(ids.filter((id) => typeof id === "string" && id))].slice(
+      0,
+      BULK_ARCHIVE_CAP
+    );
+    if (unique.length === 0) {
+      return { ok: false, message: "Select at least one fact first." };
+    }
+    const updated = await prisma.knowledgeEntry.updateMany({
+      where: { id: { in: unique }, orgId: ctx.org.id, status: "active" },
+      data: { status: "archived" },
+    });
+    if (updated.count === 0) return { ok: false, message: "No matching facts." };
+    recordAudit(ctx, "knowledge.entry_archived", `${updated.count} facts (bulk)`);
+    revalidatePath("/agent");
+    return {
+      ok: true,
+      message: `Archived ${updated.count} fact${updated.count === 1 ? "" : "s"}.`,
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 /**
  * Import-first onboarding: crawl the business website into DRAFT facts the
  * owner reviews below. Drafts never reach the agent until approved.
