@@ -121,7 +121,11 @@ export function buildElevenLabsAgentPayload(input: {
           },
         },
       },
-      tts: { model_id: "eleven_flash_v2_5" },
+      // ElevenLabs requires turbo/flash v2 for an English agent (v2_5 is the
+      // multilingual family and is rejected with "English Agents must use
+      // turbo or flash v2"). Hindi/Hinglish numbers arrive later via a
+      // language preset, not by changing this base model.
+      tts: { model_id: "eleven_flash_v2" },
       conversation: { max_duration_seconds: 480 },
       turn: { turn_timeout: 10 },
     },
