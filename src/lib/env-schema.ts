@@ -101,6 +101,10 @@ export const envSchema = z
     // "Authorization: Bearer <CRON_SECRET>" (Vercel Cron sends it natively).
     CRON_SECRET: z.string().optional(),
 
+    // Founder admin panel (/admin): comma-separated login emails. Unset ⇒ the
+    // panel is off for everyone (fails closed). See modules/admin/auth.ts.
+    FOUNDER_EMAILS: z.string().optional(),
+
     // Public app origin (invite/email links, absolute URLs). Falls back to the
     // request host when unset.
     NEXT_PUBLIC_APP_URL: z.string().optional(),
