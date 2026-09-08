@@ -10,7 +10,6 @@ import { LaunchDemoButton } from "./launch-cta";
 const NAV_LINKS = [
   { label: "Features", href: "/#features" },
   { label: "Compare", href: "/#compare" },
-  { label: "Live Demo", href: "/demo" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
 ];
