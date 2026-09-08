@@ -77,7 +77,7 @@ export function ContactsToolbar({
       </Button>
       <Button variant="secondary" onClick={() => setParam("import", true)}>
         <Upload className="h-4 w-4" aria-hidden />
-        Import CSV
+        Import contacts
       </Button>
       <Button onClick={() => setParam("new", true)}>
         <UserPlus className="h-4 w-4" aria-hidden />
@@ -224,7 +224,34 @@ export function CsvImportForm({ onDone }: { onDone: () => void }) {
   return (
     <form action={action} className="flex flex-col gap-4">
       <Field
-        label="Paste your list — one customer per line"
+        label="Upload your list"
+        htmlFor="csv-file"
+        hint={
+          <>
+            Excel (<span className="font-mono">.xlsx</span>) or{" "}
+            <span className="font-mono">.csv</span>, columns{" "}
+            <span className="font-mono">Name, phone, email</span> — a header
+            row is fine, we skip it.
+          </>
+        }
+      >
+        <input
+          id="csv-file"
+          name="file"
+          type="file"
+          accept=".csv,.txt,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          className="block w-full cursor-pointer rounded-lg border border-neutral-300 bg-white text-sm text-neutral-600 file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-neutral-900 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-700"
+        />
+      </Field>
+
+      <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+        <div className="h-px flex-1 bg-neutral-200" />
+        or paste it
+        <div className="h-px flex-1 bg-neutral-200" />
+      </div>
+
+      <Field
+        label="One customer per line"
         htmlFor="csv-body"
         hint={
           <>
@@ -237,8 +264,7 @@ export function CsvImportForm({ onDone }: { onDone: () => void }) {
         <Textarea
           id="csv-body"
           name="csv"
-          required
-          rows={6}
+          rows={4}
           className="font-mono text-xs"
           placeholder={"Priya, 9876543210, priya@gmail.com\nRahul, 9123456780"}
         />

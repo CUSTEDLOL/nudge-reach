@@ -7,6 +7,12 @@ import { requireOrg, requireOrgContext, requireRole } from "@/modules/orgs/auth"
 import { isSimulated } from "@/modules/orgs/mode";
 import { handleInboundMessage } from "@/modules/agent/inbound";
 import { normalizePhoneE164 } from "@/lib/phone";
+import {
+  looksLikeHeader,
+  MAX_IMPORT_ROWS,
+  parseCsvText,
+  rowsFromUpload,
+} from "@/modules/contacts/import-file";
 import { checkContactLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { recordContactEvent } from "@/modules/contacts/events";
@@ -123,10 +129,28 @@ export async function importContactsCsv(
     };
   }
 
-  const rows = csv
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  // Rows come from an uploaded .csv/.xlsx file when one is given, otherwise
+  // from the pasted text — both land in the same pipeline below, so the
+  // consent gate and the never-resurrect-an-opt-out rule hold for either.
+  const file = formData.get("file");
+  let rows: string[][];
+  if (file instanceof File && file.size > 0) {
+    const upload = await rowsFromUpload(file);
+    if ("error" in upload) return { ok: false, message: upload.error };
+    rows = upload.rows;
+  } else {
+    rows = parseCsvText(csv);
+    if (rows.length > 0 && looksLikeHeader(rows[0])) rows = rows.slice(1);
+    if (rows.length > MAX_IMPORT_ROWS) {
+      return {
+        ok: false,
+        message: `That's ${rows.length} rows — the limit is ${MAX_IMPORT_ROWS} per import.`,
+      };
+    }
+  }
+  if (rows.length === 0) {
+    return { ok: false, message: "Paste your list or upload a file first." };
+  }
 
   // Known phones up front, so we can tell created from updated (for the
   // contact_created automation trigger) without a per-row lookup.
@@ -143,7 +167,7 @@ export async function importContactsCsv(
   // existing contacts never count against the cap).
   const newPhones = new Set<string>();
   for (const row of rows) {
-    const [name, rawPhone] = row.split(",").map((s) => s?.trim() ?? "");
+    const [name, rawPhone] = row;
     const phone = rawPhone ? normalizePhoneE164(rawPhone, org.dialCode) : null;
     if (name && phone && !existingPhones.has(phone)) newPhones.add(phone);
   }
@@ -154,9 +178,7 @@ export async function importContactsCsv(
   let skipped = 0;
   const createdIds: string[] = [];
   for (const row of rows) {
-    const [name, rawPhone, rawEmail] = row
-      .split(",")
-      .map((s) => s?.trim() ?? "");
+    const [name, rawPhone, rawEmail] = row;
     const phone = rawPhone ? normalizePhoneE164(rawPhone, org.dialCode) : null;
     if (!name || !phone) {
       skipped++;
