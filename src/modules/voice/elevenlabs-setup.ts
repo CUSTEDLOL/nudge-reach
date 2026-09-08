@@ -121,7 +121,11 @@ export function buildElevenLabsAgentPayload(input: {
           },
         },
       },
-      tts: { model_id: "eleven_flash_v2_5" },
+      // ElevenLabs requires turbo/flash v2 for an English agent (v2_5 is the
+      // multilingual family and is rejected with "English Agents must use
+      // turbo or flash v2"). Hindi/Hinglish numbers arrive later via a
+      // language preset, not by changing this base model.
+      tts: { model_id: "eleven_flash_v2" },
       conversation: { max_duration_seconds: 480 },
       turn: { turn_timeout: 10 },
     },
@@ -143,6 +147,22 @@ export function buildElevenLabsAgentPayload(input: {
           request_headers: { "x-nudge-voice-secret": input.initiationSecret },
         },
       },
+    },
+  };
+}
+
+/** Workspace-level wiring: post-call transcript webhook + initiation webhook. */
+export function buildWorkspaceSettingsPayload(input: {
+  appUrl: string;
+  initiationSecret: string;
+  postCallWebhookId: string;
+}) {
+  const base = input.appUrl.replace(/\/$/, "");
+  return {
+    webhooks: { post_call_webhook_id: input.postCallWebhookId, send_audio: false },
+    conversation_initiation_client_data_webhook: {
+      url: `${base}/api/voice/initiation`,
+      request_headers: { "x-nudge-voice-secret": input.initiationSecret },
     },
   };
 }

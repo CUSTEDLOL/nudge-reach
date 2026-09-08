@@ -39,8 +39,9 @@ month, no card) with no carrier and no number:
 2. Put it in `.env.local` as `ELEVENLABS_API_KEY`, and invent two secrets:
    `VOICE_INITIATION_SECRET` and `VOICE_TOOLS_SECRET` (any long random strings).
 3. Run the setup script (command in `scripts/voice-setup.ts`). It creates the
-   shared agent and standalone webhook tools, enables the permitted per-call
-   overrides, and prints `ELEVENLABS_AGENT_ID` — add that to `.env.local` too.
+   shared agent, the webhook tools and the post-call webhook, enables the
+   permitted per-call overrides, and prints `ELEVENLABS_AGENT_ID` and
+   `ELEVENLABS_WEBHOOK_SECRET` — add both to `.env.local`.
 4. Set `VOICE_TEST_ORG_ID` to the workspace you want to test with (its org id).
    A browser conversation carries no dialled number, so this names the single
    workspace such a call may reach — we refuse rather than guess a tenant.
@@ -59,11 +60,12 @@ short notice first and can only reach your own verified number).
    (default `claude-haiku-4-5`; Opus/Fable are rejected by the guard).
 3. Run `scripts/voice-setup.ts` (command in the file header). It creates or
    updates the shared agent with the pinned LLM, current system-tool schema,
-   standalone webhook tools, and enabled per-call overrides. It prints
-   `ELEVENLABS_AGENT_ID` → add it to the env.
-4. ElevenLabs → Agents → Settings → Post-call webhooks → add
-   `https://nudgeagent.app/api/voice/post-call`; copy the secret into
-   `ELEVENLABS_WEBHOOK_SECRET`. Redeploy.
+   standalone webhook tools and enabled per-call overrides, creates the
+   post-call webhook, and points the workspace at both webhooks. It prints
+   `ELEVENLABS_AGENT_ID` and, on first run, `ELEVENLABS_WEBHOOK_SECRET`
+   (ElevenLabs shows that secret once) → add both to `.env.local`.
+4. `bash scripts/voice-push-env.sh` copies the voice values from `.env.local`
+   into Vercel production and deploys.
 
 ## Per client (number)
 - **India — Exotel:** KYC for the client's city, ask hello@exotel.com to enable
