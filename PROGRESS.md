@@ -5,6 +5,23 @@ what's next.
 
 ---
 
+## Founder control room hardening — batch 2 (2026-09-08) 🚧
+
+- Privileged plan, lifecycle, membership, ownership, and invite-revocation
+  changes now commit with their founder-attributed audit row in one database
+  transaction. An audit failure cannot leave an unaudited change behind.
+- Account-changing actions require a 3–500 character reason. Going live,
+  changing suspension, transferring ownership, disconnecting integrations,
+  and revoking API keys additionally require the exact organization or target
+  text; the server independently rechecks it against org-scoped data.
+- The Team page can now create Admin/Agent invitations and resend pending
+  invites. Seat limits, duplicate members/invites, HTML escaping, email delivery
+  failures, auto-accept fallback, and founder audit attribution are covered.
+- Verification: complete admin-focused suite **85/85**, full admin lint clean,
+  and TypeScript clean.
+- Next: responsive organization discovery, scalable lead search/pagination,
+  and truthful operations heartbeat/severity signals.
+
 ## Founder control room hardening — batch 1 (2026-09-08) 🚧
 
 - Merged the current `origin/main` voice fixes into the isolated
