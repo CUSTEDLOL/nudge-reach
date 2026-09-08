@@ -57,7 +57,7 @@ import { visibleChoiceValue } from "./question-state";
 const QUESTION_COUNT = 7;
 
 const SHORTCUT_LABELS = {
-  today: "Today",
+  today: "Home",
   inbox: "Inbox",
   leads: "Leads",
   "front-desk": "AI Front Desk",

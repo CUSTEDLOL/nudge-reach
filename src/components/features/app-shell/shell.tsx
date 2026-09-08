@@ -16,11 +16,10 @@ import { Sidebar, type SidebarUser } from "@/components/features/app-shell/sideb
 import { Topbar } from "@/components/features/app-shell/topbar";
 import { BottomNav, isThreadRoute } from "@/components/features/app-shell/bottom-nav";
 import type { AppRole } from "@/components/features/app-shell/nav";
-import type { ShortcutKey } from "@/modules/dashboard/workspace-profile";
 import { saveSidebarCollapsedAction } from "@/app/(app)/shell-actions";
 
 /**
- * App chrome: dark sidebar on desktop (lg+), fixed bottom navigation on
+ * App chrome: white sidebar on desktop (lg+), fixed bottom navigation on
  * mobile. The inbox thread route hides the bottom bar so the chat composer
  * owns the bottom edge. Rendered by app/(app)/layout.tsx.
  */
@@ -30,7 +29,6 @@ export function AppShell({
   role = "OWNER",
   simulation = false,
   initialSidebarCollapsed = false,
-  suggestedShortcuts = [],
   children,
 }: {
   orgName: string;
@@ -38,7 +36,6 @@ export function AppShell({
   role?: AppRole;
   simulation?: boolean;
   initialSidebarCollapsed?: boolean;
-  suggestedShortcuts?: ShortcutKey[];
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -104,12 +101,9 @@ export function AppShell({
       <SkipLink />
       <Sidebar
         role={role}
-        simulation={simulation}
-        orgName={orgName}
         user={user}
         collapsed={sidebarCollapsed}
         onCollapsedChange={updateSidebar}
-        suggestedShortcuts={suggestedShortcuts}
       />
       <div
         className={cn(
@@ -117,7 +111,7 @@ export function AppShell({
           sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[232px]"
         )}
       >
-        <Topbar orgName={orgName} user={user} role={role} />
+        <Topbar orgName={orgName} user={user} role={role} simulation={simulation} />
         <main
           id="main-content"
           tabIndex={-1}

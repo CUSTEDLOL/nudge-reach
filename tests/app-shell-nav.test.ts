@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import {
   activeNavKey,
   commandsForRole,
@@ -17,7 +16,7 @@ describe("adaptive app navigation", () => {
         group.items.map((item) => item.label),
       ])
     ).toEqual([
-      ["Workspace", ["Today", "Inbox", "Leads"]],
+      ["Workspace", ["Home", "Inbox", "Leads"]],
       [
         "Automation",
         ["AI Front Desk", "Follow-ups", "Campaigns"],
@@ -45,7 +44,7 @@ describe("adaptive app navigation", () => {
     expect([
       ...mobilePrimaryItemsForRole("OWNER").map((item) => item.mobileLabel),
       "More",
-    ]).toEqual(["Today", "Inbox", "Front Desk", "Leads", "More"]);
+    ]).toEqual(["Home", "Inbox", "Front Desk", "Leads", "More"]);
   });
 
   it.each([
@@ -102,14 +101,6 @@ describe("adaptive app navigation", () => {
         "campaigns",
       ]).map((item) => item.key)
     ).toEqual(["inbox", "campaigns"]);
-  });
-
-  it("shows shortcut labels instead of requiring icon recognition", () => {
-    const source = readFileSync(
-      "src/components/features/app-shell/sidebar.tsx",
-      "utf8"
-    );
-    expect(source).toContain('data-suggested-label="true"');
   });
 
   it("keeps the mobile bar away from an open inbox thread", () => {

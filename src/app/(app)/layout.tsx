@@ -22,7 +22,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         role={role}
         simulation={isSimulated(org)}
         initialSidebarCollapsed={uiPreferences.sidebarCollapsed}
-        suggestedShortcuts={uiPreferences.pinnedShortcuts}
       >
         {children}
       </AppShell>

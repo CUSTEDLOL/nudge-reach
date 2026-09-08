@@ -5,6 +5,22 @@ what's next.
 
 ---
 
+## App shell: quieter sidebar, Home rename (2026-09-08) ✅
+
+- Desktop sidebar restyled for clarity: white rail, solid `brand-700` active row,
+  plain `neutral-100` hover with no fade, 36px rows so the nav fits a laptop
+  viewport without a scrollbar. Removed the workspace card, the duplicate
+  "Suggested for you" block, the utility links and the sign-out button.
+- Topbar now owns the moved chrome: a small "Test mode" badge in simulation, a
+  Help & support icon button, and Settings / Customize workspace / Help /
+  Sign out in the account menu.
+- "Today" is now "Home" in navigation, the mobile bar and the onboarding
+  shortcut labels. Pinned shortcuts are still saved by onboarding but no longer
+  rendered in the sidebar.
+- Landing hero: new `finale.mp4` (orange-fruit bush, sparkle at 1160,600), the
+  status card "Your WhatsApp, handled" centred on that sparkle via
+  `.hero-reply-card`, and the over-hero navbar tinted navy instead of white glass.
+
 ## Voice: first real ElevenLabs workspace wired (2026-09-07) ✅
 
 - Ran `scripts/voice-setup.ts` against the Nudge ElevenLabs workspace for the
@@ -18,7 +34,6 @@ what's next.
   through the agent).
 - Next: founder runs the push script, then the first browser call from
   Settings → Voice → **Call your AI**; then a Twilio/Exotel number.
-
 ## Onboarding identity and honest blank states (2026-09-07) ✅
 
 - Replaced the app shell's placeholder chat mark with the official green NUDGE

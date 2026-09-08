@@ -59,8 +59,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       {
         key: "today",
-        label: "Today",
-        mobileLabel: "Today",
+        label: "Home",
+        mobileLabel: "Home",
         href: "/dashboard",
         icon: House,
         activePrefixes: ["/dashboard"],
