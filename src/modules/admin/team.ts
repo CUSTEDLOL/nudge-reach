@@ -2,6 +2,8 @@ import type { OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
 import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
+import { checkTeamLimit } from "@/modules/billing/limits";
+import { appOrigin, isEmailConfigured, sendEmail } from "@/modules/email";
 
 /**
  * Founder controls over an org's team. Same server-enforced rules as the
@@ -37,6 +39,200 @@ export async function teamOverview(orgId: string) {
     }),
   ]);
   return { members, invites };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function inviteEmail(orgName: string, email: string, role: "ADMIN" | "AGENT") {
+  const signupUrl = `${appOrigin()}/login`;
+  return {
+    to: email,
+    subject: `You're invited to ${orgName} on Nudge`,
+    text: [
+      `Nudge support invited you to join ${orgName} as ${role.toLowerCase()}.`,
+      "Nudge is the AI Front Desk that books customers, follows up with quiet leads, and helps run the business front desk.",
+      "",
+      `Accept by signing up with this email address: ${signupUrl}`,
+    ].join("\n"),
+    html: `
+      <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#0b3d2e;margin:0 0 12px">You're invited to ${escapeHtml(orgName)}</h2>
+        <p style="color:#374151;line-height:1.6;margin:0 0 20px">
+          Nudge support invited you to join <strong>${escapeHtml(orgName)}</strong>
+          as <strong>${escapeHtml(role.toLowerCase())}</strong>. Nudge is the AI Front Desk
+          that books customers, follows up with quiet leads, and helps run the
+          business front desk.
+        </p>
+        <a href="${escapeHtml(signupUrl)}" style="display:inline-block;background:#02a258;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600">
+          Accept invite
+        </a>
+        <p style="color:#9ca3af;font-size:12px;margin:20px 0 0">
+          Sign up with this email address (${escapeHtml(email)}) and you'll land
+          in the workspace automatically.
+        </p>
+      </div>`,
+  };
+}
+
+async function recordInviteDelivery(
+  orgId: string,
+  founderEmail: string,
+  email: string,
+  detail: string
+): Promise<void> {
+  try {
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.invite_delivery",
+      email,
+      detail
+    );
+  } catch {
+    // The invite is already committed. A telemetry failure must not make the
+    // UI claim that the valid invite was rolled back.
+  }
+}
+
+export async function inviteMember(
+  orgId: string,
+  rawEmail: string,
+  role: string,
+  founderEmail: string
+): Promise<FounderResult> {
+  const email = rawEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+  if (role !== "ADMIN" && role !== "AGENT") {
+    return { ok: false, error: "Invites can be admin or agent." };
+  }
+
+  const org = await prisma.org.findUnique({
+    where: { id: orgId },
+    select: { name: true },
+  });
+  if (!org) return { ok: false, error: "Org not found." };
+
+  const existingMember = await prisma.membership.findFirst({
+    where: { orgId, email },
+  });
+  if (existingMember) {
+    return { ok: false, error: `${email} is already on the team.` };
+  }
+
+  const existingInvite = await prisma.invite.findUnique({
+    where: { orgId_email: { orgId, email } },
+  });
+  if (existingInvite?.status === "pending") {
+    return { ok: false, error: `${email} already has a pending invite.` };
+  }
+
+  const limit = await checkTeamLimit(orgId);
+  if (!limit.allowed) return { ok: false, error: limit.message };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.invite.upsert({
+      where: { orgId_email: { orgId, email } },
+      create: { orgId, email, role },
+      update: { role, status: "pending" },
+    });
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.invite_created",
+      email,
+      `as ${role.toLowerCase()}`,
+      tx
+    );
+  });
+
+  if (!isEmailConfigured()) {
+    await recordInviteDelivery(
+      orgId,
+      founderEmail,
+      email,
+      "initial: skipped (email not configured)"
+    );
+    return {
+      ok: true,
+      message: `Invited ${email}. They'll join automatically when they sign up with this email.`,
+    };
+  }
+
+  let delivery: Awaited<ReturnType<typeof sendEmail>>;
+  try {
+    delivery = await sendEmail(inviteEmail(org.name, email, role));
+  } catch {
+    delivery = { ok: false };
+  }
+  await recordInviteDelivery(
+    orgId,
+    founderEmail,
+    email,
+    `initial: ${delivery.ok ? "sent" : "failed"}`
+  );
+
+  return {
+    ok: true,
+    message: delivery.ok
+      ? `Invited ${email}. An invite email is on its way.`
+      : `Invited ${email}. The invite email couldn't be sent, but they'll still join automatically when they sign up with this email.`,
+  };
+}
+
+export async function resendInvite(
+  orgId: string,
+  inviteId: string,
+  founderEmail: string
+): Promise<FounderResult> {
+  if (!isEmailConfigured()) {
+    return {
+      ok: false,
+      error: "Email delivery is not configured. The pending invite will still auto-accept on signup.",
+    };
+  }
+  const invite = await prisma.invite.findFirst({
+    where: { id: inviteId, orgId, status: "pending" },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      org: { select: { name: true } },
+    },
+  });
+  if (!invite) return { ok: false, error: "No pending invite with that id." };
+  if (invite.role !== "ADMIN" && invite.role !== "AGENT") {
+    return { ok: false, error: "Only admin or agent invites can be resent." };
+  }
+
+  let delivery: Awaited<ReturnType<typeof sendEmail>>;
+  try {
+    delivery = await sendEmail(
+      inviteEmail(invite.org.name, invite.email, invite.role)
+    );
+  } catch {
+    delivery = { ok: false };
+  }
+  await recordInviteDelivery(
+    orgId,
+    founderEmail,
+    invite.email,
+    `resent: ${delivery.ok ? "sent" : "failed"}`
+  );
+  return delivery.ok
+    ? { ok: true, message: `Invite email resent to ${invite.email}.` }
+    : {
+        ok: false,
+        error: "The invite remains pending, but its email couldn't be sent.",
+      };
 }
 
 async function loadMember(orgId: string, membershipId: string) {

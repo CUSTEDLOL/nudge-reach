@@ -1,10 +1,13 @@
 import { requireFounder } from "@/modules/admin/auth";
 import { teamOverview } from "@/modules/admin/team";
+import { isEmailConfigured } from "@/modules/email";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
 import {
+  inviteMemberAction,
   removeMemberAction,
+  resendInviteAction,
   revokeInviteAction,
   setMemberRoleAction,
   transferOwnershipAction,
@@ -21,6 +24,7 @@ export default async function AdminOrgTeamPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const { members, invites } = await teamOverview(id);
   const owners = members.filter((m) => m.role === "OWNER").length;
+  const emailConfigured = isEmailConfigured();
 
   return (
     <div className="space-y-4">
@@ -103,10 +107,45 @@ export default async function AdminOrgTeamPage({ params }: { params: Promise<{ i
         <CardHeader>
           <CardTitle>Pending invites ({invites.length})</CardTitle>
           <CardDescription>
-            An invite is accepted automatically when that email signs in. Revoking deletes it.
+            {emailConfigured
+              ? "Invite emails are enabled. A matching signup also accepts the invite automatically."
+              : "Email delivery is not configured. Invites still accept automatically when that email signs in."}{" "}
+            Revoking deletes the pending invite.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="border-b border-neutral-100 px-5 py-4">
+            <ActionForm
+              action={inviteMemberAction}
+              hidden={{ orgId: id }}
+              submitLabel="Invite member"
+              className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end"
+            >
+              <label className="block">
+                <span className="text-xs font-medium text-neutral-600">Email address</span>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="teammate@business.com"
+                  className={"mt-1 w-full " + selectCls}
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-neutral-600">Role</span>
+                <select name="role" defaultValue="AGENT" className={"mt-1 w-full " + selectCls}>
+                  <option value="AGENT">agent</option>
+                  <option value="ADMIN">admin</option>
+                </select>
+              </label>
+            </ActionForm>
+            {!emailConfigured && (
+              <p className="mt-2 text-xs text-amber-700">
+                The invite will be saved, but you&apos;ll need to share the login link manually.
+              </p>
+            )}
+          </div>
           {invites.length === 0 ? (
             <p className="px-5 py-4 text-sm text-neutral-400">No pending invites.</p>
           ) : (
@@ -120,6 +159,13 @@ export default async function AdminOrgTeamPage({ params }: { params: Promise<{ i
                     </p>
                   </div>
                   <Badge tone={ROLE_TONE[inv.role]}>{inv.role.toLowerCase()}</Badge>
+                  <ActionForm
+                    action={resendInviteAction}
+                    hidden={{ orgId: id, inviteId: inv.id }}
+                    submitLabel="Resend"
+                    variant="ghost"
+                    disabled={!emailConfigured}
+                  />
                   <ActionForm
                     action={revokeInviteAction}
                     hidden={{ orgId: id, inviteId: inv.id }}

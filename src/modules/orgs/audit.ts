@@ -51,6 +51,8 @@ export type AuditAction =
   | "admin.member_role_changed"
   | "admin.member_removed"
   | "admin.ownership_transferred"
+  | "admin.invite_created"
+  | "admin.invite_delivery"
   | "admin.invite_revoked"
   | "admin.integration_disconnected"
   | "admin.integration_changed"
@@ -102,6 +104,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.member_role_changed": "Nudge support changed a member's role",
   "admin.member_removed": "Nudge support removed a member",
   "admin.ownership_transferred": "Nudge support transferred ownership",
+  "admin.invite_created": "Nudge support created an invite",
+  "admin.invite_delivery": "Nudge support sent an invite email",
   "admin.invite_revoked": "Nudge support revoked an invite",
   "admin.integration_disconnected": "Nudge support disconnected an integration",
   "admin.integration_changed": "Nudge support changed an integration",

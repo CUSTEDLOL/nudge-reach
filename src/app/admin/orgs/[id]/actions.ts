@@ -134,7 +134,39 @@ export async function setFounderNotesAction(formData: FormData): Promise<AdminAc
 }
 
 // ---- Team -----------------------------------------------------------------
-import { removeMember, revokeInvite, setMemberRole, transferOwnership } from "@/modules/admin/team";
+import {
+  inviteMember,
+  removeMember,
+  resendInvite,
+  revokeInvite,
+  setMemberRole,
+  transferOwnership,
+} from "@/modules/admin/team";
+
+export async function inviteMemberAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    const orgId = str(formData, "orgId");
+    return done(
+      orgId,
+      await inviteMember(
+        orgId,
+        str(formData, "email"),
+        str(formData, "role"),
+        founder.email
+      )
+    );
+  });
+}
+
+export async function resendInviteAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    const orgId = str(formData, "orgId");
+    return done(
+      orgId,
+      await resendInvite(orgId, str(formData, "inviteId"), founder.email)
+    );
+  });
+}
 
 export async function setMemberRoleAction(formData: FormData): Promise<AdminActionResult> {
   return runFounderAction(async (founder) => {

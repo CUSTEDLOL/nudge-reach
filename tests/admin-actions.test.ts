@@ -1,18 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireFounder, setOrgPlan, updateLead } = vi.hoisted(() => ({
+const {
+  requireFounder,
+  setOrgPlan,
+  updateLead,
+  inviteMember,
+  resendInvite,
+} = vi.hoisted(() => ({
   requireFounder: vi.fn(),
   setOrgPlan: vi.fn(),
   updateLead: vi.fn(),
+  inviteMember: vi.fn(),
+  resendInvite: vi.fn(),
 }));
 
 vi.mock("@/modules/admin/auth", () => ({ requireFounder }));
 vi.mock("@/modules/admin/set-plan", () => ({ setOrgPlan }));
 vi.mock("@/modules/admin/leads", () => ({ updateLead }));
+vi.mock("@/modules/admin/team", () => ({
+  inviteMember,
+  resendInvite,
+  removeMember: vi.fn(),
+  revokeInvite: vi.fn(),
+  setMemberRole: vi.fn(),
+  transferOwnership: vi.fn(),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { runFounderAction } from "@/modules/admin/actions";
-import { setPlanAction } from "@/app/admin/orgs/[id]/actions";
+import {
+  inviteMemberAction,
+  resendInviteAction,
+  setPlanAction,
+} from "@/app/admin/orgs/[id]/actions";
 import { updateLeadAction } from "@/app/admin/leads/actions";
 
 beforeEach(() => {
@@ -63,6 +83,38 @@ describe("admin route actions", () => {
       "pro",
       "founder@nudge.test",
       "Owner approved the upgrade"
+    );
+  });
+
+  it("routes founder-created and resent invitations through the team module", async () => {
+    inviteMember.mockResolvedValueOnce({ ok: true, message: "Invited." });
+    resendInvite.mockResolvedValueOnce({ ok: true, message: "Resent." });
+    const inviteForm = new FormData();
+    inviteForm.set("orgId", "org_123");
+    inviteForm.set("email", "new@clinic.test");
+    inviteForm.set("role", "ADMIN");
+    const resendForm = new FormData();
+    resendForm.set("orgId", "org_123");
+    resendForm.set("inviteId", "invite_123");
+
+    await expect(inviteMemberAction(inviteForm)).resolves.toEqual({
+      ok: true,
+      message: "Invited.",
+    });
+    await expect(resendInviteAction(resendForm)).resolves.toEqual({
+      ok: true,
+      message: "Resent.",
+    });
+    expect(inviteMember).toHaveBeenCalledWith(
+      "org_123",
+      "new@clinic.test",
+      "ADMIN",
+      "founder@nudge.test"
+    );
+    expect(resendInvite).toHaveBeenCalledWith(
+      "org_123",
+      "invite_123",
+      "founder@nudge.test"
     );
   });
 
