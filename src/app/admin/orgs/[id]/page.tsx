@@ -103,7 +103,10 @@ export default async function AdminOrgOverviewPage({ params }: { params: Promise
               <Check ok={concierge.calendarConnected} label="Calendar connected" />
               <Check ok={concierge.approvedTemplates > 0} label={`Approved templates (${concierge.approvedTemplates})`} />
               <Check ok={concierge.followUpEnabled} label="Follow-ups enabled" />
-              <Check ok={org.whatsappAccounts.length > 0} label={`WhatsApp number connected (${org.whatsappAccounts.length})`} />
+              <Check
+                ok={concierge.whatsappConnected}
+                label={`WhatsApp number connected (${org.whatsappAccounts.length})`}
+              />
             </ul>
             <Link
               href={`/admin/orgs/${org.id}/agent`}
