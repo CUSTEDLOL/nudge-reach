@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { founderAudit } from "@/modules/admin/audit";
 import { PLANS, type PlanId } from "@/modules/billing/plans";
 
 /**
@@ -32,16 +33,16 @@ export async function setOrgPlan(
   if (!org) return { ok: false, error: "Org not found." };
   if (org.plan === plan) return { ok: false, error: `Already on ${plan}.` };
 
-  await prisma.org.update({ where: { id: org.id }, data: { plan } });
-  await prisma.auditLog.create({
-    data: {
-      orgId: org.id,
-      actorUserId: "founder",
-      actorName: `founder:${founderEmail}`,
-      action: "admin.plan_changed",
-      target: org.name,
-      detail: `${org.plan} → ${plan}`,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { plan } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.plan_changed",
+      org.name,
+      `${org.plan} → ${plan}`,
+      tx
+    );
   });
   return { ok: true, from: org.plan, to: plan };
 }

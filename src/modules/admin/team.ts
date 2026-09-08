@@ -65,14 +65,27 @@ export async function setMemberRole(
   if (target.role === "OWNER" && (await ownerCount(orgId)) <= 1) {
     return { ok: false, error: "That is the last owner. Transfer ownership instead." };
   }
-  await prisma.membership.update({ where: { id: target.id }, data: { role } });
-  await founderAudit(
-    orgId,
-    founderEmail,
-    "admin.member_role_changed",
-    who(target),
-    withReason(`${target.role} → ${role}`, reason)
-  );
+  const changed = await prisma.$transaction(async (tx) => {
+    if (
+      target.role === "OWNER" &&
+      (await tx.membership.count({ where: { orgId, role: "OWNER" } })) <= 1
+    ) {
+      return false;
+    }
+    await tx.membership.update({ where: { id: target.id }, data: { role } });
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.member_role_changed",
+      who(target),
+      withReason(`${target.role} → ${role}`, reason),
+      tx
+    );
+    return true;
+  });
+  if (!changed) {
+    return { ok: false, error: "That is the last owner. Transfer ownership instead." };
+  }
   return { ok: true, message: `${who(target)} is now ${role.toLowerCase()}.` };
 }
 
@@ -87,14 +100,27 @@ export async function removeMember(
   if (target.role === "OWNER" && (await ownerCount(orgId)) <= 1) {
     return { ok: false, error: "That is the last owner. Transfer ownership first." };
   }
-  await prisma.membership.delete({ where: { id: target.id } });
-  await founderAudit(
-    orgId,
-    founderEmail,
-    "admin.member_removed",
-    who(target),
-    withReason(`${target.email} (${target.role}) removed`, reason)
-  );
+  const removed = await prisma.$transaction(async (tx) => {
+    if (
+      target.role === "OWNER" &&
+      (await tx.membership.count({ where: { orgId, role: "OWNER" } })) <= 1
+    ) {
+      return false;
+    }
+    await tx.membership.delete({ where: { id: target.id } });
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.member_removed",
+      who(target),
+      withReason(`${target.email} (${target.role}) removed`, reason),
+      tx
+    );
+    return true;
+  });
+  if (!removed) {
+    return { ok: false, error: "That is the last owner. Transfer ownership first." };
+  }
   return { ok: true, message: `${who(target)} removed.` };
 }
 
@@ -115,21 +141,22 @@ export async function transferOwnership(
   if (org.ownerUserId === target.userId && target.role === "OWNER") {
     return { ok: false, error: `${who(target)} already owns this workspace.` };
   }
-  await prisma.$transaction([
-    prisma.membership.updateMany({
+  await prisma.$transaction(async (tx) => {
+    await tx.membership.updateMany({
       where: { orgId, role: "OWNER", NOT: { id: target.id } },
       data: { role: "ADMIN" },
-    }),
-    prisma.membership.update({ where: { id: target.id }, data: { role: "OWNER" } }),
-    prisma.org.update({ where: { id: orgId }, data: { ownerUserId: target.userId } }),
-  ]);
-  await founderAudit(
-    orgId,
-    founderEmail,
-    "admin.ownership_transferred",
-    who(target),
-    withReason(`ownership → ${target.email}; previous owners now admins`, reason)
-  );
+    });
+    await tx.membership.update({ where: { id: target.id }, data: { role: "OWNER" } });
+    await tx.org.update({ where: { id: orgId }, data: { ownerUserId: target.userId } });
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.ownership_transferred",
+      who(target),
+      withReason(`ownership → ${target.email}; previous owners now admins`, reason),
+      tx
+    );
+  });
   return { ok: true, message: `${who(target)} now owns ${org.name}.` };
 }
 
@@ -145,7 +172,16 @@ export async function revokeInvite(
   if (!invite) return { ok: false, error: "No pending invite with that id." };
   // Delete, as the client's own revoke does: (orgId, email) is unique, so a
   // lingering "revoked" row would block re-inviting the same address.
-  await prisma.invite.delete({ where: { id: invite.id } });
-  await founderAudit(orgId, founderEmail, "admin.invite_revoked", invite.email);
+  await prisma.$transaction(async (tx) => {
+    await tx.invite.delete({ where: { id: invite.id } });
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.invite_revoked",
+      invite.email,
+      null,
+      tx
+    );
+  });
   return { ok: true, message: `Invite for ${invite.email} revoked.` };
 }
