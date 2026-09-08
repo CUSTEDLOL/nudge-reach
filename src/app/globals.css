@@ -255,6 +255,34 @@ html {
   pointer-events: none;
 }
 
+/* Hero live-reply card — centred exactly on the watermark sparkle baked into
+   /hero/finale.mp4 (source frame 1280x720, sparkle centre at 1160,600). The
+   video is object-cover + object-top, so the rendered scale is
+   max(vw/1280, svh/720); x is centred, y is top-anchored. Below 3:2 the
+   sparkle is cropped off-frame, so the card falls back to a safe corner. */
+.hero-reply-card {
+  /* Centre y on the sparkle. For x, anchor the card's RIGHT edge so the
+     sparkle sits under the card's centre (half-width ~145px), then clamp so
+     the card never runs off the viewport. 100% resolves against the section
+     (scrollbar-safe): width in `right`, height in `top`. */
+  top: calc(600 * max(calc(100vw / 1280), calc(100% / 720)));
+  right: max(
+    0.75rem,
+    calc(50% - 520 * max(calc(100% / 1280), calc(100svh / 720)) - 145px)
+  );
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+@media (max-aspect-ratio: 3/2) {
+  .hero-reply-card {
+    left: auto;
+    top: auto;
+    right: 1rem;
+    bottom: 20%;
+    transform: none;
+  }
+}
+
 /* Edge-fade mask for marquees */
 .mask-fade-x {
   -webkit-mask-image: linear-gradient(
