@@ -5,6 +5,22 @@ what's next.
 
 ---
 
+## Founder control room hardening — batch 1 (2026-09-08) 🚧
+
+- Merged the current `origin/main` voice fixes into the isolated
+  `founder-control-room` branch and established a green admin baseline.
+- Fixed go-live readiness so an organization cannot appear ready without a
+  usable connected WhatsApp number. The suspension tests are now fully mocked
+  and no longer touch a developer database.
+- Added one founder-action boundary for every organization and lead mutation:
+  authorization still fails closed, while unexpected operational failures now
+  return one safe, non-sensitive response instead of leaking database details.
+- Verification: focused admin suite **43/43** across readiness, suspension,
+  action safety, leads, organization controls, team, and concierge; targeted
+  lint and TypeScript checks are clean. Baseline production build also passed.
+- Next: make mutation + audit writes atomic, then add reason/confirmation UX
+  and complete the missing team-invite workflow.
+
 ## Voice: first real ElevenLabs workspace wired (2026-09-07) ✅
 
 - Ran `scripts/voice-setup.ts` against the Nudge ElevenLabs workspace for the
