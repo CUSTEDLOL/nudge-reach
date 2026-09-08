@@ -5,6 +5,20 @@ what's next.
 
 ---
 
+## Voice: first real ElevenLabs workspace wired (2026-09-07) ✅
+
+- Ran `scripts/voice-setup.ts` against the Nudge ElevenLabs workspace for the
+  first time: shared agent + three webhook tools created; TTS model corrected
+  to `eleven_flash_v2` (English agents reject `v2_5`).
+- The script now also creates the post-call webhook (`/workspace/webhooks`,
+  HMAC) and points the workspace at the initiation + post-call webhooks
+  (`PATCH /convai/settings`). No dashboard step left; secret printed once.
+- `scripts/voice-push-env.sh` copies the voice env from `.env.local` into
+  Vercel production and deploys — the founder runs it (secrets never pass
+  through the agent).
+- Next: founder runs the push script, then the first browser call from
+  Settings → Voice → **Call your AI**; then a Twilio/Exotel number.
+
 ## Onboarding identity and honest blank states (2026-09-07) ✅
 
 - Replaced the app shell's placeholder chat mark with the official green NUDGE

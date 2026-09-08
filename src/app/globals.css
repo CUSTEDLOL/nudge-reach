@@ -358,7 +358,10 @@ html {
 /* The Night Shift scroll track: tall + sticky ONLY under .jsm.
    Static (default) = normal flow, whole transcript visible. */
 .jsm .ns-track {
-  height: 1300vh;
+  /* Scroll length of the pinned night-shift scrub: ~2 screen-heights per
+     chapter. Was 1300vh — founders found the ride too long; 650vh let fast
+     scrolls outrun the scrub and skip the last chapters. */
+  height: 800vh;
 }
 .jsm .ns-stage {
   position: sticky;
@@ -371,7 +374,7 @@ html {
 }
 @media (max-width: 1023px) {
   .jsm .ns-track {
-    height: 1000vh;
+    height: 650vh;
   }
 }
 

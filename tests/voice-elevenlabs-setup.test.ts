@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildElevenLabsAgentPayload,
   buildVoiceWebhookTool,
+  buildWorkspaceSettingsPayload,
   VOICE_WEBHOOK_TOOL_SPECS,
 } from "@/modules/voice/elevenlabs-setup";
 
@@ -48,6 +49,19 @@ describe("ElevenLabs setup payload", () => {
     expect(tool.api_schema.request_body_schema.properties.tool_token).toEqual({
       type: "string",
       dynamic_variable: "tool_token",
+    });
+  });
+
+  it("points the workspace at the post-call and initiation webhooks", () => {
+    const settings = buildWorkspaceSettingsPayload({
+      appUrl: "https://nudge.example/",
+      initiationSecret: "init-secret",
+      postCallWebhookId: "wh_1",
+    });
+    expect(settings.webhooks).toEqual({ post_call_webhook_id: "wh_1", send_audio: false });
+    expect(settings.conversation_initiation_client_data_webhook).toEqual({
+      url: "https://nudge.example/api/voice/initiation",
+      request_headers: { "x-nudge-voice-secret": "init-secret" },
     });
   });
 });
