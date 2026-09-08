@@ -74,6 +74,10 @@ export default async function AdminOrgTeamPage({ params }: { params: Promise<{ i
                       danger: true,
                     }}
                     askReason
+                    confirmText={{
+                      expected: m.email,
+                      label: `Type “${m.email}” to confirm`,
+                    }}
                   />
                 ) : null}
                 <ActionForm

@@ -101,7 +101,7 @@ describe("transferOwnership", () => {
   it("demotes other owners, promotes the target and moves Org.ownerUserId atomically", async () => {
     prisma.membership.findFirst.mockResolvedValue(agent);
     prisma.org.findUnique.mockResolvedValue({ ownerUserId: "u1", name: "Glow" });
-    const res = await transferOwnership("o1", "m2", "f@x.com", "founder left the clinic");
+    const res = await transferOwnership("o1", "m2", "f@x.com", "founder left the clinic", "agent@x.com");
     expect(res.ok).toBe(true);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(tx.membership.updateMany).toHaveBeenCalledWith({
@@ -111,6 +111,22 @@ describe("transferOwnership", () => {
     expect(tx.membership.update).toHaveBeenCalledWith({ where: { id: "m2" }, data: { role: "OWNER" } });
     expect(tx.org.update).toHaveBeenCalledWith({ where: { id: "o1" }, data: { ownerUserId: "u2" } });
     expect(tx.auditLog.create.mock.calls[0][0].data.action).toBe("admin.ownership_transferred");
+  });
+
+  it("requires the target email before transferring ownership", async () => {
+    prisma.membership.findFirst.mockResolvedValue(agent);
+    prisma.org.findUnique.mockResolvedValue({ ownerUserId: "u1", name: "Glow" });
+
+    const res = await transferOwnership(
+      "o1",
+      "m2",
+      "f@x.com",
+      "founder left the clinic",
+      "owner@x.com"
+    );
+
+    expect(res.ok).toBe(false);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });
 

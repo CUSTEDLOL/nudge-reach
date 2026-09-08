@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { founderAudit } from "@/modules/admin/audit";
+import { founderAudit, withReason } from "@/modules/admin/audit";
 import { PLANS, type PlanId } from "@/modules/billing/plans";
 
 /**
@@ -21,7 +21,8 @@ export function isValidPlanId(plan: string): plan is PlanId {
 export async function setOrgPlan(
   orgId: string,
   plan: string,
-  founderEmail: string
+  founderEmail: string,
+  reason?: string
 ): Promise<SetPlanResult> {
   if (!isValidPlanId(plan)) {
     return { ok: false, error: `Unknown plan "${plan}".` };
@@ -40,7 +41,7 @@ export async function setOrgPlan(
       founderEmail,
       "admin.plan_changed",
       org.name,
-      `${org.plan} → ${plan}`,
+      withReason(`${org.plan} → ${plan}`, reason),
       tx
     );
   });

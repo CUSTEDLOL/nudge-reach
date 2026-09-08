@@ -1,6 +1,7 @@
 import type { OrgRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
+import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
 
 /**
  * Founder controls over an org's team. Same server-enforced rules as the
@@ -132,14 +133,20 @@ export async function transferOwnership(
   orgId: string,
   membershipId: string,
   founderEmail: string,
-  reason?: string
+  reason?: string,
+  confirmation?: string
 ): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const target = await loadMember(orgId, membershipId);
   if (!target) return { ok: false, error: "Member not found in this org." };
   const org = await prisma.org.findUnique({ where: { id: orgId }, select: { ownerUserId: true, name: true } });
   if (!org) return { ok: false, error: "Org not found." };
   if (org.ownerUserId === target.userId && target.role === "OWNER") {
     return { ok: false, error: `${who(target)} already owns this workspace.` };
+  }
+  if (!confirmationMatches(target.email, confirmation ?? "")) {
+    return { ok: false, error: `Type "${target.email}" exactly to confirm.` };
   }
   await prisma.$transaction(async (tx) => {
     await tx.membership.updateMany({
@@ -153,7 +160,10 @@ export async function transferOwnership(
       founderEmail,
       "admin.ownership_transferred",
       who(target),
-      withReason(`ownership → ${target.email}; previous owners now admins`, reason),
+      withReason(
+        `ownership → ${target.email}; previous owners now admins`,
+        requiredReason.value
+      ),
       tx
     );
   });

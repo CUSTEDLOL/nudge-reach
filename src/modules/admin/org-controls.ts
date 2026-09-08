@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { sanitizeFeatureOverrides, type FeatureOverrides } from "@/modules/billing/limits";
 import { trialEndDate } from "@/modules/billing/trial";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
+import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
 
 /**
  * Founder controls over ONE organisation's lifecycle. Every function:
@@ -113,13 +114,19 @@ export async function setLiveMode(
   orgId: string,
   live: boolean,
   founderEmail: string,
-  reason?: string
+  reason?: string,
+  confirmation?: string
 ): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (org.simulated === !live) return { ok: false, error: `Already ${live ? "live" : "in test mode"}.` };
   if (live && org.whatsappAccounts.length === 0) {
     return { ok: false, error: "Connect a WhatsApp number first — a live workspace needs credentials to send." };
+  }
+  if (!confirmationMatches(org.name, confirmation ?? "")) {
+    return { ok: false, error: `Type "${org.name}" exactly to confirm.` };
   }
   await prisma.$transaction(async (tx) => {
     await tx.org.update({ where: { id: org.id }, data: { simulated: !live } });
@@ -128,7 +135,7 @@ export async function setLiveMode(
       founderEmail,
       "admin.mode_changed",
       org.name,
-      withReason(live ? "test → live" : "live → test", reason),
+      withReason(live ? "test → live" : "live → test", requiredReason.value),
       tx
     );
   });
@@ -167,13 +174,18 @@ export async function setSuspended(
   orgId: string,
   suspended: boolean,
   founderEmail: string,
-  reason?: string
+  reason?: string,
+  confirmation?: string
 ): Promise<FounderResult> {
-  if (suspended && !reason?.trim()) return { ok: false, error: "Give a reason — it goes in the org's audit log." };
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (Boolean(org.suspendedAt) === suspended) {
     return { ok: false, error: suspended ? "Already suspended." : "Not suspended." };
+  }
+  if (!confirmationMatches(org.name, confirmation ?? "")) {
+    return { ok: false, error: `Type "${org.name}" exactly to confirm.` };
   }
   await prisma.$transaction(async (tx) => {
     await tx.org.update({
@@ -185,7 +197,10 @@ export async function setSuspended(
       founderEmail,
       suspended ? "admin.suspended" : "admin.unsuspended",
       org.name,
-      withReason(suspended ? "workspace locked, sends refused" : "workspace unlocked", reason),
+      withReason(
+        suspended ? "workspace locked, sends refused" : "workspace unlocked",
+        requiredReason.value
+      ),
       tx
     );
   });

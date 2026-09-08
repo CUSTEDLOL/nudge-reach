@@ -113,11 +113,20 @@ describe("setLiveMode", () => {
 
   it("goes live once a number exists, and back to test any time", async () => {
     prisma.org.findUnique.mockResolvedValue({ ...baseOrg, whatsappAccounts: [{ id: "w1" }] });
-    expect((await setLiveMode("o1", true, "f@x.com")).ok).toBe(true);
+    expect((await setLiveMode("o1", true, "f@x.com", "owner approved", "Glow Clinic")).ok).toBe(true);
     expect(tx.org.update.mock.calls[0][0].data).toEqual({ simulated: false });
     prisma.org.findUnique.mockResolvedValue({ ...baseOrg, simulated: false });
-    expect((await setLiveMode("o1", false, "f@x.com")).ok).toBe(true);
+    expect((await setLiveMode("o1", false, "f@x.com", "testing an issue", " glow clinic ")).ok).toBe(true);
     expect(lastAudit().action).toBe("admin.mode_changed");
+  });
+
+  it("requires the exact organization name before changing send mode", async () => {
+    prisma.org.findUnique.mockResolvedValue({ ...baseOrg, whatsappAccounts: [{ id: "w1" }] });
+
+    const res = await setLiveMode("o1", true, "f@x.com", "owner approved", "Glow");
+
+    expect(res.ok).toBe(false);
+    expect(tx.org.update).not.toHaveBeenCalled();
   });
 });
 
@@ -140,13 +149,20 @@ describe("setSuspended", () => {
   });
 
   it("suspends with a timestamp and lifts with null, auditing each", async () => {
-    expect((await setSuspended("o1", true, "f@x.com", "chargeback")).ok).toBe(true);
+    expect((await setSuspended("o1", true, "f@x.com", "chargeback", "Glow Clinic")).ok).toBe(true);
     expect(tx.org.update.mock.calls[0][0].data.suspendedAt).toBeInstanceOf(Date);
     expect(lastAudit().action).toBe("admin.suspended");
     prisma.org.findUnique.mockResolvedValue({ ...baseOrg, suspendedAt: new Date() });
-    expect((await setSuspended("o1", false, "f@x.com")).ok).toBe(true);
+    expect((await setSuspended("o1", false, "f@x.com", "chargeback resolved", "Glow Clinic")).ok).toBe(true);
     expect(tx.org.update.mock.calls[1][0].data).toEqual({ suspendedAt: null });
     expect(lastAudit().action).toBe("admin.unsuspended");
+  });
+
+  it("requires the exact organization name before changing suspension", async () => {
+    const res = await setSuspended("o1", true, "f@x.com", "chargeback", "Other Clinic");
+
+    expect(res.ok).toBe(false);
+    expect(tx.org.update).not.toHaveBeenCalled();
   });
 });
 

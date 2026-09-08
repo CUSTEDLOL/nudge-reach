@@ -18,6 +18,7 @@ import { updateLeadAction } from "@/app/admin/leads/actions";
 beforeEach(() => {
   vi.clearAllMocks();
   requireFounder.mockResolvedValue({ email: "founder@nudge.test" });
+  setOrgPlan.mockResolvedValue({ ok: true, from: "free", to: "pro" });
 });
 
 describe("admin route actions", () => {
@@ -28,12 +29,41 @@ describe("admin route actions", () => {
     const formData = new FormData();
     formData.set("orgId", "org_123");
     formData.set("plan", "pro");
+    formData.set("reason", "Owner approved the upgrade");
 
     await expect(setPlanAction(formData)).resolves.toEqual({
       ok: false,
       message:
         "That change could not be completed. Nothing else was changed. Try again.",
     });
+  });
+
+  it("requires a reason before an account-changing action", async () => {
+    const formData = new FormData();
+    formData.set("orgId", "org_123");
+    formData.set("plan", "pro");
+
+    const result = await setPlanAction(formData);
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("reason");
+    expect(setOrgPlan).not.toHaveBeenCalled();
+  });
+
+  it("passes a trimmed reason to the account-changing module", async () => {
+    const formData = new FormData();
+    formData.set("orgId", "org_123");
+    formData.set("plan", "pro");
+    formData.set("reason", "  Owner approved the upgrade  ");
+
+    await setPlanAction(formData);
+
+    expect(setOrgPlan).toHaveBeenCalledWith(
+      "org_123",
+      "pro",
+      "founder@nudge.test",
+      "Owner approved the upgrade"
+    );
   });
 
   it("normalizes unexpected lead action failures", async () => {
