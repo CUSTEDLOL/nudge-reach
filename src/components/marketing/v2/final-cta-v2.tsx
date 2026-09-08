@@ -1,175 +1,91 @@
+"use client";
+
+import Image from "next/image";
+import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
-import { GetAccessButton } from "@/components/marketing/get-access";
+import { BookDemoButton } from "@/components/marketing/book-demo";
+import { WhatsAppGlyph } from "@/components/marketing/holo-card";
 
 /**
- * The closer — a retro-game night: dithered sky bands in the brand ink-green
- * ramp, pixel stars, a pixel moon and a blocky grass strip (same staircase
- * language as the navbar slab). Pure SVG on a 4px grid — no video, no assets.
+ * The closer: the pixel world panorama (Marina Bay Sands → Taj Mahal →
+ * Eiffel → Burj Khalifa — the markets Nudge serves) filling the section,
+ * fading into the site's cream at the bottom where the ask sits in dark
+ * ink, Duna-style. One simple line, one dark Book-a-Demo button.
  */
-
-const PX = 4; // one "game pixel" in viewBox units
-const COLS = 48; // 192 / PX
-
-// Sky bands top→bottom, each boundary blended with a one-row checkerboard
-// dither (classic pixel-art gradient).
-const SKY_BANDS = [
-  { y: 0, h: 28, color: "#050d0a" },
-  { y: 32, h: 24, color: "#07261c" },
-  { y: 60, h: 20, color: "#0b3d2e" },
-  { y: 84, h: 16, color: "#0a643c" },
-];
-const DITHER_ROWS = [
-  { y: 28, upper: "#050d0a", lower: "#07261c" },
-  { y: 56, upper: "#07261c", lower: "#0b3d2e" },
-  { y: 80, upper: "#0b3d2e", lower: "#0a643c" },
-];
-
-// Fixed star field — placed in the y 36–78 band so it survives the bottom-
-// anchored slice crop on wide screens.
-const STARS = [
-  { x: 12, y: 40, s: 2, c: "#f6fbf7", o: 0.9 },
-  { x: 30, y: 50, s: 2, c: "#d3f8e0", o: 0.6 },
-  { x: 44, y: 38, s: 2, c: "#f6fbf7", o: 0.75 },
-  { x: 58, y: 58, s: 2, c: "#a9f0c9", o: 0.5 },
-  { x: 70, y: 44, s: 2, c: "#f6fbf7", o: 0.85 },
-  { x: 84, y: 64, s: 2, c: "#d3f8e0", o: 0.45 },
-  { x: 92, y: 38, s: 2, c: "#f6fbf7", o: 0.65 },
-  { x: 104, y: 52, s: 2, c: "#a9f0c9", o: 0.6 },
-  { x: 118, y: 42, s: 2, c: "#f6fbf7", o: 0.9 },
-  { x: 128, y: 68, s: 2, c: "#d3f8e0", o: 0.5 },
-  { x: 138, y: 48, s: 2, c: "#f6fbf7", o: 0.7 },
-  { x: 166, y: 58, s: 2, c: "#a9f0c9", o: 0.55 },
-  { x: 178, y: 44, s: 2, c: "#f6fbf7", o: 0.8 },
-  { x: 22, y: 66, s: 2, c: "#d3f8e0", o: 0.4 },
-  { x: 96, y: 74, s: 2, c: "#f6fbf7", o: 0.5 },
-  { x: 152, y: 72, s: 2, c: "#d3f8e0", o: 0.45 },
-  { x: 40, y: 76, s: 2, c: "#a9f0c9", o: 0.35 },
-  { x: 6, y: 54, s: 2, c: "#f6fbf7", o: 0.4 },
-];
-
-// Pixel moon — a chunky 12×12 block with bitten corners + two craters.
-const MOON = { x: 150, y: 38 };
-const MOON_BODY = [
-  { x: 2, y: 0, w: 8, h: 12 },
-  { x: 0, y: 2, w: 12, h: 8 },
-];
-const MOON_CRATERS = [
-  { x: 4, y: 3, s: 2 },
-  { x: 7, y: 7, s: 2 },
-];
-
-// Grass strip — irregular blocky tops (same staircase spirit as the navbar
-// slab), one bright accent row, darker base.
-const GRASS_TOPS = [3, 9, 14, 20, 27, 33, 38, 44]; // columns with a raised block
-const GRASS_BUSHES = [
-  { x: 6, y: 88, w: 8, h: 8, c: "#0b3d2e" },
-  { x: 34, y: 90, w: 6, h: 6, c: "#0b3d2e" },
-  { x: 120, y: 88, w: 8, h: 8, c: "#0b3d2e" },
-  { x: 158, y: 90, w: 10, h: 6, c: "#0b3d2e" },
-];
 
 export function FinalCtaV2() {
   return (
     <section
-      id="get-access"
-      className="relative overflow-hidden bg-night"
-      aria-label="Get early access to Nudge"
+      aria-label="Book a demo"
+      className="relative isolate flex min-h-[96svh] flex-col justify-end overflow-hidden bg-[#8ecdf0]"
     >
-      <svg
-        viewBox="0 0 192 108"
-        preserveAspectRatio="xMidYMax slice"
-        shapeRendering="crispEdges"
-        aria-hidden
-        className="absolute inset-0 h-full w-full"
-      >
-        {SKY_BANDS.map((band) => (
-          <rect key={band.y} x="0" y={band.y} width="192" height={band.h} fill={band.color} />
-        ))}
-        {DITHER_ROWS.map((row) =>
-          Array.from({ length: COLS }, (_, i) => (
-            <rect
-              key={`${row.y}-${i}`}
-              x={i * PX}
-              y={row.y}
-              width={PX}
-              height={PX}
-              fill={i % 2 === 0 ? row.lower : row.upper}
-            />
-          ))
-        )}
-        {STARS.map((star, i) => (
-          <rect
-            key={`star-${i}`}
-            x={star.x}
-            y={star.y}
-            width={star.s}
-            height={star.s}
-            fill={star.c}
-            opacity={star.o}
-          />
-        ))}
-        {MOON_BODY.map((r, i) => (
-          <rect
-            key={`moon-${i}`}
-            x={MOON.x + r.x}
-            y={MOON.y + r.y}
-            width={r.w}
-            height={r.h}
-            fill="#d3f8e0"
-            opacity="0.92"
-          />
-        ))}
-        {MOON_CRATERS.map((c, i) => (
-          <rect
-            key={`crater-${i}`}
-            x={MOON.x + c.x}
-            y={MOON.y + c.y}
-            width={c.s}
-            height={c.s}
-            fill="#a9f0c9"
-          />
-        ))}
-        {GRASS_BUSHES.map((b, i) => (
-          <rect key={`bush-${i}`} x={b.x} y={b.y} width={b.w} height={b.h} fill={b.c} />
-        ))}
-        {/* raised grass blocks, bright cap row, then the base */}
-        {GRASS_TOPS.map((col) => (
-          <rect key={`top-${col}`} x={col * PX} y={92} width={PX} height={PX} fill="#02a258" />
-        ))}
-        <rect x="0" y="96" width="192" height="4" fill="#02a258" />
-        <rect x="0" y="100" width="192" height="8" fill="#047f48" />
-      </svg>
-
-      {/* soft green aura behind the ask */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[24rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500/15 blur-[90px]"
+      {/* the scenery — upper band biased so the landmark skyline stays in view */}
+      <Image
+        src="/cta/bottom-cta.png"
+        alt=""
+        fill
+        sizes="100vw"
+        quality={100}
+        className="object-cover object-[50%_26%] [image-rendering:pixelated]"
       />
 
-      <div className="relative mx-auto flex min-h-[62svh] w-full max-w-[110rem] flex-col items-center justify-center px-5 py-24 text-center sm:px-6">
-        <h2
-          className="serif-display max-w-3xl text-[clamp(2rem,4.5vw,4rem)] leading-[1.1] tracking-[-0.015em] text-white"
-          style={{ textShadow: "0 2px 12px rgba(5,13,10,0.8)" }}
+      {/* fade into the site's cream so the ask reads in dark ink */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-[68%] bg-gradient-to-b from-transparent via-[#faf9f5]/80 to-[#faf9f5]"
+      />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-5 pb-24 pt-[46svh] text-center sm:px-6">
+        <motion.h2
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.65 }}
+          className="serif-display text-[clamp(2.6rem,6vw,5rem)] leading-[1.05] tracking-[-0.02em] text-ink"
         >
-          Your front desk clocks in tonight.
-        </h2>
-        <p
-          className="mt-4 max-w-xl text-[16.5px] leading-relaxed text-white/85"
-          style={{ textShadow: "0 1px 8px rgba(5,13,10,0.7)" }}
+          Your{" "}
+          <span className="wa-word">
+            <WhatsAppGlyph className="wa-logo" aria-hidden />
+            WhatsApp
+          </span>
+          , handled.
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.12 }}
+          className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink/65"
         >
-          Books real appointments, chases quiet leads, collects payments — and
-          we set the whole thing up for you.
-        </p>
-        <GetAccessButton
-          source="final-cta"
-          className="group/link mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-[16px] font-semibold text-ink shadow-[0_16px_48px_-12px_rgba(6,193,103,0.45)] transition-all hover:-translate-y-0.5 hover:bg-brand-100"
+          It answers, books and follows up. You run the business.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.22 }}
+          className="mt-9"
         >
-          Get Early Access
-          <ArrowRight
-            className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5"
-            aria-hidden
-          />
-        </GetAccessButton>
+          <BookDemoButton className="group/link inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 text-[16.5px] font-semibold text-white shadow-[0_18px_44px_-14px_rgba(10,15,13,0.55)] transition-all hover:-translate-y-0.5 hover:bg-neutral-800">
+            Book a Demo
+            <ArrowRight
+              className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5"
+              aria-hidden
+            />
+          </BookDemoButton>
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.36 }}
+          className="mt-5 text-[13px] text-ink/45"
+        >
+          15 minutes. See it answer, book and follow up live.
+        </motion.p>
       </div>
     </section>
   );

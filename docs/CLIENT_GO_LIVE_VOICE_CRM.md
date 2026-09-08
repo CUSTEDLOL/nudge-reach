@@ -7,20 +7,20 @@ touch a live vendor for the first time are marked **first-run**.
 ## A. Once, for Nudge (platform) — ~15 min
 
 1. ElevenLabs account → **API keys** → create one.
-2. Vercel (custedlols-projects/nudge-reach) → Production env vars:
-   `ELEVENLABS_API_KEY`, `ELEVENLABS_LLM=claude-haiku-4-5`,
+2. `.env.local`: `ELEVENLABS_API_KEY`, `ELEVENLABS_LLM=claude-haiku-4-5`,
    `VOICE_INITIATION_SECRET` and `VOICE_TOOLS_SECRET` (two long random strings),
-   `SEND_MODE=live`. Redeploy.
-3. **First-run:** in the repo, with the same values in `.env.local` and
-   `NEXT_PUBLIC_APP_URL=https://nudgeagent.app`, run the setup script
-   (command at the top of `scripts/voice-setup.ts`). It creates the shared
-   agent, the three webhook tools, enables per-call overrides and the
-   initiation webhook, and prints `ELEVENLABS_AGENT_ID` → add it to Vercel.
-   If it errors, the message names the field — send it to Nudge engineering
-   before touching the dashboard.
-4. ElevenLabs → Agents → Settings → **Post-call webhooks** → add
-   `https://nudgeagent.app/api/voice/post-call` → copy its secret into
-   `ELEVENLABS_WEBHOOK_SECRET` in Vercel. Redeploy.
+   `VOICE_TEST_ORG_ID` (the org the **Call your AI** button talks to),
+   `NEXT_PUBLIC_APP_URL=https://nudgeagent.app`.
+3. **First-run:** run the setup script (command at the top of
+   `scripts/voice-setup.ts`). It creates the shared agent, the three webhook
+   tools and the post-call webhook, and points the workspace at the
+   initiation + post-call webhooks. It prints `ELEVENLABS_AGENT_ID` and
+   `ELEVENLABS_WEBHOOK_SECRET` → add both to `.env.local`. If it errors, the
+   message names the field — send it to Nudge engineering before touching the
+   dashboard. (Done 2026-09-07 for the Nudge workspace.)
+4. `bash scripts/voice-push-env.sh` → copies those values into Vercel
+   production and deploys. `SEND_MODE=live` in Vercel is a separate switch for
+   the WhatsApp side.
 5. Verify in 60 seconds (any terminal):
    ```
    curl -s -o /dev/null -w "%{http_code}\n" -X POST https://nudgeagent.app/api/voice/initiation -d '{}'   # 401

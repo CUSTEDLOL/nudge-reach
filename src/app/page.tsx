@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
+import { EasySetup } from "@/components/marketing/easy-setup";
 import { IndustryWordSearch } from "@/components/marketing/industry-word-search";
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { Experience } from "@/components/marketing/v2/experience";
@@ -85,6 +86,9 @@ export default function Home() {
           </DaySection>
           <DaySection>
             <MetaVsNudge />
+          </DaySection>
+          <DaySection>
+            <EasySetup />
           </DaySection>
           {/* pricing and FAQ live on their own pages, via the navbar */}
         </div>

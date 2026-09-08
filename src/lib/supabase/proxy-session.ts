@@ -26,8 +26,6 @@ const PUBLIC_PATHS = [
   "/api/access",
   // customer-facing hosted payment page
   "/pay",
-  // one-click guest sandbox (signs the visitor in itself)
-  "/demo",
   // public marketing pages split off the landing page
   "/pricing",
   "/faq",

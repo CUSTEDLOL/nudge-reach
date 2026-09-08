@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarCheck,
-  CreditCard,
-  Mail,
-  MessageCircle,
-  Repeat,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Mail, MessageCircle, ShieldCheck } from "lucide-react";
 import { Container } from "./section";
 import { Logo } from "./logo";
 import { LaunchDemoButton } from "./launch-cta";
@@ -62,11 +54,6 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   },
 ];
 
-const MOVES = [
-  { label: "Books into your real calendar", icon: CalendarCheck },
-  { label: "Chases every quiet lead", icon: Repeat },
-  { label: "Collects deposits before no-shows", icon: CreditCard },
-];
 
 function FooterTextLink({ link }: { link: FooterLink }) {
   const linkClass =
@@ -138,37 +125,15 @@ export function Footer() {
         className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white to-transparent"
       />
 
-      <Container className="relative py-16 sm:py-20">
+      <Container className="relative py-12 sm:py-14">
         <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:gap-16">
           <div>
             <Logo tone="light" />
-            <h2 className="mt-10 font-display text-[clamp(1.7rem,4.4vw,4.1rem)] font-black uppercase leading-[0.98] text-ink">
-              <span className="block sm:whitespace-nowrap">Your best front desk</span>
-              <span className="block sm:whitespace-nowrap text-ink/38">
-                inside WhatsApp
-              </span>
-            </h2>
+            <p className="mt-3 text-[14.5px] font-semibold text-ink/55">
+              The AI front desk for WhatsApp.
+            </p>
 
-            <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-              {MOVES.map((move) => {
-                const Icon = move.icon;
-                return (
-                  <div
-                    key={move.label}
-                    className="flex items-center gap-3 rounded-2xl border-2 border-ink/70 bg-white px-4 py-3 shadow-[4px_4px_0_rgba(10,15,13,0.82)]"
-                  >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-ink/70 bg-[#ffd94a] text-ink">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <p className="text-[13px] font-black leading-tight text-ink">
-                      {move.label}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-10 grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <div className="mt-9 grid grid-cols-2 gap-8 sm:grid-cols-4">
               {LINK_GROUPS.map((group) => (
                 <div key={group.title}>
                   <h3 className="font-mono text-[11px] font-black uppercase tracking-[0.18em] text-ink/42">
@@ -185,7 +150,7 @@ export function Footer() {
               ))}
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-3">
+            <div className="mt-9 flex flex-wrap items-center gap-3">
               <a
                 href="mailto:hqnudge@gmail.com"
                 aria-label="Email Nudge"
