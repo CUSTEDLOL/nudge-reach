@@ -52,7 +52,7 @@ export function NightShift() {
           trigger: ref.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: 0.8,
+          scrub: 0.4,
         },
       });
       tl.to({}, { duration: 1 });
