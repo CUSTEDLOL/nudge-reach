@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { AlertTriangle, Check, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Container, Section } from "./section";
@@ -126,12 +127,27 @@ function CellContent({ cell, featured }: { cell: Cell; featured?: boolean }) {
 
 export function MetaVsNudge() {
   return (
-    <Section id="compare" className="overflow-x-clip bg-[#f1f7ec]">
-      <Container>
+    <Section id="compare" className="relative overflow-x-clip bg-[#dcf2e3]">
+      {/* stage lighting: a soft brand glow behind the matrix */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-24 h-[30rem] w-[64rem] max-w-full -translate-x-1/2 rounded-full bg-brand-400/25 blur-[110px]"
+      />
+      <Container className="relative">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-[2rem] font-black leading-[1.02] tracking-[-0.03em] text-ink sm:text-[2.9rem]">
-            Why businesses choose{" "}
-            <span className="uppercase text-brand-600">Nudge</span>
+          <span className="inline-block -rotate-2 rounded-full border-2 border-ink/70 bg-white px-4 py-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink shadow-[3px_3px_0_rgba(10,15,13,0.82)]">
+            The honest comparison
+          </span>
+          <h2 className="mt-6 flex flex-wrap items-baseline justify-center gap-x-3 font-display text-[2.1rem] font-black leading-[1.02] tracking-[-0.03em] text-ink sm:text-[3.2rem]">
+            Why businesses choose
+            <Image
+              src="/logo-mark.png"
+              alt="NUDGE"
+              width={1570}
+              height={334}
+              unoptimized
+              className="inline-block h-[0.78em] w-auto translate-y-[0.04em]"
+            />
           </h2>
           <p className="mt-4 text-[16.5px] leading-relaxed text-ink/60">
             It does the whole job, not just the replies.
@@ -139,7 +155,7 @@ export function MetaVsNudge() {
         </div>
 
         {/* Desktop: the matrix */}
-        <div className="mx-auto mt-10 hidden max-w-6xl overflow-hidden rounded-[1.5rem] border-2 border-ink/70 bg-white shadow-[8px_8px_0_rgba(10,15,13,0.82)] lg:block">
+        <div className="mx-auto mt-10 hidden max-w-6xl overflow-hidden rounded-[1.5rem] border-2 border-ink/70 bg-white shadow-[10px_10px_0_rgba(10,15,13,0.82)] lg:block">
           <table className="w-full border-collapse">
             <thead>
               <tr>
