@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { BookDemoButton } from "@/components/marketing/book-demo";
+import { WhatsAppGlyph } from "@/components/marketing/holo-card";
 
 /**
  * The closer: the pixel world panorama (Marina Bay Sands → Taj Mahal →
@@ -24,7 +25,8 @@ export function FinalCtaV2() {
         alt=""
         fill
         sizes="100vw"
-        className="object-cover object-[50%_26%]"
+        quality={100}
+        className="object-cover object-[50%_26%] [image-rendering:pixelated]"
       />
 
       {/* fade into the site's cream so the ask reads in dark ink */}
@@ -41,7 +43,12 @@ export function FinalCtaV2() {
           transition={{ duration: 0.65 }}
           className="serif-display text-[clamp(2.6rem,6vw,5rem)] leading-[1.05] tracking-[-0.02em] text-ink"
         >
-          Your WhatsApp, handled.
+          Your{" "}
+          <span className="wa-word">
+            <WhatsAppGlyph className="wa-logo" aria-hidden />
+            WhatsApp
+          </span>
+          , handled.
         </motion.h2>
 
         <motion.p
