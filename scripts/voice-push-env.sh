@@ -9,7 +9,8 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 for name in ELEVENLABS_API_KEY ELEVENLABS_AGENT_ID ELEVENLABS_WEBHOOK_SECRET ELEVENLABS_LLM \
             VOICE_INITIATION_SECRET VOICE_TOOLS_SECRET VOICE_TEST_ORG_ID; do
-  value=$(grep -E "^${name}=" .env.local | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//')
+  # `|| true`: a missing key must skip, not abort the loop under set -e/pipefail.
+  value=$(grep -E "^${name}=" .env.local | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//' || true)
   if [ -z "$value" ]; then echo "skip  $name (not in .env.local)"; continue; fi
   printf '%s' "$value" | vercel env add "$name" production --yes --force >/dev/null
   echo "set   $name (${#value} chars)"
