@@ -136,7 +136,7 @@ function FactRow({
           checked={selected}
           onChange={onToggle}
           aria-label={`Select fact: ${f.fact.slice(0, 60)}`}
-          className="mt-1 h-4 w-4 shrink-0 accent-brand-600"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-brand-600 sm:mt-1 sm:h-4 sm:w-4"
         />
       )}
       <div className="min-w-0 flex-1">
@@ -330,7 +330,7 @@ export function Library({
   }
 
   const viewBtn = (v: "manage" | "sheet") =>
-    `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${view === v ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"}`;
+    `inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium sm:min-h-0 ${view === v ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"}`;
 
   if (view === "sheet") {
     return (
@@ -460,7 +460,7 @@ export function Library({
                     type="button"
                     onClick={() => toggleCategory(ids)}
                     aria-label={`${allIn ? "Deselect" : "Select"} all in ${LABEL_BY_VALUE[g.value]}`}
-                    className={`grid h-4 w-4 place-items-center rounded border ${allIn ? "border-brand-600 bg-brand-600 text-white" : "border-neutral-300 bg-white text-transparent"}`}
+                    className={`relative grid h-4 w-4 place-items-center rounded border before:absolute before:-inset-3 before:content-[''] ${allIn ? "border-brand-600 bg-brand-600 text-white" : "border-neutral-300 bg-white text-transparent"}`}
                   >
                     <Check className="h-3 w-3" />
                   </button>
