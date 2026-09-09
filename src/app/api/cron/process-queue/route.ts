@@ -14,6 +14,9 @@ import { tickCrmSync } from "@/modules/crm/sync";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
 import { expireTrials } from "@/modules/billing/trial";
 import { tickLeadScoring } from "@/modules/scoring/compute";
+import { boundedCount } from "@/modules/admin/health";
+
+const HEARTBEAT_KEY = "process-queue";
 
 /**
  * Queue tick: releases due SCHEDULED campaigns, resumes WAITING automation
@@ -37,53 +40,88 @@ export async function GET(request: Request) {
     }
   }
 
-  // 1. Scheduled broadcasts whose time has come → SENDING (spec §M4).
-  const released = await releaseDueCampaigns();
+  let step = "release-campaigns";
+  try {
+    // 1. Scheduled broadcasts whose time has come → SENDING (spec §M4).
+    const released = await releaseDueCampaigns();
 
-  // 2. Automation runs parked on a `wait` step whose resumeAt is due (§M6).
-  const resumedRuns = await tickAutomationRuns();
+    step = "resume-automations";
+    const resumedRuns = await tickAutomationRuns();
 
-  // 2a. CRM sync jobs (Zoho / Salesforce), one per connection per tick.
-  const crmSynced = await tickCrmSync();
+    step = "sync-crm";
+    const crmSynced = await tickCrmSync();
 
-  // 2b. Revenue-Recovery follow-ups: T-24h/T-2h reminders, no-show rebooks,
-  //     post-service review asks (5.2). Consent + template-gated like every send.
-  const followUps = await tickBookingReminders();
+    // Consent + approved-template gates remain inside every follow-up send.
+    step = "send-follow-ups";
+    const followUps = await tickBookingReminders();
 
-  // 2b'. Voice front desk: T-2h reminder calls for clients who opted in.
-  const calls = await tickReminderCalls();
+    step = "place-reminder-calls";
+    const calls = await tickReminderCalls();
 
-  // 2c. Simulation-mode payment links flip to "paid" after ~90s so the
-  //     collect-a-deposit story demos end-to-end with zero keys.
-  const paymentsPaid = await applySimulatedPaymentProgress();
+    step = "settle-simulated-payments";
+    const paymentsPaid = await applySimulatedPaymentProgress();
 
-  // 2d. AI Front Desk trials that ended fall back to Free.
-  const expiredTrials = await expireTrials();
+    step = "expire-trials";
+    const expiredTrials = await expireTrials();
 
-  // 2e. E6: rescore stale contacts (bounded batch, plan-gated per org).
-  const rescored = await tickLeadScoring();
+    step = "score-leads";
+    const rescored = await tickLeadScoring();
 
-  // 3. Advance every SENDING campaign (including freshly released ones).
-  const sending = await prisma.campaign.findMany({
-    where: { status: "SENDING" },
-    select: { id: true },
-  });
+    step = "process-campaigns";
+    const sending = await prisma.campaign.findMany({
+      where: { status: "SENDING" },
+      select: { id: true },
+    });
+    let processed = 0;
+    for (const campaign of sending) {
+      processed += await processQueue(campaign.id);
+      await applySimulatedProgress(campaign.id);
+    }
 
-  let processed = 0;
-  for (const campaign of sending) {
-    processed += await processQueue(campaign.id);
-    await applySimulatedProgress(campaign.id);
+    const summary = {
+      released: boundedCount(released),
+      resumedRuns: boundedCount(resumedRuns),
+      crm: {
+        done: boundedCount(crmSynced.done),
+        failed: boundedCount(crmSynced.failed),
+        dead: boundedCount(crmSynced.dead),
+      },
+      followUps: {
+        reminders: boundedCount(followUps.reminders),
+        reviews: boundedCount(followUps.reviews),
+        rebooks: boundedCount(followUps.rebooks),
+      },
+      calls: {
+        reminders: boundedCount(calls.reminders),
+        noShows: boundedCount(calls.noShows),
+        skipped: boundedCount(calls.skipped),
+      },
+      paymentsPaid: boundedCount(paymentsPaid),
+      expiredTrials: boundedCount(expiredTrials),
+      rescored: boundedCount(rescored),
+      campaigns: boundedCount(sending.length),
+      processed: boundedCount(processed),
+    };
+
+    step = "record-heartbeat";
+    await prisma.systemHeartbeat.upsert({
+      where: { key: HEARTBEAT_KEY },
+      create: { key: HEARTBEAT_KEY, status: "ok", detail: summary },
+      update: { status: "ok", detail: summary },
+    });
+    return NextResponse.json(summary);
+  } catch {
+    // Stable labels only: never persist a provider error, stack, token, payload,
+    // contact, or message body in the platform heartbeat.
+    try {
+      await prisma.systemHeartbeat.upsert({
+        where: { key: HEARTBEAT_KEY },
+        create: { key: HEARTBEAT_KEY, status: "error", detail: { step } },
+        update: { status: "error", detail: { step } },
+      });
+    } catch {
+      // If the database itself is unavailable, the stale heartbeat is the signal.
+    }
+    return NextResponse.json({ error: "cron_failed", step }, { status: 500 });
   }
-  return NextResponse.json({
-    released,
-    resumedRuns,
-    crmSynced,
-    followUps,
-    calls,
-    paymentsPaid,
-    expiredTrials,
-    rescored,
-    campaigns: sending.length,
-    processed,
-  });
 }
