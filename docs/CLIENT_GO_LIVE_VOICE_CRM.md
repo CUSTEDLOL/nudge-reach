@@ -19,8 +19,11 @@ touch a live vendor for the first time are marked **first-run**.
    message names the field — send it to Nudge engineering before touching the
    dashboard. (Done 2026-09-07 for the Nudge workspace.)
 4. `bash scripts/voice-push-env.sh` → copies those values into Vercel
-   production and deploys. `SEND_MODE=live` in Vercel is a separate switch for
-   the WhatsApp side.
+   production and deploys. **Run it while the Vercel CLI is signed in to the
+   CUSTEDLOL account** (the one that owns nudgeagent.app); a personal Vercel
+   login pushes to a copy of the project that serves nothing. The script shows
+   the account and asks before pushing. `SEND_MODE=live` in Vercel is a
+   separate switch for the WhatsApp side.
 5. Verify in 60 seconds (any terminal):
    ```
    curl -s -o /dev/null -w "%{http_code}\n" -X POST https://nudgeagent.app/api/voice/initiation -d '{}'   # 401
