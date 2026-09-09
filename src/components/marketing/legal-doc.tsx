@@ -32,7 +32,7 @@ export function LegalDoc({
           <Logo />
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/60 transition-colors hover:text-ink"
+            className="-my-2 inline-flex min-h-11 items-center gap-1.5 py-2 text-sm font-semibold text-ink/60 transition-colors hover:text-ink"
           >
             <ArrowLeft className="h-4 w-4" /> Back to home
           </Link>

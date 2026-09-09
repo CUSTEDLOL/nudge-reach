@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "@/lib/env"; // validate environment at boot
@@ -44,6 +44,15 @@ export const metadata: Metadata = {
     description:
       "Books appointments, chases quiet leads, collects payments: done-for-you. Not another WhatsApp tool; an AI employee.",
   },
+};
+
+/** viewport-fit=cover lets the navbar / bottom nav use env(safe-area-inset-*)
+ * on notched phones; without it those insets are always 0. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({

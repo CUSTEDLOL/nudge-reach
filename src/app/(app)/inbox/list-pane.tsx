@@ -84,7 +84,7 @@ export function ListPane({
               aria-selected={f === filter}
               href={inboxHref("/inbox", f, q)}
               className={cn(
-                "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50 sm:px-2.5 sm:py-1",
+                "inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50 sm:min-h-0 sm:px-2.5 sm:py-1",
                 f === filter
                   ? "bg-brand-600 text-white"
                   : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"

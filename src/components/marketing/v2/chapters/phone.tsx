@@ -128,12 +128,13 @@ function PayCard() {
               <path d="M6 4h12v2.2H6zM6 7.6h12v2.2h-4.06c.4.5.68 1.1.8 1.8H18v2.2h-3.32c-.44 2.6-2.62 4.3-5.68 4.53L14.6 22h-3.1l-5.3-3.9v-2.06h2.6c1.9 0 3.1-.72 3.44-2.24H6v-2.2h6.2c-.36-1.2-1.5-1.8-3.4-1.8H6z" />
             </svg>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-semibold text-[#111b21]">Booking deposit</p>
-            <p className="text-[11px] text-[#667781]">nudge.pay · secure UPI</p>
-          </div>
-          <p className="text-[15px] font-bold text-[#111b21]">₹500</p>
+          <p className="min-w-0 flex-1 text-[12.5px] font-semibold text-[#111b21]">Booking deposit</p>
+          <p className="shrink-0 text-[15px] font-bold text-[#111b21]">₹500</p>
         </div>
+        {/* Full-width subline: beside the icon and amount it collapsed into a
+            one-word-per-line column on phone widths. No nowrap here — the
+            phone mock is shrink-to-fit, so nowrap text would widen it. */}
+        <p className="mt-1 text-[11px] text-[#667781]">nudge.pay · secure UPI</p>
         <div className="mt-2.5 rounded-md bg-[#00a884] py-1.5 text-center text-[12px] font-semibold text-white">
           Pay ₹500
         </div>

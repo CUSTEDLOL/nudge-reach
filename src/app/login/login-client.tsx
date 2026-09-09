@@ -208,7 +208,9 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
               poster="/hero/park-cta-v2.jpg"
               className="absolute inset-0 h-full w-full object-cover"
             >
-              <source src="/hero/park-cta-v2.mp4" type="video/mp4" />
+              {/* The aside is lg-only; the media query keeps phones from
+                  downloading a 2.2 MB video they never see. */}
+              <source src="/hero/park-cta-v2.mp4" type="video/mp4" media="(min-width: 1024px)" />
             </video>
             {/* legibility grade — sky-deep at the top, clear ground below */}
             <div
@@ -270,7 +272,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
             <Logo />
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink/55 transition-colors hover:text-ink"
+              className="-my-2 inline-flex min-h-11 items-center gap-1.5 py-2 text-[13.5px] font-semibold text-ink/55 transition-colors hover:text-ink"
             >
               <ArrowLeft className="h-4 w-4" /> Back to home
             </Link>
@@ -311,7 +313,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
                   aria-selected={mode === opt.value}
                   onClick={() => switchMode(opt.value)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13.5px] font-bold transition-all duration-200",
+                    "inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-bold transition-all duration-200",
                     mode === opt.value
                       ? "bg-ink text-white shadow-[2px_2px_0_rgba(10,15,13,0.25)]"
                       : "text-ink/50 hover:text-ink"
@@ -417,7 +419,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
                 <button
                   type="button"
                   onClick={() => switchMode("reset")}
-                  className="-mt-1 self-end text-[12.5px] font-semibold text-ink/50 underline-offset-2 transition-colors hover:text-ink hover:underline"
+                  className="-my-2 inline-flex min-h-11 items-center self-end px-1 text-[12.5px] font-semibold text-ink/50 underline-offset-2 transition-colors hover:text-ink hover:underline"
                 >
                   Forgot password?
                 </button>

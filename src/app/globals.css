@@ -653,6 +653,19 @@ html {
   }
 }
 
+/* iOS Safari zooms the page when a focused field's font is under 16px.
+   Only iOS (touch-callout) and only at phone/tablet widths, so desktop and
+   Android keep the 14px form scale. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 1023px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
 /* Static night→day gradient behind everything: THE page background for
    no-JS / reduced-motion / no-WebGL. The opaque canvas covers it when the
    world is running. */

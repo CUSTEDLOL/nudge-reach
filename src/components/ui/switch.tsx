@@ -48,7 +48,8 @@ export function Switch({
         disabled={disabled}
         onClick={toggle}
         className={cn(
-          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full outline-none transition-colors duration-150",
+          // The visual track stays 20×36; the ::before pad gives a ≥44px hit area for thumbs.
+          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full outline-none transition-colors duration-150 before:absolute before:-inset-3 before:content-['']",
           "focus-visible:ring-2 focus-visible:ring-brand-400/50",
           "disabled:cursor-not-allowed disabled:opacity-50",
           on ? "bg-brand-600" : "bg-neutral-200",

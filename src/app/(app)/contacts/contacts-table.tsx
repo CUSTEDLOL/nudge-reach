@@ -125,7 +125,7 @@ export function ContactsTable({
           onChange={() =>
             setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
           }
-          className="h-3.5 w-3.5 accent-brand-600"
+          className="h-5 w-5 accent-brand-600 sm:h-3.5 sm:w-3.5"
         />
       ),
       cell: (row) => (
@@ -135,7 +135,7 @@ export function ContactsTable({
           checked={selected.has(row.id)}
           onClick={(e) => e.stopPropagation()}
           onChange={() => toggle(row.id)}
-          className="h-3.5 w-3.5 accent-brand-600"
+          className="h-5 w-5 accent-brand-600 sm:h-3.5 sm:w-3.5"
         />
       ),
       className: "w-8 pr-0",

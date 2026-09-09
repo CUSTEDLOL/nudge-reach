@@ -5,6 +5,24 @@ what's next.
 
 ---
 
+## Mobile pass over the whole site (2026-09-09) ✅
+
+- Audited every public page and the main app pages at 320 / 390 / 768 px
+  with headless Chrome (device emulation, stepped screenshots, overflow +
+  tap-target + tiny-text scan). No horizontal overflow anywhere.
+- Hero videos: phones now get 640p encodes (`finale-mobile.mp4` 290 KB,
+  `park-cta-v2-mobile.mp4` 320 KB) via `<source media>`; desktop keeps the
+  full files. The lg-only login video no longer downloads on phones.
+- `viewport-fit=cover` exported from the root layout so the navbar and
+  bottom nav's safe-area insets actually apply on notched phones; iOS input
+  zoom prevented with a 16px form font under 1024px (iOS only).
+- Tap targets: inbox filter chips, tabs, login/legal "Back to home",
+  "Forgot password", login mode pill, contacts checkboxes, switch hit area.
+- Legibility: scorecard stat labels 9.5→10.5px; the phone-mock pay card's
+  subline moved to its own row (it stacked one word per line beside the icon
+  and amount). Note: the phone mock is shrink-to-fit, so `nowrap`/`truncate`
+  inside it widens the phone instead of truncating.
+
 ## App shell: quieter sidebar, Home rename (2026-09-08) ✅
 
 - Desktop sidebar restyled for clarity: white rail, solid `brand-700` active row,

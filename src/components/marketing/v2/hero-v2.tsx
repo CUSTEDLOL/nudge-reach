@@ -71,7 +71,10 @@ export function HeroV2() {
         aria-hidden
         className="absolute inset-0 h-full w-full object-cover object-top"
       >
-        <source src="/hero/finale.mp4" type="video/mp4" />
+        {/* Phones get the 640p encode (~290 KB vs 2.3 MB); browsers that
+            ignore `media` on video sources fall through to the full file. */}
+        <source src="/hero/finale.mp4" type="video/mp4" media="(min-width: 768px)" />
+        <source src="/hero/finale-mobile.mp4" type="video/mp4" />
       </video>
 
       {/* copy — top-left of the frame, under the navbar */}

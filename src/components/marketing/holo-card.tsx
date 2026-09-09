@@ -151,7 +151,7 @@ export function HoloCard() {
                     <p className="text-[12.5px] font-black leading-tight text-white">
                       {m.name}
                     </p>
-                    <p className="truncate text-[10.5px] font-medium text-white/55">
+                    <p className="truncate text-[11px] font-medium text-white/55">
                       {m.desc}
                     </p>
                   </div>
