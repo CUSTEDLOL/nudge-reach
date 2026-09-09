@@ -5,6 +5,31 @@ what's next.
 
 ---
 
+## Founder control room hardening — batch 3 (2026-09-09) 🚧
+
+- Rebuilt organization discovery around founder decisions: safe launch-scale
+  queries now derive Ready / Setup blocked / Needs attention from the actual
+  WhatsApp, knowledge, agent, calendar, template, and follow-up dependencies.
+  Deterministic sorting, numeric pagination, and equivalent desktop/mobile
+  directory views replace the old cursor-only wide table.
+- Added bounded lead search across names, email, city, and phone, with merged
+  pagination across access requests and waitlist signups. Normalized phone and
+  lowercase email matches now surface a non-color duplicate-details count;
+  Email and WhatsApp actions remain explicit and safe.
+- Replaced inferred operational health with a persistent `process-queue`
+  heartbeat. The cron stores bounded counters after a complete run, or only a
+  stable failed-step label on error. Ops now reports explicit
+  Healthy / Degraded / Critical / Unknown severity plus grouped stale queue,
+  failed-send, dead-CRM, webhook, template, and cost incidents without reading
+  message bodies, contacts, CRM payloads, secrets, or credentials.
+- Database deployment requirement: run `npm run db:push` followed by
+  `npm run db:rls` before deploying this batch so `SystemHeartbeat` exists and
+  RLS is enabled. No developer or production database was mutated here.
+- Verification: complete founder-admin suite **98/98**, admin + cron lint clean,
+  TypeScript clean, Prisma schema valid, and the Next.js production build passed.
+- Next: add only the proven-safe, audited recovery actions for eligible campaign,
+  CRM, and template incidents.
+
 ## Founder control room hardening — batch 2 (2026-09-08) 🚧
 
 - Privileged plan, lifecycle, membership, ownership, and invite-revocation
