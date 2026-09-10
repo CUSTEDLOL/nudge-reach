@@ -7,6 +7,7 @@ import { Mic, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { browserCallErrorMessage } from "@/modules/voice/browser-call-errors";
 import { startBrowserCallAction } from "./actions";
 
 /**
@@ -18,8 +19,8 @@ function BrowserCallInner() {
   const { toast } = useToast();
   const [starting, setStarting] = useState(false);
   const conversation = useConversation({
-    onError: (message: unknown) =>
-      toast({ description: String(message) || "The call dropped.", tone: "error" }),
+    onError: (error: unknown) =>
+      toast({ description: browserCallErrorMessage("call", error), tone: "error" }),
   });
 
   const live = conversation.status === "connected";
@@ -29,8 +30,17 @@ function BrowserCallInner() {
     setStarting(true);
     try {
       // Ask for the mic first: a denied prompt should fail before we mint a URL.
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
+      try {
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+          throw new DOMException("Microphone capture is unavailable", "SecurityError");
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (error) {
+        toast({ description: browserCallErrorMessage("microphone", error), tone: "error" });
+        return;
+      }
+
       const result = await startBrowserCallAction();
       if (!result.ok || !result.signedUrl || !result.callInit) {
         toast({ description: result.message, tone: "error" });
@@ -50,9 +60,9 @@ function BrowserCallInner() {
           ...(config.tts ? { tts: { voiceId: config.tts.voice_id } } : {}),
         },
       });
-    } catch {
+    } catch (error) {
       toast({
-        description: "We couldn't reach your microphone. Allow mic access and try again.",
+        description: browserCallErrorMessage("call", error),
         tone: "error",
       });
     } finally {

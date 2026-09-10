@@ -5,6 +5,22 @@ what's next.
 
 ---
 
+## Browser-call microphone diagnosis (2026-09-10) ✅
+
+- Reproduced the live `nudgeagent.app/settings/voice` failure in Brave. macOS
+  allows Brave to use the microphone, Brave detects the built-in MacBook input,
+  and the site uses the default `Ask` permission. The deployed error handler
+  currently hides whether the remaining failure is microphone capture or the
+  later server/ElevenLabs startup stage.
+- Fixed the product defect revealed by that investigation: microphone capture
+  and call-service startup now have separate error boundaries. Missing devices,
+  blocked permission, unreadable/busy inputs, insecure contexts, and backend or
+  ElevenLabs failures no longer collapse into the same misleading permission
+  toast.
+- Verification: browser-error regression tests **4/4**, complete voice suite
+  **52/52**, focused lint clean, TypeScript clean, and the Next.js production
+  build passed.
+
 ## Founder control room hardening — batch 4 (2026-09-10) 🚧
 
 - Added narrowly scoped incident recovery: retry eligible failed campaign
