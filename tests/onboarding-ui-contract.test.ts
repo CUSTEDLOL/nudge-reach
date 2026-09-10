@@ -8,7 +8,7 @@ describe("adaptive onboarding navigation", () => {
       "utf8"
     );
 
-    expect(source.match(/<ChoiceBackControl/g)).toHaveLength(5);
+    expect(source.match(/<ChoiceBackControl/g)).toHaveLength(1);
     expect(source).toContain("disabled={step === 1}");
   });
 
@@ -29,9 +29,9 @@ describe("adaptive onboarding navigation", () => {
       "utf8"
     );
 
-    expect(source.match(/value=\{visibleChoiceValue\(/g) ?? []).toHaveLength(5);
+    expect(source.match(/value=\{visibleChoiceValue\(/g) ?? []).toHaveLength(1);
     expect(source).toMatch(
-      /visibleChoiceValue\(\s*profile\.journey,\s*3,\s*profile\.lastCompletedStep\s*\)/
+      /visibleChoiceValue\(\s*profile\.primaryOutcome,\s*1,\s*profile\.lastCompletedStep\s*\)/
     );
   });
 });

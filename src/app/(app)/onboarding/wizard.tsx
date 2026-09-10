@@ -25,22 +25,12 @@ import { cn } from "@/lib/cn";
 import { VERTICALS } from "@/modules/dashboard/verticals";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
 import {
-  GUIDANCE_OPTIONS,
-  JOURNEY_OPTIONS,
   OUTCOME_OPTIONS,
-  ROLE_OPTIONS,
-  SYSTEM_OPTIONS,
-  TEAM_OPTIONS,
   deriveWorkspaceDefaults,
-  type ConnectedSystem,
-  type CustomerJourney,
-  type GuidanceLevel,
   type PrimaryOutcome,
-  type TeamShape,
   type UiPreferences,
   type WorkspaceProfile,
   type WorkspaceProfilePatch,
-  type WorkspaceRole,
 } from "@/modules/dashboard/workspace-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +44,14 @@ import {
 } from "./actions";
 import { visibleChoiceValue } from "./question-state";
 
-const QUESTION_COUNT = 7;
+/**
+ * Two questions, then the summary. The five discovery questions that used to
+ * sit in front of these were cut: they only fed shortcut/ordering cosmetics,
+ * and one ("what do you use today?") fed nothing that ships. Answers already
+ * stored by earlier orgs are still parsed and still drive their sidebar.
+ */
+const QUESTION_COUNT = 2;
+const SUMMARY_STEP = 3;
 
 const SHORTCUT_LABELS = {
   today: "Home",
@@ -123,13 +120,13 @@ export interface WizardProps {
 export function OnboardingWizard(props: WizardProps) {
   const initialStep = props.customizing
     ? 1
-    : Math.min(Math.max(props.initialProfile.lastCompletedStep + 1, 1), 8);
+    : Math.min(
+        Math.max(props.initialProfile.lastCompletedStep + 1, 1),
+        SUMMARY_STEP
+      );
   const [step, setStep] = useState(initialStep);
   const [direction, setDirection] = useState(1);
   const [profile, setProfile] = useState(props.initialProfile);
-  const [systems, setSystems] = useState<ConnectedSystem[]>(
-    props.initialProfile.systems
-  );
   const [businessName, setBusinessName] = useState(props.orgName);
   const [vertical, setVertical] = useState(props.vertical ?? "");
   const [country, setCountry] = useState(props.country || "IN");
@@ -194,7 +191,7 @@ export function OnboardingWizard(props: WizardProps) {
           return;
         }
         const profileResult = await saveWorkspaceProfileStepAction({
-          lastCompletedStep: 7,
+          lastCompletedStep: 2,
         });
         if (!profileResult.ok) {
           setError(profileResult.message);
@@ -202,21 +199,8 @@ export function OnboardingWizard(props: WizardProps) {
         }
         if (profileResult.profile) setProfile(profileResult.profile);
         setDirection(1);
-        setStep(8);
+        setStep(SUMMARY_STEP);
       })();
-    });
-  }
-
-  function toggleSystem(value: ConnectedSystem) {
-    if (value === "none") {
-      setSystems(["none"]);
-      return;
-    }
-    setSystems((current) => {
-      const withoutNone = current.filter((item) => item !== "none");
-      return withoutNone.includes(value)
-        ? withoutNone.filter((item) => item !== value)
-        : [...withoutNone, value];
     });
   }
 
@@ -231,7 +215,7 @@ export function OnboardingWizard(props: WizardProps) {
             {props.customizing ? "Customize workspace" : "Set up your workspace"}
           </p>
           <p className="mt-0.5 text-sm text-neutral-500">
-            {step === 8
+            {step === SUMMARY_STEP
               ? "Your recommendations are ready"
               : `Question ${visibleProgress} of ${QUESTION_COUNT}`}
           </p>
@@ -285,14 +269,14 @@ export function OnboardingWizard(props: WizardProps) {
             {step === 1 && (
               <QuestionFrame
                 headingRef={headingRef}
-                eyebrow="Your perspective"
-                title="What best describes your role?"
-                description="We’ll tune the amount of business context and guidance you see."
+                eyebrow="Your priority"
+                title="What should Nudge improve first?"
+                description="This determines which exceptions appear first on Home, and which shortcuts you get."
               >
                 <ChoiceCards
-                  options={ROLE_OPTIONS}
+                  options={OUTCOME_OPTIONS}
                   value={visibleChoiceValue(
-                    profile.role,
+                    profile.primaryOutcome,
                     1,
                     profile.lastCompletedStep
                   )}
@@ -300,7 +284,7 @@ export function OnboardingWizard(props: WizardProps) {
                   onSelect={(value) =>
                     saveAndAdvance(
                       {
-                        role: value as WorkspaceRole,
+                        primaryOutcome: value as PrimaryOutcome,
                         lastCompletedStep: 1,
                       },
                       2
@@ -316,167 +300,6 @@ export function OnboardingWizard(props: WizardProps) {
             )}
 
             {step === 2 && (
-              <QuestionFrame
-                headingRef={headingRef}
-                eyebrow="Your priority"
-                title="What should Nudge improve first?"
-                description="This determines which exceptions and setup tasks appear first."
-              >
-                <ChoiceCards
-                  options={OUTCOME_OPTIONS}
-                  value={visibleChoiceValue(
-                    profile.primaryOutcome,
-                    2,
-                    profile.lastCompletedStep
-                  )}
-                  disabled={saving}
-                  onSelect={(value) =>
-                    saveAndAdvance(
-                      {
-                        primaryOutcome: value as PrimaryOutcome,
-                        lastCompletedStep: 2,
-                      },
-                      3
-                    )
-                  }
-                />
-                <ChoiceBackControl onBack={goBack} pending={saving} />
-              </QuestionFrame>
-            )}
-
-            {step === 3 && (
-              <QuestionFrame
-                headingRef={headingRef}
-                eyebrow="Customer journey"
-                title="How does a new enquiry usually become a customer?"
-                description="Choose the closest path. You can refine individual workflows later."
-              >
-                <ChoiceCards
-                  options={JOURNEY_OPTIONS}
-                  value={visibleChoiceValue(
-                    profile.journey,
-                    3,
-                    profile.lastCompletedStep
-                  )}
-                  disabled={saving}
-                  onSelect={(value) =>
-                    saveAndAdvance(
-                      {
-                        journey: value as CustomerJourney,
-                        lastCompletedStep: 3,
-                      },
-                      4
-                    )
-                  }
-                />
-                <ChoiceBackControl onBack={goBack} pending={saving} />
-              </QuestionFrame>
-            )}
-
-            {step === 4 && (
-              <QuestionFrame
-                headingRef={headingRef}
-                eyebrow="Your team"
-                title="Who will work alongside Nudge?"
-                description="This helps us choose the right amount of team context without changing permissions."
-              >
-                <ChoiceCards
-                  options={TEAM_OPTIONS}
-                  value={visibleChoiceValue(
-                    profile.teamShape,
-                    4,
-                    profile.lastCompletedStep
-                  )}
-                  disabled={saving}
-                  onSelect={(value) =>
-                    saveAndAdvance(
-                      {
-                        teamShape: value as TeamShape,
-                        lastCompletedStep: 4,
-                      },
-                      5
-                    )
-                  }
-                />
-                <ChoiceBackControl onBack={goBack} pending={saving} />
-              </QuestionFrame>
-            )}
-
-            {step === 5 && (
-              <QuestionFrame
-                headingRef={headingRef}
-                eyebrow="Your systems"
-                title="What does your business use today?"
-                description="Select everything that applies. Nothing will connect automatically."
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {SYSTEM_OPTIONS.map((option) => {
-                    const selected = systems.includes(option.value);
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        aria-pressed={selected}
-                        disabled={saving}
-                        onClick={() => toggleSystem(option.value)}
-                        className={cn(
-                          "flex min-h-14 items-center gap-3 rounded-xl border px-4 py-3 text-left text-base font-medium outline-none transition-colors disabled:opacity-60",
-                          selected
-                            ? "border-brand-500 bg-brand-50 text-brand-900 ring-1 ring-brand-500"
-                            : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50",
-                          "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
-                        )}
-                      >
-                        <SelectionMark selected={selected} />
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <QuestionFooter
-                  onBack={goBack}
-                  pending={saving}
-                  nextDisabled={systems.length === 0}
-                  onNext={() =>
-                    saveAndAdvance(
-                      { systems, lastCompletedStep: 5 },
-                      6
-                    )
-                  }
-                />
-              </QuestionFrame>
-            )}
-
-            {step === 6 && (
-              <QuestionFrame
-                headingRef={headingRef}
-                eyebrow="Your comfort level"
-                title="How much guidance would you like?"
-                description="Every feature remains available; this only changes how much explanation appears by default."
-              >
-                <ChoiceCards
-                  options={GUIDANCE_OPTIONS}
-                  value={visibleChoiceValue(
-                    profile.guidance,
-                    6,
-                    profile.lastCompletedStep
-                  )}
-                  disabled={saving}
-                  onSelect={(value) =>
-                    saveAndAdvance(
-                      {
-                        guidance: value as GuidanceLevel,
-                        lastCompletedStep: 6,
-                      },
-                      7
-                    )
-                  }
-                />
-                <ChoiceBackControl onBack={goBack} pending={saving} />
-              </QuestionFrame>
-            )}
-
-            {step === 7 && (
               <QuestionFrame
                 headingRef={headingRef}
                 eyebrow="Your business"
@@ -546,7 +369,7 @@ export function OnboardingWizard(props: WizardProps) {
               </QuestionFrame>
             )}
 
-            {step === 8 && (
+            {step === SUMMARY_STEP && (
               <RecommendationSummary
                 headingRef={headingRef}
                 profile={profile}

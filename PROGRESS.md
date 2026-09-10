@@ -5,6 +5,34 @@ what's next.
 
 ---
 
+## Onboarding cut from seven questions to two (2026-09-10) ✅
+
+- Traced every consumer of the discovery answers first. Outside onboarding
+  itself, `dashboard/page.tsx` is the only reader, and the six questions bought
+  exactly three cosmetics: the three sidebar shortcuts, the order of the
+  attention cards (which all render anyway, with handoffs force-hoisted to
+  first), and one subtitle line per dashboard section. `setupOrder` is computed
+  and shown on the review screen but never reorders the real checklist, whose
+  order is hardcoded in `buildChecklist`.
+- Worse, "what does your business use today?" fed only that dead `setupOrder`,
+  so it changed nothing that ships. And `owner` + `solo`, the common SMB answer,
+  both map to empty shortcut lists, so those two questions bought nothing for
+  the beachhead customer.
+- Cut role, journey, team, systems and guidance. The wizard is now the goal
+  question, then business identity (name, vertical, country, which really does
+  set the agent's prompt template, currency, timezone and dial code), then the
+  summary. `QUESTION_COUNT` 7 → 2.
+- `workspace-profile.ts` is untouched on purpose: answers already stored by
+  earlier orgs still parse and still drive their sidebar and card order. The
+  option lists still back the parser's validation, so nothing is left dead.
+- Known edge: an org abandoned mid-flow at the old step 1 (role answered, goal
+  not) will see the goal question pre-selected, because step numbering shifted.
+  Affects only partially-onboarded orgs, of which production has none.
+- Verified live end to end at `/onboarding?customize=1`: "Question 1 of 2",
+  "Question 2 of 2", then "Aster Skin Clinic is ready" with shortcuts derived
+  from the single answer. Test org restored afterwards. Suite 846/846, lint and
+  build clean.
+
 ## Browser-call microphone diagnosis (2026-09-10) ✅
 
 - Reproduced the live `nudgeagent.app/settings/voice` failure in Brave. macOS
