@@ -40,7 +40,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  label: "Workspace" | "Automation" | "Insights" | "Manage";
+  label: "Shortcuts" | "Workspace" | "Automation" | "Insights" | "Manage";
   items: readonly NavItem[];
 };
 
