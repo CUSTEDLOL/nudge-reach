@@ -58,7 +58,10 @@ export type AuditAction =
   | "admin.integration_changed"
   | "admin.agent_toggled"
   | "admin.followups_toggled"
-  | "admin.client_setup";
+  | "admin.client_setup"
+  | "admin.operation_requested"
+  | "admin.operation_completed"
+  | "admin.operation_failed";
 
 /** Human labels for the viewer. */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -112,6 +115,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.agent_toggled": "Nudge support switched the AI Front Desk on/off",
   "admin.followups_toggled": "Nudge support switched follow-ups on/off",
   "admin.client_setup": "Nudge support ran concierge setup",
+  "admin.operation_requested": "Nudge support requested an operational recovery",
+  "admin.operation_completed": "Nudge support completed an operational recovery",
+  "admin.operation_failed": "Nudge support recovery failed",
 };
 
 export function recordAudit(

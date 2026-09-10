@@ -177,6 +177,12 @@ export async function retryFailedMessages(
     return { retried: 0, skippedNoConsent };
   }
 
+  // A retry is a new send attempt and consumes the same monthly allowance as
+  // the original queue. Keep this check here so every caller (including the
+  // founder recovery desk) goes through the same billing choke point.
+  const limit = await checkMessageLimit(orgId, eligible.length);
+  if (!limit.allowed) throw new Error(limit.message);
+
   await prisma.$transaction([
     prisma.message.deleteMany({
       where: { id: { in: eligible.map((m) => m.id) } },

@@ -10,10 +10,16 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { ActionForm } from "@/components/features/admin-shell/action-form";
 import { formatMicroUsd } from "@/modules/analytics/compute";
 import { requireFounder } from "@/modules/admin/auth";
 import type { HealthSeverity } from "@/modules/admin/health";
 import { opsOverview } from "@/modules/admin/ops";
+import {
+  refreshTemplateAction,
+  retryCampaignAction,
+  retryCrmJobAction,
+} from "./actions";
 
 const STATE: Record<
   HealthSeverity,
@@ -141,9 +147,21 @@ export default async function AdminOpsPage() {
                     {row.orgName} · {row.count} messages · latest {ago(row.latestAt)} · {row.retryEligible ? "Consent-safe retry path available" : "Review workspace state first"}
                   </p>
                 </div>
-                <Link href={`/admin/orgs/${row.orgId}`} className="inline-flex h-11 items-center gap-1 rounded-lg border border-neutral-200 px-3 text-sm font-medium hover:bg-neutral-50">
-                  Review incident <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                </Link>
+                {row.retryEligible ? (
+                  <ActionForm
+                    action={retryCampaignAction}
+                    hidden={{ orgId: row.orgId, campaignId: row.campaignId }}
+                    submitLabel="Retry failed sends"
+                    askReason
+                    confirm={{
+                      title: `Retry failures for ${row.campaignName}?`,
+                      description: `Only the ${row.count} failed rows in ${row.orgName} are in scope. Consent, suspension, and the current plan limit are rechecked before anything is queued.`,
+                    }}
+                    confirmText={{ expected: row.campaignName, label: `Type “${row.campaignName}” to confirm` }}
+                  />
+                ) : (
+                  <p className="max-w-52 text-right text-xs text-neutral-500">Recovery unavailable: review the workspace or campaign state first.</p>
+                )}
               </li>
             ))}
           </ul>
@@ -160,9 +178,26 @@ export default async function AdminOpsPage() {
                   <p className="font-medium">{job.org.name} <Badge tone="danger">Dead job</Badge></p>
                   <p className="mt-1 text-xs text-neutral-500">{job.provider} · {job.event} · {job.attempts} attempts · last tried {ago(job.updatedAt)}</p>
                 </div>
-                <Link href={`/admin/orgs/${job.orgId}/integrations`} className="inline-flex h-11 items-center gap-1 rounded-lg border border-neutral-200 px-3 font-medium hover:bg-neutral-50">
-                  Check integration <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                </Link>
+                {job.retryEligible ? (
+                  <ActionForm
+                    action={retryCrmJobAction}
+                    hidden={{ orgId: job.orgId, jobId: job.id }}
+                    submitLabel="Requeue job"
+                    askReason
+                    confirm={{
+                      title: `Requeue ${job.provider} job?`,
+                      description: `Only job ${job.id} for ${job.org.name} is in scope. Its operation is idempotent; the payload is not shown or changed here.`,
+                    }}
+                    confirmText={{ expected: job.id, label: `Type “${job.id}” to confirm` }}
+                  />
+                ) : (
+                  <div className="text-right text-xs text-neutral-500">
+                    <p>Recovery unavailable: {job.retryBlockedReason}.</p>
+                    <Link href={`/admin/orgs/${job.orgId}/integrations`} className="mt-1 inline-flex min-h-11 items-center gap-1 font-medium hover:underline">
+                      Check integration <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -175,11 +210,30 @@ export default async function AdminOpsPage() {
           {ops.stuckTemplates.length === 0 ? <Empty /> : (
             <ul className="mt-3 divide-y divide-neutral-100 text-sm">
               {ops.stuckTemplates.map((template) => (
-                <li key={template.id} className="flex justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                <li key={template.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                   <span><Link href={`/admin/orgs/${template.org.id}`} className="font-medium hover:underline">{template.org.name}</Link> · <span className="font-mono text-xs">{template.name}</span></span>
-                  <Badge tone={template.metaStatus === "REJECTED" ? "danger" : "warning"} title={template.rejectionReason ?? undefined}>
-                    {template.metaStatus === "REJECTED" ? "Rejected" : "Pending >24h"}
-                  </Badge>
+                  <span className="flex items-center gap-2">
+                    <Badge tone={template.metaStatus === "REJECTED" ? "danger" : "warning"} title={template.rejectionReason ?? undefined}>
+                      {template.metaStatus === "REJECTED" ? "Rejected" : "Pending >24h"}
+                    </Badge>
+                    {template.metaStatus === "PENDING" && !template.org.suspendedAt ? (
+                      <ActionForm
+                        action={refreshTemplateAction}
+                        hidden={{ orgId: template.org.id, templateId: template.id }}
+                        submitLabel="Refresh status"
+                        askReason
+                        confirm={{
+                          title: `Refresh ${template.name}?`,
+                          description: `This asks Meta for the current status of this one library template in ${template.org.name}. It does not submit or send anything.`,
+                        }}
+                        confirmText={{ expected: template.name, label: `Type “${template.name}” to confirm` }}
+                      />
+                    ) : (
+                      <span className="text-xs text-neutral-500">
+                        {template.metaStatus === "REJECTED" ? "Edit and resubmit from the workspace" : "Workspace suspended"}
+                      </span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

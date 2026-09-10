@@ -7,6 +7,10 @@ import {
   deriveOpsSeverity,
   type HealthSeverity,
 } from "@/modules/admin/health";
+import { retryFailedMessages } from "@/modules/send/queue";
+import { refreshLibraryTemplateStatus } from "@/modules/whatsapp/library";
+import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
+import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
 
 /**
  * Platform-health queries for the founder panel (cross-org module rules
@@ -20,6 +24,208 @@ export interface CostAlertRow {
   plan: string;
   costMicroUsd30d: number;
   pctOfPlan: number;
+}
+
+export const CRM_RETRY_EVENTS = ["contact.created", "lead.qualified"] as const;
+
+function canRetryCrmEvent(event: string): boolean {
+  return (CRM_RETRY_EVENTS as readonly string[]).includes(event);
+}
+
+async function auditedRecovery(
+  input: {
+    orgId: string;
+    founderEmail: string;
+    target: string;
+    reason: string;
+    requestedDetail: string;
+    failureCategory: string;
+    failureMessage: string;
+  },
+  work: () => Promise<{ message: string; detail: string }>
+): Promise<FounderResult> {
+  await founderAudit(
+    input.orgId,
+    input.founderEmail,
+    "admin.operation_requested",
+    input.target,
+    withReason(input.requestedDetail, input.reason)
+  );
+  try {
+    const result = await work();
+    await founderAudit(
+      input.orgId,
+      input.founderEmail,
+      "admin.operation_completed",
+      input.target,
+      result.detail
+    );
+    return { ok: true, message: result.message };
+  } catch {
+    await founderAudit(
+      input.orgId,
+      input.founderEmail,
+      "admin.operation_failed",
+      input.target,
+      withReason(input.failureCategory, input.reason)
+    );
+    return { ok: false, error: input.failureMessage };
+  }
+}
+
+export async function founderRetryCampaign(
+  orgId: string,
+  campaignId: string,
+  founderEmail: string,
+  reason?: string,
+  confirmation?: string
+): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, orgId },
+    select: {
+      id: true,
+      orgId: true,
+      name: true,
+      status: true,
+      org: { select: { name: true, suspendedAt: true } },
+    },
+  });
+  if (!campaign) return { ok: false, error: "Campaign not found in this workspace." };
+  if (campaign.org.suspendedAt) return { ok: false, error: "Lift the workspace suspension before retrying sends." };
+  if (campaign.status !== "SENT" && campaign.status !== "SENDING") {
+    return { ok: false, error: "Only failures from a sent campaign can be retried." };
+  }
+  if (!confirmationMatches(campaign.name, confirmation ?? "")) {
+    return { ok: false, error: `Type "${campaign.name}" exactly to confirm.` };
+  }
+  return auditedRecovery(
+    {
+      orgId,
+      founderEmail,
+      target: `Campaign ${campaign.name}`,
+      reason: requiredReason.value,
+      requestedDetail: `retry failed messages for campaign ${campaign.id}`,
+      failureCategory: "campaign_retry_failed",
+      failureMessage: "Campaign retry could not be completed safely.",
+    },
+    async () => {
+      const result = await retryFailedMessages(campaign.id, orgId);
+      if (result.retried === 0) throw new Error("no eligible failures");
+      return {
+        message: `Retrying ${result.retried} failed message${result.retried === 1 ? "" : "s"}${result.skippedNoConsent ? `; ${result.skippedNoConsent} skipped without consent` : ""}.`,
+        detail: `campaign_retry_completed: ${result.retried} retried, ${result.skippedNoConsent} skipped_no_consent`,
+      };
+    }
+  );
+}
+
+export async function founderRetryCrmJob(
+  orgId: string,
+  jobId: string,
+  founderEmail: string,
+  reason?: string,
+  confirmation?: string
+): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
+  const job = await prisma.crmSyncJob.findFirst({
+    where: { id: jobId, orgId },
+    select: {
+      id: true,
+      orgId: true,
+      provider: true,
+      event: true,
+      status: true,
+      org: { select: { name: true, suspendedAt: true } },
+    },
+  });
+  if (!job) return { ok: false, error: "CRM job not found in this workspace." };
+  if (job.org.suspendedAt) return { ok: false, error: "Lift the workspace suspension before retrying CRM work." };
+  if (job.status !== "dead") return { ok: false, error: "This CRM job is no longer awaiting recovery." };
+  if (!canRetryCrmEvent(job.event)) {
+    return { ok: false, error: "This CRM event is diagnostic-only and cannot be retried safely." };
+  }
+  if (!confirmationMatches(job.id, confirmation ?? "")) {
+    return { ok: false, error: `Type "${job.id}" exactly to confirm.` };
+  }
+  return auditedRecovery(
+    {
+      orgId,
+      founderEmail,
+      target: `CRM job ${job.id}`,
+      reason: requiredReason.value,
+      requestedDetail: `requeue ${job.provider}:${job.event}`,
+      failureCategory: "crm_retry_failed",
+      failureMessage: "CRM retry could not be queued safely.",
+    },
+    async () => {
+      const claimed = await prisma.crmSyncJob.updateMany({
+        where: {
+          id: job.id,
+          orgId,
+          status: "dead",
+          event: { in: [...CRM_RETRY_EVENTS] },
+        },
+        data: { status: "pending", attempts: 0, error: null, nextRunAt: new Date() },
+      });
+      if (claimed.count !== 1) throw new Error("already claimed");
+      return {
+        message: `${job.provider} job queued for retry.`,
+        detail: `crm_retry_queued: ${job.provider}:${job.event}`,
+      };
+    }
+  );
+}
+
+export async function founderRefreshTemplate(
+  orgId: string,
+  templateId: string,
+  founderEmail: string,
+  reason?: string,
+  confirmation?: string
+): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
+  const template = await prisma.template.findFirst({
+    where: { id: templateId, orgId },
+    select: {
+      id: true,
+      orgId: true,
+      name: true,
+      campaignId: true,
+      metaStatus: true,
+      org: { select: { name: true, suspendedAt: true } },
+    },
+  });
+  if (!template) return { ok: false, error: "Template not found in this workspace." };
+  if (template.org?.suspendedAt) return { ok: false, error: "Lift the workspace suspension before refreshing templates." };
+  if (template.campaignId !== null || template.metaStatus !== "PENDING") {
+    return { ok: false, error: "Only a pending library template can be refreshed." };
+  }
+  if (!confirmationMatches(template.name, confirmation ?? "")) {
+    return { ok: false, error: `Type "${template.name}" exactly to confirm.` };
+  }
+  return auditedRecovery(
+    {
+      orgId,
+      founderEmail,
+      target: `Template ${template.name}`,
+      reason: requiredReason.value,
+      requestedDetail: `refresh template status for ${template.id}`,
+      failureCategory: "template_refresh_failed",
+      failureMessage: "Template status could not be refreshed safely.",
+    },
+    async () => {
+      const refreshed = await refreshLibraryTemplateStatus(template.id, orgId);
+      if (!refreshed) throw new Error("template disappeared");
+      return {
+        message: `Template status refreshed: ${refreshed.metaStatus.toLowerCase()}.`,
+        detail: `template_refresh_completed: ${refreshed.metaStatus.toLowerCase()}`,
+      };
+    }
+  );
 }
 
 /** Pure: join per-org cost onto plan prices and keep the over-threshold rows. */
@@ -60,7 +266,7 @@ export async function opsOverview(now = new Date()) {
     heartbeatRow,
     queuedGroups,
     failedGroups,
-    deadCrmJobs,
+    deadCrmJobRows,
     webhookFailures,
     stuckTemplates,
     lastAutomationRun,
@@ -98,7 +304,7 @@ export async function opsOverview(now = new Date()) {
           event: true,
           attempts: true,
           updatedAt: true,
-          org: { select: { id: true, name: true } },
+          org: { select: { id: true, name: true, suspendedAt: true } },
         },
         orderBy: { updatedAt: "asc" },
         take: 50,
@@ -130,7 +336,7 @@ export async function opsOverview(now = new Date()) {
           metaStatus: true,
           rejectionReason: true,
           submittedAt: true,
-          org: { select: { id: true, name: true } },
+          org: { select: { id: true, name: true, suspendedAt: true } },
         },
         orderBy: { submittedAt: "desc" },
         take: 25,
@@ -199,6 +405,15 @@ export async function opsOverview(now = new Date()) {
         }]
       : [];
   });
+  const deadCrmJobs = deadCrmJobRows.map((job) => ({
+    ...job,
+    retryEligible: !job.org.suspendedAt && canRetryCrmEvent(job.event),
+    retryBlockedReason: job.org.suspendedAt
+      ? "Workspace is suspended"
+      : canRetryCrmEvent(job.event)
+        ? null
+        : "Diagnostic-only event",
+  }));
 
   const costOrgs = await prisma.org.findMany({
     where: { id: { in: topCost.map((g) => g.orgId) } },
