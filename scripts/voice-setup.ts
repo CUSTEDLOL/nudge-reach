@@ -82,9 +82,18 @@ async function upsertWebhookTool(
 async function ensurePostCallWebhook(): Promise<{ id: string; secret?: string }> {
   const url = `${appUrl}/api/voice/post-call`;
   const listed = (await elevenLabs("/workspace/webhooks")) as {
-    webhooks?: Array<{ webhook_id?: string; webhook_url?: string }>;
+    webhooks?: Array<{ webhook_id?: string; webhook_url?: string; is_disabled?: boolean }>;
   };
-  const existing = listed.webhooks?.find((hook) => hook.webhook_url === url);
+  // Prefer the hook the workspace already uses for post-call; never a disabled one.
+  const settings = (await elevenLabs("/convai/settings")) as {
+    webhooks?: { post_call_webhook_id?: string | null };
+  };
+  const candidates = (listed.webhooks ?? []).filter(
+    (hook) => hook.webhook_url === url && !hook.is_disabled
+  );
+  const existing =
+    candidates.find((hook) => hook.webhook_id === settings.webhooks?.post_call_webhook_id) ??
+    candidates[0];
   if (existing?.webhook_id) return { id: existing.webhook_id };
   const created = (await elevenLabs("/workspace/webhooks", {
     method: "POST",

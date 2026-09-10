@@ -24,6 +24,13 @@ touch a live vendor for the first time are marked **first-run**.
    login pushes to a copy of the project that serves nothing. The script shows
    the account and asks before pushing. `SEND_MODE=live` in Vercel is a
    separate switch for the WhatsApp side.
+   **Back up `.env.local` before any `vercel link` or `vercel env pull`**
+   (`cp .env.local .env.backup.local`, gitignored): `vercel link` silently
+   overwrites `.env.local` with the project's (empty) development env. It
+   happened on 2026-09-10; the app vars came back from
+   `vercel env pull --environment=production`, the voice header secrets from
+   the ElevenLabs agent config, and the post-call webhook secret had to be
+   rotated (detach in convai settings → delete → create → attach).
 5. Verify in 60 seconds (any terminal):
    ```
    curl -s -o /dev/null -w "%{http_code}\n" -X POST https://nudgeagent.app/api/voice/initiation -d '{}'   # 401
