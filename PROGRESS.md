@@ -5,6 +5,32 @@ what's next.
 
 ---
 
+## Founder control room hardening — batch 4 (2026-09-10) 🚧
+
+- Added narrowly scoped incident recovery: retry eligible failed campaign
+  messages, requeue dead contact/qualified-lead CRM jobs, and refresh pending
+  unused templates. Every operation requires a reason and exact confirmation,
+  is organization-scoped, and records requested/completed/failed founder audit
+  events without exposing provider errors.
+- Closed a safety gap found while implementing recovery: campaign retries now
+  recheck the organization's message limit as well as suspension and current
+  consent before any messages return to the queue.
+- Made demand telemetry explorable across 7/30/90-day ranges, event type,
+  vertical, and exact organization. Charts, exact-value tables, totals, and
+  recent-event rows now share the same predicate and avoid message bodies and
+  event payloads.
+- Expanded incident audit review with organization, actor, action, result, and
+  inclusive date filters; explicit result badges; keyboard-expandable exact
+  details; and a founder-authenticated CSV export. Export and screen share one
+  query builder, exports cap at 10,000 rows, and every cell is protected against
+  spreadsheet formula injection.
+- Verification: founder-admin plus protected consent/send/retry suite **128/128**,
+  scoped lint clean, TypeScript clean, and the Next.js production build passed.
+  This batch adds no new database migration; the batch-3 `SystemHeartbeat`
+  deployment requirement still applies.
+- Next: add admin-native loading/error recovery, skip navigation, and responsive
+  organization-control polish before the final database rollout and browser QA.
+
 ## Founder control room hardening — batch 3 (2026-09-09) 🚧
 
 - Rebuilt organization discovery around founder decisions: safe launch-scale
