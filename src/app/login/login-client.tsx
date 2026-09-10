@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, LogIn, Mail, UserRoundPlus } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2, LogIn, Mail, UserRoundPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/marketing/logo";
 import { cn } from "@/lib/cn";
@@ -83,6 +83,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
   const [error, setError] = useState<string | null>(initialError);
   const [busy, setBusy] = useState(false);
   const [slide, setSlide] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   // The shift report rotates on its own; the dots let you jump.
   useEffect(() => {
@@ -404,15 +405,30 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
               </label>
               <label className="block text-[13px] font-bold text-ink/60">
                 Password
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={inputClass}
-                  placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={cn(inputClass, "pr-11")}
+                    placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    className="absolute inset-y-0 right-0 grid w-11 place-items-center text-ink/40 transition-colors hover:text-ink"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-[18px] w-[18px]" aria-hidden />
+                    ) : (
+                      <Eye className="h-[18px] w-[18px]" aria-hidden />
+                    )}
+                  </button>
+                </div>
               </label>
 
               {mode === "signin" && (
