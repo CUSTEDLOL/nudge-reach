@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 /**
@@ -7,6 +8,8 @@ import { prisma } from "@/lib/db";
  */
 
 export interface EventsOverview {
+  eventTypes: string[];
+  verticals: string[];
   /** Totals per event type in range, largest first. */
   typeTotals: { type: string; count: number }[];
   /** Per-day counts per type (pivot), oldest day first. */
@@ -15,12 +18,40 @@ export interface EventsOverview {
   signupsByVertical: { vertical: string; count: number }[];
   recent: {
     type: string;
+    orgId: string;
     orgName: string;
     createdAt: Date;
   }[];
 }
 
 const EVENT_SCAN_CAP = 20_000;
+export const EVENT_RANGES = [7, 30, 90] as const;
+export type EventRange = (typeof EVENT_RANGES)[number];
+
+export interface EventsFilter {
+  days?: number;
+  type?: string;
+  orgId?: string;
+  vertical?: string;
+}
+
+export function parseEventsDays(value: unknown): EventRange {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = typeof raw === "number" ? raw : Number(raw);
+  return (EVENT_RANGES as readonly number[]).includes(parsed) ? (parsed as EventRange) : 30;
+}
+
+/** One privacy-safe predicate reused for totals, chart series, and recent rows. */
+export function eventsWhere(filter: EventsFilter, since: Date): Prisma.ContactEventWhereInput {
+  const where: Prisma.ContactEventWhereInput = { createdAt: { gte: since } };
+  const type = filter.type?.trim();
+  const orgId = filter.orgId?.trim();
+  const vertical = filter.vertical?.trim();
+  if (type && type !== "all") where.type = type;
+  if (orgId) where.orgId = orgId;
+  if (vertical && vertical !== "all") where.org = { vertical };
+  return where;
+}
 
 function dayLabel(d: Date): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -47,31 +78,43 @@ export function pivotByDay(
   return frame;
 }
 
-export async function eventsOverview(days: number): Promise<EventsOverview> {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+export async function eventsOverview(
+  filter: EventsFilter = {},
+  now = new Date()
+): Promise<EventsOverview> {
+  const days = parseEventsDays(filter.days);
+  const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const where = eventsWhere(filter, since);
+  const vertical = filter.vertical?.trim();
+  const orgId = filter.orgId?.trim();
 
   const [typeGroups, rangeEvents, verticalGroups, recent] = await Promise.all([
     prisma.contactEvent.groupBy({
       by: ["type"],
-      where: { createdAt: { gte: since } },
+      where,
       _count: true,
     }),
     prisma.contactEvent.findMany({
-      where: { createdAt: { gte: since } },
+      where,
       select: { type: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: EVENT_SCAN_CAP,
     }),
     prisma.org.groupBy({
       by: ["vertical"],
-      where: { createdAt: { gte: since } },
+      where: {
+        createdAt: { gte: since },
+        ...(orgId ? { id: orgId } : {}),
+        ...(vertical && vertical !== "all" ? { vertical } : {}),
+      },
       _count: true,
     }),
     prisma.contactEvent.findMany({
+      where,
       select: {
         type: true,
         createdAt: true,
-        org: { select: { name: true } },
+        org: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -82,15 +125,18 @@ export async function eventsOverview(days: number): Promise<EventsOverview> {
     typeof g._count === "number" ? g._count : (g._count._all ?? 0);
 
   return {
+    eventTypes: typeGroups.map((group) => group.type).sort(),
+    verticals: verticalGroups.map((group) => group.vertical ?? "unset").sort(),
     typeTotals: typeGroups
       .map((g) => ({ type: g.type, count: count(g) }))
       .sort((a, b) => b.count - a.count),
-    byDay: pivotByDay(days, new Date(), rangeEvents),
+    byDay: pivotByDay(days, now, rangeEvents),
     signupsByVertical: verticalGroups
       .map((g) => ({ vertical: g.vertical ?? "unset", count: count(g) }))
       .sort((a, b) => b.count - a.count),
     recent: recent.map((e) => ({
       type: e.type,
+      orgId: e.org.id,
       orgName: e.org.name,
       createdAt: e.createdAt,
     })),
