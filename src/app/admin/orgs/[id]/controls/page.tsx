@@ -79,6 +79,7 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
             hidden={hidden}
             submitLabel="Change plan"
             confirm={{ title: "Change this org's plan?", description: "The new limits apply immediately." }}
+            askReason
             className="flex flex-wrap items-center gap-2"
           >
             <select name="plan" defaultValue={org.plan} className={inputCls} aria-label="Plan">
@@ -180,6 +181,7 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
               danger: org.simulated,
             }}
             askReason
+            confirmText={{ expected: org.name, label: `Type “${org.name}” to confirm` }}
           />
         </CardContent>
       </Card>
@@ -246,6 +248,7 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
               danger: !org.suspendedAt,
             }}
             askReason
+            confirmText={{ expected: org.name, label: `Type “${org.name}” to confirm` }}
           />
         </CardContent>
       </Card>

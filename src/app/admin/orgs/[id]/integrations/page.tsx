@@ -74,6 +74,10 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                     variant="ghost"
                     confirm={{ title: `Disconnect ${a.displayName}?`, description: "Sends from this number stop immediately. Reconnecting needs a fresh token.", danger: true }}
                     askReason
+                    confirmText={{
+                      expected: a.displayName,
+                      label: `Type “${a.displayName}” to confirm`,
+                    }}
                   />
                 </Row>
               ))}
@@ -106,6 +110,10 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                 variant="ghost"
                 confirm={{ title: "Disconnect the calendar?", description: "Bookings fall back to simulation until the owner reconnects.", danger: true }}
                 askReason
+                confirmText={{
+                  expected: d.calendar.accountEmail,
+                  label: `Type “${d.calendar.accountEmail}” to confirm`,
+                }}
               />
             </div>
           ) : (
@@ -135,6 +143,10 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                 variant="ghost"
                 confirm={{ title: "Remove the customer's LLM key?", description: "Their traffic moves to Nudge's platform model and cost.", danger: true }}
                 askReason
+                confirmText={{
+                  expected: `${d.llm.provider}/${d.llm.model}`,
+                  label: `Type “${d.llm.provider}/${d.llm.model}” to confirm`,
+                }}
               />
             </div>
           ) : (
@@ -215,6 +227,10 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                       variant="ghost"
                       confirm={{ title: `Disconnect ${c.provider}?`, danger: true }}
                       askReason
+                      confirmText={{
+                        expected: c.provider,
+                        label: `Type “${c.provider}” to confirm`,
+                      }}
                     />
                   )}
                 </Row>
@@ -288,6 +304,10 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                       variant="ghost"
                       confirm={{ title: `Revoke "${k.name}"?`, description: "Any integration using it stops working immediately.", danger: true }}
                       askReason
+                      confirmText={{
+                        expected: k.prefix,
+                        label: `Type “${k.prefix}” to confirm`,
+                      }}
                     />
                   )}
                 </Row>

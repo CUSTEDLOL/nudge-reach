@@ -7,6 +7,7 @@ import type { CrmProviderKey } from "@/modules/crm/types";
 import { revokeApiKey } from "@/modules/integrations/api-keys";
 import { voiceUsage } from "@/modules/voice/usage";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
+import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
 
 /**
  * Everything connected to one org, and the founder actions on it. Reads show
@@ -69,11 +70,16 @@ export async function integrationsOverview(orgId: string) {
 export type IntegrationsOverview = Awaited<ReturnType<typeof integrationsOverview>>;
 
 
-export async function founderDisconnectNumber(orgId: string, accountId: string, founderEmail: string, reason?: string): Promise<FounderResult> {
+export async function founderDisconnectNumber(orgId: string, accountId: string, founderEmail: string, reason?: string, confirmation?: string): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const acct = await prisma.whatsappAccount.findFirst({ where: { id: accountId, orgId }, select: { displayName: true, phoneNumberId: true } });
   if (!acct) return { ok: false, error: "Number not found in this org." };
+  if (!confirmationMatches(acct.displayName, confirmation ?? "")) {
+    return { ok: false, error: `Type "${acct.displayName}" exactly to confirm.` };
+  }
   await disconnectWhatsappAccount(orgId, accountId);
-  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `WhatsApp ${acct.displayName}`, withReason(`phoneNumberId ${acct.phoneNumberId} removed`, reason));
+  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `WhatsApp ${acct.displayName}`, withReason(`phoneNumberId ${acct.phoneNumberId} removed`, requiredReason.value));
   return { ok: true, message: `${acct.displayName} disconnected.` };
 }
 
@@ -85,19 +91,30 @@ export async function founderSetDefaultNumber(orgId: string, accountId: string, 
   return { ok: true, message: `${acct.displayName} is now the default number.` };
 }
 
-export async function founderDisconnectCalendar(orgId: string, founderEmail: string, reason?: string): Promise<FounderResult> {
+export async function founderDisconnectCalendar(orgId: string, founderEmail: string, reason?: string, confirmation?: string): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const cal = await prisma.calendarAccount.findUnique({ where: { orgId }, select: { accountEmail: true } });
   if (!cal) return { ok: false, error: "No calendar connected." };
+  if (!confirmationMatches(cal.accountEmail, confirmation ?? "")) {
+    return { ok: false, error: `Type "${cal.accountEmail}" exactly to confirm.` };
+  }
   await disconnectCalendar(orgId);
-  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `Calendar ${cal.accountEmail}`, withReason("calendar disconnected", reason));
+  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `Calendar ${cal.accountEmail}`, withReason("calendar disconnected", requiredReason.value));
   return { ok: true, message: "Calendar disconnected. Bookings fall back to simulation." };
 }
 
-export async function founderDisconnectLlm(orgId: string, founderEmail: string, reason?: string): Promise<FounderResult> {
+export async function founderDisconnectLlm(orgId: string, founderEmail: string, reason?: string, confirmation?: string): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const llm = await getLlmAccount(orgId);
   if (!llm) return { ok: false, error: "No customer LLM key connected." };
+  const expected = `${llm.provider}/${llm.model}`;
+  if (!confirmationMatches(expected, confirmation ?? "")) {
+    return { ok: false, error: `Type "${expected}" exactly to confirm.` };
+  }
   await deleteLlmAccount(orgId);
-  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `BYOK ${llm.provider}/${llm.model}`, withReason("key deleted; back on platform model", reason));
+  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `BYOK ${expected}`, withReason("key deleted; back on platform model", requiredReason.value));
   return { ok: true, message: `Removed the ${llm.provider} key. Back on Nudge's built-in model.` };
 }
 
@@ -110,20 +127,30 @@ export async function founderSetVoiceNumberEnabled(orgId: string, voiceNumberId:
   return { ok: true, message: `${num.phoneE164} ${enabled ? "enabled" : "disabled"}.` };
 }
 
-export async function founderDisconnectCrm(orgId: string, provider: string, founderEmail: string, reason?: string): Promise<FounderResult> {
+export async function founderDisconnectCrm(orgId: string, provider: string, founderEmail: string, reason?: string, confirmation?: string): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const conn = await prisma.crmConnection.findFirst({ where: { orgId, provider }, select: { id: true, accountLabel: true } });
   if (!conn) return { ok: false, error: "No such CRM connection." };
+  if (!confirmationMatches(provider, confirmation ?? "")) {
+    return { ok: false, error: `Type "${provider}" exactly to confirm.` };
+  }
   await disconnectCrm(orgId, provider as CrmProviderKey);
-  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `CRM ${provider}`, withReason(`${conn.accountLabel || provider} disconnected`, reason));
+  await founderAudit(orgId, founderEmail, "admin.integration_disconnected", `CRM ${provider}`, withReason(`${conn.accountLabel || provider} disconnected`, requiredReason.value));
   return { ok: true, message: `${provider} disconnected.` };
 }
 
-export async function founderRevokeApiKey(orgId: string, keyId: string, founderEmail: string, reason?: string): Promise<FounderResult> {
+export async function founderRevokeApiKey(orgId: string, keyId: string, founderEmail: string, reason?: string, confirmation?: string): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const key = await prisma.apiKey.findFirst({ where: { id: keyId, orgId }, select: { name: true, prefix: true, revokedAt: true } });
   if (!key) return { ok: false, error: "API key not found in this org." };
   if (key.revokedAt) return { ok: false, error: "Already revoked." };
+  if (!confirmationMatches(key.prefix, confirmation ?? "")) {
+    return { ok: false, error: `Type "${key.prefix}" exactly to confirm.` };
+  }
   await revokeApiKey(orgId, keyId);
-  await founderAudit(orgId, founderEmail, "admin.integration_changed", `API key ${key.name}`, withReason(`${key.prefix}… revoked`, reason));
+  await founderAudit(orgId, founderEmail, "admin.integration_changed", `API key ${key.name}`, withReason(`${key.prefix}… revoked`, requiredReason.value));
   return { ok: true, message: `API key "${key.name}" revoked.` };
 }
 
@@ -144,4 +171,3 @@ export async function founderSetCustomActionEnabled(orgId: string, actionId: str
   await founderAudit(orgId, founderEmail, "admin.integration_changed", `Custom action ${a.name}`, withReason(enabled ? "enabled" : "disabled", reason));
   return { ok: true, message: `${a.name} ${enabled ? "enabled" : "disabled"}.` };
 }
-

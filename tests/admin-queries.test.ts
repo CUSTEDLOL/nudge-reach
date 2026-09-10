@@ -13,7 +13,16 @@ const { prisma } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
 
-import { orgsList, orgsWhere, overviewStats } from "@/modules/admin/queries";
+import {
+  ORG_READINESS,
+  ORG_SORTS,
+  orgsList,
+  orgsWhere,
+  overviewStats,
+  paginate,
+  sortOrgRows,
+  type OrgRow,
+} from "@/modules/admin/queries";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,9 +94,18 @@ describe("orgsList", () => {
     name: `Org ${id}`,
     plan: "growth",
     simulated: true,
+    suspendedAt: null,
+    trialEndsAt: null,
+    subscriptionStatus: "inactive",
     vertical: "clinic",
-    createdAt: new Date(),
+    createdAt: new Date(Date.UTC(2026, 8, 1, 0, 0, Number(id.slice(1)) || 1)),
     memberships: [{ email: `${id}@x.com` }],
+    whatsappAccounts: [{ id: `wa-${id}` }],
+    agentProfile: { enabled: true, businessInfo: "Clinic facts" },
+    calendarAccount: { status: "connected" },
+    knowledgeEntries: [],
+    templates: [{ id: `template-${id}` }],
+    followUpConfig: { enabled: true },
     _count: { contacts: 3, whatsappAccounts: 1, memberships: 2 },
   });
 
@@ -100,26 +118,105 @@ describe("orgsList", () => {
     ]);
   });
 
-  it("returns a page with merged cost + last-inbound and a next cursor", async () => {
+  it("returns numeric pages after merging cost and last-inbound data", async () => {
     prisma.org.findMany.mockResolvedValue(
-      Array.from({ length: 51 }, (_, i) => makeOrg(`o${i + 1}`))
+      Array.from({ length: 55 }, (_, i) => makeOrg(`o${i + 1}`))
     );
-    const page = await orgsList({});
-    expect(page.rows).toHaveLength(50);
-    expect(page.nextCursor).toBe("o50");
+    const page = await orgsList({ page: 2 });
+    expect(page.page).toBe(2);
+    expect(page.pageCount).toBe(2);
+    expect(page.total).toBe(55);
+    expect(page.rows).toHaveLength(5);
+    const args = prisma.org.findMany.mock.calls.at(-1)![0];
+    expect(args.take).toBe(500);
+    expect(args).not.toHaveProperty("cursor");
+  });
+
+  it("merges costs and activity before deterministic sorting", async () => {
+    prisma.org.findMany.mockResolvedValue([makeOrg("o1"), makeOrg("o2")]);
+    const page = await orgsList({ sort: "cost" });
+    expect(page.rows).toHaveLength(2);
     expect(page.rows[0].aiCostMicroUsd30d).toBe(2_000_000);
     expect(page.rows[0].lastInboundAt).toEqual(new Date("2026-09-01"));
     expect(page.rows[1].aiCostMicroUsd30d).toBe(0);
   });
 
-  it("passes search and cursor into the query and ends pagination honestly", async () => {
+  it("passes search into the bounded query and selects no secret or message content", async () => {
     prisma.org.findMany.mockResolvedValue([makeOrg("o1")]);
-    const page = await orgsList({ search: "spice", cursor: "o99" });
-    expect(page.nextCursor).toBeNull();
+    await orgsList({ search: "spice" });
     const args = prisma.org.findMany.mock.calls.at(-1)![0];
-    expect(args.cursor).toEqual({ id: "o99" });
-    expect(args.skip).toBe(1);
     expect(JSON.stringify(args.where)).toContain("spice");
+    const selected = JSON.stringify(args.select);
+    expect(selected).not.toContain("accessToken");
+    expect(selected).not.toContain("body");
+    expect(selected).not.toContain("credentials");
+  });
+
+  it("derives ready, blocked and degraded states and filters them", async () => {
+    const ready = makeOrg("o1");
+    const blocked = { ...makeOrg("o2"), whatsappAccounts: [] };
+    const degraded = {
+      ...makeOrg("o3"),
+      simulated: false,
+      calendarAccount: null,
+    };
+    prisma.org.findMany.mockResolvedValue([ready, blocked, degraded]);
+
+    expect((await orgsList({ readiness: "all" })).rows.map((row) => row.readiness)).toEqual([
+      "degraded",
+      "blocked",
+      "ready",
+    ]);
+    expect((await orgsList({ readiness: "ready" })).rows.map((row) => row.id)).toEqual(["o1"]);
+    expect((await orgsList({ readiness: "blocked" })).rows.map((row) => row.id)).toEqual(["o2"]);
+    expect((await orgsList({ readiness: "degraded" })).rows.map((row) => row.id)).toEqual(["o3"]);
+  });
+});
+
+describe("organization list validation and ordering", () => {
+  const row = (id: string, overrides: Partial<OrgRow> = {}): OrgRow => ({
+    id,
+    name: "Same name",
+    plan: "growth",
+    simulated: true,
+    suspended: false,
+    trialEndsAt: null,
+    subscriptionStatus: "inactive",
+    vertical: "clinic",
+    ownerEmail: null,
+    numbers: 1,
+    contacts: 0,
+    members: 1,
+    aiCostMicroUsd30d: 0,
+    lastInboundAt: null,
+    readiness: "ready",
+    readinessIssues: [],
+    createdAt: new Date("2026-09-01T00:00:00Z"),
+    ...overrides,
+  });
+
+  it("exposes only supported readiness filters and sort orders", () => {
+    expect(ORG_READINESS).toEqual(["all", "ready", "blocked", "degraded"]);
+    expect(ORG_SORTS).toEqual(["newest", "name", "last_activity", "trial_end", "cost"]);
+  });
+
+  it("uses the organization id as a stable sort tie-breaker", () => {
+    expect(sortOrgRows([row("o2"), row("o1")], "cost").map((item) => item.id)).toEqual([
+      "o1",
+      "o2",
+    ]);
+  });
+
+  it("clamps invalid and out-of-range numeric pages", () => {
+    const rows = [row("o1"), row("o2"), row("o3")];
+    expect(paginate(rows, -4, 2)).toMatchObject({ page: 1, pageCount: 2, total: 3 });
+    expect(paginate(rows, 99, 2)).toMatchObject({
+      page: 2,
+      pageCount: 2,
+      total: 3,
+      rows: [rows[2]],
+    });
+    expect(paginate([], 99, 2)).toEqual({ rows: [], page: 1, pageCount: 1, total: 0 });
   });
 });
 

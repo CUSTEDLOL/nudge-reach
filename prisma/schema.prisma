@@ -733,6 +733,16 @@ model AccessRequest {
   @@index([createdAt])
 }
 
+// Founder-only platform liveness. The queue cron owns one row per worker;
+// customer-facing code never reads or writes this table directly.
+model SystemHeartbeat {
+  key        String   @id
+  status     String   @default("ok")
+  detail     Json     @default("{}")
+  lastSeenAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
 // Structured agent knowledge — one fact per row (spec 2026-07-10). The agent
 // reads a categorized digest of active rows, never the raw table. `condition`
 // is a plain-language applicability window ("weekends only") applied against

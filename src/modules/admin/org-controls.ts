@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { sanitizeFeatureOverrides, type FeatureOverrides } from "@/modules/billing/limits";
 import { trialEndDate } from "@/modules/billing/trial";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
+import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
 
 /**
  * Founder controls over ONE organisation's lifecycle. Every function:
@@ -58,14 +59,17 @@ export async function setTrial(
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   const trialEndsAt = days === 0 ? null : new Date(Date.now() + days * DAY_MS);
-  await prisma.org.update({ where: { id: org.id }, data: { trialEndsAt } });
-  await founderAudit(
-    org.id,
-    founderEmail,
-    "admin.trial_changed",
-    org.name,
-    withReason(`${fmt(org.trialEndsAt)} → ${fmt(trialEndsAt)}`, reason)
-  );
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { trialEndsAt } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.trial_changed",
+      org.name,
+      withReason(`${fmt(org.trialEndsAt)} → ${fmt(trialEndsAt)}`, reason),
+      tx
+    );
+  });
   return {
     ok: true,
     message: trialEndsAt ? `Trial now ends ${fmt(trialEndsAt)}.` : "Trial cleared.",
@@ -87,14 +91,17 @@ export async function setSubscriptionStatus(
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (org.subscriptionStatus === status) return { ok: false, error: `Already ${status}.` };
-  await prisma.org.update({ where: { id: org.id }, data: { subscriptionStatus: status } });
-  await founderAudit(
-    org.id,
-    founderEmail,
-    "admin.subscription_changed",
-    org.name,
-    withReason(`${org.subscriptionStatus} → ${status}`, reason)
-  );
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { subscriptionStatus: status } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.subscription_changed",
+      org.name,
+      withReason(`${org.subscriptionStatus} → ${status}`, reason),
+      tx
+    );
+  });
   return { ok: true, message: `Subscription marked ${status.replace("_", " ")}.` };
 }
 
@@ -107,22 +114,31 @@ export async function setLiveMode(
   orgId: string,
   live: boolean,
   founderEmail: string,
-  reason?: string
+  reason?: string,
+  confirmation?: string
 ): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (org.simulated === !live) return { ok: false, error: `Already ${live ? "live" : "in test mode"}.` };
   if (live && org.whatsappAccounts.length === 0) {
     return { ok: false, error: "Connect a WhatsApp number first — a live workspace needs credentials to send." };
   }
-  await prisma.org.update({ where: { id: org.id }, data: { simulated: !live } });
-  await founderAudit(
-    org.id,
-    founderEmail,
-    "admin.mode_changed",
-    org.name,
-    withReason(live ? "test → live" : "live → test", reason)
-  );
+  if (!confirmationMatches(org.name, confirmation ?? "")) {
+    return { ok: false, error: `Type "${org.name}" exactly to confirm.` };
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { simulated: !live } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.mode_changed",
+      org.name,
+      withReason(live ? "test → live" : "live → test", requiredReason.value),
+      tx
+    );
+  });
   return { ok: true, message: live ? "Workspace is live." : "Workspace back in test mode." };
 }
 
@@ -139,14 +155,17 @@ export async function setVoiceMinutes(
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (org.voiceMinutesOverride === minutes) return { ok: false, error: "No change." };
-  await prisma.org.update({ where: { id: org.id }, data: { voiceMinutesOverride: minutes } });
-  await founderAudit(
-    org.id,
-    founderEmail,
-    "admin.voice_minutes_changed",
-    org.name,
-    withReason(`${org.voiceMinutesOverride ?? "plan"} → ${minutes ?? "plan"}`, reason)
-  );
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { voiceMinutesOverride: minutes } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.voice_minutes_changed",
+      org.name,
+      withReason(`${org.voiceMinutesOverride ?? "plan"} → ${minutes ?? "plan"}`, reason),
+      tx
+    );
+  });
   return { ok: true, message: minutes === null ? "Back on the plan's minutes." : `${minutes} minutes/month.` };
 }
 
@@ -155,25 +174,36 @@ export async function setSuspended(
   orgId: string,
   suspended: boolean,
   founderEmail: string,
-  reason?: string
+  reason?: string,
+  confirmation?: string
 ): Promise<FounderResult> {
-  if (suspended && !reason?.trim()) return { ok: false, error: "Give a reason — it goes in the org's audit log." };
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (Boolean(org.suspendedAt) === suspended) {
     return { ok: false, error: suspended ? "Already suspended." : "Not suspended." };
   }
-  await prisma.org.update({
-    where: { id: org.id },
-    data: { suspendedAt: suspended ? new Date() : null },
+  if (!confirmationMatches(org.name, confirmation ?? "")) {
+    return { ok: false, error: `Type "${org.name}" exactly to confirm.` };
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({
+      where: { id: org.id },
+      data: { suspendedAt: suspended ? new Date() : null },
+    });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      suspended ? "admin.suspended" : "admin.unsuspended",
+      org.name,
+      withReason(
+        suspended ? "workspace locked, sends refused" : "workspace unlocked",
+        requiredReason.value
+      ),
+      tx
+    );
   });
-  await founderAudit(
-    org.id,
-    founderEmail,
-    suspended ? "admin.suspended" : "admin.unsuspended",
-    org.name,
-    withReason(suspended ? "workspace locked, sends refused" : "workspace unlocked", reason)
-  );
   return { ok: true, message: suspended ? "Workspace suspended." : "Suspension lifted." };
 }
 
@@ -190,14 +220,17 @@ export async function setFeatureOverrides(
   const before = JSON.stringify(sanitizeFeatureOverrides(org.featureOverrides));
   const after = JSON.stringify(next);
   if (before === after) return { ok: false, error: "No change." };
-  await prisma.org.update({ where: { id: org.id }, data: { featureOverrides: next } });
-  await founderAudit(
-    org.id,
-    founderEmail,
-    "admin.overrides_changed",
-    org.name,
-    withReason(`${before} → ${after}`, reason)
-  );
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { featureOverrides: next } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.overrides_changed",
+      org.name,
+      withReason(`${before} → ${after}`, reason),
+      tx
+    );
+  });
   return {
     ok: true,
     message: Object.keys(next).length ? "Overrides saved." : "Overrides cleared — plan limits apply.",

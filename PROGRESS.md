@@ -5,6 +5,53 @@ what's next.
 
 ---
 
+## Browser-call microphone diagnosis (2026-09-10) ✅
+
+- Reproduced the live `nudgeagent.app/settings/voice` failure in Brave. macOS
+  allows Brave to use the microphone, Brave detects the built-in MacBook input,
+  and the site uses the default `Ask` permission. The deployed error handler
+  currently hides whether the remaining failure is microphone capture or the
+  later server/ElevenLabs startup stage.
+- Fixed the product defect revealed by that investigation: microphone capture
+  and call-service startup now have separate error boundaries. Missing devices,
+  blocked permission, unreadable/busy inputs, insecure contexts, and backend or
+  ElevenLabs failures no longer collapse into the same misleading permission
+  toast.
+- Added an explicit two-step permission flow. The page checks existing browser
+  permission without prompting; an **Enable microphone** click requests a
+  temporary stream so the browser can show its native permission dialog, then
+  releases every track before enabling **Call your AI**. Denied permissions stay
+  recoverable with site-settings guidance.
+- Verification: browser permission/error regression tests **8/8**, complete
+  voice suite **56/56**, focused lint clean, TypeScript clean, and the Next.js
+  production build passed.
+
+## Founder control room hardening — batch 4 (2026-09-10) 🚧
+
+- Added narrowly scoped incident recovery: retry eligible failed campaign
+  messages, requeue dead contact/qualified-lead CRM jobs, and refresh pending
+  unused templates. Every operation requires a reason and exact confirmation,
+  is organization-scoped, and records requested/completed/failed founder audit
+  events without exposing provider errors.
+- Closed a safety gap found while implementing recovery: campaign retries now
+  recheck the organization's message limit as well as suspension and current
+  consent before any messages return to the queue.
+- Made demand telemetry explorable across 7/30/90-day ranges, event type,
+  vertical, and exact organization. Charts, exact-value tables, totals, and
+  recent-event rows now share the same predicate and avoid message bodies and
+  event payloads.
+- Expanded incident audit review with organization, actor, action, result, and
+  inclusive date filters; explicit result badges; keyboard-expandable exact
+  details; and a founder-authenticated CSV export. Export and screen share one
+  query builder, exports cap at 10,000 rows, and every cell is protected against
+  spreadsheet formula injection.
+- Verification: founder-admin plus protected consent/send/retry suite **128/128**,
+  scoped lint clean, TypeScript clean, and the Next.js production build passed.
+  This batch adds no new database migration; the batch-3 `SystemHeartbeat`
+  deployment requirement still applies.
+- Next: add admin-native loading/error recovery, skip navigation, and responsive
+  organization-control polish before the final database rollout and browser QA.
+
 ## Mobile pass over the whole site (2026-09-09) ✅
 
 - Audited every public page and the main app pages at 320 / 390 / 768 px
@@ -23,6 +70,31 @@ what's next.
   and amount). Note: the phone mock is shrink-to-fit, so `nowrap`/`truncate`
   inside it widens the phone instead of truncating.
 
+## Founder control room hardening — batch 3 (2026-09-09) 🚧
+
+- Rebuilt organization discovery around founder decisions: safe launch-scale
+  queries now derive Ready / Setup blocked / Needs attention from the actual
+  WhatsApp, knowledge, agent, calendar, template, and follow-up dependencies.
+  Deterministic sorting, numeric pagination, and equivalent desktop/mobile
+  directory views replace the old cursor-only wide table.
+- Added bounded lead search across names, email, city, and phone, with merged
+  pagination across access requests and waitlist signups. Normalized phone and
+  lowercase email matches now surface a non-color duplicate-details count;
+  Email and WhatsApp actions remain explicit and safe.
+- Replaced inferred operational health with a persistent `process-queue`
+  heartbeat. The cron stores bounded counters after a complete run, or only a
+  stable failed-step label on error. Ops now reports explicit
+  Healthy / Degraded / Critical / Unknown severity plus grouped stale queue,
+  failed-send, dead-CRM, webhook, template, and cost incidents without reading
+  message bodies, contacts, CRM payloads, secrets, or credentials.
+- Database deployment requirement: run `npm run db:push` followed by
+  `npm run db:rls` before deploying this batch so `SystemHeartbeat` exists and
+  RLS is enabled. No developer or production database was mutated here.
+- Verification: complete founder-admin suite **98/98**, admin + cron lint clean,
+  TypeScript clean, Prisma schema valid, and the Next.js production build passed.
+- Next: add only the proven-safe, audited recovery actions for eligible campaign,
+  CRM, and template incidents.
+
 ## App shell: quieter sidebar, Home rename (2026-09-08) ✅
 
 - Desktop sidebar restyled for clarity: white rail, solid `brand-700` active row,
@@ -38,6 +110,39 @@ what's next.
 - Landing hero: new `finale.mp4` (orange-fruit bush, sparkle at 1160,600), the
   status card "Your WhatsApp, handled" centred on that sparkle via
   `.hero-reply-card`, and the over-hero navbar tinted navy instead of white glass.
+
+## Founder control room hardening — batch 2 (2026-09-08) 🚧
+
+- Privileged plan, lifecycle, membership, ownership, and invite-revocation
+  changes now commit with their founder-attributed audit row in one database
+  transaction. An audit failure cannot leave an unaudited change behind.
+- Account-changing actions require a 3–500 character reason. Going live,
+  changing suspension, transferring ownership, disconnecting integrations,
+  and revoking API keys additionally require the exact organization or target
+  text; the server independently rechecks it against org-scoped data.
+- The Team page can now create Admin/Agent invitations and resend pending
+  invites. Seat limits, duplicate members/invites, HTML escaping, email delivery
+  failures, auto-accept fallback, and founder audit attribution are covered.
+- Verification: complete admin-focused suite **85/85**, full admin lint clean,
+  and TypeScript clean.
+- Next: responsive organization discovery, scalable lead search/pagination,
+  and truthful operations heartbeat/severity signals.
+
+## Founder control room hardening — batch 1 (2026-09-08) 🚧
+
+- Merged the current `origin/main` voice fixes into the isolated
+  `founder-control-room` branch and established a green admin baseline.
+- Fixed go-live readiness so an organization cannot appear ready without a
+  usable connected WhatsApp number. The suspension tests are now fully mocked
+  and no longer touch a developer database.
+- Added one founder-action boundary for every organization and lead mutation:
+  authorization still fails closed, while unexpected operational failures now
+  return one safe, non-sensitive response instead of leaking database details.
+- Verification: focused admin suite **43/43** across readiness, suspension,
+  action safety, leads, organization controls, team, and concierge; targeted
+  lint and TypeScript checks are clean. Baseline production build also passed.
+- Next: make mutation + audit writes atomic, then add reason/confirmation UX
+  and complete the missing team-invite workflow.
 
 ## Voice: first real ElevenLabs workspace wired (2026-09-07) ✅
 

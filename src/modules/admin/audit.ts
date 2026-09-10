@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import type { AuditAction } from "@/modules/orgs/audit";
 
 /**
@@ -9,15 +10,17 @@ import type { AuditAction } from "@/modules/orgs/audit";
  * Awaited, not fire-and-forget: an unaudited founder change must not happen.
  */
 export type FounderAuditAction = Extract<AuditAction, `admin.${string}`>;
+type AuditClient = Pick<Prisma.TransactionClient, "auditLog">;
 
 export async function founderAudit(
   orgId: string,
   founderEmail: string,
   action: FounderAuditAction,
   target?: string | null,
-  detail?: string | null
+  detail?: string | null,
+  db: AuditClient = prisma
 ): Promise<void> {
-  await prisma.auditLog.create({
+  await db.auditLog.create({
     data: {
       orgId,
       actorUserId: "founder",

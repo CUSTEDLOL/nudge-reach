@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Mail, MessageCircle, NotebookPen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
 import { LEAD_STATUSES, type LeadRow } from "@/modules/admin/leads";
@@ -22,15 +23,29 @@ export function LeadRowItem({ lead }: { lead: LeadRow }) {
               {lead.kind === "access" ? "access request" : "waitlist"}
             </Badge>
             {lead.vertical && <Badge tone="neutral">{lead.vertical}</Badge>}
+            {lead.duplicateCount > 0 && (
+              <Badge
+                tone="neutral"
+                title={`Matches ${lead.duplicateCount} other submission${lead.duplicateCount === 1 ? "" : "s"} by ${lead.duplicateBy.join(" and ")}`}
+              >
+                Duplicate details · {lead.duplicateCount + 1}
+              </Badge>
+            )}
           </p>
-          <p className="mt-0.5 truncate text-xs text-neutral-500">
-            {lead.secondary} ·{" "}
-            <a href={wa} target="_blank" rel="noreferrer" className="font-medium text-brand-700 hover:underline">
-              {lead.phoneE164}
-            </a>{" "}
-            · via {lead.source} ·{" "}
+          <p className="mt-0.5 text-xs text-neutral-500">
+            {lead.kind === "waitlist" && `${lead.secondary} · `}via {lead.source} ·{" "}
             {lead.createdAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
           </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium">
+            {lead.kind === "access" && (
+              <a href={`mailto:${lead.secondary}`} rel="noreferrer" className="inline-flex items-center gap-1 text-neutral-700 hover:underline">
+                <Mail className="h-3.5 w-3.5" aria-hidden /> Email {lead.secondary}
+              </a>
+            )}
+            <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:underline">
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden /> WhatsApp {lead.phoneE164}
+            </a>
+          </div>
         </div>
         <Badge tone={TONE[lead.status]}>{lead.status}</Badge>
         <ActionForm
@@ -55,8 +70,9 @@ export function LeadRowItem({ lead }: { lead: LeadRow }) {
         <button
           type="button"
           onClick={() => setNotesOpen((v) => !v)}
-          className="text-xs font-medium text-neutral-500 hover:text-neutral-900"
+          className="inline-flex h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 sm:h-9"
         >
+          <NotebookPen className="h-3.5 w-3.5" aria-hidden />
           {notesOpen ? "Hide notes" : lead.notes ? "Notes" : "Add note"}
         </button>
       </div>

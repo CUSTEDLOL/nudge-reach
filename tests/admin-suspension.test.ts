@@ -4,12 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * Founder suspension is enforced at the lowest layer: sendMessage refuses
  * every outbound message for a suspended org, whatever called it.
  */
-const { isOrgSuspended } = vi.hoisted(() => ({ isOrgSuspended: vi.fn() }));
-vi.mock("@/modules/orgs/mode", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/orgs/mode")>()),
-  isOrgSuspended,
+const { isOrgSuspended, orgSendMode } = vi.hoisted(() => ({
+  isOrgSuspended: vi.fn(),
+  orgSendMode: vi.fn().mockResolvedValue("simulation"),
 }));
-vi.mock("@/modules/integrations/webhooks", () => ({ dispatchWebhook: vi.fn() }));
+vi.mock("@/modules/orgs/mode", () => ({
+  isOrgSuspended,
+  orgSendMode,
+  sendModeFor: () => "simulation",
+}));
+vi.mock("@/modules/integrations/outbound-webhooks", () => ({
+  dispatchWebhook: vi.fn(),
+}));
 
 import { sendMessage } from "@/modules/messaging";
 

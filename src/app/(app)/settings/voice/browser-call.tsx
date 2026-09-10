@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import type { Language } from "@elevenlabs/client";
 import { Mic, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import {
+  browserCallErrorMessage,
+  microphoneStateAfterError,
+  microphoneStateFromPermission,
+  requestMicrophoneAccess,
+  type MicrophoneUiState,
+} from "@/modules/voice/browser-call-errors";
 import { startBrowserCallAction } from "./actions";
 
 /**
@@ -17,20 +24,79 @@ import { startBrowserCallAction } from "./actions";
 function BrowserCallInner() {
   const { toast } = useToast();
   const [starting, setStarting] = useState(false);
+  const [requestingMicrophone, setRequestingMicrophone] = useState(false);
+  const [microphone, setMicrophone] = useState<MicrophoneUiState>("checking");
   const conversation = useConversation({
-    onError: (message: unknown) =>
-      toast({ description: String(message) || "The call dropped.", tone: "error" }),
+    onError: (error: unknown) =>
+      toast({ description: browserCallErrorMessage("call", error), tone: "error" }),
   });
 
   const live = conversation.status === "connected";
   const connecting = starting || conversation.status === "connecting";
 
+  useEffect(() => {
+    let active = true;
+    let status: PermissionStatus | null = null;
+    const syncPermission = () => {
+      if (active && status) {
+        setMicrophone(microphoneStateFromPermission(status.state, true));
+      }
+    };
+    async function detectPermission() {
+      // Defer the browser-only check so the effect does not synchronously
+      // cascade into a second render after hydration.
+      await Promise.resolve();
+      if (!active) return;
+
+      const supported = window.isSecureContext && Boolean(navigator.mediaDevices?.getUserMedia);
+      if (!supported) {
+        setMicrophone("unsupported");
+        return;
+      }
+      if (!navigator.permissions?.query) {
+        setMicrophone("prompt");
+        return;
+      }
+
+      try {
+        status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        if (!active) return;
+        syncPermission();
+        status.addEventListener("change", syncPermission);
+      } catch {
+        if (active) setMicrophone("prompt");
+      }
+    }
+    void detectPermission();
+
+    return () => {
+      active = false;
+      status?.removeEventListener("change", syncPermission);
+    };
+  }, []);
+
+  async function enableMicrophone() {
+    setRequestingMicrophone(true);
+    try {
+      const granted = await requestMicrophoneAccess({
+        isSecureContext: window.isSecureContext,
+        getUserMedia: navigator.mediaDevices?.getUserMedia
+          ? () => navigator.mediaDevices.getUserMedia({ audio: true })
+          : undefined,
+      });
+      setMicrophone(granted);
+      toast({ description: "Microphone enabled. You can start your test call.", tone: "success" });
+    } catch (error) {
+      setMicrophone(microphoneStateAfterError(error));
+      toast({ description: browserCallErrorMessage("microphone", error), tone: "error" });
+    } finally {
+      setRequestingMicrophone(false);
+    }
+  }
+
   async function start() {
     setStarting(true);
     try {
-      // Ask for the mic first: a denied prompt should fail before we mint a URL.
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
       const result = await startBrowserCallAction();
       if (!result.ok || !result.signedUrl || !result.callInit) {
         toast({ description: result.message, tone: "error" });
@@ -50,9 +116,9 @@ function BrowserCallInner() {
           ...(config.tts ? { tts: { voiceId: config.tts.voice_id } } : {}),
         },
       });
-    } catch {
+    } catch (error) {
       toast({
-        description: "We couldn't reach your microphone. Allow mic access and try again.",
+        description: browserCallErrorMessage("call", error),
         tone: "error",
       });
     } finally {
@@ -76,13 +142,36 @@ function BrowserCallInner() {
 
   return (
     <div className="flex flex-col items-start gap-1.5">
-      <Button type="button" variant="secondary" loading={connecting} onClick={start}>
-        <Mic className="h-4 w-4" aria-hidden />
-        Call your AI
-      </Button>
-      <p className="max-w-xs text-xs leading-relaxed text-neutral-500">
-        You&apos;ll speak with an AI assistant. The test call may be recorded and shared with your business team through the inbox.
-      </p>
+      {microphone === "granted" ? (
+        <>
+          <Button type="button" variant="secondary" loading={connecting} onClick={start}>
+            <Mic className="h-4 w-4" aria-hidden />
+            Call your AI
+          </Button>
+          <p className="max-w-xs text-xs leading-relaxed text-neutral-500">
+            Microphone ready. The test call may be recorded and shared with your business team through the inbox.
+          </p>
+        </>
+      ) : (
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            loading={requestingMicrophone || microphone === "checking"}
+            disabled={microphone === "unsupported"}
+            onClick={enableMicrophone}
+          >
+            <Mic className="h-4 w-4" aria-hidden />
+            {microphone === "denied" ? "Try microphone again" : "Enable microphone"}
+          </Button>
+          <p className="max-w-xs text-xs leading-relaxed text-neutral-500" aria-live="polite">
+            {microphone === "checking" && "Checking microphone access…"}
+            {microphone === "prompt" && "Your browser will ask you to allow microphone access."}
+            {microphone === "denied" && "Permission is blocked. Set Microphone to Allow in this site's browser settings, then try again."}
+            {microphone === "unsupported" && "Microphone access requires a supported browser on a secure page."}
+          </p>
+        </>
+      )}
     </div>
   );
 }

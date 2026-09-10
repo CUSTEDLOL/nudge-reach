@@ -113,6 +113,7 @@ export function ConfirmDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   tone = "default",
+  confirmDisabled = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -123,6 +124,7 @@ export function ConfirmDialog({
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: "default" | "danger";
+  confirmDisabled?: boolean;
 }) {
   const [pending, setPending] = useState(false);
 
@@ -152,6 +154,7 @@ export function ConfirmDialog({
             variant={tone === "danger" ? "danger" : "primary"}
             onClick={handleConfirm}
             loading={pending}
+            disabled={confirmDisabled}
           >
             {confirmLabel}
           </Button>
