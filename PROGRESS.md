@@ -5,6 +5,14 @@ what's next.
 
 ---
 
+## Facebook domain verification token refreshed (2026-09-11) ✅
+
+- Replaced the previous Facebook domain-verification token with
+  `6tjz8myvmcxl30e3a9wu396mutaqyy` in the root server-rendered `<head>` so it is
+  present in the home page's initial HTML and does not depend on JavaScript.
+- Updated the landing integration regression test to require the new token and
+  reject the retired token while preserving the existing GTM placement checks.
+
 ## Onboarding cut from seven questions to two (2026-09-10) ✅
 
 - Traced every consumer of the discovery answers first. Outside onboarding

@@ -9,7 +9,8 @@ describe("landing page document integrations", () => {
 
     expect(head).toContain("GTM-WTMGT6DJ");
     expect(head).toContain('name="facebook-domain-verification"');
-    expect(head).toContain('content="uh9j91b9gh8qxdt3bxezjqlpa82fil"');
+    expect(head).toContain('content="6tjz8myvmcxl30e3a9wu396mutaqyy"');
+    expect(layout).not.toContain("uh9j91b9gh8qxdt3bxezjqlpa82fil");
   });
 
   it("places the GTM noscript fallback first in body", () => {
