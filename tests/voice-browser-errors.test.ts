@@ -1,5 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { browserCallErrorMessage } from "@/modules/voice/browser-call-errors";
+import {
+  browserCallErrorMessage,
+  microphoneStateAfterError,
+  microphoneStateFromPermission,
+  requestMicrophoneAccess,
+} from "@/modules/voice/browser-call-errors";
+
+describe("microphone permission flow", () => {
+  it("keeps the permission prompt and granted states distinct", () => {
+    expect(microphoneStateFromPermission("prompt", true)).toBe("prompt");
+    expect(microphoneStateFromPermission("granted", true)).toBe("granted");
+    expect(microphoneStateFromPermission("denied", true)).toBe("denied");
+    expect(microphoneStateFromPermission(null, false)).toBe("unsupported");
+  });
+
+  it("requests microphone capture and releases every temporary track", async () => {
+    let captures = 0;
+    let stoppedTracks = 0;
+    const result = await requestMicrophoneAccess({
+      isSecureContext: true,
+      getUserMedia: async () => {
+        captures += 1;
+        return {
+          getTracks: () => [
+            { stop: () => { stoppedTracks += 1; } },
+            { stop: () => { stoppedTracks += 1; } },
+          ],
+        };
+      },
+    });
+
+    expect(result).toBe("granted");
+    expect(captures).toBe(1);
+    expect(stoppedTracks).toBe(2);
+  });
+
+  it("does not attempt capture on an insecure or unsupported page", async () => {
+    let captures = 0;
+    await expect(requestMicrophoneAccess({
+      isSecureContext: false,
+      getUserMedia: async () => {
+        captures += 1;
+        return { getTracks: () => [] };
+      },
+    })).rejects.toMatchObject({ name: "SecurityError" });
+    expect(captures).toBe(0);
+  });
+
+  it("moves blocked permission into a recoverable denied state", () => {
+    expect(microphoneStateAfterError(new DOMException("", "NotAllowedError"))).toBe("denied");
+    expect(microphoneStateAfterError(new DOMException("", "NotFoundError"))).toBe("prompt");
+  });
+});
 
 describe("browser call startup errors", () => {
   it("explains when the operating system exposes no microphone", () => {

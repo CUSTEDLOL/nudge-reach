@@ -17,9 +17,14 @@ what's next.
   blocked permission, unreadable/busy inputs, insecure contexts, and backend or
   ElevenLabs failures no longer collapse into the same misleading permission
   toast.
-- Verification: browser-error regression tests **4/4**, complete voice suite
-  **52/52**, focused lint clean, TypeScript clean, and the Next.js production
-  build passed.
+- Added an explicit two-step permission flow. The page checks existing browser
+  permission without prompting; an **Enable microphone** click requests a
+  temporary stream so the browser can show its native permission dialog, then
+  releases every track before enabling **Call your AI**. Denied permissions stay
+  recoverable with site-settings guidance.
+- Verification: browser permission/error regression tests **8/8**, complete
+  voice suite **56/56**, focused lint clean, TypeScript clean, and the Next.js
+  production build passed.
 
 ## Founder control room hardening — batch 4 (2026-09-10) 🚧
 

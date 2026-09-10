@@ -1,8 +1,50 @@
 export type BrowserCallErrorStage = "microphone" | "call";
+export type MicrophoneUiState = "checking" | "prompt" | "granted" | "denied" | "unsupported";
+
+interface TemporaryMicrophoneStream {
+  getTracks(): Array<{ stop(): void }>;
+}
+
+interface MicrophoneEnvironment {
+  isSecureContext: boolean;
+  getUserMedia?: () => Promise<TemporaryMicrophoneStream>;
+}
 
 function errorName(error: unknown) {
   if (!error || typeof error !== "object" || !("name" in error)) return "";
   return typeof error.name === "string" ? error.name : "";
+}
+
+export function microphoneStateFromPermission(
+  permission: PermissionState | null,
+  supported: boolean
+): MicrophoneUiState {
+  if (!supported) return "unsupported";
+  if (permission === "granted") return "granted";
+  if (permission === "denied") return "denied";
+  return "prompt";
+}
+
+export function microphoneStateAfterError(error: unknown): MicrophoneUiState {
+  if (["NotAllowedError", "PermissionDeniedError"].includes(errorName(error))) return "denied";
+  if (errorName(error) === "SecurityError") return "unsupported";
+  return "prompt";
+}
+
+/**
+ * Calling this from a click handler is what allows the browser to show its
+ * native microphone prompt. The temporary stream is never kept or recorded.
+ */
+export async function requestMicrophoneAccess({
+  isSecureContext,
+  getUserMedia,
+}: MicrophoneEnvironment): Promise<"granted"> {
+  if (!isSecureContext || !getUserMedia) {
+    throw new DOMException("Microphone capture is unavailable", "SecurityError");
+  }
+  const stream = await getUserMedia();
+  stream.getTracks().forEach((track) => track.stop());
+  return "granted";
 }
 
 /** Stable, non-sensitive recovery guidance for browser-call startup failures. */
