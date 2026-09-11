@@ -9,11 +9,8 @@ import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
   isNavItemActive,
   navGroupsForRole,
-  suggestedNavItemsForRole,
   type AppRole,
-  type NavGroup,
 } from "@/components/features/app-shell/nav";
-import type { ShortcutKey } from "@/modules/dashboard/workspace-profile";
 
 export type SidebarUser = { name: string; email: string };
 
@@ -27,22 +24,14 @@ export function Sidebar({
   user,
   collapsed,
   onCollapsedChange,
-  suggestedShortcuts = [],
 }: {
   role?: AppRole;
   user: SidebarUser;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  suggestedShortcuts?: ShortcutKey[];
 }) {
   const pathname = usePathname();
-  const suggestedItems = suggestedNavItemsForRole(role, suggestedShortcuts);
-  const groups: NavGroup[] = [
-    ...(suggestedItems.length > 0
-      ? [{ label: "Shortcuts" as const, items: suggestedItems }]
-      : []),
-    ...navGroupsForRole(role),
-  ];
+  const groups = navGroupsForRole(role);
 
   const iconButton =
     "grid h-9 w-9 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500";

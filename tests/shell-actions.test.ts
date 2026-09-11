@@ -23,23 +23,18 @@ describe("shell preference actions", () => {
       org: { id: "org-1" },
       membership: {
         id: "member-1",
-        uiPreferences: { pinnedShortcuts: ["inbox"] },
+        uiPreferences: { sidebarCollapsed: false, pinnedShortcuts: ["inbox"] },
       },
     });
   });
 
-  it("updates only the authenticated member and preserves shortcuts", async () => {
+  it("updates only the authenticated member, dropping retired keys", async () => {
     const result = await saveSidebarCollapsedAction(true);
 
     expect(result.ok).toBe(true);
     expect(membershipUpdate).toHaveBeenCalledWith({
       where: { id: "member-1" },
-      data: {
-        uiPreferences: {
-          sidebarCollapsed: true,
-          pinnedShortcuts: ["inbox"],
-        },
-      },
+      data: { uiPreferences: { sidebarCollapsed: true } },
     });
   });
 

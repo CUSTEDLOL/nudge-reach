@@ -150,17 +150,6 @@ export type AttentionKind =
   | "followup"
   | "setup";
 
-export type ShortcutKey =
-  | "today"
-  | "inbox"
-  | "leads"
-  | "front-desk"
-  | "followups"
-  | "campaigns"
-  | "analytics"
-  | "integrations"
-  | "settings";
-
 export type SetupTaskKey =
   | "teach-front-desk"
   | "try-front-desk"
@@ -184,14 +173,12 @@ export type WorkspaceProfilePatch = Partial<Omit<WorkspaceProfile, "version">>;
 
 export interface WorkspaceDefaults {
   attentionOrder: AttentionKind[];
-  shortcuts: ShortcutKey[];
   setupOrder: SetupTaskKey[];
   showSectionDescriptions: boolean;
 }
 
 export interface UiPreferences {
   sidebarCollapsed: boolean;
-  pinnedShortcuts: ShortcutKey[];
 }
 
 export const DEFAULT_WORKSPACE_PROFILE: WorkspaceProfile = {
@@ -223,18 +210,6 @@ const SYSTEM_VALUES: ReadonlySet<string> = new Set(
 const GUIDANCE_VALUES: ReadonlySet<string> = new Set(
   GUIDANCE_OPTIONS.map((option) => option.value)
 );
-const SHORTCUT_VALUES = new Set<ShortcutKey>([
-  "today",
-  "inbox",
-  "leads",
-  "front-desk",
-  "followups",
-  "campaigns",
-  "analytics",
-  "integrations",
-  "settings",
-]);
-
 function record(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -440,30 +415,6 @@ const ATTENTION_BY_OUTCOME: Record<PrimaryOutcome, AttentionKind[]> = {
   ],
 };
 
-const SHORTCUTS_BY_OUTCOME: Record<PrimaryOutcome, ShortcutKey[]> = {
-  bookings: ["front-desk", "inbox", "integrations"],
-  "faster-responses": ["inbox", "front-desk", "leads"],
-  "follow-up": ["followups", "inbox", "front-desk"],
-  "fewer-no-shows": ["followups", "front-desk", "inbox"],
-  payments: ["inbox", "front-desk", "integrations"],
-  support: ["inbox", "front-desk", "leads"],
-};
-
-const SHORTCUTS_BY_ROLE: Record<WorkspaceRole, ShortcutKey[]> = {
-  owner: [],
-  manager: ["today"],
-  sales: ["leads"],
-  "front-desk": ["inbox"],
-  support: ["inbox"],
-  admin: ["integrations", "settings"],
-};
-
-const SHORTCUTS_BY_TEAM: Record<TeamShape, ShortcutKey[]> = {
-  solo: [],
-  "small-team": ["inbox"],
-  departments: ["analytics"],
-};
-
 const ATTENTION_BY_JOURNEY: Record<CustomerJourney, AttentionKind> = {
   "enquiry-booking-payment": "booking",
   "consultation-booking": "owner-question",
@@ -513,12 +464,6 @@ export function deriveWorkspaceDefaults(
     attentionOrder.splice(3, 0, journeyPriority);
   }
 
-  const shortcuts = unique([
-    ...SHORTCUTS_BY_ROLE[profile.role],
-    ...SHORTCUTS_BY_TEAM[profile.teamShape],
-    ...SHORTCUTS_BY_OUTCOME[profile.primaryOutcome],
-  ]).slice(0, 3);
-
   const setupPriorities = [
     SETUP_BY_OUTCOME[profile.primaryOutcome],
     SETUP_BY_JOURNEY[profile.journey],
@@ -539,29 +484,13 @@ export function deriveWorkspaceDefaults(
 
   return {
     attentionOrder,
-    shortcuts,
     setupOrder,
     showSectionDescriptions: profile.guidance !== "direct",
   };
 }
 
 export function parseUiPreferences(value: unknown): UiPreferences {
-  const source = record(value);
-  const rawShortcuts = Array.isArray(source.pinnedShortcuts)
-    ? source.pinnedShortcuts
-    : [];
-  const pinnedShortcuts = Array.from(
-    new Set(
-      rawShortcuts.filter(
-        (item): item is ShortcutKey =>
-          typeof item === "string" && SHORTCUT_VALUES.has(item as ShortcutKey)
-      )
-    )
-  );
-  return {
-    sidebarCollapsed: source.sidebarCollapsed === true,
-    pinnedShortcuts,
-  };
+  return { sidebarCollapsed: record(value).sidebarCollapsed === true };
 }
 
 export function mergeUiPreferences(

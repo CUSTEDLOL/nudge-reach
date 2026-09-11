@@ -4,7 +4,6 @@ import {
   commandsForRole,
   mobilePrimaryItemsForRole,
   navGroupsForRole,
-  suggestedNavItemsForRole,
 } from "@/components/features/app-shell/nav";
 import { isThreadRoute } from "@/components/features/app-shell/bottom-nav";
 
@@ -84,23 +83,6 @@ describe("adaptive app navigation", () => {
     expect(commandsForRole("AGENT").map((command) => command.href)).not.toContain(
       "/integrations"
     );
-  });
-
-  it("turns onboarding preferences into ordered, role-safe shortcuts", () => {
-    expect(
-      suggestedNavItemsForRole("OWNER", [
-        "followups",
-        "inbox",
-        "front-desk",
-      ]).map((item) => item.key)
-    ).toEqual(["followups", "inbox", "front-desk"]);
-    expect(
-      suggestedNavItemsForRole("AGENT", [
-        "settings",
-        "inbox",
-        "campaigns",
-      ]).map((item) => item.key)
-    ).toEqual(["inbox", "campaigns"]);
   });
 
   it("keeps the mobile bar away from an open inbox thread", () => {

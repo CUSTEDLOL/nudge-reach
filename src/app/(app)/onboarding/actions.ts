@@ -8,8 +8,6 @@ import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
 import { isVertical } from "@/modules/dashboard/verticals";
 import {
-  deriveWorkspaceDefaults,
-  mergeUiPreferences,
   mergeWorkspaceProfile,
   parseWorkspaceProfile,
   type WorkspaceProfile,
@@ -41,18 +39,9 @@ export async function saveWorkspaceProfileStepAction(
 
   let settings: Record<string, unknown>;
   let profile: WorkspaceProfile;
-  let uiPreferencesJson: Prisma.InputJsonObject;
   try {
     settings = mergeWorkspaceProfile(ctx.org.settings, patch);
     profile = parseWorkspaceProfile(settings);
-    const defaults = deriveWorkspaceDefaults(profile);
-    const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
-      pinnedShortcuts: defaults.shortcuts,
-    });
-    uiPreferencesJson = {
-      sidebarCollapsed: uiPreferences.sidebarCollapsed,
-      pinnedShortcuts: uiPreferences.pinnedShortcuts,
-    };
   } catch (err) {
     return {
       ok: false,
@@ -61,16 +50,10 @@ export async function saveWorkspaceProfileStepAction(
   }
 
   try {
-    await prisma.$transaction([
-      prisma.org.update({
-        where: { id: ctx.org.id },
-        data: { settings: settings as Prisma.InputJsonValue },
-      }),
-      prisma.membership.update({
-        where: { id: ctx.membership.id },
-        data: { uiPreferences: uiPreferencesJson },
-      }),
-    ]);
+    await prisma.org.update({
+      where: { id: ctx.org.id },
+      data: { settings: settings as Prisma.InputJsonValue },
+    });
 
     revalidatePath("/onboarding");
     revalidatePath("/dashboard");
@@ -178,30 +161,15 @@ export async function completeOnboardingAction(
   // discovery questions were completed. `onboardedAt` controls the redirect;
   // the profile marker records only answers the owner actually saved.
   const settings = mergeWorkspaceProfile(ctx.org.settings, {});
-  const profile = parseWorkspaceProfile(settings);
-  const defaults = deriveWorkspaceDefaults(profile);
-  const uiPreferences = mergeUiPreferences(ctx.membership.uiPreferences, {
-    pinnedShortcuts: defaults.shortcuts,
-  });
-  const uiPreferencesJson: Prisma.InputJsonObject = {
-    sidebarCollapsed: uiPreferences.sidebarCollapsed,
-    pinnedShortcuts: uiPreferences.pinnedShortcuts,
-  };
 
   try {
-    await prisma.$transaction([
-      prisma.org.update({
-        where: { id: ctx.org.id },
-        data: {
-          onboardedAt: new Date(),
-          settings: settings as Prisma.InputJsonValue,
-        },
-      }),
-      prisma.membership.update({
-        where: { id: ctx.membership.id },
-        data: { uiPreferences: uiPreferencesJson },
-      }),
-    ]);
+    await prisma.org.update({
+      where: { id: ctx.org.id },
+      data: {
+        onboardedAt: new Date(),
+        settings: settings as Prisma.InputJsonValue,
+      },
+    });
     revalidatePath("/dashboard");
     revalidatePath("/onboarding");
   } catch {

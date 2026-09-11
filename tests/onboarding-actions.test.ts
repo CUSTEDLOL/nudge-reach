@@ -106,7 +106,7 @@ describe("personalized onboarding actions", () => {
 
   it("does not expose database errors while autosaving", async () => {
     requireOrgContext.mockResolvedValue(context("OWNER"));
-    transaction.mockRejectedValueOnce(new Error("database password leaked"));
+    orgUpdate.mockRejectedValueOnce(new Error("database password leaked"));
 
     const result = await saveWorkspaceProfileStepAction({
       primaryOutcome: "follow-up",
@@ -119,7 +119,7 @@ describe("personalized onboarding actions", () => {
     });
   });
 
-  it("writes shared answers and personal shortcuts only to the caller context", async () => {
+  it("writes the shared answer to the org and never touches a member row", async () => {
     requireOrgContext.mockResolvedValue(context("ADMIN"));
 
     const result = await saveWorkspaceProfileStepAction({
@@ -140,16 +140,8 @@ describe("personalized onboarding actions", () => {
         }),
       },
     });
-    expect(membershipUpdate).toHaveBeenCalledWith({
-      where: { id: "member-1" },
-      data: {
-        uiPreferences: {
-          sidebarCollapsed: false,
-          pinnedShortcuts: ["followups", "inbox", "front-desk"],
-        },
-      },
-    });
-    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(membershipUpdate).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it("completes with safe defaults and does not activate operational models", async () => {
@@ -168,12 +160,9 @@ describe("personalized onboarding actions", () => {
         settings: expect.any(Object),
       }),
     });
-    expect(membershipUpdate).toHaveBeenCalledWith({
-      where: { id: "member-1" },
-      data: { uiPreferences: expect.any(Object) },
-    });
+    expect(membershipUpdate).not.toHaveBeenCalled();
     expect(agentProfileUpsert).not.toHaveBeenCalled();
-    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it("preserves the actual answered step when onboarding is skipped", async () => {
@@ -233,7 +222,7 @@ describe("personalized onboarding actions", () => {
 
   it("does not expose database errors while finishing", async () => {
     requireOrgContext.mockResolvedValue(context("OWNER"));
-    transaction.mockRejectedValueOnce(new Error("database password leaked"));
+    orgUpdate.mockRejectedValueOnce(new Error("database password leaked"));
 
     const result = await completeOnboardingAction(new FormData());
 

@@ -47,23 +47,11 @@ import { visibleChoiceValue } from "./question-state";
 /**
  * Two questions, then the summary. The five discovery questions that used to
  * sit in front of these were cut: they only fed shortcut/ordering cosmetics,
- * and one ("what do you use today?") fed nothing that ships. Answers already
- * stored by earlier orgs are still parsed and still drive their sidebar.
+ * and one ("what do you use today?") fed nothing that ships. The goal answer
+ * now earns its place by ordering the attention queue on Home.
  */
 const QUESTION_COUNT = 2;
 const SUMMARY_STEP = 3;
-
-const SHORTCUT_LABELS = {
-  today: "Home",
-  inbox: "Inbox",
-  leads: "Leads",
-  "front-desk": "AI Front Desk",
-  followups: "Follow-ups",
-  campaigns: "Campaigns",
-  analytics: "Analytics",
-  integrations: "Integrations",
-  settings: "Settings",
-} as const;
 
 const SETUP_TASKS = {
   "teach-front-desk": {
@@ -271,7 +259,7 @@ export function OnboardingWizard(props: WizardProps) {
                 headingRef={headingRef}
                 eyebrow="Your priority"
                 title="What should Nudge improve first?"
-                description="This determines which exceptions appear first on Home, and which shortcuts you get."
+                description="This decides which exceptions Nudge puts in front of you first on Home."
               >
                 <ChoiceCards
                   options={OUTCOME_OPTIONS}
@@ -606,18 +594,7 @@ function RecommendationSummary({
         You can adjust these presentation choices at any time.
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-          <h2 className="text-sm font-semibold text-neutral-900">Pinned shortcuts</h2>
-          <ul className="mt-3 space-y-2">
-            {defaults.shortcuts.map((shortcut) => (
-              <li key={shortcut} className="flex items-center gap-2 text-sm text-neutral-700">
-                <Check className="h-4 w-4 text-brand-600" aria-hidden />
-                {SHORTCUT_LABELS[shortcut]}
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="mt-6">
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
           <h2 className="text-sm font-semibold text-neutral-900">Workspace status</h2>
           <ul className="mt-3 space-y-2 text-sm text-neutral-700">

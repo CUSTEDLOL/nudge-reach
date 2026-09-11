@@ -16,7 +16,6 @@ import { Sidebar, type SidebarUser } from "@/components/features/app-shell/sideb
 import { Topbar } from "@/components/features/app-shell/topbar";
 import { BottomNav, isThreadRoute } from "@/components/features/app-shell/bottom-nav";
 import type { AppRole } from "@/components/features/app-shell/nav";
-import type { ShortcutKey } from "@/modules/dashboard/workspace-profile";
 import { saveSidebarCollapsedAction } from "@/app/(app)/shell-actions";
 
 /**
@@ -30,7 +29,6 @@ export function AppShell({
   role = "OWNER",
   simulation = false,
   initialSidebarCollapsed = false,
-  suggestedShortcuts = [],
   children,
 }: {
   orgName: string;
@@ -38,7 +36,6 @@ export function AppShell({
   role?: AppRole;
   simulation?: boolean;
   initialSidebarCollapsed?: boolean;
-  suggestedShortcuts?: ShortcutKey[];
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -107,7 +104,6 @@ export function AppShell({
         user={user}
         collapsed={sidebarCollapsed}
         onCollapsedChange={updateSidebar}
-        suggestedShortcuts={suggestedShortcuts}
       />
       <div
         className={cn(

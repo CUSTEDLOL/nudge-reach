@@ -17,7 +17,6 @@ export async function saveSidebarCollapsedAction(
   });
   const uiPreferencesJson: Prisma.InputJsonObject = {
     sidebarCollapsed: uiPreferences.sidebarCollapsed,
-    pinnedShortcuts: uiPreferences.pinnedShortcuts,
   };
 
   try {

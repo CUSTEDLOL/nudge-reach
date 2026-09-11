@@ -115,38 +115,6 @@ describe("workspace profile", () => {
     );
   });
 
-  it("derives stable shortcuts instead of rearranging main navigation", () => {
-    const defaults = deriveWorkspaceDefaults({
-      ...DEFAULT_WORKSPACE_PROFILE,
-      primaryOutcome: "follow-up",
-    });
-
-    expect(defaults.shortcuts).toEqual([
-      "followups",
-      "inbox",
-      "front-desk",
-    ]);
-  });
-
-  it("uses role and team shape to choose genuinely useful shortcuts", () => {
-    const salesperson = deriveWorkspaceDefaults({
-      ...DEFAULT_WORKSPACE_PROFILE,
-      role: "sales",
-      primaryOutcome: "follow-up",
-    });
-    const departmentOwner = deriveWorkspaceDefaults({
-      ...DEFAULT_WORKSPACE_PROFILE,
-      teamShape: "departments",
-    });
-
-    expect(salesperson.shortcuts).toEqual(["leads", "followups", "inbox"]);
-    expect(departmentOwner.shortcuts).toEqual([
-      "analytics",
-      "front-desk",
-      "inbox",
-    ]);
-  });
-
   it("uses the customer journey and current systems to order recommendations", () => {
     const defaults = deriveWorkspaceDefaults({
       ...DEFAULT_WORKSPACE_PROFILE,
@@ -186,31 +154,22 @@ describe("workspace profile", () => {
 });
 
 describe("member UI preferences", () => {
-  it("falls back safely and filters unknown shortcut keys", () => {
-    expect(parseUiPreferences(null)).toEqual({
-      sidebarCollapsed: false,
-      pinnedShortcuts: [],
-    });
+  it("falls back safely and ignores stale keys left by older versions", () => {
+    expect(parseUiPreferences(null)).toEqual({ sidebarCollapsed: false });
     expect(
       parseUiPreferences({
         sidebarCollapsed: true,
-        pinnedShortcuts: ["inbox", "unknown", "followups"],
+        pinnedShortcuts: ["inbox", "followups"],
       })
-    ).toEqual({
-      sidebarCollapsed: true,
-      pinnedShortcuts: ["inbox", "followups"],
-    });
+    ).toEqual({ sidebarCollapsed: true });
   });
 
   it("merges preferences without retaining arbitrary fields", () => {
     expect(
       mergeUiPreferences(
         { sidebarCollapsed: false, ignored: "value" },
-        { sidebarCollapsed: true, pinnedShortcuts: ["front-desk"] }
+        { sidebarCollapsed: true }
       )
-    ).toEqual({
-      sidebarCollapsed: true,
-      pinnedShortcuts: ["front-desk"],
-    });
+    ).toEqual({ sidebarCollapsed: true });
   });
 });
