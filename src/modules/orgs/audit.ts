@@ -33,6 +33,7 @@ export type AuditAction =
   | "knowledge.file_imported"
   | "knowledge.gbp_imported"
   | "knowledge.drafts_approved"
+  | "knowledge.drafts_discarded"
   | "voice.number_saved"
   | "custom_action.created"
   | "custom_action.updated"
@@ -90,6 +91,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "knowledge.file_imported": "File imported into knowledge drafts",
   "knowledge.gbp_imported": "Google Business Profile imported into knowledge drafts",
   "knowledge.drafts_approved": "Imported knowledge drafts approved",
+  "knowledge.drafts_discarded": "Imported knowledge drafts discarded",
   "voice.number_saved": "Voice number saved",
   "custom_action.created": "Custom agent action created",
   "custom_action.updated": "Custom agent action updated",

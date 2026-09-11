@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   approveAllDraftsAction,
   approveDraftAction,
+  discardAllDraftsAction,
   discardDraftAction,
   importFileAction,
   importGbpAction,
@@ -45,6 +46,19 @@ export function ImportPanel({
       const r = await fn();
       setMessage(r.message);
     });
+
+  /** Bulk reject is one tap away from a whole import, so confirm it first.
+   * The drafts are archived rather than deleted, same as a single discard. */
+  function discardAll() {
+    if (
+      !window.confirm(
+        `Reject all ${drafts.length} imported fact${drafts.length === 1 ? "" : "s"}? They won't be used to train your agent.`
+      )
+    ) {
+      return;
+    }
+    run(() => discardAllDraftsAction());
+  }
 
   function onFilePicked(file: File | undefined) {
     if (!file) return;
@@ -138,14 +152,25 @@ export function ImportPanel({
                 {drafts.length}
               </span>
             </h3>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!canEdit || pending}
-              onClick={() => run(() => approveAllDraftsAction())}
-            >
-              Approve all
-            </Button>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={!canEdit || pending}
+                onClick={() => run(() => approveAllDraftsAction())}
+              >
+                Approve all
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!canEdit || pending}
+                onClick={discardAll}
+              >
+                <X className="h-4 w-4" aria-hidden />
+                Reject all
+              </Button>
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             {drafts.map((d) => (

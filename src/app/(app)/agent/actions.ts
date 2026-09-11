@@ -343,6 +343,30 @@ export async function approveAllDraftsAction(): Promise<ActionResult> {
   }
 }
 
+/** Reject every pending draft in one tap. Archived, not deleted, so a bad
+ * import stays in the audit trail and nothing is lost irrecoverably. */
+export async function discardAllDraftsAction(): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const updated = await prisma.knowledgeEntry.updateMany({
+      where: { orgId: ctx.org.id, status: "draft" },
+      data: { status: "archived" },
+    });
+    if (updated.count === 0) {
+      return { ok: false, message: "There are no drafts to discard." };
+    }
+    recordAudit(ctx, "knowledge.drafts_discarded", String(updated.count));
+    revalidatePath("/agent");
+    return {
+      ok: true,
+      message: `Discarded ${updated.count} fact${updated.count === 1 ? "" : "s"}.`,
+    };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 /** One-click migration: distill the legacy businessInfo blob into facts. */
 export async function structureExistingInfoAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
