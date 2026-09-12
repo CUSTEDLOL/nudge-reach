@@ -102,7 +102,7 @@ export default async function ContactsPage({
   return (
     <div>
       <PageHeader
-        title="Contacts"
+        title="Leads"
         description={`${totalCount} contact${totalCount === 1 ? "" : "s"} · ${optedInCount} can receive campaigns`}
         actions={<ContactsToolbar tags={tagInfos} canManageTags={canManage} />}
       />

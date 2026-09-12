@@ -492,7 +492,7 @@ export async function simulateInboundAction(
         ok: true,
         message:
           result.skipped === "disabled"
-            ? "Message received — your AI is switched off (AI Agent → Setup), so it didn't reply."
+            ? "Message received — your AI is switched off (AI Front Desk → Setup), so it didn't reply."
             : "Message received. No AI agent is configured, so no auto-reply was sent.",
         conversationId,
         skipped: result.skipped,

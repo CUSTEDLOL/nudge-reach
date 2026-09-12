@@ -130,7 +130,7 @@ export function TryYourAi({
         </div>
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-neutral-500">
-            Replies use only the facts on your AI Agent page — teach it more
+            Replies use only the facts on your AI Front Desk page — teach it more
             and try again.
           </p>
           <Button type="submit" loading={sending} disabled={!text.trim()}>

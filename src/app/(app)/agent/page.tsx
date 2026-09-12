@@ -12,7 +12,7 @@ import { AgentForm, type AgentFormValues } from "./agent-form";
 import { AgentTabs } from "./agent-tabs";
 import { parseWaiting } from "@/modules/knowledge/questions";
 
-export const metadata: Metadata = { title: "AI Agent" };
+export const metadata: Metadata = { title: "AI Front Desk" };
 
 /**
  * Everything about the AI employee in one place. Two tabs:
@@ -79,7 +79,7 @@ export default async function AgentPage({
   return (
     <section>
       <PageHeader
-        title="AI Agent"
+        title="AI Front Desk"
         description="Your AI employee — what it knows, the questions it's waiting on, and how it behaves on WhatsApp."
         actions={
           <div className="flex flex-wrap gap-2">

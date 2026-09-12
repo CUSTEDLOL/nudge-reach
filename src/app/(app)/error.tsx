@@ -24,7 +24,7 @@ export default function AppError({
           </h1>
           <p className="mt-1 text-sm text-neutral-500">
             That didn&apos;t work — it&apos;s on us, not you. Try again, or head
-            back to your dashboard.
+            back Home.
           </p>
           {error.digest && (
             <p className="mt-2 font-mono text-xs text-neutral-400">
@@ -38,7 +38,7 @@ export default function AppError({
             href="/dashboard"
             className={buttonVariants({ variant: "secondary" })}
           >
-            Go to dashboard
+            Go to Home
           </Link>
         </div>
       </Card>

@@ -413,7 +413,7 @@ export function ProfileView({
                 ) : (
                   tags.length === 0 && (
                     <p className="text-xs text-neutral-400">
-                      Create tags with “Manage tags” on the contacts page.
+                      Create tags with “Manage tags” on the Leads page.
                     </p>
                   )
                 )}
