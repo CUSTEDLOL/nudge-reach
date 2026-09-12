@@ -20,6 +20,7 @@ import {
   formatDayLabel,
   formatMessageTime,
   serviceWindowState,
+  whatsAppSegments,
 } from "@/modules/inbox/format";
 import type { ThreadSnapshot } from "@/modules/inbox/queries";
 import { useInboxPoll, useNow } from "../use-inbox-poll";
@@ -242,7 +243,17 @@ function MessageList({
                   : "self-end rounded-tr-sm bg-brand-100/80 text-brand-950"
               )}
             >
-              <p className="whitespace-pre-wrap break-words">{m.body}</p>
+              <p className="whitespace-pre-wrap break-words">
+                {whatsAppSegments(m.body).map((seg, i) =>
+                  seg.bold ? (
+                    <strong key={i}>{seg.text}</strong>
+                  ) : seg.italic ? (
+                    <em key={i}>{seg.text}</em>
+                  ) : (
+                    <span key={i}>{seg.text}</span>
+                  )
+                )}
+              </p>
               <p
                 className={cn(
                   "mt-1 flex items-center justify-end gap-1 text-[10px]",

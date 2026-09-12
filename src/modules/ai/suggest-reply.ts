@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { chat } from "@/lib/model-router";
 import { recordSyntheticUsage } from "@/lib/model-router/usage";
 import { buildHistory } from "@/modules/agent/reply";
+import { normalizeWhatsAppMarkdown } from "@/modules/inbox/format";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { firstName } from "@/modules/inbox/format";
 import { SUGGEST_TONES, type SuggestTone, isSuggestTone } from "@/modules/ai/tones";
@@ -174,7 +175,7 @@ export async function suggestReply(
       attribution: { orgId, conversationId, purpose: "suggest" },
     });
     if (!draft) return { ok: false, error: "The model returned nothing — try again." };
-    return { ok: true, draft, sample: false };
+    return { ok: true, draft: normalizeWhatsAppMarkdown(draft), sample: false };
   } catch {
     return { ok: false, error: "Couldn't draft a reply right now — try again." };
   }
