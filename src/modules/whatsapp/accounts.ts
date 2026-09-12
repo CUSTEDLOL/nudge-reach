@@ -29,13 +29,16 @@ export async function getDefaultWhatsappAccount(orgId: string) {
  * existing number updates it; a new number creates a second account (plan-
  * gated). The org's first account becomes the default.
  */
-export async function saveWhatsappAccount(input: {
-  orgId: string;
-  wabaId: string;
-  phoneNumberId: string;
-  displayName: string;
-  accessToken: string;
-}): Promise<
+export async function saveWhatsappAccount(
+  input: {
+    orgId: string;
+    wabaId: string;
+    phoneNumberId: string;
+    displayName: string;
+    accessToken: string;
+  },
+  options: { activateOrg?: boolean } = {}
+): Promise<
   | { ok: true; account: Awaited<ReturnType<typeof getDefaultWhatsappAccount>> }
   | { ok: false; message: string }
 > {
@@ -56,11 +59,14 @@ export async function saveWhatsappAccount(input: {
     if (!gate.allowed) return { ok: false, message: gate.message };
   }
 
-  // A connected number is what takes the org out of test mode.
-  await prisma.org.update({
-    where: { id: input.orgId },
-    data: { simulated: false },
-  });
+  // Client self-service keeps its existing behaviour. Founder-assisted setup
+  // can preserve mode so a separate, explicit control enables live sending.
+  if (options.activateOrg !== false) {
+    await prisma.org.update({
+      where: { id: input.orgId },
+      data: { simulated: false },
+    });
+  }
   const account = await prisma.whatsappAccount.upsert({
     where: { phoneNumberId: input.phoneNumberId },
     create: {

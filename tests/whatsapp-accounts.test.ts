@@ -115,6 +115,17 @@ describe("saveWhatsappAccount", () => {
     expect(r.ok).toBe(true);
     expect(prisma.org.findUnique).not.toHaveBeenCalled(); // no gate consulted
   });
+
+  it("can save assisted-setup credentials without changing the org's send mode", async () => {
+    prisma.whatsappAccount.findUnique.mockResolvedValue(null);
+    prisma.whatsappAccount.count.mockResolvedValue(0);
+
+    const r = await saveWhatsappAccount(INPUT, { activateOrg: false });
+
+    expect(r.ok).toBe(true);
+    expect(prisma.whatsappAccount.upsert).toHaveBeenCalledOnce();
+    expect(prisma.org.update).not.toHaveBeenCalled();
+  });
 });
 
 describe("credentials resolution", () => {
