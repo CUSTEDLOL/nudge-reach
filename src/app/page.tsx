@@ -3,6 +3,7 @@ import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
 import { EasySetup } from "@/components/marketing/easy-setup";
+import { PlansStrip } from "@/components/marketing/plans-strip";
 import { IndustryWordSearch } from "@/components/marketing/industry-word-search";
 import { FeaturesBento } from "@/components/marketing/features-bento";
 import { Experience } from "@/components/marketing/v2/experience";
@@ -51,11 +52,35 @@ const JSON_LD = {
       offers: [
         {
           "@type": "Offer",
-          name: "AI Front Desk implementation",
-          price: "20000",
+          name: "Entry",
+          price: "1499",
           priceCurrency: "INR",
           description:
-            "End-to-end setup of the AI Front Desk, starting from ₹20,000 — final plan customized per business.",
+            "An AI chatbot trained on your business that answers customer questions around the clock, plus marketing templates. It does not book, collect or follow up.",
+        },
+        {
+          "@type": "Offer",
+          name: "Starter",
+          price: "4499",
+          priceCurrency: "INR",
+          description:
+            "AI replies and lead capture around the clock, shared inbox, contacts and campaigns. One WhatsApp number.",
+        },
+        {
+          "@type": "Offer",
+          name: "Growth",
+          price: "7499",
+          priceCurrency: "INR",
+          description:
+            "Everything in Starter plus real calendar bookings, payment links, automated follow-ups, lead scoring and CRM sync.",
+        },
+        {
+          "@type": "Offer",
+          name: "Pro",
+          price: "14999",
+          priceCurrency: "INR",
+          description:
+            "Everything in Growth plus the voice front desk, custom actions into your own systems and bring-your-own AI key.",
         },
       ],
     },
@@ -90,7 +115,10 @@ export default function Home() {
           <DaySection>
             <EasySetup />
           </DaySection>
-          {/* pricing and FAQ live on their own pages, via the navbar */}
+          <DaySection>
+            <PlansStrip />
+          </DaySection>
+          {/* the full grid and the FAQ live on their own pages, via the navbar */}
         </div>
         {/* the closer — back in the hero's sky, one ask: early access */}
         <FinalCtaV2 />

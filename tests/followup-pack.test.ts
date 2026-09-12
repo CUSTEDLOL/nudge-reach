@@ -67,9 +67,13 @@ describe("lead-nudge automation (composed, exactly two nudges)", () => {
 });
 
 describe("AI Front Desk gating", () => {
-  it("only the flagship plan has the capability", () => {
+  it("Growth and up can chase; Starter and the retired free tier cannot", () => {
+    expect(planHasAiFrontDesk("growth")).toBe(true);
+    expect(planHasAiFrontDesk("pro")).toBe(true);
+    expect(planHasAiFrontDesk("enterprise")).toBe(true);
+    // The retired flagship keeps everything it was sold with.
     expect(planHasAiFrontDesk("front_desk")).toBe(true);
-    expect(planHasAiFrontDesk("pro")).toBe(false);
+    expect(planHasAiFrontDesk("starter")).toBe(false);
     expect(planHasAiFrontDesk("free")).toBe(false);
     expect(planHasAiFrontDesk("unknown")).toBe(false);
   });

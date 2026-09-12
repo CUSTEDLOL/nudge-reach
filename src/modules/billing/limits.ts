@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/db";
 import { getPlan, PLANS, type Plan, type PlanLimits } from "@/modules/billing/plans";
 
-/** The flagship plan (AI Front Desk) — surfaced in gate messages + upsells. */
-export const AI_FRONT_DESK_PLAN = PLANS.find((p) => p.flagship)!;
+/** Lowest sold tier that includes the agent's real actions — used in upsells. */
+export const AI_FRONT_DESK_PLAN = PLANS.find(
+  (p) => !p.contactOnly && !p.legacy && p.limits.aiFrontDesk
+)!;
 
 /** Pure: does this stored plan id include the AI Front Desk capability? */
 export function planHasAiFrontDesk(planId: string): boolean {
@@ -66,6 +68,7 @@ const OVERRIDABLE_COUNTS = [
   "teamMembers",
   "automations",
   "messagesPerMonth",
+  "whatsappNumbers",
 ] as const satisfies readonly (keyof PlanLimits)[];
 
 export type FeatureOverrides = Partial<
@@ -159,7 +162,35 @@ export async function checkAiFrontDesk(orgId: string): Promise<LimitCheck> {
     allowed: false,
     used: 0,
     limit: 0,
-    message: `The AI Front Desk — calendar booking, the follow-up engine and agent actions — is on the ${AI_FRONT_DESK_PLAN.name} plan. Upgrade in Settings → Billing to switch it on.`,
+    message: `Calendar booking, payment links and the follow-up engine are available from the ${AI_FRONT_DESK_PLAN.name} plan. Upgrade in Settings → Billing to switch them on.`,
+  };
+}
+
+/**
+ * Connected WhatsApp numbers. A count, not a flag: Starter gets one, Growth
+ * two, Pro five. `have` is the number already connected.
+ */
+export async function checkWhatsappNumbers(
+  orgId: string,
+  have: number
+): Promise<LimitCheck> {
+  const plan = await planFor(orgId);
+  const limit = plan.limits.whatsappNumbers;
+  if (limit === null || have < limit) {
+    return { allowed: true, message: "", used: have, limit };
+  }
+  const lowest = PLANS.find(
+    (p) =>
+      !p.contactOnly &&
+      !p.legacy &&
+      (p.limits.whatsappNumbers === null || p.limits.whatsappNumbers > limit)
+  );
+  const next = lowest ? `Upgrade to ${lowest.name} for more.` : "Talk to us about Enterprise for more.";
+  return {
+    allowed: false,
+    used: have,
+    limit,
+    message: `The ${plan.name} plan includes ${limit} WhatsApp ${limit === 1 ? "number" : "numbers"}. ${next}`,
   };
 }
 

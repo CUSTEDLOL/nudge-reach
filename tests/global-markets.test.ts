@@ -61,9 +61,10 @@ describe("money", () => {
   });
 
   it("every plan has a sensible USD price ladder", () => {
-    // Ladder invariants apply to the sellable tiers; contact-only Enterprise is priced 0.
+    // Ladder invariants apply to the sold tiers; Enterprise and the retired
+    // tiers are excluded from the grid entirely.
     const usd = selfServePlans().map((p) => planPrice(p, "USD"));
-    expect(usd).toEqual([0, 29, 69, 159, 179]);
+    expect(usd).toEqual([19, 49, 89, 179]);
     for (let i = 1; i < usd.length; i++) expect(usd[i]).toBeGreaterThan(usd[i - 1]);
   });
 
@@ -80,7 +81,7 @@ describe("money", () => {
   it("every currency has a strictly increasing plan-price ladder", () => {
     for (const c of CURRENCIES) {
       const ladder = selfServePlans().map((p) => planPrice(p, c));
-      expect(ladder[0]).toBe(0);
+      expect(ladder[0]).toBeGreaterThan(0); // no free tier is sold any more
       for (let i = 1; i < ladder.length; i++) {
         expect(ladder[i]).toBeGreaterThan(ladder[i - 1]);
       }

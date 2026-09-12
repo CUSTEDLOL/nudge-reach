@@ -1,5 +1,13 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Pricing amendment — permanent Entry plan
+
+- Documented Entry at ₹1,499/month (business chatbot and marketing templates
+  only), and Starter at ₹4,499/month. Growth, Pro and seven-day trial unchanged.
+- Updated the pricing decision and produced an updated Word guide with revised
+  Starter economics. Entry capacity, credits and Singapore price remain undecided.
+- Documentation only; no live billing, feature gates or deployment changed.
+
 ## 2026-09-11 — Pricing strategy decision (documentation only)
 
 - Founder approved tiered subscriptions replacing mandatory-setup flagship pricing.

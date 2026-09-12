@@ -21,7 +21,7 @@ const inputCls =
   "h-9 rounded-lg border border-neutral-300 bg-white px-2.5 text-sm outline-none focus:border-neutral-500";
 
 const FLAGS = [
-  ["aiFrontDesk", "AI Front Desk (booking, follow-ups, actions)"],
+  ["aiFrontDesk", "Real actions (booking, payment links, follow-ups)"],
   ["publicApi", "Developer API + webhooks"],
   ["customActions", "Custom agent actions"],
   ["byoLlm", "Bring-your-own LLM key"],
@@ -35,6 +35,7 @@ const COUNTS = [
   ["teamMembers", "Team members"],
   ["automations", "Automations"],
   ["messagesPerMonth", "Campaign messages / month"],
+  ["whatsappNumbers", "WhatsApp numbers"],
 ] as const;
 
 /** Every lever a founder has over one org's plan, trial, mode and access. */

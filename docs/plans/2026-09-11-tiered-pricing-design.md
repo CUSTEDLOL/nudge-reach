@@ -11,17 +11,24 @@ Nudge is an AI Front Desk that answers customers, captures leads, and, on higher
 plans, books appointments, collects payments and follows up. The inbox, CRM and
 campaign tools support that employee; they are not the headline.
 
-| Monthly, excluding taxes | Starter | Growth | Pro | Enterprise |
-|---|---:|---:|---:|---|
-| India | ₹2,499 | ₹7,499 | ₹14,999 | Custom |
-| Singapore | S$79 | S$249 | S$499 | Custom |
-| Team members | 3 | 10 | 25 | Agreed limits |
-| WhatsApp numbers | 1 | 2 | 5 | Agreed limits |
+| Monthly, excluding taxes | Entry | Starter | Growth | Pro | Enterprise |
+|---|---:|---:|---:|---:|---|
+| India | ₹1,499 | ₹4,499 | ₹7,499 | ₹14,999 | Custom |
+| Singapore | Undecided | S$79 | S$249 | S$499 | Custom |
+| Team members | Undecided | 3 | 10 | 25 | Agreed limits |
+| WhatsApp numbers | Undecided | 1 | 2 | 5 | Agreed limits |
+
+Founder amendment: Entry is a permanent entry-level plan, not temporary early
+access. Its name is provisional. It includes only a business-specific AI chatbot
+and marketing templates, not an action-taking agent. No bookings, payments or
+other agent actions. Template limits and sending scope remain to be defined.
+Its credit allowance and Singapore price are undecided; do not assume unlimited
+AI or inherit Starter's features. The seven-day trial is unchanged.
 
 These are the working subscription prices discussed with the founder; launch
 economics still need validation. Regional prices are deliberate, not live FX.
 
-- All paid plans: autonomous AI replies/lead capture, inbox, contacts, campaigns,
+- Starter and higher: autonomous AI replies/lead capture, inbox, contacts, campaigns,
   website WhatsApp button, AI campaign drafting and chat summaries.
 - Growth adds bookings, payment links, automated follow-ups, lead scoring,
   developer API, webhooks, standard CRM sync and per-number staff restrictions.
@@ -125,7 +132,10 @@ be allocated separately or explicitly priced before launch.
 
 Planning FX assumptions only: US$1 = ₹90 and S$1.35; not current exchange quotes.
 Full included consumption costs ₹225/₹675/₹1,350 for Starter/Growth/Pro, or
-about 9% of India subscription revenue, before every other operating expense.
+about 5%/9%/9% of India subscription revenue, before every other operating expense.
+At the revised Starter price, ₹4,274 remains after eligible provider usage cost,
+not net profit. Entry margin remains undecided until its allowance is set;
+each 100 credits costs ₹45 at the planning exchange rate if fully consumed.
 At these assumptions the 10,000-credit pack costs ₹4,500/S$67.50 in eligible
 provider spend, leaving about 44%/60% respectively before fees and overhead.
 At INR/USD 100, that India pack leaves about 37.5%. No claim of total gross

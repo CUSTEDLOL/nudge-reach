@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/db";
 
-/** Every new workspace starts on the AI Front Desk for this long — the only
- * self-serve way to reach calendar booking, follow-ups and agent actions
- * before a subscription exists. */
-export const TRIAL_DAYS = 14;
-export const TRIAL_PLAN = "front_desk";
+/** Every new workspace starts on Growth for this long, no card, so the real
+ * actions — calendar booking, payment links, follow-ups — can be seen before
+ * a subscription exists. Voice is deliberately not in the trial. */
+export const TRIAL_DAYS = 7;
+export const TRIAL_PLAN = "growth";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

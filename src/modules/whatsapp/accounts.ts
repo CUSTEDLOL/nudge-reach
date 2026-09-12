@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
-import { checkMultiNumber } from "@/modules/billing/limits";
+import { checkWhatsappNumbers } from "@/modules/billing/limits";
 
 /**
  * E4 multi-number: an org may hold several WhatsApp numbers. Exactly one is
- * the default (enforced here); the 2nd+ number gates on the multiNumber plan
- * flag. The old single-number call sites keep working — `getWhatsappAccount`
+ * the default (enforced here); each plan caps how many numbers an org may
+ * connect (Starter 1, Growth 2, Pro 5). The old single-number call sites keep working — `getWhatsappAccount`
  * / `getWhatsappCredentials` without an account id resolve the default.
  */
 
@@ -51,8 +51,8 @@ export async function saveWhatsappAccount(input: {
   }
 
   const count = await prisma.whatsappAccount.count({ where: { orgId: input.orgId } });
-  if (!existing && count >= 1) {
-    const gate = await checkMultiNumber(input.orgId);
+  if (!existing) {
+    const gate = await checkWhatsappNumbers(input.orgId, count);
     if (!gate.allowed) return { ok: false, message: gate.message };
   }
 

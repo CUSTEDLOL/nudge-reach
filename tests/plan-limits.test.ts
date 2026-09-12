@@ -4,7 +4,7 @@ import {
   evaluateLimit,
   sanitizeFeatureOverrides,
 } from "@/modules/billing/limits";
-import { getPlan, PLANS, planPrice } from "@/modules/billing/plans";
+import { getPlan, PLANS, planPrice, selfServePlans } from "@/modules/billing/plans";
 
 describe("evaluateLimit", () => {
   it("allows when under the cap", () => {
@@ -37,24 +37,27 @@ describe("evaluateLimit", () => {
 });
 
 describe("plans", () => {
-  it("has the six tiers in order (contact-only Enterprise last)", () => {
+  it("sells four tiers plus Enterprise, with the retired ones last", () => {
     expect(PLANS.map((p) => p.id)).toEqual([
-      "free",
+      "entry",
       "starter",
       "growth",
       "pro",
-      "front_desk",
       "enterprise",
+      "free",
+      "front_desk",
     ]);
     expect(PLANS.map((p) => planPrice(p, "INR"))).toEqual([
-      0, 999, 2499, 5999, 14999, 0,
+      1499, 4499, 7499, 14999, 0, 0, 14999,
     ]);
   });
 
-  it("only the flagship and enterprise have the AI Front Desk capability", () => {
+  it("gives the agent's real actions to Growth and up, never to Starter", () => {
     expect(PLANS.filter((p) => p.limits.aiFrontDesk).map((p) => p.id)).toEqual([
-      "front_desk",
+      "growth",
+      "pro",
       "enterprise",
+      "front_desk",
     ]);
   });
 
@@ -66,17 +69,25 @@ describe("plans", () => {
     expect(getPlan("banana").id).toBe("free");
   });
 
-  it("every paid tier raises every limit vs the tier below (or unlimits it)", () => {
-    for (let i = 1; i < PLANS.length; i++) {
-      const prev = PLANS[i - 1].limits;
-      const next = PLANS[i].limits;
-      for (const key of ["contacts", "teamMembers", "messagesPerMonth"] as const) {
+  it("every sold tier raises every limit vs the tier below (or unlimits it)", () => {
+    const sold = selfServePlans();
+    for (let i = 1; i < sold.length; i++) {
+      const prev = sold[i - 1].limits;
+      const next = sold[i].limits;
+      for (const key of [
+        "contacts",
+        "teamMembers",
+        "messagesPerMonth",
+        "whatsappNumbers",
+      ] as const) {
         const p = prev[key];
         const n = next[key];
         if (n === null) continue; // unlimited beats anything
         expect(p).not.toBeNull();
-        expect(n).toBeGreaterThan(p!);
+        expect(n).toBeGreaterThanOrEqual(p!);
       }
+      // Price, at least, always goes up.
+      expect(planPrice(sold[i], "INR")).toBeGreaterThan(planPrice(sold[i - 1], "INR"));
     }
   });
 });
@@ -90,13 +101,13 @@ describe("feature overrides (founder panel bespoke deals)", () => {
   });
 
   it("merges known boolean flags and numeric counts over the plan", () => {
-    const plan = getPlan("pro");
+    const plan = getPlan("starter");
     expect(plan.limits.byoLlm).toBe(false);
     const merged = applyFeatureOverrides(plan, { byoLlm: true, contacts: 5000 });
     expect(merged.limits.byoLlm).toBe(true);
     expect(merged.limits.contacts).toBe(5000);
     expect(merged.limits.publicApi).toBe(plan.limits.publicApi);
-    expect(merged.id).toBe("pro");
+    expect(merged.id).toBe("starter");
   });
 
   it("ignores unknown keys and wrong types so a bad blob can't widen access", () => {

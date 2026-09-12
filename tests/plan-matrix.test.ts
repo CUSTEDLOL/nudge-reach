@@ -7,34 +7,39 @@ import {
 } from "@/modules/billing/plans";
 
 /**
- * E0 feature-flag matrix (head plan F4,
- * docs/plans/2026-09-04-enterprise-track.md). Each later enterprise
- * workstream gates on one of these booleans — this test is the contract.
+ * Feature-flag matrix. Each gated capability hangs off one of these booleans,
+ * and this test is the contract. Re-tiered 2026-09-11: AI replies are on every
+ * paid plan, Growth adds the real actions, Pro adds voice and BYO key. `free`
+ * and `front_desk` are legacy — kept so existing workspaces keep what they had.
  */
 const MATRIX: Record<
-  "publicApi" | "webWidget" | "leadScoring" | "customActions" | "byoLlm" | "multiNumber" | "voiceAgent",
+  | "publicApi" | "webWidget" | "leadScoring" | "customActions"
+  | "byoLlm" | "multiNumber" | "voiceAgent" | "aiFrontDesk",
   Record<PlanId, boolean>
 > = {
   publicApi: {
-    free: false, starter: false, growth: true, pro: true, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: false, growth: true, pro: true, front_desk: true, enterprise: true,
   },
   webWidget: {
-    free: false, starter: true, growth: true, pro: true, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: true, growth: true, pro: true, front_desk: true, enterprise: true,
   },
   leadScoring: {
-    free: false, starter: false, growth: false, pro: true, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: false, growth: true, pro: true, front_desk: true, enterprise: true,
   },
   customActions: {
-    free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: false, growth: false, pro: true, front_desk: true, enterprise: true,
   },
   byoLlm: {
-    free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: false, growth: false, pro: true, front_desk: true, enterprise: true,
   },
   multiNumber: {
-    free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: false, growth: true, pro: true, front_desk: true, enterprise: true,
   },
   voiceAgent: {
-    free: false, starter: false, growth: false, pro: false, front_desk: true, enterprise: true,
+    entry: false, free: false, starter: false, growth: false, pro: true, front_desk: true, enterprise: true,
+  },
+  aiFrontDesk: {
+    entry: false, free: false, starter: false, growth: true, pro: true, front_desk: true, enterprise: true,
   },
 };
 
@@ -54,13 +59,14 @@ describe("enterprise feature-flag matrix (F4)", () => {
 });
 
 describe("enterprise tier", () => {
-  it("resolves, is unlimited on all numeric caps, and has aiFrontDesk", () => {
+  it("resolves, is unlimited on all numeric caps, and has the real actions", () => {
     const p = getPlan("enterprise");
     expect(p.id).toBe("enterprise");
     expect(p.limits.contacts).toBeNull();
     expect(p.limits.teamMembers).toBeNull();
     expect(p.limits.automations).toBeNull();
     expect(p.limits.messagesPerMonth).toBeNull();
+    expect(p.limits.whatsappNumbers).toBeNull();
     expect(p.limits.aiFrontDesk).toBe(true);
   });
 
@@ -71,11 +77,21 @@ describe("enterprise tier", () => {
     }
   });
 
-  it("is excluded from the self-serve billing grid", () => {
+  it("is excluded from the self-serve billing grid, as are the legacy tiers", () => {
     const ids = selfServePlans().map((p) => p.id);
     expect(ids).not.toContain("enterprise");
-    // The self-serve grid keeps the existing five tiers untouched.
-    expect(ids).toEqual(["free", "starter", "growth", "pro", "front_desk"]);
+    expect(ids).toEqual(["entry", "starter", "growth", "pro"]);
+  });
+
+  it("keeps the retired tiers resolvable so existing workspaces don't break", () => {
+    for (const id of ["free", "front_desk"] as const) {
+      const plan = getPlan(id);
+      expect(plan.id).toBe(id);
+      expect(plan.legacy).toBe(true);
+    }
+    // The retired flagship keeps every capability it was sold with.
+    expect(getPlan("front_desk").limits.voiceAgent).toBe(true);
+    expect(getPlan("front_desk").limits.teamMembers).toBeNull();
   });
 
   it("keeps the legacy 'scale' → pro mapping intact", () => {

@@ -60,14 +60,32 @@ describe("saveWhatsappAccount", () => {
     expect(args.create.isDefault).toBe(true);
   });
 
-  it("a SECOND number is refused on a plan without multiNumber", async () => {
+  it("a SECOND number is refused once the plan's number cap is reached", async () => {
     prisma.whatsappAccount.findUnique.mockResolvedValue(null);
     prisma.whatsappAccount.count.mockResolvedValue(1);
-    prisma.org.findUnique.mockResolvedValue({ plan: "growth" }); // checkMultiNumber reads this
+    // Starter includes exactly one number.
+    prisma.org.findUnique.mockResolvedValue({ plan: "starter" });
     const r = await saveWhatsappAccount({ ...INPUT, phoneNumberId: "pn-200" });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toMatch(/plan|AI Front Desk|Upgrade/i);
+    if (!r.ok) expect(r.message).toMatch(/1 WhatsApp number|Upgrade to Growth/i);
     expect(prisma.whatsappAccount.upsert).not.toHaveBeenCalled();
+  });
+
+  it("a second number saves fine on Growth, whose cap is two", async () => {
+    prisma.whatsappAccount.findUnique.mockResolvedValue(null);
+    prisma.whatsappAccount.count.mockResolvedValue(1);
+    prisma.org.findUnique.mockResolvedValue({ plan: "growth" });
+    const r = await saveWhatsappAccount({ ...INPUT, phoneNumberId: "pn-200" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("a THIRD number is refused on Growth", async () => {
+    prisma.whatsappAccount.findUnique.mockResolvedValue(null);
+    prisma.whatsappAccount.count.mockResolvedValue(2);
+    prisma.org.findUnique.mockResolvedValue({ plan: "growth" });
+    const r = await saveWhatsappAccount({ ...INPUT, phoneNumberId: "pn-300" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.message).toMatch(/2 WhatsApp numbers|Upgrade to Pro/i);
   });
 
   it("a second number saves fine on an enterprise plan", async () => {
