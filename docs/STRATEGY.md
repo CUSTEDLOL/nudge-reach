@@ -1,5 +1,11 @@
 # STRATEGY — Nudge
 
+> **Pricing amendment, approved 2026-09-11:** the tiered subscription direction
+> in [the pricing design](plans/2026-09-11-tiered-pricing-design.md) supersedes
+> this document's single-flagship pricing, mandatory setup, and restrictions on
+> paid lower-tier AI/actions. Nudge remains an AI Front Desk, with real actions
+> and compliant follow-ups as differentiators. Unrelated strategy is unchanged.
+
 The "why" behind every product decision. If a feature, price, or line of copy
 doesn't serve this, it's wrong. Condensed contract lives in `AGENTS.md`.
 

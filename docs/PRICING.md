@@ -1,5 +1,12 @@
 # PRICING — Nudge
 
+> **2026-09-11 — superseded pricing strategy.** The founder approved replacing
+> the single flagship plus mandatory setup fee with Starter / Growth / Pro /
+> custom Enterprise subscriptions. The current decision record is
+> [Tiered pricing design](plans/2026-09-11-tiered-pricing-design.md).
+> Everything below is historical, not a current quote or implementation spec.
+> Credit quantities and rates in the new design remain proposals pending approval.
+
 How we charge, why, and the exact numbers per market. This is the operational
 companion to **`docs/STRATEGY.md` §6** (the "why") — if the two ever disagree,
 STRATEGY.md owns positioning and this doc owns the mechanics. Founder-tunable;

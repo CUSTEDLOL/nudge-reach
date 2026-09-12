@@ -1,5 +1,13 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## 2026-09-11 — Pricing strategy decision (documentation only)
+
+- Founder approved tiered subscriptions replacing mandatory-setup flagship pricing.
+- Added `docs/plans/2026-09-11-tiered-pricing-design.md` with approved feature/trial
+  rules and separately labeled proposed credit economics and launch checks.
+- Marked conflicting legacy strategy as superseded. No product gates, billing,
+  database, payment configuration or deployments changed. Credit numbers await approval.
+
 Build log. Newest phase at the top. Each entry: what was done, decisions made,
 what's next.
 

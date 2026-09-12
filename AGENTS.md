@@ -1,5 +1,13 @@
 # AGENTS.md — Nudge
 
+> **Approved pricing override (2026-09-11):**
+> `docs/plans/2026-09-11-tiered-pricing-design.md` supersedes the legacy
+> single-flagship/mandatory-setup pricing guidance below. Starter includes AI;
+> Growth adds business actions; Pro adds voice and advanced capabilities.
+> Keep AI Front Desk positioning and all seven protected invariants. This is
+> a design decision, not evidence that billing changes have shipped. Proposed
+> credit rates/allowances require approval before implementation.
+
 Read automatically at the start of every session. It is the contract for how you
 work in this repo and, above all, **what this product is**. Keep it short and true.
 
