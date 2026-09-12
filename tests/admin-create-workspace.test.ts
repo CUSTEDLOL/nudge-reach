@@ -28,7 +28,7 @@ const { founderAudit } = vi.hoisted(() => ({ founderAudit: vi.fn() }));
 vi.mock("@/modules/admin/audit", () => ({ founderAudit }));
 
 const { sendEmail, isEmailConfigured } = vi.hoisted(() => ({
-  sendEmail: vi.fn(async () => ({ ok: true })),
+  sendEmail: vi.fn(async (_input: { text: string; html: string }) => ({ ok: true })),
   isEmailConfigured: vi.fn(() => true),
 }));
 vi.mock("@/modules/email", () => ({
@@ -81,7 +81,7 @@ describe("createWorkspace", () => {
     expect(tx.invite.create).toHaveBeenCalledWith({
       data: { orgId: "org-1", email: "owner@aster.in", role: "OWNER" },
     });
-    const mail = sendEmail.mock.calls[0][0] as { text: string; html: string };
+    const mail = sendEmail.mock.calls[0][0];
     expect(mail.text).not.toMatch(/password is|temporary password/i);
     expect(mail.html).toContain("you choose your own");
   });
