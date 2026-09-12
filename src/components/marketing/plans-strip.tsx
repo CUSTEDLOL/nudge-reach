@@ -86,7 +86,7 @@ export function PlansStrip() {
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
           <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-ink/45">
-            7-day trial, no card · Enterprise scoped with you
+            7-day trial after your demo · Enterprise scoped with you
           </p>
         </div>
       </Container>

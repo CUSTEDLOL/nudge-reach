@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { NewWorkspace } from "@/components/features/admin-shell/new-workspace";
 import { OrgDirectory } from "@/components/features/admin-shell/org-directory";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireFounder } from "@/modules/admin/auth";
@@ -14,7 +15,10 @@ import {
   type OrgSort,
   type OrgState,
 } from "@/modules/admin/queries";
+import { assignablePlans } from "@/modules/admin/create-workspace";
+import { COUNTRY_PRESETS } from "@/modules/billing/money";
 import { PLANS } from "@/modules/billing/plans";
+import { createWorkspaceAction } from "./actions";
 
 const one = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
@@ -84,6 +88,16 @@ export default async function AdminOrgsPage({
       <PageHeader
         title="Organisations"
         description="Find a workspace, see whether it can deliver the Front Desk outcome, then open the full account record."
+      />
+
+      <NewWorkspace
+        action={createWorkspaceAction}
+        countries={COUNTRY_PRESETS.filter((c) => c.code !== "OTHER").map((c) => ({
+          code: c.code,
+          label: c.label,
+          currency: c.currency,
+        }))}
+        plans={assignablePlans().map((p) => ({ id: p.id, name: p.name }))}
       />
 
       <form

@@ -1,6 +1,8 @@
 import { Membership, Org, Prisma } from "@prisma/client";
 import { TRIAL_PLAN, trialEndDate } from "@/modules/billing/trial";
 import { prisma } from "@/lib/db";
+import { isPendingOwner } from "@/modules/orgs/pending-owner";
+import { isSignupOpen } from "@/modules/orgs/signup";
 
 /**
  * Org resolution (spec §3.1). Membership is the source of truth for "which
@@ -9,11 +11,23 @@ import { prisma } from "@/lib/db";
  *   1. an existing Membership wins;
  *   2. owners of pre-Membership orgs get an OWNER membership backfilled;
  *   3. a pending Invite matching the email is auto-accepted on first visit
- *      (no invite emails in the MVP — signup with the invited address joins);
- *   4. otherwise a fresh org + OWNER membership is created.
+ *      (signing up with the invited address joins); an OWNER invite also
+ *      claims a workspace the founder created before the owner existed;
+ *   4. otherwise a fresh org + OWNER membership is created — but only when
+ *      open signup is enabled. With signup closed (the default, because
+ *      accounts are created by Nudge after a demo) this throws
+ *      `NoWorkspaceError` and the caller sends them somewhere that says so.
  *
  * Race-safe against the double-request on first load via P2002 retries.
  */
+
+/** Signed in, but no workspace and no invite — and signup is closed. */
+export class NoWorkspaceError extends Error {
+  constructor() {
+    super("This account is not attached to a workspace.");
+    this.name = "NoWorkspaceError";
+  }
+}
 
 export interface ResolvedOrg {
   org: Org;
@@ -87,11 +101,28 @@ export async function resolveOrgContext(
         where: { id: invite.id },
         data: { status: "accepted" },
       });
+      // A founder-created workspace has a placeholder owner until now.
+      if (invite.role === "OWNER" && isPendingOwner(invite.org.ownerUserId)) {
+        try {
+          const claimed = await prisma.org.update({
+            where: { id: invite.orgId },
+            data: { ownerUserId: userId },
+          });
+          return { org: claimed, membership: joined };
+        } catch {
+          // Already owns another org. The OWNER membership is what grants
+          // access, so carry on rather than blocking their first sign-in.
+        }
+      }
       return { org: invite.org, membership: joined };
     }
   }
 
   // 4) First visit with no org anywhere → create org + OWNER membership.
+  //    Only when open signup is on; otherwise Nudge creates the workspace.
+  if (!isSignupOpen()) {
+    throw new NoWorkspaceError();
+  }
   const name = email ? `${email.split("@")[0]}'s shop` : "My shop";
   try {
     const org = await prisma.org.create({

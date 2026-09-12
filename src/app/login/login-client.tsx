@@ -74,7 +74,14 @@ function GoogleG() {
   );
 }
 
-export function LoginClient({ initialError }: { initialError: string | null }) {
+export function LoginClient({
+  initialError,
+  signupOpen = false,
+}: {
+  initialError: string | null;
+  /** Open signup is off by default: Nudge creates workspaces after a demo. */
+  signupOpen?: boolean;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -192,6 +199,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
 
   const active = SLIDES[slide];
   const showGoogle = mode !== "reset" && GOOGLE_ENABLED;
+  const signingUp = signupOpen && mode === "signup";
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#faf9f5]">
@@ -281,21 +289,24 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
 
           <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
             <h1 className="text-center font-display text-[1.9rem] font-black tracking-[-0.02em] text-ink">
-              {mode === "signin"
-                ? "Welcome back."
-                : mode === "reset"
-                  ? "Reset your password."
-                  : "Let's run your WhatsApp."}
+              {mode === "reset"
+                ? "Reset your password."
+                : signingUp
+                  ? "Let's run your WhatsApp."
+                  : "Welcome back."}
             </h1>
             <p className="mt-2 text-center text-[14.5px] leading-relaxed text-ink/55">
-              {mode === "signin"
-                ? "Your front desk kept the seat warm."
-                : mode === "reset"
-                  ? "We'll email you a link to choose a new one."
-                  : "Free plan, no card — live the same day."}
+              {mode === "reset"
+                ? "We'll email you a link to choose a new one."
+                : signingUp
+                  ? "Choose a password and your workspace opens."
+                  : "Your front desk kept the seat warm."}
             </p>
 
-            {/* Sign In / Sign Up segmented toggle */}
+            {/* Sign In / Sign Up segmented toggle — only when open signup is
+                on. Nudge normally creates the workspace after a demo and
+                invites the owner, so there is nothing to sign up for. */}
+            {signupOpen && (
             <div
               role="tablist"
               aria-label="Sign in or sign up"
@@ -325,6 +336,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
                 </button>
               ))}
             </div>
+            )}
 
             {showGoogle && (
               <>
@@ -389,7 +401,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
               className={cn("flex flex-col gap-4", !showGoogle && "mt-7")}
               onSubmit={(e) => {
                 e.preventDefault();
-                void (mode === "signin" ? signIn() : signUp());
+                void (signingUp ? signUp() : signIn());
               }}
             >
               <label className="block text-[13px] font-bold text-ink/60">
@@ -431,7 +443,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
                 </div>
               </label>
 
-              {mode === "signin" && (
+              {!signingUp && (
                 <button
                   type="button"
                   onClick={() => switchMode("reset")}
@@ -447,7 +459,7 @@ export function LoginClient({ initialError }: { initialError: string | null }) {
                 className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-4 text-[15px] font-bold text-white shadow-[0_4px_0_#047f48] transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-400 hover:shadow-[0_6px_0_#047f48] active:translate-y-0 active:shadow-[0_2px_0_#047f48] disabled:pointer-events-none disabled:opacity-60"
               >
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {mode === "signin" ? (
+                {!signingUp ? (
                   "Sign in"
                 ) : (
                   <>

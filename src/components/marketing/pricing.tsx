@@ -261,8 +261,8 @@ export function Pricing() {
         )}
 
         <p className="mx-auto mt-8 max-w-2xl text-center font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-ink/45">
-          7-day trial, no card · Official WhatsApp Cloud API · Meta&rsquo;s
-          per-message charges pass through at cost
+          7-day trial switched on after your demo · Official WhatsApp Cloud
+          API · Meta&rsquo;s per-message charges pass through at cost
         </p>
       </Container>
     </Section>

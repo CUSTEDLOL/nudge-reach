@@ -41,6 +41,7 @@ export type AuditAction =
   | "llm.connected"
   | "llm.disconnected"
   // Founder panel (src/modules/admin) — actor is "founder:<email>".
+  | "admin.workspace_created"
   | "admin.plan_changed"
   | "admin.trial_changed"
   | "admin.subscription_changed"
@@ -98,6 +99,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "custom_action.deleted": "Custom agent action deleted",
   "llm.connected": "Own AI model connected",
   "llm.disconnected": "Own AI model disconnected",
+  "admin.workspace_created": "Nudge support created this workspace",
   "admin.plan_changed": "Nudge support changed the plan",
   "admin.trial_changed": "Nudge support changed the trial",
   "admin.subscription_changed": "Nudge support changed the subscription status",

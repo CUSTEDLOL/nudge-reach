@@ -2,8 +2,8 @@
 // import it without pulling in the client accordion.
 export const FAQS: { q: string; a: string }[] = [
   {
-    q: "Do I need a WhatsApp Business account to start?",
-    a: "No. You can explore the entire product in test mode with no account at all — nothing you do reaches a real customer until you say so. When you're ready to go live, you connect a WhatsApp Business number through the official Cloud API, and we walk you through every step.",
+    q: "How do I get an account?",
+    a: "We create it for you. Book a demo, and once you pick a plan we set up your workspace and email you a link to choose your own password. There is no public sign-up form, because every workspace is built and trained with you rather than handed over empty.",
   },
   {
     q: "What do the plans actually include?",
@@ -11,7 +11,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Can I try it before paying?",
-    a: "Yes. Every new workspace gets a 7-day trial on the Growth plan with no card. At the end you choose a plan; there is no automatic charge. If you don't subscribe, your history stays readable and exportable while the AI pauses.",
+    a: "Yes. Book a demo, and we switch on a 7-day trial of the Growth plan for you — no card. We set the workspace up during the call so you are trying your own business, not a sandbox. At the end you choose a plan; there is no automatic charge, and if you don't subscribe your history stays readable and exportable while the AI pauses.",
   },
   {
     q: "Is there a setup fee?",
