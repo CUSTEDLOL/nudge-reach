@@ -136,6 +136,26 @@ export function planPrice(plan: Plan, currency: Currency): number {
   return PLAN_PRICES[plan.id][currency];
 }
 
+/**
+ * Annual billing: charge for ten months, give twelve.
+ *
+ * PROVISIONAL. No annual rate has been approved, and the pricing record
+ * explicitly says to avoid annual discounts until fully consumed economics
+ * are known. This is the conventional two-months-free default, kept as one
+ * constant so it is trivial to retune or withdraw.
+ */
+export const ANNUAL_MONTHS_CHARGED = 10;
+
+/** Major-unit price for a year paid up front. */
+export function planPriceYearly(plan: Plan, currency: Currency): number {
+  return PLAN_PRICES[plan.id][currency] * ANNUAL_MONTHS_CHARGED;
+}
+
+/** What a year works out to per month, for comparison against the monthly price. */
+export function planPriceYearlyPerMonth(plan: Plan, currency: Currency): number {
+  return Math.round(planPriceYearly(plan, currency) / 12);
+}
+
 export const PLANS: Plan[] = [
   {
     id: "entry",
