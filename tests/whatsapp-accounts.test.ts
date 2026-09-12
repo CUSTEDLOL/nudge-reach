@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  *  - back-compat: getWhatsappCredentials(orgId) = the default account
  */
 
-const { prisma } = vi.hoisted(() => ({
+const { prisma, transactionDb } = vi.hoisted(() => ({
   prisma: {
     org: { update: vi.fn().mockResolvedValue({}), findUnique: vi.fn() },
     whatsappAccount: {
@@ -23,6 +23,14 @@ const { prisma } = vi.hoisted(() => ({
       delete: vi.fn().mockResolvedValue({}),
     },
     $transaction: vi.fn().mockResolvedValue([]),
+  },
+  transactionDb: {
+    org: { update: vi.fn().mockResolvedValue({}) },
+    whatsappAccount: {
+      findUnique: vi.fn(),
+      count: vi.fn(),
+      upsert: vi.fn(),
+    },
   },
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -48,6 +56,7 @@ const INPUT = {
 beforeEach(() => {
   vi.clearAllMocks();
   prisma.whatsappAccount.upsert.mockResolvedValue({ id: "wa1" });
+  transactionDb.whatsappAccount.upsert.mockResolvedValue({ id: "wa1" });
 });
 
 describe("saveWhatsappAccount", () => {
@@ -114,6 +123,31 @@ describe("saveWhatsappAccount", () => {
     const r = await saveWhatsappAccount(INPUT);
     expect(r.ok).toBe(true);
     expect(prisma.org.findUnique).not.toHaveBeenCalled(); // no gate consulted
+  });
+
+  it("can save assisted-setup credentials without changing the org's send mode", async () => {
+    prisma.whatsappAccount.findUnique.mockResolvedValue(null);
+    prisma.whatsappAccount.count.mockResolvedValue(0);
+
+    const r = await saveWhatsappAccount(INPUT, { activateOrg: false });
+
+    expect(r.ok).toBe(true);
+    expect(prisma.whatsappAccount.upsert).toHaveBeenCalledOnce();
+    expect(prisma.org.update).not.toHaveBeenCalled();
+  });
+
+  it("can persist through a caller-provided transaction client", async () => {
+    transactionDb.whatsappAccount.findUnique.mockResolvedValue(null);
+    transactionDb.whatsappAccount.count.mockResolvedValue(0);
+
+    const r = await saveWhatsappAccount(INPUT, {
+      activateOrg: false,
+      db: transactionDb,
+    });
+
+    expect(r.ok).toBe(true);
+    expect(transactionDb.whatsappAccount.upsert).toHaveBeenCalledOnce();
+    expect(prisma.whatsappAccount.upsert).not.toHaveBeenCalled();
   });
 });
 

@@ -4,6 +4,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
 import {
+  connectWhatsappAction,
   disconnectCalendarAction,
   disconnectCrmAction,
   disconnectLlmAction,
@@ -48,6 +49,80 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="border-b border-neutral-100 bg-neutral-50/60 px-5 py-5">
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-neutral-900">Connect a number</p>
+              <p className="mt-1 text-xs leading-5 text-neutral-500">
+                Validate official Meta Cloud API credentials, then store the token encrypted.
+                Re-entering the same Phone Number ID securely refreshes its credentials.
+              </p>
+            </div>
+            <ActionForm
+              action={connectWhatsappAction}
+              hidden={H}
+              submitLabel="Validate & save"
+              variant="primary"
+              className="grid items-end gap-4 md:grid-cols-2"
+              confirm={{
+                title: "Validate and save this WhatsApp number?",
+                description:
+                  "Meta will verify the WABA, token and Phone Number ID. The token cannot be viewed after it is encrypted.",
+              }}
+              askReason
+            >
+              <label className="block text-sm font-medium text-neutral-700">
+                Display name
+                <input
+                  name="displayName"
+                  required
+                  maxLength={100}
+                  placeholder="Clinic WhatsApp"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-neutral-500"
+                />
+              </label>
+              <label className="block text-sm font-medium text-neutral-700">
+                WhatsApp Business Account ID
+                <input
+                  name="wabaId"
+                  required
+                  inputMode="numeric"
+                  pattern="[0-9]{5,40}"
+                  autoComplete="off"
+                  placeholder="123456789012345"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 font-mono text-sm outline-none focus:border-neutral-500"
+                />
+              </label>
+              <label className="block text-sm font-medium text-neutral-700">
+                Phone Number ID
+                <input
+                  name="phoneNumberId"
+                  required
+                  inputMode="numeric"
+                  pattern="[0-9]{5,40}"
+                  autoComplete="off"
+                  placeholder="987654321098765"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 font-mono text-sm outline-none focus:border-neutral-500"
+                />
+              </label>
+              <label className="block text-sm font-medium text-neutral-700">
+                Permanent access token
+                <input
+                  name="accessToken"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={10}
+                  maxLength={4096}
+                  placeholder="Paste the Meta system-user token"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 font-mono text-sm outline-none focus:border-neutral-500"
+                />
+              </label>
+              <p className="text-xs leading-5 text-neutral-500 md:col-span-2">
+                Saving credentials does not enable live sending. Review the connection,
+                then use Controls to change the workspace mode explicitly.
+              </p>
+            </ActionForm>
+          </div>
           {d.whatsapp.length === 0 ? (
             <Empty text="No number connected — the workspace stays in test mode." />
           ) : (

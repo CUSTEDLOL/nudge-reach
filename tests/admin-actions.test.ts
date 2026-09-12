@@ -6,12 +6,14 @@ const {
   updateLead,
   inviteMember,
   resendInvite,
+  founderConnectWhatsapp,
 } = vi.hoisted(() => ({
   requireFounder: vi.fn(),
   setOrgPlan: vi.fn(),
   updateLead: vi.fn(),
   inviteMember: vi.fn(),
   resendInvite: vi.fn(),
+  founderConnectWhatsapp: vi.fn(),
 }));
 
 vi.mock("@/modules/admin/auth", () => ({ requireFounder }));
@@ -25,10 +27,23 @@ vi.mock("@/modules/admin/team", () => ({
   setMemberRole: vi.fn(),
   transferOwnership: vi.fn(),
 }));
+vi.mock("@/modules/admin/integrations", () => ({
+  founderConnectWhatsapp,
+  founderDisconnectCalendar: vi.fn(),
+  founderDisconnectCrm: vi.fn(),
+  founderDisconnectLlm: vi.fn(),
+  founderDisconnectNumber: vi.fn(),
+  founderRevokeApiKey: vi.fn(),
+  founderSetCustomActionEnabled: vi.fn(),
+  founderSetDefaultNumber: vi.fn(),
+  founderSetVoiceNumberEnabled: vi.fn(),
+  founderSetWebhookEnabled: vi.fn(),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { runFounderAction } from "@/modules/admin/actions";
 import {
+  connectWhatsappAction,
   inviteMemberAction,
   resendInviteAction,
   setPlanAction,
@@ -39,6 +54,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireFounder.mockResolvedValue({ email: "founder@nudge.test" });
   setOrgPlan.mockResolvedValue({ ok: true, from: "free", to: "pro" });
+  founderConnectWhatsapp.mockResolvedValue({
+    ok: true,
+    message: "Clinic WhatsApp connected. Sending mode was not changed.",
+  });
 });
 
 describe("admin route actions", () => {
@@ -115,6 +134,32 @@ describe("admin route actions", () => {
       "org_123",
       "invite_123",
       "founder@nudge.test"
+    );
+  });
+
+  it("routes a trimmed WhatsApp connection through the founder-only service", async () => {
+    const formData = new FormData();
+    formData.set("orgId", " org_123 ");
+    formData.set("displayName", " Clinic WhatsApp ");
+    formData.set("wabaId", " 123456789012345 ");
+    formData.set("phoneNumberId", " 987654321098765 ");
+    formData.set("accessToken", " EAA-founder-secret-token ");
+    formData.set("reason", " Assisted onboarding with owner approval ");
+
+    await expect(connectWhatsappAction(formData)).resolves.toEqual({
+      ok: true,
+      message: "Clinic WhatsApp connected. Sending mode was not changed.",
+    });
+    expect(founderConnectWhatsapp).toHaveBeenCalledWith(
+      "org_123",
+      {
+        displayName: "Clinic WhatsApp",
+        wabaId: "123456789012345",
+        phoneNumberId: "987654321098765",
+        accessToken: "EAA-founder-secret-token",
+      },
+      "founder@nudge.test",
+      "Assisted onboarding with owner approval"
     );
   });
 

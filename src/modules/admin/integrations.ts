@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/db";
-import { disconnectWhatsappAccount, setDefaultWhatsappAccount } from "@/modules/whatsapp/accounts";
+import {
+  disconnectWhatsappAccount,
+  saveWhatsappAccount,
+  setDefaultWhatsappAccount,
+} from "@/modules/whatsapp/accounts";
+import {
+  validateWhatsappConnection,
+  type WhatsappConnectionInput,
+} from "@/modules/whatsapp/connection-validator";
 import { disconnectCalendar } from "@/modules/calendar/accounts";
 import { deleteLlmAccount, getLlmAccount } from "@/modules/ai/llm-account";
 import { disconnect as disconnectCrm } from "@/modules/crm/connections";
@@ -68,6 +76,50 @@ export async function integrationsOverview(orgId: string) {
   return { whatsapp, calendar, llm, voiceNumbers, voice, crm, deadJobsByProvider: dead, apiKeys, webhooks, customActions };
 }
 export type IntegrationsOverview = Awaited<ReturnType<typeof integrationsOverview>>;
+
+export async function founderConnectWhatsapp(
+  orgId: string,
+  input: WhatsappConnectionInput,
+  founderEmail: string,
+  reason?: string
+): Promise<FounderResult> {
+  const requiredReason = requireReason(reason);
+  if (!requiredReason.ok) return requiredReason;
+
+  const org = await prisma.org.findUnique({
+    where: { id: orgId },
+    select: { id: true },
+  });
+  if (!org) return { ok: false, error: "Organization not found." };
+
+  const validation = await validateWhatsappConnection(input);
+  if (!validation.ok) return { ok: false, error: validation.message };
+
+  const { displayName, wabaId, phoneNumberId } = validation.value;
+  return prisma.$transaction(async (tx) => {
+    const saved = await saveWhatsappAccount(
+      { orgId, ...validation.value },
+      { activateOrg: false, db: tx }
+    );
+    if (!saved.ok) return { ok: false, error: saved.message };
+
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.integration_changed",
+      `WhatsApp ${displayName}`,
+      withReason(
+        `wabaId ${wabaId}; phoneNumberId ${phoneNumberId} connected or refreshed; sending mode unchanged`,
+        requiredReason.value
+      ),
+      tx
+    );
+    return {
+      ok: true,
+      message: `${displayName} connected. Sending mode was not changed.`,
+    };
+  });
+}
 
 
 export async function founderDisconnectNumber(orgId: string, accountId: string, founderEmail: string, reason?: string, confirmation?: string): Promise<FounderResult> {

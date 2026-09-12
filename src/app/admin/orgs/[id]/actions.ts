@@ -216,6 +216,7 @@ export async function revokeInviteAction(formData: FormData): Promise<AdminActio
 
 // ---- Integrations ---------------------------------------------------------
 import {
+  founderConnectWhatsapp,
   founderDisconnectCalendar,
   founderDisconnectCrm,
   founderDisconnectLlm,
@@ -226,6 +227,28 @@ import {
   founderSetVoiceNumberEnabled,
   founderSetWebhookEnabled,
 } from "@/modules/admin/integrations";
+
+export async function connectWhatsappAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    return withRequiredReason(formData, async (reason) => {
+      const orgId = str(formData, "orgId");
+      return done(
+        orgId,
+        await founderConnectWhatsapp(
+          orgId,
+          {
+            displayName: str(formData, "displayName"),
+            wabaId: str(formData, "wabaId"),
+            phoneNumberId: str(formData, "phoneNumberId"),
+            accessToken: str(formData, "accessToken"),
+          },
+          founder.email,
+          reason
+        )
+      );
+    });
+  });
+}
 
 export async function disconnectNumberAction(formData: FormData): Promise<AdminActionResult> {
   return runFounderAction(async (founder) => {
