@@ -35,7 +35,7 @@ export function AgentTabs({
   return (
     <div>
       <Tabs
-        aria-label="AI Agent sections"
+        aria-label="AI Front Desk sections"
         className="mb-6"
         value={tab}
         onValueChange={select}

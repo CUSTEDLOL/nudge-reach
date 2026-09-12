@@ -102,7 +102,7 @@ export function GeneralForm({ initial }: { initial: GeneralFormValues }) {
       <Field
         label="Average order value"
         htmlFor="org-aov"
-        hint="Used for the estimated “revenue influenced” metric on your dashboard."
+        hint="Used for the estimated “revenue influenced” metric on your Home page."
       >
         <div className="relative">
           <span

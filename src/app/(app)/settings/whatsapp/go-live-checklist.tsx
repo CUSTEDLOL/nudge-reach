@@ -64,7 +64,7 @@ export async function GoLiveChecklist({ orgId }: { orgId: string }) {
           ? `${optedIn.toLocaleString("en-IN")} customer${optedIn === 1 ? "" : "s"} said yes to WhatsApp.`
           : "Import the customers who agreed to hear from you — follow-ups and offers only ever go to them.",
       href: "/contacts",
-      linkLabel: "Contacts",
+      linkLabel: "Leads",
     },
     {
       done: approvedTemplates > 0,
