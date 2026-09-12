@@ -98,3 +98,52 @@ export function toPreview(body: string): string {
   const points = [...flat];
   return points.length > 120 ? `${points.slice(0, 119).join("")}…` : flat;
 }
+
+/* ------------------------------------------------------------------ */
+/* WhatsApp text formatting                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The model sometimes writes Markdown; WhatsApp bolds with SINGLE asterisks
+ * and knows nothing about ## headings. Normalize agent output before it is
+ * stored or sent so customers never see literal "**".
+ */
+export function normalizeWhatsAppMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "*$1*")
+    .replace(/__(.+?)__/g, "_$1_")
+    .replace(/^#{1,6}\s+/gm, "");
+}
+
+export interface WhatsAppSegment {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+}
+
+const MARK_RE = /([*_])(\S(?:[^*_\n]*?\S)?)\1/g;
+
+/**
+ * Split a message into renderable segments: WhatsApp-style *bold* and
+ * _italic_ runs become styled segments; everything ambiguous (unbalanced
+ * marks, "5 * 3") stays literal. Conservative by design — a false plain
+ * string beats mangled text.
+ */
+export function whatsAppSegments(body: string): WhatsAppSegment[] {
+  const segments: WhatsAppSegment[] = [];
+  let last = 0;
+  for (const match of body.matchAll(MARK_RE)) {
+    const index = match.index ?? 0;
+    // Marks glued to surrounding word characters ("15 *fun" edge) are risky;
+    // require the mark to start a run cleanly (start-of-text or whitespace).
+    if (index > 0 && !/\s/.test(body[index - 1])) continue;
+    if (index > last) segments.push({ text: body.slice(last, index) });
+    segments.push({
+      text: match[2],
+      ...(match[1] === "*" ? { bold: true } : { italic: true }),
+    });
+    last = index + match[0].length;
+  }
+  if (last < body.length) segments.push({ text: body.slice(last) });
+  return segments;
+}

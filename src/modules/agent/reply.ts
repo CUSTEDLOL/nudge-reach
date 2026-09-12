@@ -1,4 +1,5 @@
 import { chat, runAgent, type ChatTurn } from "@/lib/model-router";
+import { normalizeWhatsAppMarkdown } from "@/modules/inbox/format";
 import {
   buildAgentSystemPrompt,
   HANDOFF_SENTINEL,
@@ -37,7 +38,7 @@ export async function generateAgentReply(
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
     return { text: HANDOFF_MESSAGE, handoff: true };
   }
-  return { text: raw, handoff: false };
+  return { text: normalizeWhatsAppMarkdown(raw), handoff: false };
 }
 
 export interface AgentActionReply extends AgentReply {
@@ -87,7 +88,7 @@ export async function generateAgentActionReply(
   if (!text) {
     return { text: HANDOFF_MESSAGE, handoff: true, actions };
   }
-  return { text, handoff, actions };
+  return { text: normalizeWhatsAppMarkdown(text), handoff, actions };
 }
 
 /**
