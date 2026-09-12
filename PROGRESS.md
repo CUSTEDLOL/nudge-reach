@@ -1,5 +1,24 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Founder-assisted WhatsApp connection (2026-09-12) ✅
+
+- Added a founder-only “Connect a number” form to each organization's
+  Integrations page for concierge onboarding. It accepts the display name,
+  WhatsApp Business Account ID, Phone Number ID, and masked permanent Meta token.
+- Live deployments now validate the token and require the Phone Number ID to be
+  returned by the submitted WABA through Meta's official Cloud API before
+  anything is saved. Simulation performs deterministic local validation without
+  contacting Meta.
+- Successful credentials reuse the existing per-organization AES-256-GCM
+  encrypted store. Founder-assisted setup deliberately preserves the workspace&apos;s
+  current send mode; going live remains a separate confirmed action in Controls.
+- The server independently enforces founder access, target-org existence, a
+  3–500 character reason, organization ownership of the number, and plan limits.
+  The client-visible audit row records IDs and reason but never the access token;
+  provider and unexpected errors return stable, non-secret messages.
+- Verification: focused cross-layer safety suite **46/46**, complete suite
+  **874/874**, lint clean, and the Next.js production build passed.
+
 ## Pricing amendment — permanent Entry plan
 
 - Documented Entry at ₹1,499/month (business chatbot and marketing templates
