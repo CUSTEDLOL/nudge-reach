@@ -18,6 +18,7 @@ const {
     crmConnection: { findFirst: vi.fn() },
     apiKey: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
   disconnectWhatsappAccount: vi.fn(),
   saveWhatsappAccount: vi.fn(),
@@ -84,6 +85,7 @@ beforeEach(() => {
     revokedAt: null,
   });
   prisma.auditLog.create.mockResolvedValue({});
+  prisma.$transaction.mockImplementation(async (work) => work(prisma));
   validateWhatsappConnection.mockResolvedValue({ ok: true, value: CONNECTION });
   saveWhatsappAccount.mockResolvedValue({ ok: true, account: { id: "wa_1" } });
 });
@@ -147,9 +149,10 @@ describe("founder WhatsApp connection", () => {
     });
     expect(saveWhatsappAccount).toHaveBeenCalledWith(
       { orgId: "o1", ...CONNECTION },
-      { activateOrg: false }
+      { activateOrg: false, db: prisma }
     );
     expect(prisma.auditLog.create).toHaveBeenCalledOnce();
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
     const audit = prisma.auditLog.create.mock.calls[0][0].data;
     expect(audit).toEqual(
       expect.objectContaining({

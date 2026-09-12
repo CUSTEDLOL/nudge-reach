@@ -2,6 +2,14 @@ import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { checkWhatsappNumbers } from "@/modules/billing/limits";
 
+type WhatsappAccountDb = {
+  whatsappAccount: Pick<
+    typeof prisma.whatsappAccount,
+    "findUnique" | "count" | "upsert"
+  >;
+  org: Pick<typeof prisma.org, "update">;
+};
+
 /**
  * E4 multi-number: an org may hold several WhatsApp numbers. Exactly one is
  * the default (enforced here); each plan caps how many numbers an org may
@@ -37,13 +45,14 @@ export async function saveWhatsappAccount(
     displayName: string;
     accessToken: string;
   },
-  options: { activateOrg?: boolean } = {}
+  options: { activateOrg?: boolean; db?: WhatsappAccountDb } = {}
 ): Promise<
   | { ok: true; account: Awaited<ReturnType<typeof getDefaultWhatsappAccount>> }
   | { ok: false; message: string }
 > {
+  const db = options.db ?? prisma;
   const accessTokenEncrypted = encryptSecret(input.accessToken);
-  const existing = await prisma.whatsappAccount.findUnique({
+  const existing = await db.whatsappAccount.findUnique({
     where: { phoneNumberId: input.phoneNumberId },
   });
   if (existing && existing.orgId !== input.orgId) {
@@ -53,7 +62,7 @@ export async function saveWhatsappAccount(
     };
   }
 
-  const count = await prisma.whatsappAccount.count({ where: { orgId: input.orgId } });
+  const count = await db.whatsappAccount.count({ where: { orgId: input.orgId } });
   if (!existing) {
     const gate = await checkWhatsappNumbers(input.orgId, count);
     if (!gate.allowed) return { ok: false, message: gate.message };
@@ -62,12 +71,12 @@ export async function saveWhatsappAccount(
   // Client self-service keeps its existing behaviour. Founder-assisted setup
   // can preserve mode so a separate, explicit control enables live sending.
   if (options.activateOrg !== false) {
-    await prisma.org.update({
+    await db.org.update({
       where: { id: input.orgId },
       data: { simulated: false },
     });
   }
-  const account = await prisma.whatsappAccount.upsert({
+  const account = await db.whatsappAccount.upsert({
     where: { phoneNumberId: input.phoneNumberId },
     create: {
       orgId: input.orgId,

@@ -12,12 +12,14 @@
 - Successful credentials reuse the existing per-organization AES-256-GCM
   encrypted store. Founder-assisted setup deliberately preserves the workspace&apos;s
   current send mode; going live remains a separate confirmed action in Controls.
-- The server independently enforces founder access, target-org existence, a
+- The encrypted account upsert and its founder audit entry now commit in one
+  database transaction, so an audit failure cannot leave an unaudited setup.
+  The server independently enforces founder access, target-org existence, a
   3–500 character reason, organization ownership of the number, and plan limits.
   The client-visible audit row records IDs and reason but never the access token;
   provider and unexpected errors return stable, non-secret messages.
-- Verification: focused cross-layer safety suite **46/46**, complete suite
-  **874/874**, lint clean, and the Next.js production build passed.
+- Verification: focused cross-layer safety suite **47/47**, complete suite
+  **875/875**, lint clean, and the Next.js production build passed.
 
 ## Pricing amendment — permanent Entry plan
 

@@ -95,27 +95,30 @@ export async function founderConnectWhatsapp(
   const validation = await validateWhatsappConnection(input);
   if (!validation.ok) return { ok: false, error: validation.message };
 
-  const saved = await saveWhatsappAccount(
-    { orgId, ...validation.value },
-    { activateOrg: false }
-  );
-  if (!saved.ok) return { ok: false, error: saved.message };
-
   const { displayName, wabaId, phoneNumberId } = validation.value;
-  await founderAudit(
-    orgId,
-    founderEmail,
-    "admin.integration_changed",
-    `WhatsApp ${displayName}`,
-    withReason(
-      `wabaId ${wabaId}; phoneNumberId ${phoneNumberId} connected or refreshed; sending mode unchanged`,
-      requiredReason.value
-    )
-  );
-  return {
-    ok: true,
-    message: `${displayName} connected. Sending mode was not changed.`,
-  };
+  return prisma.$transaction(async (tx) => {
+    const saved = await saveWhatsappAccount(
+      { orgId, ...validation.value },
+      { activateOrg: false, db: tx }
+    );
+    if (!saved.ok) return { ok: false, error: saved.message };
+
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.integration_changed",
+      `WhatsApp ${displayName}`,
+      withReason(
+        `wabaId ${wabaId}; phoneNumberId ${phoneNumberId} connected or refreshed; sending mode unchanged`,
+        requiredReason.value
+      ),
+      tx
+    );
+    return {
+      ok: true,
+      message: `${displayName} connected. Sending mode was not changed.`,
+    };
+  });
 }
 
 
