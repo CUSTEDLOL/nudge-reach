@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
+  isNavChildActive,
   isNavItemActive,
   navGroupsForRole,
   type AppRole,
@@ -31,6 +32,7 @@ export function Sidebar({
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const pathname = usePathname();
+  const currentTab = useSearchParams().get("tab");
   const groups = navGroupsForRole(role);
 
   const iconButton =
@@ -116,6 +118,32 @@ export function Sidebar({
                           />
                           {!collapsed && <span className="truncate">{item.label}</span>}
                         </Link>
+
+                        {/* Second level: only for the section you are in, so
+                            the rail stays calm everywhere else. */}
+                        {!collapsed && active && item.children && (
+                          <ul className="mt-0.5 ml-[1.45rem] flex flex-col gap-0.5 border-l border-neutral-200 pl-2.5">
+                            {item.children.map((child) => {
+                              const here = isNavChildActive(child, currentTab);
+                              return (
+                                <li key={child.key}>
+                                  <Link
+                                    href={child.href}
+                                    aria-current={here ? "page" : undefined}
+                                    className={cn(
+                                      "flex h-8 items-center rounded-md px-2.5 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1",
+                                      here
+                                        ? "font-semibold text-brand-800"
+                                        : "font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950"
+                                    )}
+                                  >
+                                    {child.label}
+                                  </Link>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
                       </li>
                     );
                   })}

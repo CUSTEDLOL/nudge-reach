@@ -28,6 +28,19 @@ export type NavKey =
   | "integrations"
   | "settings";
 
+/**
+ * A second level under a nav item, for a page whose sections are real
+ * destinations rather than incidental tabs. Shown only while the parent is
+ * the active section, so the rail stays calm.
+ */
+export type NavChild = {
+  key: string;
+  label: string;
+  href: string;
+  /** The `?tab=` value this child owns; omitted means the parent's default. */
+  tab?: string;
+};
+
 export type NavItem = {
   key: NavKey;
   label: string;
@@ -36,6 +49,7 @@ export type NavItem = {
   icon: LucideIcon;
   activePrefixes: readonly string[];
   hideForAgent?: boolean;
+  children?: readonly NavChild[];
 };
 
 export type NavGroup = {
@@ -92,6 +106,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/agent",
         icon: Bot,
         activePrefixes: ["/agent", "/knowledge"],
+        // Setup is a set-once persona screen that was hard to find behind a
+        // tab; both faces of the page get their own entry in the rail.
+        children: [
+          { key: "training", label: "Training", href: "/agent" },
+          { key: "setup", label: "Setup", href: "/agent?tab=setup", tab: "setup" },
+        ],
       },
       {
         key: "followups",
@@ -245,4 +265,15 @@ export function activeNavKey(pathname: string): NavKey | null {
 
 export function isNavItemActive(pathname: string, item: NavItem): boolean {
   return activeNavKey(pathname) === item.key;
+}
+
+/**
+ * Which child of an active nav item is the current one. The parent's own href
+ * (no `tab`) is the default, so /agent with no query highlights Training.
+ */
+export function isNavChildActive(
+  child: NavChild,
+  currentTab: string | null
+): boolean {
+  return child.tab ? child.tab === currentTab : !currentTab;
 }
