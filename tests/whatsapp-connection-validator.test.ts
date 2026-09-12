@@ -58,7 +58,7 @@ describe("validateWhatsappConnection", () => {
     env.SEND_MODE = "live";
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(metaResponse(200, { data: [{ id: INPUT.phoneNumberId }] }) as Response);
+      .mockResolvedValue(metaResponse(200, { data: [{ id: INPUT.phoneNumberId }] }) as unknown as Response);
 
     await expect(validateWhatsappConnection(INPUT)).resolves.toEqual({ ok: true, value: INPUT });
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -75,7 +75,7 @@ describe("validateWhatsappConnection", () => {
   it.each([401, 403])("maps Meta credential rejection (%s) to a safe message", async (status) => {
     env.SEND_MODE = "live";
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      metaResponse(status, { error: { message: `Secret response containing ${INPUT.accessToken}` } }) as Response
+      metaResponse(status, { error: { message: `Secret response containing ${INPUT.accessToken}` } }) as unknown as Response
     );
 
     const result = await validateWhatsappConnection(INPUT);
@@ -90,7 +90,7 @@ describe("validateWhatsappConnection", () => {
   it("rejects a Phone Number ID that is not registered under the WABA", async () => {
     env.SEND_MODE = "live";
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      metaResponse(200, { data: [{ id: "111111111111111" }] }) as Response
+      metaResponse(200, { data: [{ id: "111111111111111" }] }) as unknown as Response
     );
 
     await expect(validateWhatsappConnection(INPUT)).resolves.toEqual({
@@ -114,7 +114,7 @@ describe("validateWhatsappConnection", () => {
 
   it("rejects malformed successful Meta responses safely", async () => {
     env.SEND_MODE = "live";
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(metaResponse(200, { data: "wrong" }) as Response);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(metaResponse(200, { data: "wrong" }) as unknown as Response);
 
     await expect(validateWhatsappConnection(INPUT)).resolves.toEqual({
       ok: false,
