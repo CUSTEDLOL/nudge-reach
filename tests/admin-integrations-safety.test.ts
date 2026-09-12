@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   prisma,
   disconnectWhatsappAccount,
+  saveWhatsappAccount,
+  validateWhatsappConnection,
   disconnectCalendar,
   deleteLlmAccount,
   getLlmAccount,
@@ -10,6 +12,7 @@ const {
   revokeApiKey,
 } = vi.hoisted(() => ({
   prisma: {
+    org: { findUnique: vi.fn() },
     whatsappAccount: { findFirst: vi.fn() },
     calendarAccount: { findUnique: vi.fn() },
     crmConnection: { findFirst: vi.fn() },
@@ -17,6 +20,8 @@ const {
     auditLog: { create: vi.fn() },
   },
   disconnectWhatsappAccount: vi.fn(),
+  saveWhatsappAccount: vi.fn(),
+  validateWhatsappConnection: vi.fn(),
   disconnectCalendar: vi.fn(),
   deleteLlmAccount: vi.fn(),
   getLlmAccount: vi.fn(),
@@ -27,7 +32,11 @@ const {
 vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/modules/whatsapp/accounts", () => ({
   disconnectWhatsappAccount,
+  saveWhatsappAccount,
   setDefaultWhatsappAccount: vi.fn(),
+}));
+vi.mock("@/modules/whatsapp/connection-validator", () => ({
+  validateWhatsappConnection,
 }));
 vi.mock("@/modules/calendar/accounts", () => ({ disconnectCalendar }));
 vi.mock("@/modules/ai/llm-account", () => ({
@@ -43,11 +52,20 @@ import {
   founderDisconnectCrm,
   founderDisconnectLlm,
   founderDisconnectNumber,
+  founderConnectWhatsapp,
   founderRevokeApiKey,
 } from "@/modules/admin/integrations";
 
+const CONNECTION = {
+  displayName: "Clinic WhatsApp",
+  wabaId: "123456789012345",
+  phoneNumberId: "987654321098765",
+  accessToken: "EAA-founder-secret-token",
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  prisma.org.findUnique.mockResolvedValue({ id: "o1" });
   prisma.whatsappAccount.findFirst.mockResolvedValue({
     displayName: "Clinic WhatsApp",
     phoneNumberId: "pn_123",
@@ -66,6 +84,106 @@ beforeEach(() => {
     revokedAt: null,
   });
   prisma.auditLog.create.mockResolvedValue({});
+  validateWhatsappConnection.mockResolvedValue({ ok: true, value: CONNECTION });
+  saveWhatsappAccount.mockResolvedValue({ ok: true, account: { id: "wa_1" } });
+});
+
+describe("founder WhatsApp connection", () => {
+  it("requires a reason before validating or saving", async () => {
+    const res = await founderConnectWhatsapp("o1", CONNECTION, "f@nudge.test", "");
+
+    expect(res).toEqual({ ok: false, error: expect.stringMatching(/reason/i) });
+    expect(validateWhatsappConnection).not.toHaveBeenCalled();
+    expect(saveWhatsappAccount).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing target org before contacting Meta", async () => {
+    prisma.org.findUnique.mockResolvedValue(null);
+
+    const res = await founderConnectWhatsapp(
+      "missing",
+      CONNECTION,
+      "f@nudge.test",
+      "initial client setup"
+    );
+
+    expect(res).toEqual({ ok: false, error: "Organization not found." });
+    expect(validateWhatsappConnection).not.toHaveBeenCalled();
+    expect(saveWhatsappAccount).not.toHaveBeenCalled();
+  });
+
+  it("saves and audits nothing when Meta validation fails", async () => {
+    validateWhatsappConnection.mockResolvedValue({
+      ok: false,
+      message: "Meta rejected the access token. Check it and try again.",
+    });
+
+    const res = await founderConnectWhatsapp(
+      "o1",
+      CONNECTION,
+      "f@nudge.test",
+      "initial client setup"
+    );
+
+    expect(res).toEqual({
+      ok: false,
+      error: "Meta rejected the access token. Check it and try again.",
+    });
+    expect(saveWhatsappAccount).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("stores validated credentials without changing mode and writes a redacted audit", async () => {
+    const res = await founderConnectWhatsapp(
+      "o1",
+      CONNECTION,
+      "f@nudge.test",
+      "initial client setup"
+    );
+
+    expect(res).toEqual({
+      ok: true,
+      message: "Clinic WhatsApp connected. Sending mode was not changed.",
+    });
+    expect(saveWhatsappAccount).toHaveBeenCalledWith(
+      { orgId: "o1", ...CONNECTION },
+      { activateOrg: false }
+    );
+    expect(prisma.auditLog.create).toHaveBeenCalledOnce();
+    const audit = prisma.auditLog.create.mock.calls[0][0].data;
+    expect(audit).toEqual(
+      expect.objectContaining({
+        orgId: "o1",
+        actorName: "founder:f@nudge.test",
+        action: "admin.integration_changed",
+        target: "WhatsApp Clinic WhatsApp",
+      })
+    );
+    expect(audit.detail).toContain(CONNECTION.wabaId);
+    expect(audit.detail).toContain(CONNECTION.phoneNumberId);
+    expect(audit.detail).toContain("initial client setup");
+    expect(audit.detail).not.toContain(CONNECTION.accessToken);
+  });
+
+  it("does not write a success audit when encrypted persistence is refused", async () => {
+    saveWhatsappAccount.mockResolvedValue({
+      ok: false,
+      message: "That phone number is already connected to another workspace.",
+    });
+
+    const res = await founderConnectWhatsapp(
+      "o1",
+      CONNECTION,
+      "f@nudge.test",
+      "initial client setup"
+    );
+
+    expect(res).toEqual({
+      ok: false,
+      error: "That phone number is already connected to another workspace.",
+    });
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("critical integration confirmations", () => {
