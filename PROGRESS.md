@@ -14,7 +14,8 @@
   architecture, build gates and the 34-month operating cadence.
 - Documentation only. No public copy, indexing rule, analytics account,
   conversion event or marketing route has changed yet; implementation planning
-  is next.
+  is captured in `docs/superpowers/plans/2026-09-14-seo-foundation.md` as nine
+  TDD tasks with explicit account/database activation gates.
 
 ## Founder-assisted WhatsApp connection (2026-09-12) ✅
 
