@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
@@ -32,7 +32,6 @@ export function Sidebar({
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const pathname = usePathname();
-  const currentTab = useSearchParams().get("tab");
   const groups = navGroupsForRole(role);
 
   const iconButton =
@@ -124,7 +123,7 @@ export function Sidebar({
                         {!collapsed && active && item.children && (
                           <ul className="mt-0.5 ml-[1.45rem] flex flex-col gap-0.5 border-l border-neutral-200 pl-2.5">
                             {item.children.map((child) => {
-                              const here = isNavChildActive(child, currentTab);
+                              const here = isNavChildActive(child, pathname);
                               return (
                                 <li key={child.key}>
                                   <Link

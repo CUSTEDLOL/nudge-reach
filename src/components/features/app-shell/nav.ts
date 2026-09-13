@@ -37,8 +37,6 @@ export type NavChild = {
   key: string;
   label: string;
   href: string;
-  /** The `?tab=` value this child owns; omitted means the parent's default. */
-  tab?: string;
 };
 
 export type NavItem = {
@@ -106,11 +104,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/agent",
         icon: Bot,
         activePrefixes: ["/agent", "/knowledge"],
-        // Setup is a set-once persona screen that was hard to find behind a
-        // tab; both faces of the page get their own entry in the rail.
+        // Two real pages, not tabs: Setup was too easy to miss behind one.
         children: [
           { key: "training", label: "Training", href: "/agent" },
-          { key: "setup", label: "Setup", href: "/agent?tab=setup", tab: "setup" },
+          { key: "setup", label: "Setup", href: "/agent/setup" },
         ],
       },
       {
@@ -267,13 +264,7 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
   return activeNavKey(pathname) === item.key;
 }
 
-/**
- * Which child of an active nav item is the current one. The parent's own href
- * (no `tab`) is the default, so /agent with no query highlights Training.
- */
-export function isNavChildActive(
-  child: NavChild,
-  currentTab: string | null
-): boolean {
-  return child.tab ? child.tab === currentTab : !currentTab;
+/** Which child of an active nav item is the current page. */
+export function isNavChildActive(child: NavChild, pathname: string): boolean {
+  return cleanPathname(pathname) === child.href;
 }
