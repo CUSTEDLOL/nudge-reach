@@ -1,5 +1,21 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## 34-month SEO program design approved (2026-09-14) ✅
+
+- Audited the live and local marketing surface, current search results,
+  crawl/index controls, sitemap, public-route gate, conversion paths, trust
+  signals and large visual assets.
+- Approved a vertical, commercial-first strategy for qualified organic demo
+  bookings from Indian cosmetic-dental, aesthetic-dermatology and
+  hair-transplant clinics. Nudge remains an AI Front Desk; broad WhatsApp CRM
+  positioning, mass AI content and programmatic city pages are explicitly out.
+- Added `docs/plans/2026-09-14-seo-program-design.md` with page/query ownership,
+  content and authority systems, Cal.com-to-qualified-lead measurement, technical
+  architecture, build gates and the 34-month operating cadence.
+- Documentation only. No public copy, indexing rule, analytics account,
+  conversion event or marketing route has changed yet; implementation planning
+  is next.
+
 ## Founder-assisted WhatsApp connection (2026-09-12) ✅
 
 - Added a founder-only “Connect a number” form to each organization's
