@@ -1,5 +1,22 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Typed resources and clinic booking guide (2026-09-14) ✅
+
+- Added a published-only typed resource manifest and loader registry, plus static
+  `/resources` and SSG `/resources/[slug]` routes with canonical metadata,
+  breadcrumbs and Article structured data.
+- Published the first operational guide for clinic appointment booking, covering
+  verified availability, minimum booking data, Meta's 24-hour service window,
+  approved templates, reminders, deposits, human handoff and journey measurement.
+  The policy guidance links to the official WhatsApp Business Messaging Policy,
+  verified on 2026-09-14, and is explicitly not medical or legal advice.
+- Added Resources to desktop/mobile navigation and the footer, and registered the
+  resource family in the sitemap-backed SEO registry.
+- Verification: focused resource/SEO contracts **16/16**, complete suite
+  **913/913**, touched-file lint clean, and the production build passed with the
+  index emitted statically and the guide via SSG. Desktop/mobile browser review
+  was attempted but unavailable because no browser session was connected.
+
 ## Clinic AI Front Desk search hub (2026-09-14) ✅
 
 - Published the server-rendered `/industries/clinics` commercial landing page

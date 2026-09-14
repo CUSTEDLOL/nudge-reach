@@ -19,6 +19,7 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
       { label: "Features", href: "/#features" },
       { label: "Compare", href: "/#compare" },
       { label: "Clinics", href: "/industries/clinics" },
+      { label: "Resources", href: "/resources" },
       { label: "Pricing", href: "/pricing" },
       { label: "FAQ", href: "/faq" },
     ],
