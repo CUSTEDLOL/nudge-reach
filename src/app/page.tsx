@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { metadataFor } from "@/modules/marketing/seo-pages";
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { MetaVsNudge } from "@/components/marketing/meta-vs-nudge";
@@ -13,10 +14,7 @@ import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
 
 export const metadata: Metadata = {
-  title: "Nudge: the AI Front Desk that runs your WhatsApp",
-  description:
-    "Meta's free AI answers your WhatsApp. Nudge's AI Front Desk runs it: books into your real calendar, chases every lead that goes quiet, collects payments, and we set the whole thing up. It's not software. It's your best employee, for a third of the salary.",
-  alternates: { canonical: "/" },
+  ...metadataFor("/"),
   openGraph: {
     title: "Nudge: your AI Front Desk on WhatsApp",
     description:
