@@ -1,7 +1,9 @@
 # SEO release baseline
 
 Audit date: **2026-09-15**
-Scope: `feature/seo-foundation` at `df8ffd9`, compared with base `7232ce6`
+Runtime/content snapshot: Tasks 1–8 through `df8ffd9`, compared with program base
+`7232ce6`. This baseline document was introduced by Task 9 in `a817658`; it does
+not treat Task 9's documentation commit as part of the runtime snapshot.
 Environment: local Next.js 16.2.9 production build in simulation mode, served on
 `127.0.0.1` with documented non-secret Supabase placeholders. This is a release
 baseline, not evidence that the branch is deployed or that production accounts,
@@ -77,6 +79,29 @@ keyboard/mobile-menu/DOM probe did not return a result, so it is not counted as
 a pass; the screenshots, rendered HTML checks and automated behavior tests are
 the evidence retained.
 
+### Conversion E2E handoff limitation
+
+The Task 9 verification handoff is **incomplete for interactive and
+database/authenticated conversion E2E**. No local Postgres binaries or listening
+Postgres/Supabase ports were present, the repository has no installed Supabase
+CLI, and the installed Docker client could not connect to a running daemon. No
+database service was installed or started to expand the task scope. Consequently,
+these four local-production checks remain pending:
+
+1. Click a rendered demo CTA and observe exactly one `demo_cta_click` while Cal
+   trigger behavior remains intact.
+2. Complete a Cal embed dry-run and observe aggregate `generate_lead` without an
+   authoritative booking write.
+3. Send a correctly signed `BOOKING_CREATED` staging fixture to a disposable
+   database, then resend it and confirm exactly one row with unchanged first-touch
+   attribution.
+4. Authenticate as an authorized founder, mark that stored booking qualified,
+   verify success with GA4 unconfigured, then repeat against a mocked/debug GA4
+   endpoint and inspect the restricted payload fields.
+
+Unit/integration tests cover the underlying event, signature, upsert, transition
+and analytics boundaries. They do not replace these omitted E2E checks.
+
 ## Repository asset baseline
 
 These are source-file sizes, not compressed transfer sizes or performance
@@ -111,9 +136,8 @@ The approved India-first query ownership remains:
 A read-only sample on 2026-09-15 used four queries: `AI receptionist for clinics
 India WhatsApp`, `WhatsApp appointment booking automation clinics`, `AI
 receptionist cosmetic dental clinics WhatsApp`, and `WhatsApp automation hair
-transplant clinics`. Results were blended: focused vendor landing pages, YouTube
-workflow demonstrations, community/forum discussions, and PDF/research-style
-documents. No reliable volume, position or traffic estimate was inferred.
+transplant clinics`. The reproducibly recorded result type was focused vendor
+landing pages. No reliable volume, position or traffic estimate was inferred.
 
 Known competing pages returned in that sample included:
 

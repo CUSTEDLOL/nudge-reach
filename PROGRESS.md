@@ -1,6 +1,6 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
-## Organic search foundation handoff (2026-09-15) ✅ LOCALLY VERIFIED — PRODUCTION ACTIVATION PENDING
+## Organic search foundation handoff (2026-09-15) ⚠️ STATIC/TEST VERIFIED — CONVERSION E2E INCOMPLETE
 
 - The release inventory now has eight typed, indexable canonicals: `/`,
   `/industries/clinics`, `/resources`,
@@ -34,11 +34,23 @@
   review is documented only as a post-sprint renewal cadence.
 - Still pending and not implied complete: production deployment/HTTP review,
   Search Console domain verification and sitemap submission, DNS access, GTM/GA4
-  account configuration, GA4 credentials, Cal event/webhook/secret setup, a real
-  booking replay, production Prisma schema application, `DemoBooking` RLS
+  account configuration, GA4 credentials, Cal event/webhook/secret setup,
+  production Prisma schema application, `DemoBooking` RLS
   verification, first-party performance/indexing/CWV/referring-domain baselines,
   and production lead reconciliation. No external account or database was read
   or changed for this handoff.
+- The Task 9 handoff is explicitly incomplete for interactive and
+  database/authenticated conversion E2E. The following four checks were not
+  performed: a rendered demo CTA click preserving Cal behavior; a Cal dry-run
+  success without an authoritative write; signed fixture persistence plus a
+  second controlled send proving one-row/first-touch deduplication; and an
+  authenticated qualified transition with GA4 both unconfigured and directed to
+  a mock/debug endpoint. Unit/integration coverage remains evidence for the code
+  boundaries only.
+- No disposable database was immediately available: no local Postgres binaries
+  or listening Postgres/Supabase ports, no installed repository Supabase CLI,
+  and no running Docker daemon. No database infrastructure was installed or
+  external/production data accessed to close that gap.
 
 ## Qualified demo-lead pipeline and GA4 offline events (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
 

@@ -44,30 +44,46 @@ Before calling measurement live:
 
 ## GTM and GA4
 
-Confirm the active web stream and GTM container before changing tags. Use Preview
-and GA4 DebugView/Realtime, then publish one reviewed container version with a
-plain-language version note.
+Confirm the active production web stream and GTM container before changing tags.
+Confirm the production Google tag/config tag uses the intended Measurement ID,
+respects the approved consent configuration, and fires once on each public-page
+load. Do not infer this from the repository's GTM loader alone.
 
 | Event | Source | Allowed parameters | Verification |
 |---|---|---|---|
 | `demo_cta_click` | Browser `dataLayer` | `surface`, `landing_path` | Click one demo CTA per stable surface; exactly one event; Cal trigger attributes and modal behavior remain intact. |
 | `generate_lead` | Browser Cal success or access-form success | `lead_source` only | Cal dry-run emits `lead_source=cal`; access form emits `access_form`; neither browser event is the authoritative booking. |
-| `qualify_lead` | Server GA4 Measurement Protocol | numeric two-part `client_id`, internal `lead_id` | Transition one stored booking to qualified; database succeeds even if GA4 is absent/fails; debug payload contains no personal data. |
+| `qualify_lead` | Server GA4 Measurement Protocol | numeric two-part `client_id`, internal `lead_id` | Transition one stored booking to qualified; database succeeds even if GA4 is absent/fails; inspect the restricted debug payload fields. |
 | `disqualify_lead` | Server GA4 Measurement Protocol | numeric two-part `client_id`, internal `lead_id` | Transition one stored booking to dismissed and verify one event. |
 | `close_convert_lead` | Server GA4 Measurement Protocol | numeric two-part `client_id`, internal `lead_id` | Transition one stored booking to converted and verify one event. |
 
-- [ ] Create Custom Event triggers for the two browser event names and map only
-  the allowed parameters.
+- [ ] Create one Custom Event trigger for `demo_cta_click` and one for
+  `generate_lead`; each trigger must match only its exact `dataLayer` event name.
+- [ ] Create a GA4 Event tag for `demo_cta_click`, select the confirmed production
+  Google tag/config tag, set the event name to `demo_cta_click`, map only
+  `surface` and `landing_path`, and attach only the matching trigger.
+- [ ] Create a GA4 Event tag for `generate_lead`, select the same production
+  Google tag/config tag, set the event name to `generate_lead`, map only
+  `lead_source`, and attach only the matching trigger.
+- [ ] In GTM Preview, exercise each source once and confirm the corresponding tag
+  fires once while the other tag does not fire. In GA4 DebugView/Realtime,
+  confirm the exact event and allowed parameter names.
+- [ ] Have another operator review the container diff, then publish that reviewed
+  version with a plain-language note and record its version ID.
 - [ ] Confirm `generate_lead`, `qualify_lead` and `close_convert_lead` key-event
   treatment with the reporting owner. Keep `demo_cta_click` diagnostic.
 - [ ] Configure server-only `GA4_MEASUREMENT_ID` and `GA4_API_SECRET`; neither
   may use a `NEXT_PUBLIC_` prefix.
 - [ ] Use GA4's validation/debug destination before production collection where
   practical. Inspect field names, not real contact values.
-- [ ] Verify the server payload contains only event name, numeric `client_id`
-  and `lead_id=booking:<internal-id>`—never name, email, phone, Cal UID, notes,
-  calendar time, landing URL or raw attribution.
-- [ ] Document consent/legal review for analytics storage before activation.
+- [ ] Verify the server payload contains only event name, validated numeric
+  two-part `client_id` and `lead_id=booking:<internal-id>`—never name, email,
+  phone, Cal UID, notes, calendar time, landing URL or raw attribution. These
+  include no direct contact, patient or appointment fields, but the GA client ID
+  is a pseudonymous identifier and the internal booking ID is opaque, not
+  anonymous.
+- [ ] Complete and document mandatory consent/legal review, retention and access
+  controls for both identifiers before analytics activation.
 
 ## Cal.com booking measurement
 
@@ -78,17 +94,26 @@ plain-language version note.
   `metadata[landingPath]`, origin-only `metadata[referrer]`, and a validated
   numeric `metadata[gaClientId]` are forwarded.
 - [ ] Create the webhook at
-  `https://nudgeagent.app/api/webhooks/cal` for `BOOKING_CREATED` only.
+  `https://nudgeagent.app/api/webhooks/cal`, scoped in Cal to event type
+  `hqnudge/30min` and trigger `BOOKING_CREATED` only.
 - [ ] Generate a strong webhook secret, set the same value in Cal.com and the
-  server-only `CAL_WEBHOOK_SECRET`, and confirm the supported version header.
+  server-only `CAL_WEBHOOK_SECRET`.
+- [ ] Select webhook version **`2021-10-20`** and leave the payload template at
+  Cal's default/unmodified setting (null rather than a custom template). From a
+  redacted staging delivery, verify the received `x-cal-webhook-version` is
+  `2021-10-20` and the default shape contains `triggerEvent` plus `payload.uid`,
+  `payload.type`, `payload.startTime`, `payload.attendees` and optional
+  `payload.metadata`. Do not record field values or the body.
 - [ ] Confirm the deployed event will not exceed the deliberate ten-attendee
   ingress cap. If it can, review and test the cap before activation.
 - [ ] Make one non-sensitive test booking. Confirm one `DemoBooking` row with the
   expected event type and internal attribution fields.
-- [ ] Replay the same signed delivery through Cal's supported retry/test path.
-  Confirm the row count for that `calUid` remains one and first-touch attribution
-  is unchanged. Record only the internal row ID and pass/fail—not the raw payload
-  or attendee details.
+- [ ] Separately send a correctly signed, non-sensitive fixture twice to the
+  staging endpoint using the staging secret. Confirm the row count for its
+  `calUid` remains one and first-touch attribution is unchanged. This controlled
+  resend validates Nudge idempotency; it is **not** evidence of a Cal
+  successful-delivery replay feature or Cal retry behavior. Record only the
+  internal row ID and pass/fail—not the raw fixture or attendee details.
 - [ ] Confirm Cal browser success produces aggregate `generate_lead`; treat the
   signed webhook/database row as authoritative.
 
@@ -118,12 +143,27 @@ changes before acting.
 
 ## Monthly report
 
-Use one row per calendar month, with links to the underlying exports and sales
-reconciliation. Separate brand from non-brand and organic from other sources.
+Use one row per calendar month, with the reporting timezone, extraction timestamp,
+links to underlying exports and the exact classification-rule version. Use a
+booking-created cohort for the month so every database funnel column uses the
+same denominator. Separate brand from non-brand and organic from other sources.
 
-| Month | Non-brand impressions | Non-brand clicks | Organic bookings | Attended/worked | Qualified | Customers | Page/query opportunities | Actions and owner |
+| Month | Non-brand impressions | Non-brand clicks | Organic bookings | Attended | Qualified | Customers | Page/query opportunities | Actions and owner |
 |---|---:|---:|---:|---:|---:|---:|---|---|
-| YYYY-MM | — | — | — | — | — | — | — | — |
+| YYYY-MM | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | — | — |
+
+### Monthly data dictionary
+
+| Column | Definition and source |
+|---|---|
+| Month | Calendar month in the recorded reporting timezone. Database funnel columns use `DemoBooking.createdAt` to select the cohort and are snapshots at the recorded extraction time. |
+| Non-brand impressions / clicks | Search Console Performance export, Web search type, filtered to the reporting month and target country as applicable. Normalize query text to lowercase/trimmed form. Classify brand only with a reviewed, versioned list containing `nudge`, `nudge agent`, `nudgeagent` and documented product-name misspellings; all other returned query rows are non-brand. Preserve Google's anonymized-query limitation and never silently change the rule for prior months. |
+| Organic bookings | Count distinct persisted `DemoBooking.calUid` values in the monthly cohort. Use only persisted first-touch `utmSource`, `utmMedium`, `utmCampaign`, `landingPath` and `referrer`: organic when normalized `utmMedium` is `organic`, or when medium is absent, the referrer hostname matches the versioned search-engine host list and no paid marker appears in source/medium/campaign. Missing or ambiguous attribution is `UNKNOWN`/unclassified, never organic by assumption. |
+| Attended | **UNKNOWN until a real attendance source and mapping are implemented.** Do not infer attendance from `contacted`, `qualified`, notes, a scheduled start time or “worked.” When a source exists, document its immutable event/time field and reconciliation rule before reporting. |
+| Qualified | From the same organic booking cohort, count rows whose persisted status is `qualified` or `converted` at extraction time. Record that this is a current-status snapshot; the present schema has no transition history, so later pipeline changes can restate it. |
+| Customers | From the same organic booking cohort, count rows whose persisted status is `converted` at extraction time; reconcile with the authorized sales/billing owner before treating this as a paying customer count. |
+| Page/query opportunities | Search Console page/query export joined only by its reported landing-page URL; record selection rule and evidence link for each opportunity. |
+| Actions and owner | Dated action record or issue tracker: action, accountable owner, due date and evidence link. |
 
 Also record deployment/content annotations, crawl/index coverage, available
 Core Web Vitals, relevant referring domains and any attribution limitations.
@@ -157,7 +197,7 @@ If renewed, repeat a quarterly technical, content and authority review: crawl an
 index controls; Core Web Vitals; intent ownership/cannibalization; content decay;
 claims and pricing; link quality and unlinked mentions; outreach results; and
 qualified-demo/customer economics. This is the ongoing cadence after the
-four-month sprint, not a 34-month plan.
+four-month sprint. The current sprint ends at the month-4 checkpoint.
 
 ## 30/60/90-day page decision tree
 
@@ -183,6 +223,8 @@ At days 30, 60 and 90 after publication or substantive revision:
 ## Claim review and content publication
 
 - [ ] Assign one canonical URL to one primary intent; check for cannibalization.
+- [ ] Before drafting, confirm live result intent and review available first-party
+  query, sales and support evidence; record the dated inputs and keep gaps unknown.
 - [ ] Define reader, decision stage, evidence and next action.
 - [ ] Gather founder, product or clinic subject-matter input.
 - [ ] Include something competitors cannot cheaply reproduce: a product
@@ -192,6 +234,8 @@ At days 30, 60 and 90 after publication or substantive revision:
   plan. Use the approved pricing source; do not duplicate an unapproved price.
 - [ ] Fact-check Meta policy against current primary documentation. Obtain
   qualified medical/legal review before making those claims.
+- [ ] Review every cited source for authority, date, direct support and faithful
+  paraphrase; replace or remove any source that does not support the claim.
 - [ ] Remove unsupported rankings, outcomes, statistics, testimonials,
   certifications, partner status and customer stories.
 - [ ] Keep Nudge positioned as an AI Front Desk. CRM/campaign phrases are
@@ -200,6 +244,9 @@ At days 30, 60 and 90 after publication or substantive revision:
   links and only applicable JSON-LD whose facts match the page.
 - [ ] Confirm HTML is useful without JavaScript; test 1440×900 and 390×844,
   keyboard focus, mobile menu, reduced motion, overflow and primary CTA.
+- [ ] Validate performance with dated lab evidence and available field data kept
+  separately labeled; validate crawlability with anonymous rendered HTML, HTTP
+  status, canonical, robots, sitemap membership and internal-link checks.
 - [ ] Check every first-party link and safe external-link attributes.
 - [ ] Publish only after review; submit/inspect, annotate the reporting timeline,
   and schedule 30/60/90-day reviews. Change dates only after substantive review.
@@ -249,6 +296,8 @@ If any gate is missing, keep the market page unpublished.
 - If trust is uncertain, disable the webhook or unset the secret so the route
   fails closed; browser `generate_lead` remains non-authoritative.
 
-After recovery, repeat signature rejection, valid delivery, replay/deduplication,
-GA4 non-blocking and no-personal-data checks. Record the incident without secrets
-or payloads.
+After recovery, repeat signature rejection, valid delivery, controlled fixture
+resend/deduplication, GA4 non-blocking and restricted-field checks. Confirm GA4
+contains no direct contact, patient or appointment fields; treat the validated
+pseudonymous client ID and opaque internal booking ID under the mandatory
+consent/legal review. Record the incident without secrets or payloads.
