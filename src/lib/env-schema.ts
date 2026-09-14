@@ -84,6 +84,11 @@ export const envSchema = z
     // URL (optional; leads always land in AccessRequest regardless)
     LEADS_SHEET_WEBHOOK_URL: z.string().url().optional(),
 
+    // Cal.com demo-booking webhook. Optional so simulation/local builds remain
+    // keyless; the public webhook route fails closed while the secret is unset.
+    CAL_WEBHOOK_SECRET: z.string().optional(),
+    CAL_EVENT_TYPE_SLUG: z.string().min(1).default("30min"),
+
     // Google Calendar OAuth (optional). Left empty, "Connect calendar" works in
     // SIMULATION with a mocked calendar — no Google app needed. Fill these only
     // for real OAuth. Deliberately NOT in the live superRefine below: even a

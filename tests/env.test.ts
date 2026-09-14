@@ -11,6 +11,23 @@ describe("envSchema", () => {
   it("accepts a minimal simulation-mode config", () => {
     const parsed = envSchema.parse(baseEnv);
     expect(parsed.SEND_MODE).toBe("simulation");
+    expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("30min");
+    expect(parsed.CAL_WEBHOOK_SECRET).toBeUndefined();
+  });
+
+  it("accepts an optional Cal webhook secret and event-type slug", () => {
+    const parsed = envSchema.parse({
+      ...baseEnv,
+      CAL_WEBHOOK_SECRET: "cal-secret",
+      CAL_EVENT_TYPE_SLUG: "clinic-demo",
+    });
+    expect(parsed.CAL_WEBHOOK_SECRET).toBe("cal-secret");
+    expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("clinic-demo");
+  });
+
+  it("accepts an empty optional Cal secret from the example configuration", () => {
+    const parsed = envSchema.parse({ ...baseEnv, CAL_WEBHOOK_SECRET: "" });
+    expect(parsed.CAL_WEBHOOK_SECRET).toBe("");
   });
 
   it("defaults the runtime model to Sonnet (rule 3: production tier)", () => {

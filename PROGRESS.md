@@ -1,5 +1,24 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Signed Cal demo-booking ingestion (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
+
+- Added a fail-closed Cal.com `BOOKING_CREATED` webhook boundary that verifies
+  the raw-body HMAC, accepts only the documented payload versions and configured
+  event-type slug, and whitelists the booking and first-touch fields retained.
+- Added atomic, UID-keyed booking upserts. Delivery retries may refresh the
+  appointment and attendee fields but cannot overwrite first-touch attribution;
+  notes, meeting URLs, ICS content, raw payloads and undeclared fields are never
+  stored.
+- Added the server-only `DemoBooking` platform-lead model and its operational
+  indexes. It intentionally has no tenant relation or browser policies.
+- Verification: focused webhook/environment tests **30/30**, complete suite
+  **954/954**, Prisma format/generate/validate, touched-file lint, and the
+  production build all passed.
+- Activation remains gated on applying the Prisma schema, running the repository
+  RLS script and verifying `pg_tables.rowsecurity = true` for `DemoBooking`, then
+  configuring the Cal secret and event slug. No database or real booking was
+  touched during implementation.
+
 ## Typed resources and clinic booking guide (2026-09-14) ✅
 
 - Added a published-only typed resource manifest and loader registry, plus static
