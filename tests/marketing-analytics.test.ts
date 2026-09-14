@@ -91,6 +91,87 @@ describe("marketing attribution", () => {
     });
   });
 
+  it("normalizes known fields from storage and rewrites the sanitized record", () => {
+    const storage = new FakeStorage();
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        landingPath:
+          "/resources?email=person@example.com#phone=+919999999999",
+        referrer:
+          "https://partner.example/private?email=person@example.com",
+        utmSource: "a".repeat(250),
+        unknown: "must not survive",
+      })
+    );
+
+    const attribution = captureAttribution(
+      new URL("https://nudgeagent.app/pricing"),
+      "https://current.example/private",
+      storage,
+      ""
+    );
+
+    expect(attribution).toEqual({
+      landingPath: "/resources",
+      referrer: "https://partner.example/",
+      utmSource: "a".repeat(200),
+    });
+    expect(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}")).toEqual(
+      attribution
+    );
+  });
+
+  it("replaces an invalid stored record with a persistent current first touch", () => {
+    const storage = new FakeStorage();
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        landingPath:
+          "https://nudgeagent.app/private?email=person@example.com",
+        referrer: "tel:+919999999999",
+      })
+    );
+
+    const repaired = captureAttribution(
+      new URL("https://nudgeagent.app/pricing?utm_source=google"),
+      "https://www.google.com/search?q=nudge",
+      storage,
+      ""
+    );
+    const later = captureAttribution(
+      new URL("https://nudgeagent.app/faq?utm_source=newsletter"),
+      "https://example.com/private",
+      storage,
+      ""
+    );
+
+    expect(repaired).toEqual({
+      landingPath: "/pricing",
+      referrer: "https://www.google.com/",
+      utmSource: "google",
+    });
+    expect(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}")).toEqual(repaired);
+    expect(later).toEqual(repaired);
+  });
+
+  it("repairs malformed stored JSON", () => {
+    const storage = new FakeStorage();
+    storage.setItem(STORAGE_KEY, "{broken");
+
+    const attribution = captureAttribution(
+      new URL("https://nudgeagent.app/industries/clinics"),
+      "",
+      storage,
+      ""
+    );
+
+    expect(attribution).toEqual({ landingPath: "/industries/clinics" });
+    expect(JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}")).toEqual(
+      attribution
+    );
+  });
+
   it("truncates captured values to 200 characters", () => {
     const storage = new FakeStorage();
     const longValue = "a".repeat(250);
@@ -281,11 +362,26 @@ describe("demo booking funnel", () => {
     ]);
 
     const booking = eventCalls[0][1] as {
-      callback: (event: { detail?: { data?: { uid?: string } } }) => void;
+      callback: (event: unknown) => void;
     };
     booking.callback({
       detail: {
-        data: { uid: "booking-123" },
+        data: { uid: { nested: "raw provider data" } },
+      },
+    });
+    booking.callback({
+      detail: {
+        data: { uid: "a".repeat(129) },
+      },
+    });
+    booking.callback({
+      detail: {
+        data: { uid: "person@example.com" },
+      },
+    });
+    booking.callback({
+      detail: {
+        data: { uid: "Booking_UID-123" },
       },
     });
 
@@ -302,10 +398,13 @@ describe("demo booking funnel", () => {
     });
 
     expect(dataLayer).toEqual([
+      { event: "generate_lead", lead_source: "cal" },
+      { event: "generate_lead", lead_source: "cal" },
+      { event: "generate_lead", lead_source: "cal" },
       {
         event: "generate_lead",
         lead_source: "cal",
-        booking_uid: "booking-123",
+        booking_uid: "Booking_UID-123",
       },
       { event: "cal_embed_error", surface: "cal_embed" },
     ]);

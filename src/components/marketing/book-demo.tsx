@@ -25,6 +25,7 @@ const CAL_STATIC_CONFIG = {
   useSlotsViewOnSmallScreen: "true",
 } as const;
 const CAL_CONFIG = JSON.stringify(CAL_STATIC_CONFIG);
+const CAL_BOOKING_UID = /^[A-Za-z0-9_-]{1,128}$/;
 const SAFE_SURFACES = new Set([
   "navbar",
   "hero",
@@ -39,6 +40,24 @@ let calStarted = false;
 
 function safeSurface(surface: string) {
   return SAFE_SURFACES.has(surface) ? surface : "unknown";
+}
+
+function calBookingUid(event: unknown) {
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    return undefined;
+  }
+  const detail = (event as Record<string, unknown>).detail;
+  if (!detail || typeof detail !== "object" || Array.isArray(detail)) {
+    return undefined;
+  }
+  const data = (detail as Record<string, unknown>).data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return undefined;
+  }
+  const uid = (data as Record<string, unknown>).uid;
+  return typeof uid === "string" && CAL_BOOKING_UID.test(uid)
+    ? uid
+    : undefined;
 }
 
 export function trackDemoCta(
@@ -100,11 +119,12 @@ export function initializeCalEmbed() {
     });
     w.Cal.ns[CAL_NAMESPACE]("on", {
       action: "bookingSuccessfulV2",
-      callback: (event: { detail?: { data?: { uid?: string } } }) => {
+      callback: (event: unknown) => {
+        const bookingUid = calBookingUid(event);
         pushMarketingEvent({
           event: "generate_lead",
           lead_source: "cal",
-          booking_uid: event.detail?.data?.uid,
+          ...(bookingUid ? { booking_uid: bookingUid } : {}),
         });
       },
     });

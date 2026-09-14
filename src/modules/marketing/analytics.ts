@@ -1,5 +1,6 @@
 const STORAGE_KEY = "nudge:first-touch:v1";
 const MAX_VALUE_LENGTH = 200;
+const PATH_BASE = "https://nudge.invalid";
 
 export type AttributionSnapshot = {
   landingPath: string;
@@ -49,6 +50,18 @@ function referrerOrigin(referrer: string) {
   }
 }
 
+function pathnameOnly(value: string) {
+  if (!value.startsWith("/") || value.startsWith("//")) return undefined;
+
+  try {
+    const url = new URL(value, PATH_BASE);
+    if (url.origin !== PATH_BASE) return undefined;
+    return limited(url.pathname) ?? "/";
+  } catch {
+    return undefined;
+  }
+}
+
 function currentTouch(location: URL, referrer: string): FirstTouch {
   return {
     landingPath: limited(location.pathname) ?? "/",
@@ -66,18 +79,29 @@ function currentTouch(location: URL, referrer: string): FirstTouch {
 }
 
 function storedTouch(value: string): FirstTouch | null {
-  const parsed: unknown = JSON.parse(value);
-  if (!parsed || typeof parsed !== "object") return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
 
   const record = parsed as Record<string, unknown>;
   if (typeof record.landingPath !== "string") return null;
+  const landingPath = pathnameOnly(record.landingPath);
+  if (!landingPath) return null;
 
   const optional = (key: keyof FirstTouch) =>
     typeof record[key] === "string" ? limited(record[key]) : undefined;
+  const referrer =
+    typeof record.referrer === "string"
+      ? referrerOrigin(record.referrer)
+      : undefined;
 
   return {
-    landingPath: limited(record.landingPath) ?? "/",
-    ...(optional("referrer") ? { referrer: optional("referrer") } : {}),
+    landingPath,
+    ...(referrer ? { referrer } : {}),
     ...(optional("utmSource") ? { utmSource: optional("utmSource") } : {}),
     ...(optional("utmMedium") ? { utmMedium: optional("utmMedium") } : {}),
     ...(optional("utmCampaign")
@@ -108,9 +132,10 @@ export function captureAttribution(
 
   try {
     const existing = storage.getItem(STORAGE_KEY);
-    const firstTouch = existing ? storedTouch(existing) ?? current : current;
+    const firstTouch = (existing && storedTouch(existing)) || current;
+    const serialized = JSON.stringify(firstTouch);
 
-    if (!existing) storage.setItem(STORAGE_KEY, JSON.stringify(firstTouch));
+    if (existing !== serialized) storage.setItem(STORAGE_KEY, serialized);
 
     return {
       ...firstTouch,
