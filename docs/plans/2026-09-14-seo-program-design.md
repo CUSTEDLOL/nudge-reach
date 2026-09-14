@@ -1,4 +1,4 @@
-# Nudge — 34-month SEO program design
+# Nudge — 3–4 month SEO program design
 
 Date: 2026-09-14. Status: approved for implementation planning.
 
@@ -88,7 +88,8 @@ source are connected.
 4. Convert organic demand into booked, attended, qualified demos and customers.
 5. Earn relevant authority through useful assets, product evidence, partners
    and real customer outcomes.
-6. Operate a repeatable 34-month measurement, publishing and refresh loop.
+6. Run a focused four-month measurement, publishing and refresh sprint that
+   leaves a repeatable monthly operating system behind.
 
 ### Non-goals
 
@@ -312,31 +313,29 @@ irrelevant guest-post networks are prohibited.
 | Period | Outcome |
 |---|---|
 | Weeks 1–2 | GSC, GA4/GTM, booking attribution, crawl baseline and KPI dashboard |
-| Months 1–3 | Technical foundation, content system and initial commercial/content cluster |
-| Months 4–6 | Query-driven improvements, integrations/comparisons and first genuine case study |
-| Months 7–12 | Deepen the best-converting India specialty and launch linkable assets |
-| Months 13–18 | Customer evidence, workflow benchmarks, partnerships and pruning |
-| Months 19–22 | Malaysia localization only if demand and sales readiness are proven |
-| Months 23–26 | Singapore localization with unique pricing, language and evidence |
-| Months 27–30 | Test UAE or reinvest in India if international evidence is weak |
-| Months 31–34 | Consolidate authority, refresh winners and optimize conversion |
+| Month 1 | Technical foundation, content system, homepage correction, clinic hub and first operational resource |
+| Month 2 | Three clinic-specialty pages, priority capability pages, supporting resources and targeted outreach foundations |
+| Month 3 | Comparison/integration pages, query-led refreshes and the first genuine case study only if attributable evidence exists |
+| Month 4 | Consolidate winning pages, improve demo conversion, refresh or prune weak content, run an authority sprint and set the next-quarter plan |
 
 Cadence:
 
 - Weekly: tracking, indexing, crawl and material traffic anomalies.
 - Monthly: queries, pages, qualified demos, lead quality and the content queue.
-- Quarterly: technical crawl, Core Web Vitals, content decay, competitors and
-  earned authority.
-- Six-monthly: market allocation, architecture and conversion review.
-- Annually: strategy reset based on customer and revenue evidence.
+- At the end of month 2: technical crawl, Core Web Vitals, content quality and
+  conversion review.
+- At the end of month 4: strategy reset and next-quarter allocation based on
+  qualified demos, customers and revenue evidence.
 
-Market pages are genuinely localized and use hreflang only when distinct market
-versions exist. A country name swap is not localization.
+International market pages are out of scope for this sprint. Revisit Malaysia,
+Singapore and UAE only after the four-month India results and sales readiness
+are reviewed. Future market pages must be genuinely localized; a country-name
+swap is not localization.
 
 ## 10. First implementation boundary
 
-The first implementation plan should cover the foundation, not all 34 months of
-pages in one release:
+The first implementation plan should cover the foundation, not all four months
+of pages in one release:
 
 1. Technical indexing and public-route corrections.
 2. Typed SEO/content registry and sitemap integration.

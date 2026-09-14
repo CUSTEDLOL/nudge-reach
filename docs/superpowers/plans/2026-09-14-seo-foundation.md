@@ -58,7 +58,7 @@
 ### Tests and operations
 
 - Create `tests/seo-registry.test.ts`, `tests/seo-indexing.test.ts`, `tests/seo-structured-data.test.ts`, `tests/clinic-hub.test.ts`, `tests/resources.test.ts`, `tests/marketing-analytics.test.ts`, `tests/cal-webhook.test.ts`, `tests/cal-webhook-route.test.ts`, and `tests/ga4-leads.test.ts`.
-- Modify `tests/admin-leads.test.ts`, `tests/landing-tracking.test.ts`, and `tests/env.test.ts`.
+- Modify `tests/admin-leads.test.ts` and `tests/env.test.ts`.
 - Create `docs/SEO_OPERATIONS.md` and `docs/SEO_BASELINE.md`.
 - Modify `PROGRESS.md` after all verification is current.
 
@@ -257,7 +257,7 @@ git commit -m "fix(seo): centralize canonical pages and truthful sitemap dates"
 - Test: `tests/seo-indexing.test.ts`
 
 **Interfaces:**
-- Produces: exported `PUBLIC_PATHS` used by the proxy and tests.
+- Produces: exported `isPublicPath(pathname)` used by the proxy and behavior tests.
 - Consumes: existing `updateSession()` behavior and Next.js metadata inheritance.
 - Later tasks rely on `/industries`, `/resources`, `/features`, `/compare`, and `/how-it-works` being anonymous.
 
@@ -266,10 +266,11 @@ git commit -m "fix(seo): centralize canonical pages and truthful sitemap dates"
 Create `tests/seo-indexing.test.ts`:
 
 ```ts
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import robots from "@/app/robots";
-import { PUBLIC_PATHS } from "@/lib/supabase/proxy-session";
+import { metadata as appMetadata } from "@/app/(app)/layout";
+import { metadata as loginMetadata } from "@/app/login/page";
+import { isPublicPath } from "@/lib/supabase/proxy-session";
 
 describe("SEO indexing controls", () => {
   it("allows crawlers to read HTML noindex directives", () => {
@@ -282,13 +283,14 @@ describe("SEO indexing controls", () => {
   });
 
   it("marks login and the authenticated app shell noindex", () => {
-    expect(readFileSync("src/app/login/page.tsx", "utf8")).toContain("index: false");
-    expect(readFileSync("src/app/(app)/layout.tsx", "utf8")).toContain("index: false");
+    expect(loginMetadata.robots).toMatchObject({ index: false, follow: false });
+    expect(appMetadata.robots).toMatchObject({ index: false, follow: false });
   });
 
   it("makes every planned marketing route family public", () => {
     for (const path of ["/industries", "/features", "/compare", "/resources", "/how-it-works"]) {
-      expect(PUBLIC_PATHS).toContain(path);
+      expect(isPublicPath(path)).toBe(true);
+      expect(isPublicPath(`${path}/example`)).toBe(true);
     }
   });
 });
@@ -298,12 +300,13 @@ describe("SEO indexing controls", () => {
 
 Run: `npm test -- tests/seo-indexing.test.ts`
 
-Expected: FAIL because `PUBLIC_PATHS` is private and login/app layouts do not
-export a robots directive.
+Expected: FAIL because `isPublicPath` and login/app robots metadata do not exist.
 
 - [ ] **Step 3: Implement explicit noindex and readable crawler rules**
 
-- Export `PUBLIC_PATHS` and append the five exact route prefixes from the test.
+- Extract and export `isPublicPath(pathname)` around the existing exact-home and
+  prefix checks, append the five marketing prefixes, and make `updateSession()`
+  call that function. Keep the raw prefix list private.
 - Add `export const metadata: Metadata = { robots: { index: false, follow: false } }`
   to `src/app/login/page.tsx` and `src/app/(app)/layout.tsx`.
 - Reduce robots.txt HTML disallows to `/api/` and `/auth/`. Authentication
@@ -453,26 +456,29 @@ git commit -m "feat(seo): add crawlable marketing page primitives"
 Create `tests/clinic-hub.test.ts`:
 
 ```ts
-import { readFileSync } from "node:fs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { metadata } from "@/app/industries/clinics/page";
+import { ClinicHub } from "@/components/marketing/clinics/clinic-hub";
+import { HeroV2 } from "@/components/marketing/v2/hero-v2";
 
-const page = readFileSync("src/app/industries/clinics/page.tsx", "utf8");
-const body = readFileSync("src/components/marketing/clinics/clinic-hub.tsx", "utf8");
-const hero = readFileSync("src/components/marketing/v2/hero-v2.tsx", "utf8");
+const pageHtml = renderToStaticMarkup(createElement(ClinicHub));
+const heroHtml = renderToStaticMarkup(createElement(HeroV2));
 
 describe("clinic SEO landing page", () => {
   it("owns the clinic receptionist intent with concrete front-desk actions", () => {
-    expect(page).toContain('metadataFor("/industries/clinics")');
-    expect(body).toContain("AI Front Desk for clinics");
+    expect(metadata.alternates?.canonical).toBe("https://nudgeagent.app/industries/clinics");
+    expect(pageHtml).toContain("AI Front Desk for clinics");
     for (const phrase of ["real calendar", "follow", "payment", "human handoff", "official WhatsApp Cloud API"]) {
-      expect(body.toLowerCase()).toContain(phrase.toLowerCase());
+      expect(pageHtml.toLowerCase()).toContain(phrase.toLowerCase());
     }
   });
 
   it("does not claim generic CRM leadership or unsupported proof", () => {
-    expect(`${page}\n${body}\n${hero}`).not.toContain("The #1");
-    expect(`${page}\n${body}`.toLowerCase()).not.toContain("best whatsapp crm");
-    expect(`${page}\n${body}`).not.toMatch(/\d+%|trusted by \d+/);
+    expect(`${pageHtml}\n${heroHtml}`).not.toContain("The #1");
+    expect(pageHtml.toLowerCase()).not.toContain("best whatsapp crm");
+    expect(pageHtml).not.toMatch(/\d+%|trusted by \d+/);
   });
 });
 ```
@@ -558,6 +564,7 @@ git commit -m "feat(seo): launch clinic AI Front Desk hub"
 
 **Files:**
 - Create: `src/content/resources/manifest.ts`
+- Create: `src/content/resources/loaders.ts`
 - Create: `src/content/resources/whatsapp-appointment-booking-for-clinics.tsx`
 - Create: `src/app/resources/page.tsx`
 - Create: `src/app/resources/[slug]/page.tsx`
@@ -568,7 +575,8 @@ git commit -m "feat(seo): launch clinic AI Front Desk hub"
 
 **Interfaces:**
 - Produces: `ResourceRecord`, `RESOURCE_MANIFEST`, `ResourceSlug`, `publishedResources()`, `resourceBySlug(slug)`.
-- Resource loader map lives only in the dynamic page and has exactly the manifest's published slugs.
+- The typed resource loader map has exactly the manifest's published slugs and is
+  consumed by the route and behavior tests.
 - Consumes: metadata/structured-data primitives from Tasks 1 and 3.
 
 - [ ] **Step 1: Write failing resource-manifest tests**
@@ -630,7 +638,7 @@ The first record is:
 Article JSON-LD and this exact loader key:
 
 ```ts
-const LOADERS = {
+export const RESOURCE_LOADERS = {
   "whatsapp-appointment-booking-for-clinics": () =>
     import("@/content/resources/whatsapp-appointment-booking-for-clinics"),
 } as const;
@@ -670,10 +678,12 @@ beyond its permitted limit and do not use competitor statistics as Nudge facts.
 
 - [ ] **Step 5: Verify manifest, routes and rendered facts**
 
-Extend `tests/resources.test.ts` to read both resource files and assert every
-published slug has a loader, title and section headings, every draft has no
-loader, and the guide contains `24-hour`, `approved template`, `human handoff`,
-and `/industries/clinics`.
+Extend `tests/resources.test.ts` to compare published manifest slugs with
+`Object.keys(RESOURCE_LOADERS)`, load the guide through that map, and render it
+with `renderToStaticMarkup`. Assert the rendered result is an article with one
+ordered H2 outline beneath the route-owned H1, visible author/date, safe
+primary-source links, and a link back to `/industries/clinics`. Draft and
+unknown slugs must not load.
 
 Run: `npm test -- tests/resources.test.ts tests/seo-registry.test.ts tests/seo-structured-data.test.ts`
 
@@ -703,7 +713,6 @@ git commit -m "feat(seo): add typed resources and clinic booking guide"
 - Modify: `src/components/marketing/book-demo.tsx`
 - Modify: `src/components/marketing/get-access.tsx`
 - Test: `tests/marketing-analytics.test.ts`
-- Modify: `tests/landing-tracking.test.ts`
 
 **Interfaces:**
 - Produces: `pushMarketingEvent(event)`, `captureAttribution(location, referrer, storage, cookie)`, `calMetadata(attribution)`.
@@ -794,7 +803,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit browser measurement**
 
 ```bash
-git add src/modules/marketing/analytics.ts src/components/marketing/book-demo.tsx src/components/marketing/get-access.tsx tests/marketing-analytics.test.ts tests/landing-tracking.test.ts
+git add src/modules/marketing/analytics.ts src/components/marketing/book-demo.tsx src/components/marketing/get-access.tsx tests/marketing-analytics.test.ts
 git commit -m "feat(analytics): measure demo intent and Cal bookings"
 ```
 
@@ -1137,8 +1146,8 @@ git commit -m "docs(seo): add organic growth baseline and runbook"
   the first resource, browser and authoritative booking measurement, lead
   quality, baseline and operations. The remaining specialty/capability pages,
   About/legal identity, case studies, authority outreach and international pages
-  remain correctly sequenced after the foundation; the 34-month roadmap stays in
-  the approved design.
+  remain correctly sequenced through months 2–4; the four-month roadmap stays
+  in the approved design.
 - **Dependency boundary:** Tasks 1–6 run without production Supabase, GA4, GSC or
   Cal secrets. Tasks 7–8 build and test safely with mocks but production
   activation requires the documented database, RLS, Cal, GTM/GA4 and account

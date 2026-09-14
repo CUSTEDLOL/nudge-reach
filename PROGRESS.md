@@ -1,6 +1,6 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
-## 34-month SEO program design approved (2026-09-14) ✅
+## 3–4 month SEO program design approved (2026-09-14) ✅
 
 - Audited the live and local marketing surface, current search results,
   crawl/index controls, sitemap, public-route gate, conversion paths, trust
@@ -11,7 +11,7 @@
   positioning, mass AI content and programmatic city pages are explicitly out.
 - Added `docs/plans/2026-09-14-seo-program-design.md` with page/query ownership,
   content and authority systems, Cal.com-to-qualified-lead measurement, technical
-  architecture, build gates and the 34-month operating cadence.
+  architecture, build gates and the four-month operating cadence.
 - Documentation only. No public copy, indexing rule, analytics account,
   conversion event or marketing route has changed yet; implementation planning
   is captured in `docs/superpowers/plans/2026-09-14-seo-foundation.md` as nine
