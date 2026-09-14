@@ -1,7 +1,12 @@
 import type { ComponentType } from "react";
-import type { PublishedResource } from "@/content/resources/manifest";
+import type {
+  PublishedResource,
+  ResourceRecord,
+} from "@/content/resources/manifest";
 
-type ResourceModule = { default: ComponentType };
+type ResourceModule = {
+  default: ComponentType<{ resource: ResourceRecord }>;
+};
 type ResourceLoader = () => Promise<ResourceModule>;
 
 export const RESOURCE_LOADERS = {

@@ -3,7 +3,12 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/marketing/seo/json-ld";
 import { LandingShell } from "@/components/marketing/seo/landing-shell";
 import { RESOURCE_LOADERS } from "@/content/resources/loaders";
-import { publishedResources, resourceBySlug } from "@/content/resources/manifest";
+import {
+  RESOURCE_MANIFEST,
+  resourceBySlug,
+  resourcePath,
+  resourceRouteParams,
+} from "@/content/resources/manifest";
 import { metadataFor, SITE_ORIGIN } from "@/modules/marketing/seo-pages";
 import { articleJsonLd, breadcrumbJsonLd } from "@/modules/marketing/structured-data";
 
@@ -12,7 +17,7 @@ interface ResourcePageProps {
 }
 
 export function generateStaticParams() {
-  return publishedResources().map((resource) => ({ slug: resource.slug }));
+  return resourceRouteParams(RESOURCE_MANIFEST);
 }
 
 export async function generateMetadata({ params }: ResourcePageProps): Promise<Metadata> {
@@ -20,7 +25,7 @@ export async function generateMetadata({ params }: ResourcePageProps): Promise<M
   const resource = resourceBySlug(slug);
   if (!resource) notFound();
 
-  const path = `/resources/${resource.slug}` as const;
+  const path = resourcePath(resource.slug);
   return {
     ...metadataFor(path),
     alternates: { canonical: `${SITE_ORIGIN}${path}` },
@@ -32,7 +37,7 @@ export default async function ResourcePage({ params }: ResourcePageProps) {
   const resource = resourceBySlug(slug);
   if (!resource) notFound();
 
-  const path = `/resources/${resource.slug}` as const;
+  const path = resourcePath(resource.slug);
   const { default: ResourceContent } = await RESOURCE_LOADERS[resource.slug]();
   const breadcrumbs = [
     { name: "Home", path: "/" },
@@ -62,7 +67,7 @@ export default async function ResourcePage({ params }: ResourcePageProps) {
         ctaBody="Walk through real availability, a confirmed booking, compliant follow-up and human handoff in one practical Nudge demo."
         surface="resource"
       >
-        <ResourceContent />
+        <ResourceContent resource={resource} />
       </LandingShell>
     </>
   );

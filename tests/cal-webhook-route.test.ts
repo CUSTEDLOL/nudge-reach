@@ -7,7 +7,17 @@ const state = vi.hoisted(() => ({
     CAL_EVENT_TYPE_SLUG: "30min",
   },
 }));
-const upsert = vi.hoisted(() => vi.fn(async () => ({ id: "demo-booking-1" })));
+type DemoBookingUpsertInput = {
+  where: Record<string, unknown>;
+  create: Record<string, unknown>;
+  update: Record<string, unknown>;
+};
+const upsert = vi.hoisted(() =>
+  vi.fn(async (input: DemoBookingUpsertInput) => {
+    void input;
+    return { id: "demo-booking-1" };
+  })
+);
 
 vi.mock("@/lib/env", () => ({ env: state.env }));
 vi.mock("@/lib/db", () => ({ prisma: { demoBooking: { upsert } } }));
@@ -55,6 +65,32 @@ function request(
   return new Request("http://localhost/api/webhooks/cal", {
     method: "POST",
     body,
+    headers,
+  });
+}
+
+function byteRequest(
+  body: Uint8Array,
+  options: { signature?: string | null; version?: string | null } = {}
+) {
+  const requestBody = new ArrayBuffer(body.byteLength);
+  new Uint8Array(requestBody).set(body);
+  const headers = new Headers({ "content-type": "application/json" });
+  const signed =
+    options.signature === undefined
+      ? crypto
+          .createHmac("sha256", "cal-webhook-secret")
+          .update(body)
+          .digest("hex")
+      : options.signature;
+  const version =
+    options.version === undefined ? "2021-10-20" : options.version;
+  if (signed !== null) headers.set("x-cal-signature-256", signed);
+  if (version !== null) headers.set("x-cal-webhook-version", version);
+
+  return new Request("http://localhost/api/webhooks/cal", {
+    method: "POST",
+    body: requestBody,
     headers,
   });
 }
@@ -184,6 +220,21 @@ describe("POST /api/webhooks/cal", () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["malformed JSON", "{broken", "2099-01-01"],
+    ["unsupported version", JSON.stringify(validPayload), "2099-01-01"],
+  ])(
+    "rejects an invalid signature before a combined %s/version failure",
+    async (_name, body, version) => {
+      const response = await POST(
+        request(body, { signature: "0".repeat(64), version })
+      );
+
+      expect(response.status).toBe(401);
+      expect(upsert).not.toHaveBeenCalled();
+    }
+  );
+
   it("fails closed before database access when the webhook secret is absent", async () => {
     state.env.CAL_WEBHOOK_SECRET = undefined;
     const body = JSON.stringify(validPayload);
@@ -203,6 +254,22 @@ describe("POST /api/webhooks/cal", () => {
 
     expect((await POST(request(badJson))).status).toBe(400);
     expect((await POST(request(badSchema))).status).toBe(400);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 without database access for signed invalid UTF-8", async () => {
+    const marker = "INVALID_UTF8_MARKER";
+    const otherwiseValid = JSON.stringify({ ...validPayload, ignored: marker });
+    const markerOffset = Buffer.from(otherwiseValid).indexOf(marker);
+    const invalidUtf8 = Buffer.concat([
+      Buffer.from(otherwiseValid.slice(0, markerOffset)),
+      Buffer.from([0xc3, 0x28]),
+      Buffer.from(otherwiseValid.slice(markerOffset + marker.length)),
+    ]);
+
+    const response = await POST(byteRequest(invalidUtf8));
+
+    expect(response.status).toBe(400);
     expect(upsert).not.toHaveBeenCalled();
   });
 

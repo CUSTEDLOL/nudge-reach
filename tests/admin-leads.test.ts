@@ -41,6 +41,7 @@ import { updateLeadAction } from "@/app/admin/leads/actions";
 import AdminLeadsPage from "@/app/admin/leads/page";
 import { ToastProvider } from "@/components/ui/toast";
 import {
+  formatBookingStart,
   leadCounts,
   leadsList,
   newLeadsCount,
@@ -82,6 +83,30 @@ function mockConcurrentBookingUpdates() {
 }
 
 describe("updateLead", () => {
+  it("rejects runtime-invalid lead kinds and opaque IDs before database access", async () => {
+    const call = updateLead as unknown as (
+      kind: string,
+      id: string,
+      patch: { status?: string }
+    ) => ReturnType<typeof updateLead>;
+
+    await expect(call("patient", "lead_123", { status: "qualified" })).resolves.toEqual({
+      ok: false,
+      error: "Bad lead reference.",
+    });
+    await expect(
+      call("booking", "person@example.com", { status: "qualified" })
+    ).resolves.toEqual({ ok: false, error: "Bad lead reference." });
+    await expect(
+      call("booking", "a".repeat(129), { status: "qualified" })
+    ).resolves.toEqual({ ok: false, error: "Bad lead reference." });
+    expect(prisma.accessRequest.update).not.toHaveBeenCalled();
+    expect(prisma.waitlistSignup.update).not.toHaveBeenCalled();
+    expect(prisma.demoBooking.update).not.toHaveBeenCalled();
+    expect(prisma.demoBooking.updateMany).not.toHaveBeenCalled();
+    expect(prisma.demoBooking.findUnique).not.toHaveBeenCalled();
+  });
+
   it("rejects unknown statuses and empty patches", async () => {
     expect((await updateLead("access", "a1", { status: "hot" })).ok).toBe(false);
     expect((await updateLead("access", "a1", {})).ok).toBe(false);
@@ -166,6 +191,17 @@ describe("updateLead", () => {
 });
 
 describe("leadsList / newLeadsCount", () => {
+  it("formats stored booking instants in the configured operator time zone", () => {
+    const instant = new Date("2026-09-20T10:00:00.000Z");
+
+    expect(formatBookingStart(instant, "Asia/Kolkata")).toContain(
+      "20 Sept 2026, 15:30 (Asia/Kolkata)"
+    );
+    expect(formatBookingStart(instant, "America/New_York")).toContain(
+      "20 Sept 2026, 06:00 (America/New_York)"
+    );
+  });
+
   it("shows and accepts the demo-booking source filter", async () => {
     prisma.demoBooking.findMany.mockResolvedValue([]);
     prisma.accessRequest.groupBy.mockResolvedValue([]);
@@ -216,7 +252,9 @@ describe("leadsList / newLeadsCount", () => {
       source: "google",
       status: "qualified",
     });
-    expect(page.rows[0].scheduledFor).toContain("20 Sept 2026");
+    expect(page.rows[0].scheduledFor).toContain(
+      "20 Sept 2026, 15:30 (Asia/Kolkata)"
+    );
     expect(page.rows[1]).toMatchObject({ kind: "waitlist", name: "Glow Derma", secondary: "Pune", vertical: "clinic", status: "new" });
     expect(page.rows[2]).toMatchObject({ kind: "access", name: "Dr Rao", secondary: "rao@clinic.in", vertical: null });
     expect(page).toMatchObject({ page: 1, pageCount: 1, total: 3 });
@@ -285,7 +323,9 @@ describe("leadsList / newLeadsCount", () => {
       createElement(ToastProvider, null, createElement(LeadRowItem, { lead: rows[0] }))
     );
     expect(html).toContain('href="mailto:mehta@clinic.in"');
-    expect(html).toContain("Scheduled 20 Sept 2026");
+    expect(html).toContain(
+      "Scheduled 20 Sept 2026, 15:30 (Asia/Kolkata)"
+    );
     expect(html).not.toContain("wa.me");
   });
 
@@ -383,6 +423,7 @@ function bookingAction(status?: string, notes?: string) {
 
 describe("booking lead analytics", () => {
   it("sends qualify_lead once after a persisted contacted-to-qualified transition", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     prisma.demoBooking.findUnique.mockResolvedValue({
       status: "contacted",
       gaClientId: "12345.67890",
@@ -398,6 +439,8 @@ describe("booking lead analytics", () => {
       clientId: "12345.67890",
       leadId: "b1",
     });
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 
   it("does not send an event for a notes-only save", async () => {
@@ -406,6 +449,46 @@ describe("booking lead analytics", () => {
       message: "Note saved.",
     });
     expect(sendGa4LeadEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not report a deliberately skipped GA4 delivery as a failure", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    prisma.demoBooking.findUnique.mockResolvedValue({
+      status: "contacted",
+      gaClientId: "12345.67890",
+    });
+    sendGa4LeadEvent.mockResolvedValueOnce("skipped");
+
+    await expect(bookingAction("qualified")).resolves.toEqual({
+      ok: true,
+      message: "Marked qualified.",
+    });
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("reports a failed GA4 delivery without lead, client, Cal, or landing identifiers", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    prisma.demoBooking.findUnique.mockResolvedValue({
+      status: "contacted",
+      gaClientId: "12345.67890",
+    });
+    sendGa4LeadEvent.mockResolvedValueOnce("failed");
+
+    await expect(bookingAction("qualified")).resolves.toEqual({
+      ok: true,
+      message: "Marked qualified.",
+    });
+    expect(error).toHaveBeenCalledWith(
+      "[analytics] GA4 lead-event delivery failed",
+      { event: "qualify_lead" }
+    );
+    const logged = JSON.stringify(error.mock.calls);
+    expect(logged).not.toContain("b1");
+    expect(logged).not.toContain("12345.67890");
+    expect(logged).not.toContain("calUid");
+    expect(logged).not.toContain("landing");
+    error.mockRestore();
   });
 
   it.each([
@@ -427,6 +510,7 @@ describe("booking lead analytics", () => {
   });
 
   it("keeps a successful admin result when analytics delivery throws", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     prisma.demoBooking.findUnique.mockResolvedValue({
       status: "contacted",
       gaClientId: "12345.67890",
@@ -437,6 +521,11 @@ describe("booking lead analytics", () => {
       ok: true,
       message: "Marked qualified.",
     });
+    expect(error).toHaveBeenCalledWith(
+      "[analytics] GA4 lead-event delivery failed",
+      { event: "qualify_lead" }
+    );
+    error.mockRestore();
   });
 
   it("emits once when two same-target booking actions race", async () => {

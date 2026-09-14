@@ -21,7 +21,7 @@ describe("SEO page registry", () => {
 
   it("uses reviewed dates instead of the current clock", () => {
     expect(seoPage("/").modifiedAt).toBe("2026-09-12");
-    expect(seoPage("/industries/clinics").modifiedAt).toBe("2026-09-14");
+    expect(seoPage("/industries/clinics").modifiedAt).toBe("2026-09-15");
     expect(seoPage("/resources")).toMatchObject({
       modifiedAt: "2026-09-14",
       changeFrequency: "weekly",
@@ -34,7 +34,7 @@ describe("SEO page registry", () => {
     });
     expect(seoPage("/pricing").modifiedAt).toBe("2026-09-12");
     expect(seoPage("/faq").modifiedAt).toBe("2026-07-19");
-    expect(seoPage("/privacy").modifiedAt).toBe("2026-07-19");
+    expect(seoPage("/privacy").modifiedAt).toBe("2026-09-15");
     expect(seoPage("/terms").modifiedAt).toBe("2026-07-05");
   });
 

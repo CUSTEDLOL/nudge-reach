@@ -32,7 +32,7 @@ export function LandingShell({
       <main className="pt-32">
         <div className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
           <Breadcrumbs items={breadcrumbs} />
-          <p className="mt-10 font-mono text-sm font-bold uppercase tracking-[0.16em] text-[#06c167]">
+          <p className="mt-10 font-mono text-sm font-bold uppercase tracking-[0.16em] text-brand-700">
             {eyebrow}
           </p>
           <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-ink sm:text-6xl">
@@ -45,7 +45,7 @@ export function LandingShell({
             <p className="mt-3 max-w-2xl text-white/75">{ctaBody}</p>
             <LaunchDemoButton
               surface={surface}
-              className="mt-6 inline-flex rounded-xl bg-[#06c167] px-5 py-3 font-bold text-white hover:bg-[#05ac5d]"
+              className="mt-6 inline-flex rounded-xl bg-brand-700 px-5 py-3 font-bold text-white hover:bg-brand-800"
             >
               Book a Demo
             </LaunchDemoButton>

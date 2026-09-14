@@ -81,9 +81,9 @@ export function ClinicHub() {
         { name: "Home", path: "/" },
         { name: "Clinics", path: "/industries/clinics" },
       ]}
-      eyebrow="AI Front Desk for clinics"
-      title="An AI Front Desk for clinics, on WhatsApp."
-      intro="Replies are only the start. Nudge checks your real calendar, creates bookings, follows up when a lead goes quiet, shares payment links and brings in your team when a conversation needs a person."
+      eyebrow="AI Front Desk for clinics in India"
+      title="An AI Front Desk for India's aesthetic dermatology, cosmetic dental and hair transplant clinics."
+      intro="Nudge turns WhatsApp enquiries into a clear consultation journey: it answers from your clinic's knowledge, checks your real calendar, creates confirmed bookings, follows up compliantly, shares payment links and brings in your team when a conversation needs a person."
       ctaTitle="See Nudge run your clinic's WhatsApp"
       ctaBody="Walk through an enquiry, a real booking, a compliant follow-up and a human handoff in one practical demo."
       surface="clinic"
@@ -99,8 +99,9 @@ export function ClinicHub() {
                 Where clinic revenue leaks
               </h2>
               <p className="mt-4 max-w-md leading-7 text-ink/65">
-                The enquiry rarely disappears in one dramatic moment. It slips
-                away between a message, a slot and the next follow-up.
+                For Indian aesthetic dermatology, cosmetic dental and hair
+                transplant teams, an enquiry can slip away between the first
+                message, a consultation slot and the next follow-up.
               </p>
             </div>
 

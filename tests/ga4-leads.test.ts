@@ -4,6 +4,7 @@ const { analyticsEnv, fetchMock } = vi.hoisted(() => ({
   analyticsEnv: {
     GA4_MEASUREMENT_ID: undefined as string | undefined,
     GA4_API_SECRET: undefined as string | undefined,
+    NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: "true" as "true" | "false",
   },
   fetchMock: vi.fn(),
 }));
@@ -11,7 +12,10 @@ const { analyticsEnv, fetchMock } = vi.hoisted(() => ({
 vi.mock("@/lib/env", () => ({ env: analyticsEnv }));
 
 import { envSchema } from "@/lib/env-schema";
-import { sendGa4LeadEvent } from "@/modules/marketing/ga4";
+import {
+  sendGa4LeadEvent,
+  type Ga4LeadEventName,
+} from "@/modules/marketing/ga4";
 
 const baseEnv = {
   NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
@@ -23,6 +27,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   analyticsEnv.GA4_MEASUREMENT_ID = undefined;
   analyticsEnv.GA4_API_SECRET = undefined;
+  analyticsEnv.NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED = "true";
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -45,6 +50,21 @@ describe("GA4 lead-event configuration", () => {
 });
 
 describe("sendGa4LeadEvent", () => {
+  it("skips correlated delivery while the public attribution gate is off", async () => {
+    analyticsEnv.GA4_MEASUREMENT_ID = "G-TEST123";
+    analyticsEnv.GA4_API_SECRET = "server-secret";
+    analyticsEnv.NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED = "false";
+
+    await expect(
+      sendGa4LeadEvent({
+        name: "qualify_lead",
+        clientId: "12345.67890",
+        leadId: "lead_123",
+      })
+    ).resolves.toBe("skipped");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     [undefined, "server-secret", "12345.67890"],
     ["G-TEST123", undefined, "12345.67890"],
@@ -85,6 +105,29 @@ describe("sendGa4LeadEvent", () => {
     ).resolves.toBe("skipped");
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["unknown event", "page_view", "lead_123"],
+    ["empty lead ID", "qualify_lead", ""],
+    ["oversized lead ID", "qualify_lead", "a".repeat(129)],
+    ["email-shaped lead ID", "qualify_lead", "person@example.com"],
+    ["path-shaped lead ID", "qualify_lead", "booking/lead_123"],
+  ])(
+    "skips a runtime-invalid %s without network access",
+    async (_kind, name, leadId) => {
+      analyticsEnv.GA4_MEASUREMENT_ID = "G-TEST123";
+      analyticsEnv.GA4_API_SECRET = "server-secret";
+
+      await expect(
+        sendGa4LeadEvent({
+          name: name as Ga4LeadEventName,
+          clientId: "12345.67890",
+          leadId,
+        })
+      ).resolves.toBe("skipped");
+      expect(fetchMock).not.toHaveBeenCalled();
+    }
+  );
 
   it("posts one recommended event with only client_id and internal lead_id", async () => {
     analyticsEnv.GA4_MEASUREMENT_ID = "G-TEST123";

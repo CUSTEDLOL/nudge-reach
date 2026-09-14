@@ -6,8 +6,9 @@ import {
   type AdminActionResult,
 } from "@/modules/admin/actions";
 import {
+  isLeadKind,
+  isOpaqueLeadId,
   updateLead,
-  type LeadKind,
   type LeadStatus,
 } from "@/modules/admin/leads";
 import {
@@ -21,17 +22,18 @@ const LEAD_EVENT_BY_STATUS: Partial<Record<LeadStatus, Ga4LeadEventName>> = {
   converted: "close_convert_lead",
 };
 
+function reportGa4Failure(event: Ga4LeadEventName) {
+  console.error("[analytics] GA4 lead-event delivery failed", { event });
+}
+
 /** Founder-only: move a lead through the pipeline and/or save a note. */
 export async function updateLeadAction(
   formData: FormData
 ): Promise<AdminActionResult> {
   return runFounderAction(async () => {
-    const kind = String(formData.get("kind") ?? "") as LeadKind;
+    const kind = String(formData.get("kind") ?? "");
     const id = String(formData.get("id") ?? "");
-    if (
-      (kind !== "access" && kind !== "waitlist" && kind !== "booking") ||
-      !id
-    ) {
+    if (!isLeadKind(kind) || !isOpaqueLeadId(id)) {
       return { ok: false, message: "Bad lead reference." };
     }
     const status = formData.has("status")
@@ -50,13 +52,15 @@ export async function updateLeadAction(
       : undefined;
     if (eventName && res.transition?.gaClientId) {
       try {
-        await sendGa4LeadEvent({
+        const delivery = await sendGa4LeadEvent({
           name: eventName,
           clientId: res.transition.gaClientId,
           leadId: id,
         });
+        if (delivery === "failed") reportGa4Failure(eventName);
       } catch {
         // Lead updates remain authoritative if optional analytics is unavailable.
+        reportGa4Failure(eventName);
       }
     }
 

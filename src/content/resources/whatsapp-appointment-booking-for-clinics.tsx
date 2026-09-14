@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { ArrowUpRight, Check, ExternalLink } from "lucide-react";
+import {
+  formatResourceDate,
+  type ResourceRecord,
+} from "@/content/resources/manifest";
 
 const JOURNEY_EVENTS = [
   "Enquiry received",
@@ -26,16 +30,23 @@ const sectionClass = "border-t border-ink/15 pt-9 sm:pt-11";
 const headingClass = "text-2xl font-black tracking-tight text-ink sm:text-3xl";
 const bodyClass = "mt-4 space-y-4 text-[1.0625rem] leading-8 text-ink/70";
 
-export default function WhatsappAppointmentBookingForClinicsGuide() {
+export default function WhatsappAppointmentBookingForClinicsGuide({
+  resource,
+}: {
+  resource: ResourceRecord;
+}) {
   return (
     <article aria-label="WhatsApp appointment booking guide" className="mx-auto max-w-3xl">
       <header className="mb-12 border-y-2 border-ink py-5 sm:flex sm:items-center sm:justify-between sm:gap-8">
         <div>
-          <p className="text-sm font-bold text-ink">By Nudge team</p>
+          <p className="text-sm font-bold text-ink">By {resource.authorName}</p>
           <p className="mt-1 text-sm text-ink/55">Operational product guidance</p>
         </div>
         <p className="mt-4 text-sm text-ink/65 sm:mt-0 sm:text-right">
-          Published <time dateTime="2026-09-14">14 September 2026</time>
+          Published{` `}
+          <time dateTime={resource.publishedAt}>
+            {formatResourceDate(resource.publishedAt)}
+          </time>
         </p>
       </header>
 
@@ -246,7 +257,7 @@ export default function WhatsappAppointmentBookingForClinicsGuide() {
           <ul className="mt-6 space-y-3">
             {CHECKLIST.map((item) => (
               <li key={item} className="flex gap-3 rounded-xl border border-ink/10 bg-white p-4 leading-7 text-ink/70">
-                <span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-md bg-[#06c167] text-white">
+                <span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-md bg-brand-700 text-white">
                   <Check className="h-3.5 w-3.5" aria-hidden />
                 </span>
                 {item}
@@ -264,7 +275,7 @@ export default function WhatsappAppointmentBookingForClinicsGuide() {
             </p>
             <Link
               href="/industries/clinics"
-              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#06c167] px-5 py-3 font-bold text-white transition-colors hover:bg-[#05ac5d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-700 px-5 py-3 font-bold text-white transition-colors hover:bg-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               Explore the clinic AI Front Desk
               <ArrowUpRight className="h-4 w-4" aria-hidden />

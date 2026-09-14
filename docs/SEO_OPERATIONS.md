@@ -2,6 +2,10 @@
 
 Owner: founder/growth operator, with engineering for releases and incidents
 Program: **four-month India sprint**
+Reporting timezone: **`Asia/Kolkata`** (IST, UTC+05:30). Convert its calendar
+boundaries to UTC when filtering stored timestamps. Record operational actions
+with an ISO 8601 timestamp including its numeric offset; if the operator works
+elsewhere, also record the operator's IANA timezone.
 Checkpoints: end of **month 2** and end of **month 4**. Quarterly reviews apply
 only after the sprint if the program is renewed; they are not extra months in
 this sprint.
@@ -10,18 +14,64 @@ Never put secrets, raw webhook bodies, contact details, patient information,
 Cal notes, meeting URLs or conversation content in tickets, analytics, logs or
 this runbook.
 
-## Production activation gates
+## Production release and activation gates
 
-Before calling measurement live:
+Keep the reviewed build and Cal ingestion inactive while the database boundary is
+prepared. First-touch attribution and the new GA4 conversion measurement also
+remain inactive pending their separate approval gates below. Before calling
+measurement live:
 
-- [ ] Deploy the reviewed release and repeat the anonymous HTTP/render checks.
-- [ ] Apply the Prisma schema with the authorized production workflow.
-- [ ] Run the repository RLS step and verify `pg_tables.rowsecurity = true` for
-  `DemoBooking`; confirm there are no browser policies for this server-only table.
-- [ ] Complete Search Console, GTM/GA4 and Cal.com setup below.
+- [ ] Identify the authorized database and deployment operators, confirm the
+  exact production connection target, take the required backup, and record the
+  reviewed commit and rollback owner without copying credentials.
+- [ ] Begin a documented **maintenance/no-ingestion window**. Keep the Cal.com
+  webhook absent or disabled, do not deploy the new application code, and stop
+  any other path that could use the new table until the database checks below
+  pass.
+- [ ] Apply the additive Prisma schema with the authorized production workflow:
+  `npm run db:push`.
+- [ ] Immediately run `npm run db:rls` in the same window. Do not restore traffic
+  or proceed to deployment between schema push and RLS.
+- [ ] Verify `DemoBooking` has RLS enabled and no browser policies. Run the
+  following in the production SQL editor using an authorized database role:
+
+  ```sql
+  select tablename, rowsecurity
+  from pg_tables
+  where schemaname = 'public' and tablename = 'DemoBooking';
+
+  select policyname, roles, cmd
+  from pg_policies
+  where schemaname = 'public' and tablename = 'DemoBooking';
+  ```
+
+  The first query must return one row with `rowsecurity = true`, and the policy
+  query must return zero rows. With no policy, browser roles cannot select or
+  mutate rows through the Data API. Any other result keeps the window closed.
+  `db:push` and `db:rls` are separate, non-atomic commands; the no-ingestion
+  window is what makes their ordering safe.
+- [ ] Deploy the reviewed application code with Cal ingestion still inactive,
+  `NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED` set to the exact value `false`, and
+  no new GA4 event tags or server credentials activated. Repeat the anonymous
+  HTTP/render checks before restoring normal site traffic.
+- [ ] Enable the Cal.com webhook only after its server-only secret, event slug,
+  signed test and database checks below pass. A Cal booking may run without
+  browser attribution.
+- [ ] Complete Search Console setup below.
+- [ ] First-touch attribution and the new GA4 conversion measurement stay
+  inactive until the consent, retention, deletion, access, and configuration
+  review is approved and every GTM/GA4 gate below has evidence. This does not
+  remove the root GTM loader or suppress aggregate CTA/form `dataLayer` events.
 - [ ] Record operator, timestamp, property/container/event-type IDs and evidence
   links without copying credentials or webhook payloads.
-- [ ] Keep simulation as the default until every live gate is evidenced.
+- [ ] Keep simulation as the product default until every unrelated live-product
+  gate is evidenced.
+
+The prior evidence boundary is unchanged: interactive/database conversion E2Es
+remain pending until the four flows listed under **End-to-end activation debt**
+run against an authorized disposable or staging environment. The public
+legal-entity identity and qualified legal review remain pending; neither this
+runbook nor passing application tests closes that publication debt.
 
 ## Search Console domain property and sitemap
 
@@ -43,6 +93,16 @@ Before calling measurement live:
   complete indexed-page count.
 
 ## GTM and GA4
+
+Activation rule: leave `NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED` at the exact
+value `false`, do not publish the new GA4 event tags in the existing GTM
+container, and leave `GA4_MEASUREMENT_ID` / `GA4_API_SECRET` unset until the
+public privacy notice, consent behavior, retention/deletion schedule, access
+controls and exact production configuration have received the required approval.
+Code availability is not authorization to collect. Only the exact value `true`
+enables Nudge's first-touch browser storage, `_ga` read and Cal attribution
+forwarding; the root GTM loader and aggregate CTA/form `dataLayer` events are a
+separate control surface.
 
 Confirm the active production web stream and GTM container before changing tags.
 Confirm the production Google tag/config tag uses the intended Measurement ID,
@@ -74,8 +134,15 @@ load. Do not infer this from the repository's GTM loader alone.
   treatment with the reporting owner. Keep `demo_cta_click` diagnostic.
 - [ ] Configure server-only `GA4_MEASUREMENT_ID` and `GA4_API_SECRET`; neither
   may use a `NEXT_PUBLIC_` prefix.
-- [ ] Use GA4's validation/debug destination before production collection where
-  practical. Inspect field names, not real contact values.
+- [ ] Before production collection, send the same restricted synthetic payload
+  to `https://www.google-analytics.com/debug/mp/collect` and inspect
+  `validationMessages`. The validation endpoint does not add events to reports
+  and does not validate the API secret, so separately confirm the secret and
+  Measurement ID without exposing them.
+- [ ] An HTTP 2xx from `/mp/collect` confirms transport only; Google can return
+  2xx for malformed, invalid or unprocessed events. Require an empty validation
+  result first, then confirm the non-sensitive test event in DebugView/Realtime
+  after collection is enabled.
 - [ ] Verify the server payload contains only event name, validated numeric
   two-part `client_id` and `lead_id=booking:<internal-id>`—never name, email,
   phone, Cal UID, notes, calendar time, landing URL or raw attribution. These
@@ -104,8 +171,9 @@ load. Do not infer this from the repository's GTM loader alone.
   `2021-10-20` and the default shape contains `triggerEvent` plus `payload.uid`,
   `payload.type`, `payload.startTime`, `payload.attendees` and optional
   `payload.metadata`. Do not record field values or the body.
-- [ ] Confirm the deployed event will not exceed the deliberate ten-attendee
-  ingress cap. If it can, review and test the cap before activation.
+- [ ] The ten-attendee ingress cap remains an activation debt: confirm the real
+  deployed event cannot exceed it. If it can, review and test any cap change
+  before activation; do not silently raise or mark the existing debt complete.
 - [ ] Make one non-sensitive test booking. Confirm one `DemoBooking` row with the
   expected event type and internal attribution fields.
 - [ ] Separately send a correctly signed, non-sensitive fixture twice to the
@@ -116,6 +184,28 @@ load. Do not infer this from the repository's GTM loader alone.
   internal row ID and pass/fail—not the raw fixture or attendee details.
 - [ ] Confirm Cal browser success produces aggregate `generate_lead`; treat the
   signed webhook/database row as authoritative.
+
+## End-to-end activation debt
+
+Unit and route tests do not replace these external-state checks. In an authorized
+disposable or staging environment, record evidence for all four before calling
+the conversion path complete:
+
+- [ ] A rendered demo CTA emits exactly one `demo_cta_click` and still opens the
+  intended Cal flow.
+- [ ] A Cal browser dry-run emits aggregate `generate_lead` without creating an
+  authoritative booking row.
+- [ ] One correctly signed fixture persists, and a second controlled send leaves
+  one row with unchanged first-touch attribution.
+- [ ] An authenticated booking qualification succeeds with GA4 unconfigured.
+  Separately validate the restricted synthetic payload at `/debug/mp/collect`.
+  Only after the approval gates above, configure credentials for a dedicated
+  non-production GA4 property, repeat the qualification through the code's real
+  `/mp/collect` boundary, and confirm the non-sensitive event in DebugView.
+
+These interactive/database conversion E2Es remain pending until actual evidence
+is linked here. The legal-entity identity and qualified legal review remain
+pending independently and are not resolved by technical E2E evidence.
 
 ## Weekly incident check
 
@@ -156,7 +246,7 @@ same denominator. Separate brand from non-brand and organic from other sources.
 
 | Column | Definition and source |
 |---|---|
-| Month | Calendar month in the recorded reporting timezone. Database funnel columns use `DemoBooking.createdAt` to select the cohort and are snapshots at the recorded extraction time. |
+| Month | Calendar month in `Asia/Kolkata`. Convert the local start (inclusive) and next-month start (exclusive) to UTC before filtering `DemoBooking.createdAt`; database funnel columns are snapshots at the recorded extraction time. Record any source-specific date-zone limitation rather than silently shifting it. |
 | Non-brand impressions / clicks | Search Console Performance export, Web search type, filtered to the reporting month and target country as applicable. Normalize query text to lowercase/trimmed form. Classify brand only with a reviewed, versioned list containing `nudge`, `nudge agent`, `nudgeagent` and documented product-name misspellings; all other returned query rows are non-brand. Preserve Google's anonymized-query limitation and never silently change the rule for prior months. |
 | Organic bookings | Count distinct persisted `DemoBooking.calUid` values in the monthly cohort. Use only persisted first-touch `utmSource`, `utmMedium`, `utmCampaign`, `landingPath` and `referrer`: organic when normalized `utmMedium` is `organic`, or when medium is absent, the referrer hostname matches the versioned search-engine host list and no paid marker appears in source/medium/campaign. Missing or ambiguous attribution is `UNKNOWN`/unclassified, never organic by assumption. |
 | Attended | **UNKNOWN until a real attendance source and mapping are implemented.** Do not infer attendance from `contacted`, `qualified`, notes, a scheduled start time or “worked.” When a source exists, document its immutable event/time field and reconciliation rule before reporting. |

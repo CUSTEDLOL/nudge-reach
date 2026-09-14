@@ -10,6 +10,13 @@ export interface ResourceRecord {
   draft: boolean;
 }
 
+const RESOURCE_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 export const RESOURCE_MANIFEST = [
   {
     slug: "whatsapp-appointment-booking-for-clinics",
@@ -38,6 +45,31 @@ export function selectPublishedResources<T extends ResourceRecord>(
   return resources.filter(
     (resource): resource is T & { draft: false } => resource.draft === false,
   );
+}
+
+export function resourcePath(slug: string): `/resources/${string}` {
+  return `/resources/${slug}`;
+}
+
+export function resourceRouteParams<T extends ResourceRecord>(
+  resources: readonly T[],
+) {
+  return publishedResourceEntries(resources).map((resource) => ({
+    slug: resource.slug,
+  }));
+}
+
+export function publishedResourceEntries<T extends ResourceRecord>(
+  resources: readonly T[],
+) {
+  return selectPublishedResources(resources).map((resource) => ({
+    ...resource,
+    href: resourcePath(resource.slug),
+  }));
+}
+
+export function formatResourceDate(date: ResourceRecord["publishedAt"]): string {
+  return RESOURCE_DATE_FORMATTER.format(new Date(`${date}T00:00:00.000Z`));
 }
 
 export function publishedResources(): PublishedResource[] {

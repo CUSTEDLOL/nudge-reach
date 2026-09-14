@@ -1,4 +1,9 @@
 import type { Metadata, MetadataRoute } from "next";
+import {
+  RESOURCE_MANIFEST,
+  publishedResourceEntries,
+  type ResourceRecord,
+} from "@/content/resources/manifest";
 
 export const SITE_ORIGIN = "https://nudgeagent.app";
 
@@ -10,6 +15,24 @@ export interface SeoPage {
   changeFrequency: NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
   priority: number;
   index: boolean;
+}
+
+interface ResourceSeoPage extends SeoPage {
+  path: `/resources/${string}`;
+}
+
+export function resourceSeoPages(
+  resources: readonly ResourceRecord[],
+): ResourceSeoPage[] {
+  return publishedResourceEntries(resources).map((resource) => ({
+    path: resource.href,
+    title: resource.title,
+    description: resource.description,
+    modifiedAt: resource.modifiedAt,
+    changeFrequency: "monthly",
+    priority: 0.6,
+    index: true,
+  }));
 }
 
 export const SEO_PAGES = [
@@ -24,9 +47,9 @@ export const SEO_PAGES = [
   },
   {
     path: "/industries/clinics",
-    title: "AI Front Desk for Clinics on WhatsApp",
-    description: "Nudge answers clinic enquiries on WhatsApp, checks real calendar availability, books appointments, follows up with quiet leads, collects deposits, and hands complex conversations to staff.",
-    modifiedAt: "2026-09-14",
+    title: "AI Front Desk for Clinics in India on WhatsApp",
+    description: "AI Front Desk for aesthetic dermatology, cosmetic dental and hair transplant clinics in India, with WhatsApp booking, follow-up, payment links and handoff.",
+    modifiedAt: "2026-09-15",
     changeFrequency: "monthly",
     priority: 0.9,
     index: true,
@@ -40,15 +63,7 @@ export const SEO_PAGES = [
     priority: 0.7,
     index: true,
   },
-  {
-    path: "/resources/whatsapp-appointment-booking-for-clinics",
-    title: "WhatsApp Appointment Booking for Clinics: An Operational Guide",
-    description: "A practical guide to connecting clinic enquiries, real availability, booking confirmation, reminders, deposits and human handoff on WhatsApp.",
-    modifiedAt: "2026-09-14",
-    changeFrequency: "monthly",
-    priority: 0.6,
-    index: true,
-  },
+  ...resourceSeoPages(RESOURCE_MANIFEST),
   {
     path: "/pricing",
     title: "Pricing",
@@ -71,7 +86,7 @@ export const SEO_PAGES = [
     path: "/privacy",
     title: "Privacy policy",
     description: "Read how Nudge handles account, conversation, customer, integration and usage data for its business-specific AI Front Desk and WhatsApp workspace.",
-    modifiedAt: "2026-07-19",
+    modifiedAt: "2026-09-15",
     changeFrequency: "yearly",
     priority: 0.2,
     index: true,
@@ -105,8 +120,10 @@ export function metadataFor(path: SeoPagePath): Metadata {
   };
 }
 
-export function sitemapEntries(): MetadataRoute.Sitemap {
-  return SEO_PAGES.filter((page) => page.index).map((page) => ({
+export function sitemapEntries(
+  pages: readonly SeoPage[] = SEO_PAGES,
+): MetadataRoute.Sitemap {
+  return pages.filter((page) => page.index).map((page) => ({
     url: `${SITE_ORIGIN}${page.path === "/" ? "" : page.path}`,
     lastModified: new Date(`${page.modifiedAt}T00:00:00.000Z`),
     changeFrequency: page.changeFrequency,

@@ -5,8 +5,8 @@ import { BookDemoButton } from "./book-demo";
 import type { ButtonSize, ButtonVariant } from "./button";
 
 /**
- * "Book a Demo" — opens the Cal.com booking modal. No hover scene: the
- * wrapper exists so every call site keeps its props unchanged.
+ * "Book a Demo" — opens the Cal.com modal when the embed loads and otherwise
+ * follows the direct booking link. The wrapper keeps call-site props stable.
  */
 export function LaunchDemoButton({
   children = "Book a Demo",

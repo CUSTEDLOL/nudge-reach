@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
 
+function isSupportedTimeZone(value: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Environment schema. Kept separate from lib/env.ts (which parses
  * process.env at boot) so it can be unit-tested without real env vars.
@@ -10,6 +19,12 @@ export const envSchema = z
     // Supabase
     NEXT_PUBLIC_SUPABASE_URL: z.url(),
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+
+    // Browser first-touch storage and Cal attribution forwarding are disabled
+    // until an approved marketing consent configuration is in place.
+    NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: z
+      .enum(["true", "false"])
+      .default("false"),
 
     // Database
     DATABASE_URL: z.string().min(1),
@@ -115,6 +130,10 @@ export const envSchema = z
     // Founder admin panel (/admin): comma-separated login emails. Unset ⇒ the
     // panel is off for everyone (fails closed). See modules/admin/auth.ts.
     FOUNDER_EMAILS: z.string().optional(),
+    FOUNDER_TIME_ZONE: z
+      .string()
+      .refine(isSupportedTimeZone, "Must be a supported IANA time zone")
+      .default("Asia/Kolkata"),
 
     // Public app origin (invite/email links, absolute URLs). Falls back to the
     // request host when unset.

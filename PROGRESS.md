@@ -1,5 +1,56 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## SEO foundation final-review fix wave (2026-09-15) ✅ CODE/STATIC VERIFIED — EXTERNAL ACTIVATION PENDING
+
+- Marketing attribution now has an explicit public gate that defaults off. In
+  that state Nudge does not capture or store first-touch data, read `_ga`,
+  forward attribution to Cal, or send correlated server GA4 events; aggregate
+  CTA/form events remain under the existing GTM control surface.
+- The Cal trigger is a working direct booking link when the embed is blocked.
+  Embed initialization can retry after synchronous insertion or script-load
+  failure, and one shared aggregate-only callback handles both normal and
+  dry-run success. A bounded UID/slot-key set prevents the two provider events
+  for one completion from double-counting without placing a booking UID in the
+  browser event.
+- GA4 delivery results now produce an aggregate, privacy-safe server error only
+  on failure and never roll back an authoritative lead update. The boundary is
+  server-only and validates event names, client IDs and opaque lead IDs at
+  runtime. Founder booking times render the stored instant in the validated
+  `FOUNDER_TIME_ZONE`, defaulting to `Asia/Kolkata`, with the zone shown.
+- Resource route params, navigation, metadata, sitemap facts, visible dates and
+  Article JSON-LD now derive from the published manifest contract. Draft
+  fixtures stay out of route/navigation/sitemap output. `/resources` includes
+  BreadcrumbList JSON-LD; visible final crumbs are non-links with
+  `aria-current="page"` and mobile-safe wrapping.
+- The clinic hub now owns India-specific high-ticket clinic intent for aesthetic
+  dermatology, cosmetic dental and hair-transplant teams. Shared landing/guide
+  action colors use `brand-700` and `brand-800`, verified at **5.0792:1** and
+  **7.2388:1** against white, and the nested footer HoloCard CTA reports the
+  `footer` surface.
+- Privacy and operations/deployment copy now discloses demo-prospect and optional
+  attribution processing, Cal/Google providers, purpose, retention and rights
+  boundaries, current autonomous/BYOK behavior, and outstanding legal review.
+  The release order is a maintenance/no-ingestion window, non-atomic
+  `db:push` → immediate `db:rls`, verified `DemoBooking` RLS with zero browser
+  policies, then code deploy and later webhook activation. Debug-payload
+  validation is separate from a real authenticated send to a dedicated
+  non-production GA4 property.
+- Fresh final verification: canonical SEO/marketing/admin/webhook/env suite
+  **16 files / 180 tests**, complete suite **158 files / 1,045 tests**,
+  `npx tsc --noEmit`, production build (**81 static-generation inputs**) and
+  lint all passed. Lint retained one unrelated pre-existing warning in
+  `tests/admin-create-workspace.test.ts`. Anonymous production HTML returned
+  200 and contained the localized clinic copy, accessible CTA tokens, direct
+  Cal fallback, manifest dates and breadcrumb semantics/JSON-LD.
+- Fresh exact-size screenshots could not be captured because the configured
+  browser runtime reported no available browser session. The prior branch
+  screenshots are not reused as evidence for this changed wave; desktop/mobile
+  visual inspection remains an explicit release check.
+- Still pending: all external account, database, consent/legal, Search Console,
+  GTM/GA4 and Cal activation; authenticated/database conversion E2E; the
+  ten-attendee deployment constraint; and final legal identity/domain-email
+  trust work. No external account or database was read or changed.
+
 ## Organic search foundation handoff (2026-09-15) ⚠️ STATIC/TEST VERIFIED — CONVERSION E2E INCOMPLETE
 
 - The release inventory now has eight typed, indexable canonicals: `/`,

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { paginate } from "@/modules/admin/queries";
 
 /**
@@ -22,7 +23,29 @@ export function isLeadStatus(s: string): s is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(s);
 }
 
-export type LeadKind = "access" | "waitlist" | "booking";
+export const LEAD_KINDS = ["access", "waitlist", "booking"] as const;
+export type LeadKind = (typeof LEAD_KINDS)[number];
+
+export function isLeadKind(value: string): value is LeadKind {
+  return (LEAD_KINDS as readonly string[]).includes(value);
+}
+
+export function isOpaqueLeadId(value: string) {
+  return /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
+export function formatBookingStart(
+  instant: Date,
+  timeZone = env.FOUNDER_TIME_ZONE || "Asia/Kolkata"
+) {
+  const formatted = instant.toLocaleString("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    hour12: false,
+    timeZone,
+  });
+  return `${formatted} (${timeZone})`;
+}
 
 export interface LeadRow {
   id: string;
@@ -252,10 +275,7 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
       createdAt: r.createdAt,
     })),
     ...bookings.map((r) => {
-      const scheduledFor = r.startTime.toLocaleString("en-GB", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+      const scheduledFor = formatBookingStart(r.startTime);
       return {
         id: r.id,
         kind: "booking" as const,
@@ -326,6 +346,9 @@ export async function updateLead(
   id: string,
   patch: { status?: string; notes?: string | null }
 ): Promise<UpdateLeadResult> {
+  if (!isLeadKind(kind) || !isOpaqueLeadId(id)) {
+    return { ok: false, error: "Bad lead reference." };
+  }
   const data: { status?: LeadStatus; notes?: string | null } = {};
   if (patch.status !== undefined) {
     if (!isLeadStatus(patch.status)) return { ok: false, error: `Unknown status "${patch.status}".` };

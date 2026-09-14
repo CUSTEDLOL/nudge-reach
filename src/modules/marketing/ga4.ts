@@ -1,20 +1,30 @@
+import "server-only";
+
 import { env } from "@/lib/env";
 import { isGaClientId } from "./ga-client-id";
 
-export type Ga4LeadEventName =
-  | "qualify_lead"
-  | "disqualify_lead"
-  | "close_convert_lead";
+export const GA4_LEAD_EVENT_NAMES = [
+  "qualify_lead",
+  "disqualify_lead",
+  "close_convert_lead",
+] as const;
+export type Ga4LeadEventName = (typeof GA4_LEAD_EVENT_NAMES)[number];
 
 export type Ga4LeadEventResult = "sent" | "skipped" | "failed";
 
 const GA4_MEASUREMENT_PROTOCOL_URL =
   "https://www.google-analytics.com/mp/collect";
 const REQUEST_TIMEOUT_MS = 5_000;
+const OPAQUE_LEAD_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+function isGa4LeadEventName(value: string): value is Ga4LeadEventName {
+  return (GA4_LEAD_EVENT_NAMES as readonly string[]).includes(value);
+}
 
 /**
  * Send one offline lead-quality event correlated to an existing GA web client.
- * The payload deliberately contains no contact, appointment, or landing-page PII.
+ * The payload excludes direct contact, patient, appointment, Cal, and landing
+ * fields. Its GA client ID is pseudonymous and its internal lead ID is opaque.
  */
 export async function sendGa4LeadEvent({
   name,
@@ -27,7 +37,14 @@ export async function sendGa4LeadEvent({
 }): Promise<Ga4LeadEventResult> {
   const measurementId = env.GA4_MEASUREMENT_ID;
   const apiSecret = env.GA4_API_SECRET;
-  if (!measurementId || !apiSecret || !isGaClientId(clientId)) {
+  if (
+    env.NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED !== "true" ||
+    !measurementId ||
+    !apiSecret ||
+    !isGaClientId(clientId) ||
+    !isGa4LeadEventName(name) ||
+    !OPAQUE_LEAD_ID.test(leadId)
+  ) {
     return "skipped";
   }
 

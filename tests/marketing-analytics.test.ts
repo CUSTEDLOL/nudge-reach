@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   BookDemoButton,
+  buildCalTriggerConfig,
   initializeCalEmbed,
   trackDemoCta,
 } from "@/components/marketing/book-demo";
@@ -327,6 +328,61 @@ describe("marketing browser events", () => {
 });
 
 describe("demo booking funnel", () => {
+  it("keeps attribution storage and forwarding off unless explicitly enabled", () => {
+    const browser = Object.defineProperties({}, {
+      locationHref: {
+        get() {
+          throw new Error("location must not be read");
+        },
+      },
+      referrer: {
+        get() {
+          throw new Error("referrer must not be read");
+        },
+      },
+      storage: {
+        get() {
+          throw new Error("storage must not be read");
+        },
+      },
+      cookie: {
+        get() {
+          throw new Error("cookie must not be read");
+        },
+      },
+    });
+
+    expect(buildCalTriggerConfig(false, browser as never)).toBe(
+      JSON.stringify({
+        layout: "month_view",
+        useSlotsViewOnSmallScreen: "true",
+      })
+    );
+  });
+
+  it("adds only whitelisted attribution when the public gate is enabled", () => {
+    const storage = new FakeStorage();
+
+    expect(
+      JSON.parse(
+        buildCalTriggerConfig(true, {
+          locationHref:
+            "https://nudgeagent.app/industries/clinics?utm_source=google&token=private",
+          referrer: "https://www.google.com/private?q=nudge",
+          storage,
+          cookie: "_ga=GA1.1.12345.67890",
+        })
+      )
+    ).toEqual({
+      layout: "month_view",
+      useSlotsViewOnSmallScreen: "true",
+      utm_source: "google",
+      "metadata[landingPath]": "/industries/clinics",
+      "metadata[referrer]": "https://www.google.com/",
+      "metadata[gaClientId]": "12345.67890",
+    });
+  });
+
   it("keeps the Cal trigger config static during server rendering", () => {
     const html = renderToStaticMarkup(
       createElement(BookDemoButton, { surface: "hero" }, "Book a Demo")
@@ -336,6 +392,7 @@ describe("demo booking funnel", () => {
       'data-cal-config="{&quot;layout&quot;:&quot;month_view&quot;,&quot;useSlotsViewOnSmallScreen&quot;:&quot;true&quot;}"'
     );
     expect(html).toContain('data-cal-link="hqnudge/30min"');
+    expect(html).toContain('href="https://cal.com/hqnudge/30min"');
   });
 
   it("tracks a CTA click with its stable surface and pathname", () => {
@@ -353,9 +410,9 @@ describe("demo booking funnel", () => {
     ]);
   });
 
-  it("subscribes once and emits aggregate-only Cal booking events", () => {
+  it("subscribes both Cal success events to one aggregate-only deduplicating callback", () => {
     const dataLayer: object[] = [];
-    const script = { src: "" };
+    const script = { src: "", onerror: null as null | (() => void) };
     vi.stubGlobal("window", { dataLayer });
     vi.stubGlobal("document", {
       head: { appendChild: (element: object) => element },
@@ -370,41 +427,76 @@ describe("demo booking funnel", () => {
       ns: Record<string, CalNamespace>;
     };
     type CalNamespace = ((...args: unknown[]) => void) & { q: unknown[][] };
-    const cal = (window as Window & { Cal: CalApi }).Cal;
+    const cal = (window as unknown as Window & { Cal: CalApi }).Cal;
     const eventCalls = cal.ns["30min"].q.filter((call) => call[0] === "on");
 
     expect(script.src).toBe("https://app.cal.com/embed/embed.js");
     expect(cal.config.forwardQueryParams).toBe(false);
     expect(eventCalls.map((call) => call[1])).toMatchObject([
       { action: "bookingSuccessfulV2" },
+      { action: "dryRunBookingSuccessfulV2" },
       { action: "linkFailed" },
     ]);
 
-    const booking = eventCalls[0][1] as {
+    const booking = eventCalls.find(
+      (call) =>
+        (call[1] as { action?: string }).action === "bookingSuccessfulV2"
+    )?.[1] as {
       callback: (event: unknown) => void;
     };
-    booking.callback({
-      detail: {
-        data: { uid: { nested: "raw provider data" } },
-      },
-    });
-    booking.callback({
-      detail: {
-        data: { uid: "a".repeat(129) },
-      },
-    });
-    booking.callback({
-      detail: {
-        data: { uid: "person@example.com" },
-      },
-    });
-    booking.callback({
-      detail: {
-        data: { uid: "Booking_UID-123" },
-      },
-    });
+    const dryRun = eventCalls.find(
+      (call) =>
+        (call[1] as { action?: string }).action ===
+        "dryRunBookingSuccessfulV2"
+    )?.[1] as {
+      callback: (event: unknown) => void;
+    };
+    expect(dryRun.callback).toBe(booking.callback);
 
-    const failure = eventCalls[1][1] as {
+    booking.callback({
+      detail: {
+        data: {
+          uid: "Booking_UID-123",
+          startTime: "2026-09-20T10:00:00.000Z",
+          endTime: "2026-09-20T10:30:00.000Z",
+          eventTypeId: 30,
+        },
+      },
+    });
+    dryRun.callback({
+      detail: {
+        data: {
+          startTime: "2026-09-20T10:00:00.000Z",
+          endTime: "2026-09-20T10:30:00.000Z",
+          eventTypeId: 30,
+        },
+      },
+    });
+    expect(dataLayer).toHaveLength(1);
+    dryRun.callback({
+      detail: {
+        data: {
+          startTime: "2026-09-21T10:00:00.000Z",
+          endTime: "2026-09-21T10:30:00.000Z",
+          eventTypeId: 30,
+        },
+      },
+    });
+    booking.callback({
+      detail: {
+        data: {
+          uid: "Booking_UID-456",
+          startTime: "2026-09-21T10:00:00.000Z",
+          endTime: "2026-09-21T10:30:00.000Z",
+          eventTypeId: 30,
+        },
+      },
+    });
+    expect(dataLayer).toHaveLength(2);
+
+    const failure = eventCalls.find(
+      (call) => (call[1] as { action?: string }).action === "linkFailed"
+    )?.[1] as {
       callback: (event: unknown) => void;
     };
     failure.callback({
@@ -419,9 +511,59 @@ describe("demo booking funnel", () => {
     expect(dataLayer).toEqual([
       { event: "generate_lead", lead_source: "cal" },
       { event: "generate_lead", lead_source: "cal" },
-      { event: "generate_lead", lead_source: "cal" },
-      { event: "generate_lead", lead_source: "cal" },
       { event: "cal_embed_error", surface: "cal_embed" },
     ]);
+    expect(JSON.stringify(dataLayer)).not.toContain("Booking_UID");
+    expect(JSON.stringify(dataLayer)).not.toContain("Booking_UID-456");
+  });
+
+  it("clears the Cal initialization latch after a script error so a later call retries", () => {
+    const scripts: { src: string; onerror: null | (() => void) }[] = [];
+    vi.stubGlobal("window", { dataLayer: [] });
+    vi.stubGlobal("document", {
+      head: {
+        appendChild: (element: { src: string; onerror: null | (() => void) }) => {
+          scripts.push(element);
+          return element;
+        },
+      },
+      createElement: () => ({ src: "", onerror: null }),
+    });
+
+    initializeCalEmbed();
+    expect(scripts).toHaveLength(1);
+    scripts[0].onerror?.();
+    initializeCalEmbed();
+
+    expect(scripts).toHaveLength(2);
+    expect(scripts.every((script) => script.src === "https://app.cal.com/embed/embed.js")).toBe(true);
+    const cal = (window as unknown as Window & {
+      Cal: { q: unknown[][] };
+    }).Cal;
+    expect(
+      cal.q.filter(
+        (call) => call[0] === "initNamespace" && call[1] === "30min"
+      )
+    ).toHaveLength(1);
+  });
+
+  it("retries after a synchronous Cal script insertion failure", () => {
+    let attempts = 0;
+    vi.stubGlobal("window", { dataLayer: [] });
+    vi.stubGlobal("document", {
+      head: {
+        appendChild: (element: object) => {
+          attempts += 1;
+          if (attempts === 1) throw new Error("blocked script insertion");
+          return element;
+        },
+      },
+      createElement: () => ({ src: "", onerror: null }),
+    });
+
+    expect(() => initializeCalEmbed()).not.toThrow();
+    initializeCalEmbed();
+
+    expect(attempts).toBe(2);
   });
 });

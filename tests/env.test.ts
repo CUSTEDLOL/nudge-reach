@@ -13,6 +13,34 @@ describe("envSchema", () => {
     expect(parsed.SEND_MODE).toBe("simulation");
     expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("30min");
     expect(parsed.CAL_WEBHOOK_SECRET).toBeUndefined();
+    expect(parsed.NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED).toBe("false");
+    expect(parsed.FOUNDER_TIME_ZONE).toBe("Asia/Kolkata");
+  });
+
+  it("enables marketing attribution only with an explicit public true value", () => {
+    expect(
+      envSchema.parse({
+        ...baseEnv,
+        NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: "true",
+      }).NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED
+    ).toBe("true");
+    expect(
+      envSchema.safeParse({
+        ...baseEnv,
+        NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: "1",
+      }).success
+    ).toBe(false);
+  });
+
+  it("accepts valid founder time zones and rejects invalid values", () => {
+    expect(
+      envSchema.parse({ ...baseEnv, FOUNDER_TIME_ZONE: "America/New_York" })
+        .FOUNDER_TIME_ZONE
+    ).toBe("America/New_York");
+    expect(
+      envSchema.safeParse({ ...baseEnv, FOUNDER_TIME_ZONE: "India/Founder" })
+        .success
+    ).toBe(false);
   });
 
   it("accepts an optional Cal webhook secret and event-type slug", () => {

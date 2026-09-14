@@ -8,10 +8,21 @@ import ResourcePage, {
 import ResourcesPage, { metadata as resourcesMetadata } from "@/app/resources/page";
 import { RESOURCE_LOADERS } from "@/content/resources/loaders";
 import {
+  formatResourceDate,
+  publishedResourceEntries,
   publishedResources,
   resourceBySlug,
+  resourceRouteParams,
   selectPublishedResources,
+  type ResourceRecord,
 } from "@/content/resources/manifest";
+import {
+  SEO_PAGES,
+  metadataFor,
+  resourceSeoPages,
+  seoPage,
+  sitemapEntries,
+} from "@/modules/marketing/seo-pages";
 
 const GUIDE_SLUG = "whatsapp-appointment-booking-for-clinics";
 
@@ -54,6 +65,72 @@ describe("resource manifest", () => {
       "whatsapp-appointment-booking-for-clinics",
     ]);
   });
+
+  it("keeps draft fixtures out of route params, navigation and sitemap output", () => {
+    const published = publishedResources()[0];
+    const records = [
+      published,
+      {
+        ...published,
+        slug: "draft-clinic-guide",
+        title: "Draft clinic guide",
+        draft: true as const,
+      },
+    ] as const satisfies readonly ResourceRecord[];
+
+    expect(resourceRouteParams(records)).toEqual([{ slug: GUIDE_SLUG }]);
+    expect(publishedResourceEntries(records).map((item) => item.href)).toEqual([
+      `/resources/${GUIDE_SLUG}`,
+    ]);
+    expect(
+      sitemapEntries(resourceSeoPages(records)).map((entry) => entry.url),
+    ).toEqual([
+      `https://nudgeagent.app/resources/${GUIDE_SLUG}`,
+    ]);
+  });
+
+  it("derives resource SEO facts from the manifest", () => {
+    const resource = publishedResources()[0];
+    const path = `/resources/${resource.slug}` as const;
+    const page = seoPage(path);
+    const sitemapEntry = sitemapEntries().find(
+      (entry) => entry.url === `https://nudgeagent.app${path}`,
+    );
+
+    expect(page).toMatchObject({
+      path,
+      title: resource.title,
+      description: resource.description,
+      modifiedAt: resource.modifiedAt,
+    });
+    expect(metadataFor(path)).toMatchObject({
+      title: resource.title,
+      description: resource.description,
+    });
+    expect(sitemapEntry?.lastModified).toEqual(
+      new Date(`${resource.modifiedAt}T00:00:00.000Z`),
+    );
+
+    const changedManifestFact = {
+      ...resource,
+      title: "Fixture title controlled by the manifest",
+      description:
+        "Fixture description controlled by the resource manifest for deterministic metadata behavior.",
+      modifiedAt: "2026-01-05",
+    } as const satisfies ResourceRecord;
+    expect(resourceSeoPages([changedManifestFact])[0]).toMatchObject({
+      title: changedManifestFact.title,
+      description: changedManifestFact.description,
+      modifiedAt: changedManifestFact.modifiedAt,
+    });
+    expect(
+      SEO_PAGES.filter((candidate) => candidate.path.startsWith("/resources/")),
+    ).toEqual(resourceSeoPages(publishedResources()));
+  });
+
+  it("formats manifest dates deterministically for visible copy", () => {
+    expect(formatResourceDate("2026-01-05")).toBe("5 January 2026");
+  });
 });
 
 describe("published resource loading", () => {
@@ -67,8 +144,11 @@ describe("published resource loading", () => {
   });
 
   it("renders the guide as an ordered article without taking route H1 ownership", async () => {
+    const resource = resourceBySlug(GUIDE_SLUG)!;
     const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
-    const html = renderToStaticMarkup(createElement(resourceModule.default));
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
     const headings = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map(
       (match) => plainText(match[1]),
     );
@@ -93,8 +173,11 @@ describe("published resource loading", () => {
   });
 
   it("supports policy claims with a safe official primary-source link", async () => {
+    const resource = resourceBySlug(GUIDE_SLUG)!;
     const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
-    const html = renderToStaticMarkup(createElement(resourceModule.default));
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
     const policyLink = html.match(
       /<a[^>]*href="https:\/\/whatsappbusiness\.com\/policy\/"[^>]*>/,
     )?.[0];
@@ -108,8 +191,11 @@ describe("published resource loading", () => {
   });
 
   it("attributes the financial-data policy next to the deposits guidance", async () => {
+    const resource = resourceBySlug(GUIDE_SLUG)!;
     const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
-    const html = renderToStaticMarkup(createElement(resourceModule.default));
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
     const depositsSection = html.match(
       /<section aria-labelledby="deposits"[\s\S]*?<\/section>/,
     )?.[0];
@@ -124,11 +210,35 @@ describe("published resource loading", () => {
     expect(policyLink!).toContain('target="_blank"');
     expect(policyLink!).toContain('rel="noopener noreferrer"');
   });
+
+  it("renders the byline and publication date supplied by the manifest", async () => {
+    const resource = resourceBySlug(GUIDE_SLUG)!;
+    const fixture = {
+      ...resource,
+      authorName: "Fixture editorial team",
+      publishedAt: "2026-01-05",
+    } as const satisfies ResourceRecord;
+    const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource: fixture }),
+    );
+    const articleHeader = html.match(/<header[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+
+    expect(plainText(articleHeader)).toContain("By Fixture editorial team");
+    expect(articleHeader).toMatch(/datetime="2026-01-05"/i);
+    expect(plainText(articleHeader)).toContain("Published 5 January 2026");
+    expect(plainText(articleHeader)).not.toContain("14 September 2026");
+  });
 });
 
 describe("resource routes", () => {
   it("lists the published guide with canonical metadata", () => {
     const html = renderToStaticMarkup(createElement(ResourcesPage));
+    const scripts = [
+      ...html.matchAll(
+        /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
+      ),
+    ].map((match) => JSON.parse(match[1])) as Array<Record<string, unknown>>;
 
     expect(resourcesMetadata.alternates?.canonical).toBe(
       "https://nudgeagent.app/resources",
@@ -137,6 +247,26 @@ describe("resource routes", () => {
     expect(plainText(html)).toContain(
       "WhatsApp Appointment Booking for Clinics: An Operational Guide",
     );
+    expect(html).toMatch(/datetime="2026-09-14"/i);
+    expect(plainText(html)).toContain("14 September 2026");
+    expect(scripts).toContainEqual({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://nudgeagent.app/",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Resources",
+          item: "https://nudgeagent.app/resources",
+        },
+      ],
+    });
   });
 
   it("pre-renders only published resources and derives their metadata", async () => {
@@ -153,6 +283,7 @@ describe("resource routes", () => {
   });
 
   it("renders one route-owned H1, visible breadcrumbs and Article JSON-LD", async () => {
+    const resource = resourceBySlug(GUIDE_SLUG)!;
     const element = await ResourcePage({
       params: Promise.resolve({ slug: GUIDE_SLUG }),
     });
@@ -163,9 +294,11 @@ describe("resource routes", () => {
     expect(html.match(/<h1/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Breadcrumb"');
     expect(scripts.find((value) => value["@type"] === "Article")).toMatchObject({
-      headline: "WhatsApp Appointment Booking for Clinics: An Operational Guide",
-      datePublished: "2026-09-14",
-      dateModified: "2026-09-14",
+      headline: resource.title,
+      description: resource.description,
+      datePublished: resource.publishedAt,
+      dateModified: resource.modifiedAt,
+      author: { name: resource.authorName },
     });
   });
 
