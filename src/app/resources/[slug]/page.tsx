@@ -60,6 +60,7 @@ export default async function ResourcePage({ params }: ResourcePageProps) {
         intro={resource.description}
         ctaTitle="See the complete clinic workflow"
         ctaBody="Walk through real availability, a confirmed booking, compliant follow-up and human handoff in one practical Nudge demo."
+        surface="resource"
       >
         <ResourceContent />
       </LandingShell>

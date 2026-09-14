@@ -13,12 +13,14 @@ export function LaunchDemoButton({
   variant,
   size,
   className,
+  surface = "unknown",
   "aria-label": ariaLabel,
 }: {
   children?: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
   className?: string;
+  surface?: string;
   "aria-label"?: string;
   /** Accepted for call-site compatibility; the launch scene that used it is gone. */
   tone?: "light" | "dark";
@@ -28,6 +30,7 @@ export function LaunchDemoButton({
       variant={variant}
       size={size}
       className={className}
+      surface={surface}
       aria-label={ariaLabel}
     >
       {children}

@@ -13,6 +13,7 @@ interface LandingShellProps {
   children: ReactNode;
   ctaTitle?: string;
   ctaBody?: string;
+  surface?: string;
 }
 
 export function LandingShell({
@@ -23,6 +24,7 @@ export function LandingShell({
   children,
   ctaTitle = "See Nudge in action",
   ctaBody = "See how an AI Front Desk can run your clinic's WhatsApp.",
+  surface = "unknown",
 }: LandingShellProps) {
   return (
     <>
@@ -41,7 +43,10 @@ export function LandingShell({
           <section className="mt-16 rounded-3xl bg-ink px-8 py-10 text-white sm:px-12">
             <h2 className="text-2xl font-black">{ctaTitle}</h2>
             <p className="mt-3 max-w-2xl text-white/75">{ctaBody}</p>
-            <LaunchDemoButton className="mt-6 inline-flex rounded-xl bg-[#06c167] px-5 py-3 font-bold text-white hover:bg-[#05ac5d]">
+            <LaunchDemoButton
+              surface={surface}
+              className="mt-6 inline-flex rounded-xl bg-[#06c167] px-5 py-3 font-bold text-white hover:bg-[#05ac5d]"
+            >
               Book a Demo
             </LaunchDemoButton>
           </section>

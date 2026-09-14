@@ -26,6 +26,7 @@ export default function ResourcesPage() {
       intro="Practical, evidence-backed guides for connecting WhatsApp conversations to the calendars, follow-ups, payments and people that move a customer forward."
       ctaTitle="Put the operating model into practice"
       ctaBody="See how Nudge turns a documented front-desk workflow into a connected, done-for-you system."
+      surface="resource"
     >
       <section aria-labelledby="resource-list-title">
         <h2 id="resource-list-title" className="sr-only">

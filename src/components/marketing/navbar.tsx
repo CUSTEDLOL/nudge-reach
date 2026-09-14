@@ -43,6 +43,7 @@ function NavLinks({ overHero }: { overHero: boolean }) {
 function NavCta({ overHero }: { overHero: boolean }) {
   return (
     <LaunchDemoButton
+      surface="navbar"
       tone={overHero ? "dark" : "light"}
       className="group/cta hidden min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] lg:inline-flex"
     >
@@ -275,7 +276,11 @@ export function Navbar() {
                 >
                   Sign in
                 </a>
-                <LaunchDemoButton variant="primary" className="w-full">
+                <LaunchDemoButton
+                  surface="navbar"
+                  variant="primary"
+                  className="w-full"
+                >
                   Book a Demo
                 </LaunchDemoButton>
               </div>

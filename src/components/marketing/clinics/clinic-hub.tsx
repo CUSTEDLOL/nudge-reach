@@ -86,6 +86,7 @@ export function ClinicHub() {
       intro="Replies are only the start. Nudge checks your real calendar, creates bookings, follows up when a lead goes quiet, shares payment links and brings in your team when a conversation needs a person."
       ctaTitle="See Nudge run your clinic's WhatsApp"
       ctaBody="Walk through an enquiry, a real booking, a compliant follow-up and a human handoff in one practical demo."
+      surface="clinic"
     >
       <div className="space-y-16 sm:space-y-24">
         <section aria-labelledby="revenue-leaks-title">

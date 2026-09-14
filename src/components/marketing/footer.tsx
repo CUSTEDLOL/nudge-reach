@@ -66,7 +66,7 @@ function FooterTextLink({ link }: { link: FooterLink }) {
 
   if (link.demo) {
     return (
-      <LaunchDemoButton className={linkClass}>
+      <LaunchDemoButton surface="footer" className={linkClass}>
         {link.label}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-0.5" />
       </LaunchDemoButton>
@@ -161,6 +161,7 @@ export function Footer() {
                 <Mail className="h-[18px] w-[18px]" />
               </a>
               <LaunchDemoButton
+                surface="footer"
                 aria-label="Book a demo call"
                 className="grid h-11 w-11 place-items-center rounded-xl border-2 border-ink/70 bg-white text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)] transition-all hover:-translate-y-0.5 hover:bg-[#06c167] hover:text-white"
               >
