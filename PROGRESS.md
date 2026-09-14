@@ -1,5 +1,45 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Organic search foundation handoff (2026-09-15) ✅ LOCALLY VERIFIED — PRODUCTION ACTIVATION PENDING
+
+- The release inventory now has eight typed, indexable canonicals: `/`,
+  `/industries/clinics`, `/resources`,
+  `/resources/whatsapp-appointment-booking-for-clinics`, `/pricing`, `/faq`,
+  `/privacy` and `/terms`. Sitemap dates are fixed review dates.
+- Measurement code covers `demo_cta_click`, aggregate browser `generate_lead`,
+  authoritative signed/deduplicated Cal bookings, and optional
+  `qualify_lead`, `disqualify_lead` and `close_convert_lead` GA4 events. Browser
+  Cal success is not treated as the authoritative booking.
+- Release verification on the local production build: focused SEO/conversion
+  suite **12 files / 136 tests**, complete suite **155 files / 1,010 tests**,
+  lint exit 0 with one pre-existing warning, production build exit 0, and diff
+  check exit 0. Build output emitted the home,
+  clinic hub, resource index, pricing, FAQ, privacy, terms, robots and sitemap
+  statically and the first guide via SSG.
+- Anonymous production-server checks with documented non-secret simulation
+  placeholders returned 200 for the home, clinic hub, resources and guide;
+  `/dashboard` returned 307 to `/login`; login returned 200 with rendered
+  `noindex, nofollow`. Rendered canonicals and JSON-LD parsed, while robots and
+  sitemap matched the eight-URL registry and fixed dates. An initial server run
+  with empty local Supabase URL/key values returned 500 before routing; no live
+  credential was used to resolve that environment-only failure.
+- Screenshot review was completed for `/`, `/industries/clinics`, `/resources`
+  and the guide at exactly **1440×900** and **390×844** using an already-installed
+  local Chromium. Headline wrapping, readable measure and visible navigation
+  showed no visible clipping. A follow-up scripted keyboard/mobile-menu/DOM probe
+  produced no result, so no automated interaction pass is claimed.
+- Added `docs/SEO_BASELINE.md` with dated evidence/unknown states and
+  `docs/SEO_OPERATIONS.md` with activation, reporting, month-2/month-4 sprint
+  checkpoints, 30/60/90 review and incident/rotation procedures. Quarterly
+  review is documented only as a post-sprint renewal cadence.
+- Still pending and not implied complete: production deployment/HTTP review,
+  Search Console domain verification and sitemap submission, DNS access, GTM/GA4
+  account configuration, GA4 credentials, Cal event/webhook/secret setup, a real
+  booking replay, production Prisma schema application, `DemoBooking` RLS
+  verification, first-party performance/indexing/CWV/referring-domain baselines,
+  and production lead reconciliation. No external account or database was read
+  or changed for this handoff.
+
 ## Qualified demo-lead pipeline and GA4 offline events (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
 
 - Added signed `DemoBooking` records to the founder-only lead desk, including
