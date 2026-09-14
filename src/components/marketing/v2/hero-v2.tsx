@@ -88,15 +88,14 @@ export function HeroV2() {
             }}
           >
             <span className="hero-line block pb-1">
-              The #1{" "}
+              The AI Front Desk
+            </span>
+            <span className="hero-line block pb-2">
+              That Runs Your{" "}
               <span className="wa-word">
                 <WhatsAppGlyph className="wa-logo" aria-hidden />
                 WhatsApp
-              </span>{" "}
-              Agent
-            </span>
-            <span className="hero-line block pb-2">
-              That Handles Your Business
+              </span>
             </span>
           </h1>
           <div className="hero-cta mt-5 flex flex-wrap items-center gap-3">

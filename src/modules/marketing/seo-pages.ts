@@ -23,6 +23,15 @@ export const SEO_PAGES = [
     index: true,
   },
   {
+    path: "/industries/clinics",
+    title: "AI Front Desk for Clinics on WhatsApp",
+    description: "Nudge answers clinic enquiries on WhatsApp, checks real calendar availability, books appointments, follows up with quiet leads, collects deposits, and hands complex conversations to staff.",
+    modifiedAt: "2026-09-14",
+    changeFrequency: "monthly",
+    priority: 0.9,
+    index: true,
+  },
+  {
     path: "/pricing",
     title: "Pricing",
     description: "Compare Nudge AI Front Desk plans for WhatsApp replies, team inboxes, real calendar booking, payment links, compliant follow-ups, voice, and custom actions.",

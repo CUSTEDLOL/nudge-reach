@@ -1,5 +1,19 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Clinic AI Front Desk search hub (2026-09-14) ✅
+
+- Published the server-rendered `/industries/clinics` commercial landing page
+  around the clinic enquiry-to-booking operating flow, compliant follow-ups,
+  payment links, human handoff and concierge setup.
+- Registered the page for canonical metadata and the sitemap, added Clinics to
+  desktop/mobile navigation and the footer, and corrected the homepage headline
+  to lead with the AI Front Desk rather than generic WhatsApp-agent leadership.
+- Verification: focused SEO/page contracts **6/6**, complete suite **904/904**,
+  touched-file lint clean, and the production build passed with the clinic hub
+  emitted as a static route. Browser screenshots were unavailable because no
+  browser session was connected; direct dev-server checks confirmed all four
+  public routes returned 200 with one H1, expected links and server HTML.
+
 ## 3–4 month SEO program design approved (2026-09-14) ✅
 
 - Audited the live and local marketing surface, current search results,
