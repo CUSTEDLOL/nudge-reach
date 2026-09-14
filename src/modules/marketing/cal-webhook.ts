@@ -6,29 +6,57 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import type { AttributionSnapshot } from "./analytics";
 
 const MAX_ATTRIBUTION_LENGTH = 200;
+const CAL_SIGNATURE_PATTERN = /^[0-9a-fA-F]{64}$/;
+
+// Conservative ingress bounds keep third-party text finite before it can reach
+// normalization, truncation, logging, or persistence.
+const MAX_TRIGGER_EVENT_LENGTH = 64;
+const MAX_CAL_UID_LENGTH = 128;
+const MAX_EVENT_TYPE_LENGTH = 128;
+const MAX_START_TIME_LENGTH = 64;
+const MAX_ATTENDEES = 10;
+const MAX_ATTENDEE_NAME_LENGTH = 200;
+const MAX_ATTENDEE_EMAIL_LENGTH = 254;
+const MAX_ATTENDEE_PHONE_LENGTH = 64;
+const MAX_METADATA_INPUT_LENGTH = 512;
+
+const eventTypeSchema = z.string().min(1).max(MAX_EVENT_TYPE_LENGTH);
+const metadataStringSchema = z.string().max(MAX_METADATA_INPUT_LENGTH);
 
 const attendeeSchema = z.object({
-  name: z.string().min(1).optional(),
-  email: z.email().optional(),
-  phoneNumber: z.string().min(1).nullable().optional(),
+  name: z.string().min(1).max(MAX_ATTENDEE_NAME_LENGTH).optional(),
+  email: z
+    .string()
+    .max(MAX_ATTENDEE_EMAIL_LENGTH)
+    .pipe(z.email())
+    .optional(),
+  phoneNumber: z
+    .string()
+    .min(1)
+    .max(MAX_ATTENDEE_PHONE_LENGTH)
+    .nullable()
+    .optional(),
 });
 
 const metadataSchema = z.object({
-  landingPath: z.string().optional(),
-  referrer: z.string().optional(),
-  utm_source: z.string().optional(),
-  utm_medium: z.string().optional(),
-  utm_campaign: z.string().optional(),
-  gaClientId: z.string().optional(),
+  landingPath: metadataStringSchema.optional(),
+  referrer: metadataStringSchema.optional(),
+  utm_source: metadataStringSchema.optional(),
+  utm_medium: metadataStringSchema.optional(),
+  utm_campaign: metadataStringSchema.optional(),
+  gaClientId: metadataStringSchema.optional(),
 });
 
 const bookingSchema = z.object({
   triggerEvent: z.literal("BOOKING_CREATED"),
   payload: z.object({
-    uid: z.string().min(1).max(128),
-    type: z.string().min(1),
-    startTime: z.iso.datetime({ offset: true }),
-    attendees: z.array(attendeeSchema).min(1),
+    uid: z.string().min(1).max(MAX_CAL_UID_LENGTH),
+    type: eventTypeSchema,
+    startTime: z
+      .string()
+      .max(MAX_START_TIME_LENGTH)
+      .pipe(z.iso.datetime({ offset: true })),
+    attendees: z.array(attendeeSchema).min(1).max(MAX_ATTENDEES),
     metadata: metadataSchema.optional(),
   }),
 });
@@ -43,13 +71,19 @@ export type ParsedCalBooking = {
   attribution: Partial<AttributionSnapshot>;
 };
 
+export function isCalSignatureFormat(
+  signature: string | null
+): signature is string {
+  return signature !== null && CAL_SIGNATURE_PATTERN.test(signature);
+}
+
 /** Verify Cal.com's raw-body HMAC-SHA256 hex signature. */
 export function verifyCalSignature(
-  rawBody: string,
+  rawBody: string | Uint8Array,
   signature: string | null,
   secret: string
 ): boolean {
-  if (!secret || !signature || !/^[0-9a-fA-F]{64}$/.test(signature)) {
+  if (!secret || !isCalSignatureFormat(signature)) {
     return false;
   }
 
@@ -72,12 +106,16 @@ function limited(value: string | undefined) {
 /** Parse one declared Cal booking shape and discard every undeclared field. */
 export function parseCalBooking(rawBody: string): ParsedCalBooking | null {
   const json: unknown = JSON.parse(rawBody);
-  const envelope = z.object({ triggerEvent: z.string() }).parse(json);
+  const envelope = z
+    .object({
+      triggerEvent: z.string().max(MAX_TRIGGER_EVENT_LENGTH),
+    })
+    .parse(json);
 
   if (envelope.triggerEvent !== "BOOKING_CREATED") return null;
 
   const discriminator = z
-    .object({ payload: z.object({ type: z.string().min(1) }) })
+    .object({ payload: z.object({ type: eventTypeSchema }) })
     .parse(json);
   const expectedEventType = env.CAL_EVENT_TYPE_SLUG ?? "30min";
   if (discriminator.payload.type !== expectedEventType) return null;

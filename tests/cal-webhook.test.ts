@@ -45,6 +45,49 @@ const bookingPayload = {
   },
 };
 
+type BookingFixture = typeof bookingPayload;
+type MutateBooking = (booking: BookingFixture) => void;
+
+const overlongDeclaredFields: Array<[string, MutateBooking]> = [
+  [
+    "event type",
+    (booking) => {
+      booking.payload.type = "x".repeat(129);
+    },
+  ],
+  [
+    "attendee name",
+    (booking) => {
+      booking.payload.attendees[0].name = "n".repeat(201);
+    },
+  ],
+  [
+    "attendee email",
+    (booking) => {
+      booking.payload.attendees[0].email = `${"a".repeat(243)}@example.com`;
+    },
+  ],
+  [
+    "attendee phone",
+    (booking) => {
+      booking.payload.attendees[0].phoneNumber = "1".repeat(65);
+    },
+  ],
+  ...([
+    "landingPath",
+    "referrer",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "gaClientId",
+  ] as const).map<[string, MutateBooking]>((field) => [
+    `metadata ${field}`,
+    (booking) => {
+      booking.payload.metadata[field] = "m".repeat(513);
+    },
+  ]),
+];
+
 describe("verifyCalSignature", () => {
   it("accepts the HMAC-SHA256 hex signature for the exact raw body", () => {
     const body = JSON.stringify(bookingPayload);
@@ -119,6 +162,25 @@ describe("parseCalBooking", () => {
         })
       )
     ).toBeNull();
+  });
+
+  it.each(overlongDeclaredFields)(
+    "rejects an overlong %s at the parser boundary",
+    (_name, mutate) => {
+      const booking = structuredClone(bookingPayload);
+      mutate(booking);
+
+      expect(() => parseCalBooking(JSON.stringify(booking))).toThrow();
+    }
+  );
+
+  it("rejects more than ten attendees at the parser boundary", () => {
+    const booking = structuredClone(bookingPayload);
+    booking.payload.attendees = Array.from({ length: 11 }, () => ({
+      ...booking.payload.attendees[0],
+    }));
+
+    expect(() => parseCalBooking(JSON.stringify(booking))).toThrow();
   });
 
   it("throws for invalid JSON or an invalid booking schema", () => {

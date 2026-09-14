@@ -14,6 +14,10 @@
 - Verification: focused webhook/environment tests **30/30**, complete suite
   **954/954**, Prisma format/generate/validate, touched-file lint, and the
   production build all passed.
+- Fix round 1 now rejects absent configuration or malformed signature headers
+  before body access, streams the exact HMAC/JSON bytes under a 64 KiB ceiling,
+  and bounds every declared Cal string plus the attendee count at ingress.
+  Focused Task 7 tests **47/47**, touched lint, and the production build passed.
 - Activation remains gated on applying the Prisma schema, running the repository
   RLS script and verifying `pg_tables.rowsecurity = true` for `DemoBooking`, then
   configuring the Cal secret and event slug. No database or real booking was
