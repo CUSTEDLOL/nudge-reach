@@ -89,6 +89,12 @@ export const envSchema = z
     CAL_WEBHOOK_SECRET: z.string().optional(),
     CAL_EVENT_TYPE_SLUG: z.string().min(1).default("30min"),
 
+    // Optional GA4 Measurement Protocol credentials for server-side lead
+    // quality events. Never prefix these with NEXT_PUBLIC_: the API secret
+    // must not enter a browser bundle.
+    GA4_MEASUREMENT_ID: z.string().optional(),
+    GA4_API_SECRET: z.string().optional(),
+
     // Google Calendar OAuth (optional). Left empty, "Connect calendar" works in
     // SIMULATION with a mocked calendar — no Google app needed. Fill these only
     // for real OAuth. Deliberately NOT in the live superRefine below: even a

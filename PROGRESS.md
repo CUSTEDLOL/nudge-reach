@@ -1,5 +1,28 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Qualified demo-lead pipeline and GA4 offline events (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
+
+- Added signed `DemoBooking` records to the founder-only lead desk, including
+  newest-first merging, counts, attendee search, source attribution, safe
+  nullable-phone rendering, duplicate signals, notes, and the `qualified`
+  pipeline state.
+- Booking updates derive transitions from the persisted status. Qualified,
+  dismissed and converted transitions can emit Google's recommended
+  `qualify_lead`, `disqualify_lead` and `close_convert_lead` events; notes-only,
+  same-status and client-ID-less changes emit nothing.
+- Added an optional five-second GA4 Measurement Protocol sender. Its body is
+  restricted to event name, persisted `client_id`, and internal
+  `lead_id=booking:<id>`; contact details, notes, calendar data, attribution URLs
+  and Cal UID are never sent. Analytics failure cannot alter the saved admin
+  result.
+- Verification: RED captured the unsupported booking/status contracts; focused
+  admin/GA4 tests **32/32**, complete suite **985/985**, touched-file lint and
+  production build passed. Full lint had zero errors and one unrelated existing
+  unused-variable warning in `tests/admin-create-workspace.test.ts`.
+- Activation remains off until `GA4_MEASUREMENT_ID` and `GA4_API_SECRET` are
+  configured. The Task 7 database/RLS/real-Cal activation gate is unchanged; no
+  database, analytics property, account, or secret was accessed or mutated.
+
 ## Signed Cal demo-booking ingestion (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
 
 - Added a fail-closed Cal.com `BOOKING_CREATED` webhook boundary that verifies

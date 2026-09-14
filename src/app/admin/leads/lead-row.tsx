@@ -1,18 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, MessageCircle, NotebookPen } from "lucide-react";
+import { CalendarClock, Mail, MessageCircle, NotebookPen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
 import { LEAD_STATUSES, type LeadRow } from "@/modules/admin/leads";
 import { updateLeadAction } from "./actions";
 
-const TONE = { new: "brand", contacted: "info", converted: "success", dismissed: "neutral" } as const;
+const TONE = {
+  new: "brand",
+  contacted: "info",
+  qualified: "warning",
+  converted: "success",
+  dismissed: "neutral",
+} as const;
+
+const KIND_LABEL = {
+  access: "access request",
+  waitlist: "waitlist",
+  booking: "demo booking",
+} as const;
 
 /** One lead: who, how to reach them, where they are in the pipeline, notes. */
 export function LeadRowItem({ lead }: { lead: LeadRow }) {
   const [notesOpen, setNotesOpen] = useState(Boolean(lead.notes));
-  const wa = `https://wa.me/${lead.phoneE164.replace(/[^\d]/g, "")}`;
+  const wa = lead.phoneE164
+    ? `https://wa.me/${lead.phoneE164.replace(/[^\d]/g, "")}`
+    : null;
   return (
     <li className="px-5 py-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -20,7 +34,7 @@ export function LeadRowItem({ lead }: { lead: LeadRow }) {
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
             <span className="truncate">{lead.name}</span>
             <Badge tone={lead.kind === "access" ? "info" : "neutral"}>
-              {lead.kind === "access" ? "access request" : "waitlist"}
+              {KIND_LABEL[lead.kind]}
             </Badge>
             {lead.vertical && <Badge tone="neutral">{lead.vertical}</Badge>}
             {lead.duplicateCount > 0 && (
@@ -37,14 +51,21 @@ export function LeadRowItem({ lead }: { lead: LeadRow }) {
             {lead.createdAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium">
-            {lead.kind === "access" && (
-              <a href={`mailto:${lead.secondary}`} rel="noreferrer" className="inline-flex items-center gap-1 text-neutral-700 hover:underline">
-                <Mail className="h-3.5 w-3.5" aria-hidden /> Email {lead.secondary}
+            {lead.email ? (
+              <a href={`mailto:${lead.email}`} rel="noreferrer" className="inline-flex items-center gap-1 text-neutral-700 hover:underline">
+                <Mail className="h-3.5 w-3.5" aria-hidden /> Email {lead.email}
               </a>
-            )}
-            <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:underline">
-              <MessageCircle className="h-3.5 w-3.5" aria-hidden /> WhatsApp {lead.phoneE164}
-            </a>
+            ) : null}
+            {lead.kind === "booking" && lead.scheduledFor ? (
+              <span className="inline-flex items-center gap-1 text-neutral-600">
+                <CalendarClock className="h-3.5 w-3.5" aria-hidden /> Scheduled {lead.scheduledFor}
+              </span>
+            ) : null}
+            {wa && lead.phoneE164 ? (
+              <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:underline">
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden /> WhatsApp {lead.phoneE164}
+              </a>
+            ) : null}
           </div>
         </div>
         <Badge tone={TONE[lead.status]}>{lead.status}</Badge>
