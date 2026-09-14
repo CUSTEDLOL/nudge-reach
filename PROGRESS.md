@@ -19,6 +19,15 @@
   admin/GA4 tests **32/32**, complete suite **985/985**, touched-file lint and
   production build passed. Full lint had zero errors and one unrelated existing
   unused-variable warning in `tests/admin-create-workspace.test.ts`.
+- Fix round 1 now validates the numeric two-part GA client ID at browser capture,
+  signed Cal ingress, and GA4 egress; malformed, whitespace-padded, overlong and
+  PII-shaped values are discarded without network access. Booking transitions
+  now use an `id + observed status` compare-and-set, so concurrent same-target
+  edits emit once and competing edits return a refresh conflict. The founder
+  source filter now exposes and accepts demo bookings.
+- Fix-round verification: affected Task 6/7/8 tests **121/121**, complete suite
+  **1010/1010**, touched-file lint, Prisma generation, and production build
+  passed.
 - Activation remains off until `GA4_MEASUREMENT_ID` and `GA4_API_SECRET` are
   configured. The Task 7 database/RLS/real-Cal activation gate is unchanged; no
   database, analytics property, account, or secret was accessed or mutated.

@@ -11,6 +11,7 @@ const KINDS: { value: LeadKind | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "access", label: "Access requests" },
   { value: "waitlist", label: "Waitlist" },
+  { value: "booking", label: "Demo bookings" },
 ];
 
 function pick<T extends string>(raw: string | string[] | undefined, allowed: readonly T[], fallback: T): T {
@@ -32,7 +33,11 @@ export default async function AdminLeadsPage({
   await requireFounder();
   const sp = await searchParams;
   const status = pick<LeadStatus | "all">(sp.status, [...LEAD_STATUSES, "all"], "new");
-  const kind = pick<LeadKind | "all">(sp.kind, ["all", "access", "waitlist"], "all");
+  const kind = pick<LeadKind | "all">(
+    sp.kind,
+    KINDS.map(({ value }) => value),
+    "all"
+  );
   const rawQuery = Array.isArray(sp.q) ? sp.q[0] : sp.q;
   const q = rawQuery?.trim() ?? "";
   const rawPage = Number(Array.isArray(sp.page) ? sp.page[0] : sp.page);
@@ -56,7 +61,7 @@ export default async function AdminLeadsPage({
     <div>
       <PageHeader
         title="Leads"
-        description="Access requests and waitlist signups from the landing page. Move each one along; the badge in the sidebar counts what's still new."
+        description="Access requests, waitlist signups, and demo bookings from the landing page. Move each one along; the badge in the sidebar counts what's still new."
       />
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <nav aria-label="Status" className="flex flex-wrap gap-1">

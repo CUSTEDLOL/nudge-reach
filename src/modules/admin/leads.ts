@@ -317,6 +317,9 @@ export type UpdateLeadResult =
   | { ok: true; transition: LeadTransition }
   | { ok: false; error: string };
 
+const LEAD_EDIT_CONFLICT =
+  "Lead changed while you were editing. Refresh and try again.";
+
 /** Move a lead through the pipeline and/or save a note (max 1000 chars). */
 export async function updateLead(
   kind: LeadKind,
@@ -334,21 +337,51 @@ export async function updateLead(
   }
   if (Object.keys(data).length === 0) return { ok: false, error: "Nothing to update." };
   try {
-    let transition: LeadTransition = null;
     if (kind === "booking" && data.status) {
-      const current = await prisma.demoBooking.findUnique({
+      const observed = await prisma.demoBooking.findUnique({
         where: { id },
         select: { status: true, gaClientId: true },
       });
-      if (!current) return { ok: false, error: "Lead not found." };
-      const previous = isLeadStatus(current.status) ? current.status : "new";
-      if (previous !== data.status) {
-        transition = {
-          previous,
-          current: data.status,
-          gaClientId: current.gaClientId,
+      if (!observed) return { ok: false, error: "Lead not found." };
+
+      const committed = await prisma.demoBooking.updateMany({
+        where: { id, status: observed.status },
+        data,
+      });
+      if (committed.count === 1) {
+        const previous = isLeadStatus(observed.status) ? observed.status : "new";
+        return {
+          ok: true,
+          transition:
+            previous === data.status
+              ? null
+              : {
+                  previous,
+                  current: data.status,
+                  gaClientId: observed.gaClientId,
+                },
         };
       }
+
+      const latest = await prisma.demoBooking.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      if (!latest) return { ok: false, error: "Lead not found." };
+      if (latest.status !== data.status) {
+        return { ok: false, error: LEAD_EDIT_CONFLICT };
+      }
+
+      if (data.notes !== undefined) {
+        const notesCommitted = await prisma.demoBooking.updateMany({
+          where: { id, status: latest.status },
+          data: { notes: data.notes },
+        });
+        if (notesCommitted.count !== 1) {
+          return { ok: false, error: LEAD_EDIT_CONFLICT };
+        }
+      }
+      return { ok: true, transition: null };
     }
 
     if (kind === "access") {
@@ -358,7 +391,7 @@ export async function updateLead(
     } else {
       await prisma.demoBooking.update({ where: { id }, data });
     }
-    return { ok: true, transition };
+    return { ok: true, transition: null };
   } catch {
     return { ok: false, error: "Lead not found." };
   }

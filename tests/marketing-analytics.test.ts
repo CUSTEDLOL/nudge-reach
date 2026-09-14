@@ -172,7 +172,7 @@ describe("marketing attribution", () => {
     );
   });
 
-  it("truncates captured values to 200 characters", () => {
+  it("truncates captured attribution but rejects an overlong client ID", () => {
     const storage = new FakeStorage();
     const longValue = "a".repeat(250);
     const longGaClientId = `${"1".repeat(125)}.${"2".repeat(125)}`;
@@ -189,17 +189,24 @@ describe("marketing attribution", () => {
     expect(attribution.landingPath).toHaveLength(200);
     expect(attribution.utmSource).toHaveLength(200);
     expect(attribution.utmCampaign).toHaveLength(200);
-    expect(attribution.gaClientId).toHaveLength(200);
+    expect(attribution.gaClientId).toBeUndefined();
   });
 
-  it("does not treat an arbitrary GA cookie value as a client ID", () => {
+  it.each([
+    ["malformed", "12345.67890.123"],
+    ["whitespace-padded", " 12345.67890 "],
+    ["trailing-whitespace", "12345.67890 "],
+    ["email-shaped", "person@example.com"],
+    ["name-shaped", "Dr Priya Rao"],
+    ["phone-shaped", "+919876543210"],
+  ])("does not treat a %s GA cookie value as a client ID", (_kind, value) => {
     const storage = new FakeStorage();
 
     const attribution = captureAttribution(
       new URL("https://nudgeagent.app/"),
       "",
       storage,
-      "_ga=GA1.1.person@example.com"
+      `_ga=GA1.1.${value}`
     );
 
     expect(attribution).toEqual({ landingPath: "/" });
@@ -272,6 +279,18 @@ describe("marketing attribution", () => {
       "metadata[landingPath]": "/industries/clinics",
       "metadata[referrer]": "https://www.google.com/",
       "metadata[gaClientId]": "12345.67890",
+    });
+  });
+
+  it.each([
+    ["malformed", "12345.67890.123"],
+    ["whitespace-padded", " 12345.67890 "],
+    ["email-shaped", "person@example.com"],
+    ["name-shaped", "Dr Priya Rao"],
+    ["phone-shaped", "+919876543210"],
+  ])("omits a %s client ID from Cal metadata", (_kind, gaClientId) => {
+    expect(calMetadata({ landingPath: "/pricing", gaClientId })).toEqual({
+      "metadata[landingPath]": "/pricing",
     });
   });
 });

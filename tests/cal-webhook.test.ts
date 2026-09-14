@@ -145,6 +145,21 @@ describe("parseCalBooking", () => {
     }
   });
 
+  it.each([
+    ["malformed", "12345.67890.123"],
+    ["whitespace-padded", " 12345.67890 "],
+    ["email-shaped", "person@example.com"],
+    ["name-shaped", "Dr Priya Rao"],
+    ["phone-shaped", "+919876543210"],
+  ])("drops a %s GA client ID at signed Cal ingress", (_kind, gaClientId) => {
+    const booking = structuredClone(bookingPayload);
+    booking.payload.metadata.gaClientId = gaClientId;
+
+    const parsed = parseCalBooking(JSON.stringify(booking));
+
+    expect(parsed?.attribution).not.toHaveProperty("gaClientId");
+  });
+
   it("returns null for events other than the configured booking event", () => {
     expect(
       parseCalBooking(

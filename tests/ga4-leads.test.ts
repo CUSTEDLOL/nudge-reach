@@ -66,6 +66,26 @@ describe("sendGa4LeadEvent", () => {
     }
   );
 
+  it.each([
+    ["malformed", "12345.67890.123"],
+    ["whitespace-padded", " 12345.67890 "],
+    ["email-shaped", "person@example.com"],
+    ["name-shaped", "Dr Priya Rao"],
+    ["phone-shaped", "+919876543210"],
+  ])("skips a %s client ID without network access", async (_kind, clientId) => {
+    analyticsEnv.GA4_MEASUREMENT_ID = "G-TEST123";
+    analyticsEnv.GA4_API_SECRET = "server-secret";
+
+    await expect(
+      sendGa4LeadEvent({
+        name: "qualify_lead",
+        clientId,
+        leadId: "lead_123",
+      })
+    ).resolves.toBe("skipped");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("posts one recommended event with only client_id and internal lead_id", async () => {
     analyticsEnv.GA4_MEASUREMENT_ID = "G-TEST123";
     analyticsEnv.GA4_API_SECRET = "server-secret";

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { normalizePhoneE164 } from "@/lib/phone";
 import type { AttributionSnapshot } from "./analytics";
+import { isGaClientId } from "./ga-client-id";
 
 const MAX_ATTRIBUTION_LENGTH = 200;
 const CAL_SIGNATURE_PATTERN = /^[0-9a-fA-F]{64}$/;
@@ -151,8 +152,8 @@ export function parseCalBooking(rawBody: string): ParsedCalBooking | null {
       ...(limited(metadata?.utm_campaign)
         ? { utmCampaign: limited(metadata?.utm_campaign) }
         : {}),
-      ...(limited(metadata?.gaClientId)
-        ? { gaClientId: limited(metadata?.gaClientId) }
+      ...(isGaClientId(metadata?.gaClientId)
+        ? { gaClientId: metadata.gaClientId }
         : {}),
     },
   };

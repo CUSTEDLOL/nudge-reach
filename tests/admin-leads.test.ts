@@ -19,6 +19,7 @@ const { prisma, requireFounder, revalidatePath, sendGa4LeadEvent } = vi.hoisted(
       },
       demoBooking: {
         update: vi.fn(),
+        updateMany: vi.fn(),
         findUnique: vi.fn(),
         findMany: vi.fn(),
         count: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 
 import { LeadRowItem } from "@/app/admin/leads/lead-row";
 import { updateLeadAction } from "@/app/admin/leads/actions";
+import AdminLeadsPage from "@/app/admin/leads/page";
 import { ToastProvider } from "@/components/ui/toast";
 import {
   leadCounts,
@@ -50,9 +52,34 @@ beforeEach(() => {
   prisma.accessRequest.update.mockResolvedValue({});
   prisma.waitlistSignup.update.mockResolvedValue({});
   prisma.demoBooking.update.mockResolvedValue({});
+  prisma.demoBooking.updateMany.mockResolvedValue({ count: 1 });
   requireFounder.mockResolvedValue({ email: "founder@nudge.test" });
   sendGa4LeadEvent.mockResolvedValue("sent");
 });
+
+function mockConcurrentBookingUpdates() {
+  let booking = { status: "contacted", gaClientId: "12345.67890" };
+  let observedReads = 0;
+  let releaseReads!: () => void;
+  const bothObserved = new Promise<void>((resolve) => {
+    releaseReads = resolve;
+  });
+  prisma.demoBooking.findUnique.mockImplementation(async () => {
+    const snapshot = { ...booking };
+    if (observedReads < 2) {
+      observedReads += 1;
+      if (observedReads === 2) releaseReads();
+      await bothObserved;
+    }
+    return snapshot;
+  });
+  prisma.demoBooking.updateMany.mockImplementation(async ({ where, data }) => {
+    if (booking.status !== where.status) return { count: 0 };
+    booking = { ...booking, ...data };
+    return { count: 1 };
+  });
+  return () => booking;
+}
 
 describe("updateLead", () => {
   it("rejects unknown statuses and empty patches", async () => {
@@ -91,8 +118,8 @@ describe("updateLead", () => {
       where: { id: "b1" },
       select: { status: true, gaClientId: true },
     });
-    expect(prisma.demoBooking.update).toHaveBeenCalledWith({
-      where: { id: "b1" },
+    expect(prisma.demoBooking.updateMany).toHaveBeenCalledWith({
+      where: { id: "b1", status: "contacted" },
       data: { status: "qualified" },
     });
     expect(result).toEqual({
@@ -104,9 +131,59 @@ describe("updateLead", () => {
       },
     });
   });
+
+  it("allows only one transition when same-target updates race", async () => {
+    const currentBooking = mockConcurrentBookingUpdates();
+
+    const results = await Promise.all([
+      updateLead("booking", "b1", { status: "qualified" }),
+      updateLead("booking", "b1", { status: "qualified" }),
+    ]);
+
+    expect(currentBooking().status).toBe("qualified");
+    expect(results.filter((result) => result.ok && result.transition)).toHaveLength(1);
+    expect(results.filter((result) => result.ok && !result.transition)).toHaveLength(1);
+  });
+
+  it("rejects a stale competing update without reporting a transition", async () => {
+    const currentBooking = mockConcurrentBookingUpdates();
+
+    const results = await Promise.all([
+      updateLead("booking", "b1", { status: "qualified" }),
+      updateLead("booking", "b1", { status: "dismissed" }),
+    ]);
+
+    expect(currentBooking().status).toBe("qualified");
+    expect(results[0]).toMatchObject({
+      ok: true,
+      transition: { previous: "contacted", current: "qualified" },
+    });
+    expect(results[1]).toEqual({
+      ok: false,
+      error: "Lead changed while you were editing. Refresh and try again.",
+    });
+  });
 });
 
 describe("leadsList / newLeadsCount", () => {
+  it("shows and accepts the demo-booking source filter", async () => {
+    prisma.demoBooking.findMany.mockResolvedValue([]);
+    prisma.accessRequest.groupBy.mockResolvedValue([]);
+    prisma.waitlistSignup.groupBy.mockResolvedValue([]);
+    prisma.demoBooking.groupBy.mockResolvedValue([]);
+
+    const page = await AdminLeadsPage({
+      searchParams: Promise.resolve({ kind: "booking", status: "all" }),
+    });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("Demo bookings");
+    expect(html).toContain("kind=booking");
+    expect(prisma.demoBooking.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accessRequest.findMany).not.toHaveBeenCalled();
+    expect(prisma.waitlistSignup.findMany).not.toHaveBeenCalled();
+  });
+
   it("merges all three tables newest-first with a normalised shape", async () => {
     prisma.accessRequest.findMany.mockResolvedValue([
       { id: "a1", name: "Dr Rao", email: "rao@clinic.in", phoneE164: "+919900000001", source: "hero", status: "new", notes: null, createdAt: new Date("2026-09-01") },
@@ -359,6 +436,45 @@ describe("booking lead analytics", () => {
     await expect(bookingAction("qualified")).resolves.toEqual({
       ok: true,
       message: "Marked qualified.",
+    });
+  });
+
+  it("emits once when two same-target booking actions race", async () => {
+    mockConcurrentBookingUpdates();
+
+    const results = await Promise.all([
+      bookingAction("qualified"),
+      bookingAction("qualified"),
+    ]);
+
+    expect(results).toEqual([
+      { ok: true, message: "Marked qualified." },
+      { ok: true, message: "Marked qualified." },
+    ]);
+    expect(sendGa4LeadEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits only the committed event when competing booking actions race", async () => {
+    const currentBooking = mockConcurrentBookingUpdates();
+
+    const results = await Promise.all([
+      bookingAction("qualified"),
+      bookingAction("dismissed"),
+    ]);
+
+    expect(currentBooking().status).toBe("qualified");
+    expect(results).toEqual([
+      { ok: true, message: "Marked qualified." },
+      {
+        ok: false,
+        message: "Lead changed while you were editing. Refresh and try again.",
+      },
+    ]);
+    expect(sendGa4LeadEvent).toHaveBeenCalledTimes(1);
+    expect(sendGa4LeadEvent).toHaveBeenCalledWith({
+      name: "qualify_lead",
+      clientId: "12345.67890",
+      leadId: "b1",
     });
   });
 });

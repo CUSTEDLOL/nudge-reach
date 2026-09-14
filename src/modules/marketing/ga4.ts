@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { isGaClientId } from "./ga-client-id";
 
 export type Ga4LeadEventName =
   | "qualify_lead"
@@ -26,7 +27,9 @@ export async function sendGa4LeadEvent({
 }): Promise<Ga4LeadEventResult> {
   const measurementId = env.GA4_MEASUREMENT_ID;
   const apiSecret = env.GA4_API_SECRET;
-  if (!measurementId || !apiSecret || !clientId?.trim()) return "skipped";
+  if (!measurementId || !apiSecret || !isGaClientId(clientId)) {
+    return "skipped";
+  }
 
   const url = new URL(GA4_MEASUREMENT_PROTOCOL_URL);
   url.searchParams.set("measurement_id", measurementId);

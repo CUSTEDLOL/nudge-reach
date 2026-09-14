@@ -1,3 +1,5 @@
+import { isGaClientId } from "./ga-client-id";
+
 const STORAGE_KEY = "nudge:first-touch:v1";
 const MAX_VALUE_LENGTH = 200;
 const PATH_BASE = "https://nudge.invalid";
@@ -112,12 +114,12 @@ function storedTouch(value: string): FirstTouch | null {
 function gaClientId(cookie: string) {
   const gaCookie = cookie
     .split(";")
-    .map((part) => part.trim())
+    .map((part) => part.trimStart())
     .find((part) => part.startsWith("_ga="));
   if (!gaCookie) return undefined;
 
   const match = gaCookie.slice(4).match(/^GA\d+\.\d+\.(\d+\.\d+)$/);
-  return limited(match?.[1]);
+  return isGaClientId(match?.[1]) ? match[1] : undefined;
 }
 
 export function captureAttribution(
@@ -159,12 +161,14 @@ export function calMetadata(attribution: AttributionSnapshot) {
     ["utm_medium", attribution.utmMedium],
     ["utm_campaign", attribution.utmCampaign],
     ["metadata[referrer]", attribution.referrer],
-    ["metadata[gaClientId]", attribution.gaClientId],
   ] as const;
 
   for (const [key, value] of fields) {
     const safeValue = limited(value);
     if (safeValue) config[key] = safeValue;
+  }
+  if (isGaClientId(attribution.gaClientId)) {
+    config["metadata[gaClientId]"] = attribution.gaClientId;
   }
 
   return config;
