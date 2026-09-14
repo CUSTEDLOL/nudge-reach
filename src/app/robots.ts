@@ -7,24 +7,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Authenticated product surfaces and API routes carry no SEO value.
-      disallow: [
-        "/api/",
-        "/dashboard",
-        "/inbox",
-        "/contacts",
-        "/campaigns",
-        "/templates",
-        "/automations",
-        "/agent",
-        "/analytics",
-        "/integrations",
-        "/settings",
-        "/onboarding",
-        "/conversations",
-        "/auth/",
-        "/login",
-      ],
+      // Protected app routes redirect anonymous visitors to the crawlable,
+      // noindex login response. Authentication remains the access boundary.
+      disallow: ["/api/", "/auth/"],
     },
     sitemap: `${BASE}/sitemap.xml`,
   };

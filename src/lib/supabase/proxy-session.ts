@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // /api/webhooks: Meta calls it (signature-verified, not cookie-auth'd).
 // /api/cron: queue tick (no session; safe — it only advances queued work).
 // /api/waitlist: public signup endpoint for the homepage lead form (demo/waitlist).
-const PUBLIC_PATHS = [
+const PUBLIC_PATH_PREFIXES = [
   "/login",
   "/auth",
   "/api/webhooks",
@@ -31,12 +31,26 @@ const PUBLIC_PATHS = [
   "/faq",
   "/privacy",
   "/terms",
+  "/industries",
+  "/resources",
+  "/features",
+  "/compare",
+  "/how-it-works",
   // SEO artifacts served by the app router
   "/sitemap.xml",
   "/robots.txt",
   "/opengraph-image",
   "/icon.svg",
 ];
+
+export function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    PUBLIC_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    )
+  );
+}
 
 /**
  * Refreshes the Supabase auth token on every matched request and redirects
@@ -73,8 +87,7 @@ export async function updateSession(request: NextRequest) {
   const claims = data?.claims;
 
   const { pathname } = request.nextUrl;
-  const isPublic =
-    pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic = isPublicPath(pathname);
 
   if (!claims && !isPublic) {
     const url = request.nextUrl.clone();
