@@ -12,7 +12,7 @@
   verified on 2026-09-14, and is explicitly not medical or legal advice.
 - Added Resources to desktop/mobile navigation and the footer, and registered the
   resource family in the sitemap-backed SEO registry.
-- Verification: focused resource/SEO contracts **16/16**, complete suite
+- Verification: focused resource/SEO contracts **18/18**, complete suite
   **913/913**, touched-file lint clean, and the production build passed with the
   index emitted statically and the guide via SSG. Desktop/mobile browser review
   was attempted but unavailable because no browser session was connected.

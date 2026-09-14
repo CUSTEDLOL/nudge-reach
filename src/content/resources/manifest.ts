@@ -32,10 +32,16 @@ export type PublishedResource = Extract<
   { draft: false }
 >;
 
-export function publishedResources(): PublishedResource[] {
-  return RESOURCE_MANIFEST.filter(
-    (resource): resource is PublishedResource => !resource.draft,
+export function selectPublishedResources<T extends ResourceRecord>(
+  resources: readonly T[],
+): Array<T & { draft: false }> {
+  return resources.filter(
+    (resource): resource is T & { draft: false } => resource.draft === false,
   );
+}
+
+export function publishedResources(): PublishedResource[] {
+  return selectPublishedResources(RESOURCE_MANIFEST);
 }
 
 export function resourceBySlug(slug: string): PublishedResource | undefined {

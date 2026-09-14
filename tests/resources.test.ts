@@ -10,6 +10,7 @@ import { RESOURCE_LOADERS } from "@/content/resources/loaders";
 import {
   publishedResources,
   resourceBySlug,
+  selectPublishedResources,
 } from "@/content/resources/manifest";
 
 const GUIDE_SLUG = "whatsapp-appointment-booking-for-clinics";
@@ -38,8 +39,20 @@ describe("resource manifest", () => {
     });
   });
 
-  it("returns undefined for unknown or draft resources", () => {
+  it("returns undefined for unknown resources", () => {
     expect(resourceBySlug("missing")).toBeUndefined();
+  });
+
+  it("excludes draft records through the production publication filter", () => {
+    const published = publishedResources()[0];
+    const records = [
+      published,
+      { ...published, slug: "draft-clinic-guide", draft: true as const },
+    ] as const;
+
+    expect(selectPublishedResources(records).map((resource) => resource.slug)).toEqual([
+      "whatsapp-appointment-booking-for-clinics",
+    ]);
   });
 });
 
@@ -88,9 +101,28 @@ describe("published resource loading", () => {
 
     expect(plainText(html)).toContain("24-hour customer service window");
     expect(plainText(html)).toContain("approved message template");
-    expect(policyLink).toContain('target="_blank"');
-    expect(policyLink).toContain('rel="noopener noreferrer"');
+    expect(policyLink).toBeDefined();
+    expect(policyLink!).toContain('target="_blank"');
+    expect(policyLink!).toContain('rel="noopener noreferrer"');
     expect(html).toContain('href="/industries/clinics"');
+  });
+
+  it("attributes the financial-data policy next to the deposits guidance", async () => {
+    const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
+    const html = renderToStaticMarkup(createElement(resourceModule.default));
+    const depositsSection = html.match(
+      /<section aria-labelledby="deposits"[\s\S]*?<\/section>/,
+    )?.[0];
+    const policyLink = depositsSection?.match(
+      /<a[^>]*href="https:\/\/whatsappbusiness\.com\/policy\/"[^>]*>/,
+    )?.[0];
+
+    expect(plainText(depositsSection ?? "")).toContain(
+      "full card or financial-account details",
+    );
+    expect(policyLink).toBeDefined();
+    expect(policyLink!).toContain('target="_blank"');
+    expect(policyLink!).toContain('rel="noopener noreferrer"');
   });
 });
 

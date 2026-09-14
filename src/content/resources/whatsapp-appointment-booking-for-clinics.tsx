@@ -175,8 +175,18 @@ export default function WhatsappAppointmentBookingForClinicsGuide() {
             </p>
             <p>
               Do not ask a patient to type full card or financial-account details
-              into WhatsApp. Keep payment collection with the payment provider and
-              keep the conversation focused on the booking status.
+              into WhatsApp. That handling follows the current{` `}
+              <a
+                href="https://whatsappbusiness.com/policy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold text-brand-700 underline decoration-brand-300 underline-offset-4 hover:text-brand-800"
+              >
+                WhatsApp Business Messaging Policy
+                <ExternalLink className="h-4 w-4" aria-hidden />
+              </a>
+              . Keep payment collection with the payment provider and keep the
+              conversation focused on the booking status.
             </p>
           </div>
         </section>
