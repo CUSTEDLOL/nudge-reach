@@ -20,7 +20,6 @@ export type MarketingEvent =
   | {
       event: "generate_lead";
       lead_source: "cal";
-      booking_uid?: string;
     }
   | {
       event: "generate_lead";

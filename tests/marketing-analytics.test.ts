@@ -334,7 +334,7 @@ describe("demo booking funnel", () => {
     ]);
   });
 
-  it("initializes and subscribes to Cal events exactly once", () => {
+  it("subscribes once and emits aggregate-only Cal booking events", () => {
     const dataLayer: object[] = [];
     const script = { src: "" };
     vi.stubGlobal("window", { dataLayer });
@@ -401,11 +401,7 @@ describe("demo booking funnel", () => {
       { event: "generate_lead", lead_source: "cal" },
       { event: "generate_lead", lead_source: "cal" },
       { event: "generate_lead", lead_source: "cal" },
-      {
-        event: "generate_lead",
-        lead_source: "cal",
-        booking_uid: "Booking_UID-123",
-      },
+      { event: "generate_lead", lead_source: "cal" },
       { event: "cal_embed_error", surface: "cal_embed" },
     ]);
   });
