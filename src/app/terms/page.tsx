@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { LegalDoc, type LegalSection } from "@/components/marketing/legal-doc";
+import { metadataFor } from "@/modules/marketing/seo-pages";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "The agreement between Nudge and the businesses that use it — plans, acceptable use, WhatsApp policy compliance, liability and termination.",
-};
+export const metadata: Metadata = metadataFor("/terms");
 
 const UPDATED = "4 July 2026";
 

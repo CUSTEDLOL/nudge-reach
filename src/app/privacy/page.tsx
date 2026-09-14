@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { LegalDoc, type LegalSection } from "@/components/marketing/legal-doc";
+import { metadataFor } from "@/modules/marketing/seo-pages";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description:
-    "How Nudge collects, uses, stores and protects personal data — for our customers and the contacts they message on WhatsApp.",
-};
+export const metadata: Metadata = metadataFor("/privacy");
 
 const UPDATED = "4 July 2026";
 

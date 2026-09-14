@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sitemap from "@/app/sitemap";
+import { metadata as privacyMetadata } from "@/app/privacy/page";
+import { metadata as termsMetadata } from "@/app/terms/page";
 import {
   SEO_PAGES,
   metadataFor,
@@ -23,6 +25,11 @@ describe("SEO page registry", () => {
     expect(seoPage("/faq").modifiedAt).toBe("2026-07-19");
     expect(seoPage("/privacy").modifiedAt).toBe("2026-07-19");
     expect(seoPage("/terms").modifiedAt).toBe("2026-07-05");
+  });
+
+  it("uses registry metadata for legal pages", () => {
+    expect(privacyMetadata).toEqual(metadataFor("/privacy"));
+    expect(termsMetadata).toEqual(metadataFor("/terms"));
   });
 
   it("builds the sitemap from every published registry page", () => {
