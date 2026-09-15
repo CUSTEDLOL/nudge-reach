@@ -1,7 +1,7 @@
 # Isolated Founder Admin Login — Design
 
-**Date:** 2026-09-15  
-**Status:** Approved  
+**Date:** 2026-09-15
+**Status:** Approved
 **Audience:** Nudge founders only
 
 ## Purpose
