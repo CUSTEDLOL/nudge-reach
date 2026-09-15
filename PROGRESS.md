@@ -1,5 +1,17 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## First high-volume client onboarding plan (2026-09-15) ✅
+
+- Added `docs/superpowers/plans/2026-09-15-first-client-whatsapp-onboarding.md`,
+  the operational runbook for moving an existing-vendor client with roughly 100
+  WhatsApp leads/day onto Nudge.
+- The plan uses the current founder-assisted, client-owned Meta connection and
+  explicit per-workspace live control; it adds ownership/billing gates, vendor
+  handover, consent-safe imports, templates, simulation/UAT, rollback, cohort
+  ramping, old-vendor removal and a 30-day outcome review.
+- Documentation only. It does not enable live sending, alter Meta assets, import
+  client data, change billing, or add a product feature.
+
 ## SEO production release gate (2026-09-15) ✅
 
 - Merged the reviewed SEO foundation onto the current `origin/main` while
