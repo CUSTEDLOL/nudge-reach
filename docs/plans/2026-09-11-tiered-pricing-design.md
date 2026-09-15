@@ -170,11 +170,11 @@ If US$1 moves to ₹100 the 10,000 pack's margin falls to 37.5%. Margin here is
 (price − cost) ÷ price, before all other expenses.
 
 Voice does not use credits (founder decision 2026-09-15). Pro's 100 included
-minutes are limited by the per-plan minute cap, and at the assumed
-US$0.15/minute they cost Nudge up to ₹1,350 a month if fully used — so Pro's
-"left after AI cost" above is about ₹16,400 (82%) for a customer who also uses
-every voice minute. The voice figure is an assumption, not a carrier quote;
-verify speech, inference and carrier costs before selling live voice.
+minutes are limited by the per-plan minute cap, and at the measured
+~US$0.18/minute all-in they cost Nudge up to ₹1,620 a month if fully used — so
+Pro's "left after AI cost" above is about ₹16,130 (81%) for a customer who
+also uses every voice minute. Re-check the per-minute figure against real
+carrier and ElevenLabs invoices before selling live voice at volume.
 
 ## 5. High-volume and Enterprise deals
 
