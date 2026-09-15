@@ -98,7 +98,7 @@ whole minute; the month resets on the 1st. WhatsApp is unaffected either way.
   can cost at most ~8 minutes.
 
 Sizing a package: at roughly ₹9–12 (~S$0.15) an all-in minute, 100 minutes
-costs on the order of ₹1,000. Check `docs/PRICING.md` before quoting.
+costs on the order of ₹1,000. Check `docs/plans/2026-09-11-tiered-pricing-design.md` before quoting.
 
 ## Compliance
 - Every opener identifies the agent as AI and says the call may be recorded

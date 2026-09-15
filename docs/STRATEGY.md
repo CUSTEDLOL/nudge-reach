@@ -90,9 +90,8 @@ with the flagship.** Ten currencies are supported (INR, USD, AED, SAR, SGD, MYR,
 IDR, BRL, MXN, GBP).
 
 Full mechanics — setup fee + monthly + annual, per-market price sheet, competitive
-analysis, and pricing guardrails — live in **`docs/PRICING.md`**. (Note: PRICING.md
-proposes moving the Singapore flagship S$599 → S$699; adopt there before updating
-this table.)
+analysis, and pricing guardrails — live in **`docs/plans/2026-09-11-tiered-pricing-design.md`** (the tiered pricing
+record; `docs/PRICING.md` was retired 2026-09-15).
 
 ## 7. Positioning of the existing feature set
 
