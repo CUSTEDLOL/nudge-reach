@@ -9,6 +9,8 @@ import { adminCookieOptions } from "@/lib/supabase/admin-cookie";
 // /api/waitlist: public signup endpoint for the homepage lead form (demo/waitlist).
 const PUBLIC_PATHS = [
   "/login",
+  // owner setup tokens are validated and consumed by the public route itself
+  "/invite",
   "/auth",
   "/api/webhooks",
   // voice front desk: ElevenLabs webhooks + tool calls carry their own secrets

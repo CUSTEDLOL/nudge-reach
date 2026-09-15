@@ -18,9 +18,13 @@
 - Production Prisma schema is synchronized and the server-only Supabase admin
   credential is encrypted in Vercel. Resend remains optional: when configured,
   the same link is emailed; otherwise the founder can copy and send it manually.
-- Verification: focused token, acceptance, action and admin UI coverage is part
-  of the complete suite (**950/950**); TypeScript, lint and the Next.js production
-  build pass, including the dynamic `/invite/[token]` route.
+- A first production smoke test caught the new public route being redirected by
+  the auth proxy. `/invite/[token]` is now explicitly public while token lookup
+  and consumption remain the security boundary, with a regression test for the
+  signed-out owner journey.
+- Verification: focused token, acceptance, action, proxy and admin UI coverage
+  is part of the complete suite (**951/951**); TypeScript, lint and the Next.js
+  production build pass, including the dynamic `/invite/[token]` route.
 
 ## Isolated founder admin login (2026-09-15) ✅
 

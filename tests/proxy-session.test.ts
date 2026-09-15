@@ -55,6 +55,15 @@ describe("updateSession", () => {
     );
   });
 
+  it("lets a signed-out invited owner open the public password setup route", async () => {
+    const response = await updateSession(
+      request("/invite/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("retains normal authenticated application access", async () => {
     getClaims.mockResolvedValue({
       data: { claims: { email: "owner@example.com" } },
