@@ -1,5 +1,22 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## SEO production release gate (2026-09-15) ✅
+
+- Merged the reviewed SEO foundation onto the current `origin/main` while
+  preserving the superseded local credit-ledger work on
+  `backup/local-credit-ledger-2026-09-15`; none of that metering code is in the
+  release.
+- Applied the single additive `DemoBooking` table to production, immediately
+  re-applied the repository RLS policy set, and verified directly that the new
+  empty table has RLS enabled with zero browser policies. No customer or booking
+  rows were changed.
+- Final release verification on the merged tree passed: **167 test files / 1,105
+  tests**, TypeScript, lint, and the Next.js production build (**82
+  static-generation inputs**).
+- Attribution collection still defaults off. Search Console, GTM/GA4 consent,
+  and the signed Cal webhook remain explicit account/configuration activation
+  steps; the public Cal demo link continues to work without them.
+
 ## Seven-day owner setup links (2026-09-15) ✅
 
 - Founder workspace creation now returns a copyable owner setup link instead
