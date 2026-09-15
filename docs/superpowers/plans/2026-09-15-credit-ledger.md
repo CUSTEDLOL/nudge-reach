@@ -115,7 +115,7 @@ model CreditGrant {
   kind              String   // included | trial | purchase | founder
   amountMicroUsd    Int      // issued (may be 0: an Enterprise org with no override)
   remainingMicroUsd Int      // decremented by debits; the latest-expiring grant may go slightly negative (one call's overdraft)
-  // Idempotency key per kind: included = "YYYY-MM"; trial = "trial";
+  // Idempotency key per kind: included = currentPeriodEnd ISO date (YYYY-MM-DD); trial = "trial";
   // purchase = gateway payment/session id; founder = the audit row id.
   sourceKey         String
   note              String?
@@ -282,8 +282,9 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** `prisma/schema.prisma` (CreditGrant, CreditDebit, Org columns); create `src/modules/billing/credits.ts` (pure parts + `creditBalance`); `tests/credit-ledger.test.ts`.
 
-- [ ] Tests: `allocateFifo spends the soonest-expiring grant first`; `skips nothing expired (caller filters) and splits across grants`; `overdraws onto the latest-expiring grant when short`; `overdraft anchor works with a 0-amount grant`; `meteringFor: legacy front_desk → unmetered; free → metered 0; enterprise without override → metered 0; enterprise with override → override; starter → 1,000; featureOverrides never widen credits`; `estimateRemainingReplies uses recent average, falls back to rate-card reply price`.
-- [ ] Add models, `db:push`, `db:rls`; implement pure functions and `creditBalance` (`aggregate` `_sum` with `expiresAt > now`).
+- [x] Tests: `allocateFifo spends the soonest-expiring grant first`; `skips nothing expired (caller filters) and splits across grants`; `overdraws onto the latest-expiring grant when short`; `overdraft anchor works with a 0-amount grant`; `meteringFor: legacy front_desk → unmetered; free → metered 0; enterprise without override → metered 0; enterprise with override → override; starter → 1,000; featureOverrides never widen credits`; `estimateRemainingReplies uses recent average, falls back to rate-card reply price`.
+- [x] Add models; implement pure functions and `creditBalance` (`aggregate` `_sum` with `expiresAt > now`) — schema edited + `prisma generate` run 2026-09-15; tests, lint, build green.
+- [ ] `npm run db:push && npm run db:rls` (awaits founder approval, together with Task 1's push; `scripts/enable-rls.ts` lists `pg_tables` dynamically, so the two new tables are covered without an edit).
 
 ### Task 3: Grants: trial, monthly included, upgrade top-up (≈4h)
 

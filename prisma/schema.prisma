@@ -28,77 +28,84 @@ enum LeadStage {
 // One org per user for MVP (PRD §3). ownerUserId is the Supabase Auth user id.
 // Teams arrive via Membership rows; ownerUserId stays the canonical owner.
 model Org {
-  id                     String            @id @default(cuid())
-  name                   String
-  ownerUserId            String            @unique
+  id                      String            @id @default(cuid())
+  name                    String
+  ownerUserId             String            @unique
   // Business vertical picked during onboarding (e.g. "boutique", "restaurant").
-  vertical               String?
+  vertical                String?
   // Set when the onboarding wizard completes (or is skipped).
-  onboardedAt            DateTime?
+  onboardedAt             DateTime?
   // Per-org test mode: sends, approvals, calendar and payments stay mocked
   // until a real WhatsApp number is connected. SEND_MODE=simulation still
   // mocks everything globally (invariant #4); this only matters in live.
-  simulated              Boolean           @default(true)
+  simulated               Boolean           @default(true)
   // AI Front Desk trial for self-serve signups; cleared when a subscription
   // activates, expired to Free by the cron tick.
-  trialEndsAt            DateTime?
+  trialEndsAt             DateTime?
   // Free-form org preferences, e.g. { "avgOrderValueInr": 1499 }.
-  settings               Json              @default("{}")
+  settings                Json              @default("{}")
   // Globalization (spec: global outreach). Defaults preserve the original
   // India-first behavior for existing rows.
-  currency               String            @default("INR") // "INR" | "USD"
-  dialCode               String            @default("+91") // default country code for bare phone numbers
-  timezone               String            @default("Asia/Kolkata")
+  currency                String            @default("INR") // "INR" | "USD"
+  dialCode                String            @default("+91") // default country code for bare phone numbers
+  timezone                String            @default("Asia/Kolkata")
   // Billing (spec: real usage + Razorpay when keys present). plan defaults to
   // the free tier; the paid fields fill in after a successful subscription.
-  plan                   String            @default("free") // free | starter | growth | pro
+  plan                    String            @default("free") // free | starter | growth | pro
   // Bespoke voice-minute allowance for this org; null = use the plan's.
-  voiceMinutesOverride   Int?
+  voiceMinutesOverride    Int?
+  // Included AI credits per paid period for an Enterprise deal (credit
+  // ledger, billing/credits.ts); null = the plan's amount (0 for Enterprise).
+  includedCreditsOverride Int?
+  // When the low-credit-balance email was last sent, so it goes once a period.
+  creditsLowNotifiedAt    DateTime?
   // Founder admin panel controls (src/modules/admin). suspendedAt set ⇒ the
   // workspace is locked: app redirects to /suspended and sendMessage refuses.
-  suspendedAt            DateTime?
+  suspendedAt             DateTime?
   // Per-org plan-limit overrides for bespoke deals, merged over the plan's
   // limits in billing/limits.ts (e.g. {"publicApi":true,"contacts":5000}).
-  featureOverrides       Json              @default("{}")
+  featureOverrides        Json              @default("{}")
   // Internal notes, visible only in the founder panel.
-  founderNotes           String?
-  subscriptionStatus     String            @default("inactive") // inactive | active | past_due | cancelled
-  razorpayCustomerId     String?
-  razorpaySubscriptionId String?
-  currentPeriodEnd       DateTime?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
-  contacts               Contact[]
-  audiences              Audience[]
-  products               Product[]
-  campaigns              Campaign[]
-  whatsappAccounts       WhatsappAccount[]
-  agentProfile           AgentProfile?
-  conversations          Conversation[]
-  memberships            Membership[]
-  invites                Invite[]
-  tags                   Tag[]
-  notes                  Note[]
-  automations            Automation[]
-  automationRuns         AutomationRun[]
-  apiKeys                ApiKey[]
-  templates              Template[]
-  webhookEndpoints       WebhookEndpoint[]
-  auditLogs              AuditLog[]
-  aiUsage                AiUsage[]
-  bookingRequests        BookingRequest[]
-  paymentRequests        PaymentRequest[]
-  calendarAccount        CalendarAccount?
-  followUpConfig         FollowUpConfig?
-  knowledgeEntries       KnowledgeEntry[]
-  ownerQuestions         OwnerQuestion[]
-  voiceNumbers           VoiceNumber[]
-  voiceCalls             VoiceCall[]
-  crmConnections         CrmConnection[]
-  crmSyncJobs            CrmSyncJob[]
-  contactEvents          ContactEvent[]
-  customActions          CustomAction[]
-  llmAccount             LlmAccount?
+  founderNotes            String?
+  subscriptionStatus      String            @default("inactive") // inactive | active | past_due | cancelled
+  razorpayCustomerId      String?
+  razorpaySubscriptionId  String?
+  currentPeriodEnd        DateTime?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  contacts                Contact[]
+  audiences               Audience[]
+  products                Product[]
+  campaigns               Campaign[]
+  whatsappAccounts        WhatsappAccount[]
+  agentProfile            AgentProfile?
+  conversations           Conversation[]
+  memberships             Membership[]
+  invites                 Invite[]
+  tags                    Tag[]
+  notes                   Note[]
+  automations             Automation[]
+  automationRuns          AutomationRun[]
+  apiKeys                 ApiKey[]
+  templates               Template[]
+  webhookEndpoints        WebhookEndpoint[]
+  auditLogs               AuditLog[]
+  aiUsage                 AiUsage[]
+  bookingRequests         BookingRequest[]
+  paymentRequests         PaymentRequest[]
+  calendarAccount         CalendarAccount?
+  followUpConfig          FollowUpConfig?
+  knowledgeEntries        KnowledgeEntry[]
+  ownerQuestions          OwnerQuestion[]
+  voiceNumbers            VoiceNumber[]
+  voiceCalls              VoiceCall[]
+  crmConnections          CrmConnection[]
+  crmSyncJobs             CrmSyncJob[]
+  contactEvents           ContactEvent[]
+  customActions           CustomAction[]
+  llmAccount              LlmAccount?
+  creditGrants            CreditGrant[]
+  creditDebits            CreditDebit[]
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -796,9 +803,9 @@ model KnowledgeEntry {
 // the credit meter read it. conversationId is a plain string on purpose —
 // cost history must survive conversation/contact deletion.
 model AiUsage {
-  id               String   @id @default(cuid())
+  id               String       @id @default(cuid())
   orgId            String
-  org              Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org              Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   conversationId   String?
   purpose          String // agent_reply | suggest | distill | ingest | campaign_copy | summary
   model            String
@@ -806,18 +813,67 @@ model AiUsage {
   outputTokens     Int
   // Prompt-cache tokens (Anthropic reports them separately from inputTokens);
   // priced at their own rates by the credit ledger. 0 for other providers.
-  cacheReadTokens  Int      @default(0)
-  cacheWriteTokens Int      @default(0)
+  cacheReadTokens  Int          @default(0)
+  cacheWriteTokens Int          @default(0)
   // Micro-USD (1e-6 USD) so integer math never loses fractions of a cent.
   costMicroUsd     Int
   // True when the tokens are synthetic estimates (simulation / keyless).
-  synthetic        Boolean  @default(false)
+  synthetic        Boolean      @default(false)
   // True when the call ran on the org's own BYO key (E3) — their cost, shown for visibility.
-  byok             Boolean  @default(false)
-  createdAt        DateTime @default(now())
+  byok             Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  creditDebit      CreditDebit?
 
   @@index([orgId, createdAt])
   @@index([orgId, conversationId])
+}
+
+// Credit ledger (docs/superpowers/plans/2026-09-15-credit-ledger.md). One
+// positive balance with its own expiry. Balance = SUM(remainingMicroUsd) over
+// rows with expiresAt > now(). 1 credit = 5,000 micro-USD.
+model CreditGrant {
+  id                String   @id @default(cuid())
+  orgId             String
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind              String // included | trial | purchase | founder
+  // Issued; may be 0 (an Enterprise org with no override).
+  amountMicroUsd    Int
+  // Decremented by debits; the latest-expiring grant may go slightly
+  // negative (one call's overdraft).
+  remainingMicroUsd Int
+  // Idempotency key per kind: included = the paid period's end date
+  // (currentPeriodEnd, YYYY-MM-DD); trial = "trial"; purchase = gateway
+  // payment/session id; founder = the audit row id.
+  sourceKey         String
+  note              String?
+  issuedAt          DateTime @default(now())
+  expiresAt         DateTime
+
+  @@unique([orgId, kind, sourceKey])
+  @@index([orgId, expiresAt])
+}
+
+// One row per priced piece of work, anchored to the usage row it prices so a
+// retry (webhook redelivery, reconciler) can never debit twice.
+model CreditDebit {
+  id              String   @id @default(cuid())
+  orgId           String
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  amountMicroUsd  Int
+  purpose         String // agent_reply | suggest | summary | campaign_copy | distill | ingest
+  model           String // exact model id
+  rateCardVersion String
+  aiUsageId       String?  @unique
+  aiUsage         AiUsage? @relation(fields: [aiUsageId], references: [id], onDelete: SetNull)
+  // [{ grantId, microUsd }] in FIFO order; [] for simulated or absorbed debits.
+  allocations     Json
+  // No provider was paid (SEND_MODE=simulation / keyless synthetic path).
+  simulated       Boolean  @default(false)
+  // Provider was paid but Nudge eats it (knowledge ingest/distill).
+  absorbed        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([orgId, createdAt])
 }
 
 // A question the agent could not answer, waiting for the owner
