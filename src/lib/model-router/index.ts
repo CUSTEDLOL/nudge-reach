@@ -101,7 +101,7 @@ export async function generate({
     maxTokens,
   });
   if (attribution) {
-    recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
+    void recordUsage(attribution, rt.model, usage, { byok });
   }
   return sanitizeText(text);
 }
@@ -127,7 +127,7 @@ export async function chat({
   const { driver, rt, byok } = await resolveRuntime(attribution);
   const { text, usage } = await driver.chat(rt, { system, messages, maxTokens });
   if (attribution) {
-    recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
+    void recordUsage(attribution, rt.model, usage, { byok });
   }
   return sanitizeText(text);
 }
@@ -185,7 +185,7 @@ export async function runAgent({
     maxSteps,
   });
   if (attribution) {
-    recordUsage(attribution, rt.model, usage.inputTokens, usage.outputTokens, { byok });
+    void recordUsage(attribution, rt.model, usage, { byok });
   }
   return { text: sanitizeText(text), toolCalls, cappedOut, spoken: (spoken ?? []).map(sanitizeText) };
 }

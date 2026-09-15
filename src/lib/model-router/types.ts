@@ -40,6 +40,9 @@ export interface DriverRuntime {
 export interface DriverUsage {
   inputTokens: number;
   outputTokens: number;
+  /** Prompt-cache tokens, priced separately from inputTokens. Anthropic only; omitted = 0. */
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
 }
 
 export interface DriverGenerateArgs {

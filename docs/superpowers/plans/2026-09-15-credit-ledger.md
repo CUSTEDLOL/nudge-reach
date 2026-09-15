@@ -274,9 +274,9 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** create `src/modules/billing/credit-rates.ts`; modify `src/lib/model-router/types.ts`, `drivers/anthropic.ts`, `usage.ts`, `prisma/schema.prisma` (AiUsage cache columns); tests `tests/credit-rates.test.ts`, update `tests/ai-usage.test.ts`, `tests/llm-drivers.test.ts`.
 
-- [ ] Write `tests/credit-rates.test.ts`: `prices claude-sonnet-5 exactly (1M in + 1M out + 1M cache read + 1M cache write)`; `prices claude-haiku-4-5 exactly`; `does not substring-match ("claude-sonnet-5-turbo" throws UnpricedModelError)`; `rounds to the nearest micro-USD, never up to a credit (1 token in on Haiku = 1 micro-USD = 0.0002 credits)`; `every Anthropic model in BYOK_ALLOWED_MODELS.anthropic and the env RUNTIME_MODEL default is priced`.
-- [ ] Implement the rate card; extend `DriverUsage`; read `cache_read_input_tokens` / `cache_creation_input_tokens` in `usageOf` and `tally`; make `recordUsage` `async`, return the row id (null on failure), store cache tokens. Keep `computeCostMicroUsd` as-is for analytics.
-- [ ] `npm run db:push && npm run db:rls`; run tests, lint, build.
+- [x] Write `tests/credit-rates.test.ts`: `prices claude-sonnet-5 exactly (1M in + 1M out + 1M cache read + 1M cache write)`; `prices claude-haiku-4-5 exactly`; `does not substring-match ("claude-sonnet-5-turbo" throws UnpricedModelError)`; `rounds to the nearest micro-USD, never up to a credit (1 token in on Haiku = 1 micro-USD = 0.0002 credits)`; `every Anthropic model in BYOK_ALLOWED_MODELS.anthropic and the env RUNTIME_MODEL default is priced`.
+- [x] Implement the rate card; extend `DriverUsage`; read `cache_read_input_tokens` / `cache_creation_input_tokens` in `usageOf` and `tally`; make `recordUsage` `async`, return the row id (null on failure), store cache tokens. Keep `computeCostMicroUsd` as-is for analytics.
+- [ ] `npm run db:push && npm run db:rls` (schema edited + `prisma generate` run 2026-09-15; the push awaits founder approval); tests, lint, build are green.
 
 ### Task 2: Ledger schema + pure core (≈4h)
 

@@ -7,7 +7,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  */
 
 const { prisma } = vi.hoisted(() => ({
-  prisma: { aiUsage: { create: vi.fn().mockResolvedValue({}) } },
+  prisma: { aiUsage: { create: vi.fn().mockResolvedValue({ id: "usage_1" }) } },
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
 
@@ -25,12 +25,17 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-import { computeCostMicroUsd, estimateTokens, recordSyntheticUsage } from "@/lib/model-router/usage";
+import {
+  computeCostMicroUsd,
+  estimateTokens,
+  recordSyntheticUsage,
+  recordUsage,
+} from "@/lib/model-router/usage";
 import { chat, runAgent } from "@/lib/model-router";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  prisma.aiUsage.create.mockResolvedValue({});
+  prisma.aiUsage.create.mockResolvedValue({ id: "usage_1" });
 });
 
 describe("computeCostMicroUsd", () => {
@@ -80,6 +85,35 @@ describe("router usage recording", () => {
       synthetic: false,
     });
     expect(data.costMicroUsd).toBeGreaterThan(0);
+    // No caching on this call → the cache columns are explicit zeros.
+    expect(data.cacheReadTokens).toBe(0);
+    expect(data.cacheWriteTokens).toBe(0);
+  });
+
+  it("chat() stores Anthropic cache read/write tokens on the AiUsage row", async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: "text", text: "hi" }],
+      stop_reason: "end_turn",
+      usage: {
+        input_tokens: 120,
+        output_tokens: 40,
+        cache_read_input_tokens: 800,
+        cache_creation_input_tokens: 200,
+      },
+    });
+    await chat({
+      system: "s",
+      messages: [{ role: "user", text: "hello" }],
+      attribution: { orgId: "org1", purpose: "agent_reply" },
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    const data = prisma.aiUsage.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      inputTokens: 120,
+      outputTokens: 40,
+      cacheReadTokens: 800,
+      cacheWriteTokens: 200,
+    });
   });
 
   it("chat() without attribution writes nothing", async () => {
@@ -122,6 +156,30 @@ describe("router usage recording", () => {
   });
 });
 
+describe("recordUsage", () => {
+  const usage = { inputTokens: 10, outputTokens: 5, cacheReadTokens: 3, cacheWriteTokens: 2 };
+
+  it("resolves to the new AiUsage row id and stores cache tokens", async () => {
+    const id = await recordUsage({ orgId: "org1", purpose: "suggest" }, "claude-sonnet-5", usage);
+    expect(id).toBe("usage_1");
+    const data = prisma.aiUsage.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      inputTokens: 10,
+      outputTokens: 5,
+      cacheReadTokens: 3,
+      cacheWriteTokens: 2,
+      byok: false,
+    });
+  });
+
+  it("resolves to null and never throws when the write fails", async () => {
+    prisma.aiUsage.create.mockRejectedValueOnce(new Error("db down"));
+    await expect(
+      recordUsage({ orgId: "org1", purpose: "suggest" }, "claude-sonnet-5", usage)
+    ).resolves.toBeNull();
+  });
+});
+
 describe("synthetic usage (simulation / keyless)", () => {
   it("estimateTokens approximates chars/4 with a floor of 1", () => {
     expect(estimateTokens("abcdefgh")).toBe(2);
@@ -136,6 +194,10 @@ describe("synthetic usage (simulation / keyless)", () => {
     );
     await new Promise((r) => setTimeout(r, 0));
     expect(prisma.aiUsage.create).toHaveBeenCalledOnce();
-    expect(prisma.aiUsage.create.mock.calls[0][0].data.synthetic).toBe(true);
+    const data = prisma.aiUsage.create.mock.calls[0][0].data;
+    expect(data.synthetic).toBe(true);
+    // Synthetic rows never carry cache tokens.
+    expect(data.cacheReadTokens).toBe(0);
+    expect(data.cacheWriteTokens).toBe(0);
   });
 });

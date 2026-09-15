@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
+import type { DriverUsage } from "@/lib/model-router/types";
 
 /**
  * AI usage metering (PLAN.md WS2). Every routed LLM call records model,
  * tokens and computed cost, attributed to an org (+ conversation when there
- * is one). Fire-and-forget like recordAudit — metering must never break a
- * customer reply. Simulation / keyless paths record synthetic estimates so
- * the meter works with zero external keys (invariant 4).
+ * is one). Never throws — metering must never break a customer reply; callers
+ * may await the row id (the credit ledger anchors its debit on it) or fire
+ * and forget. Simulation / keyless paths record synthetic estimates so the
+ * meter works with zero external keys (invariant 4).
  */
 
 export type UsagePurpose =
@@ -55,30 +57,35 @@ export function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
-export function recordUsage(
+/** Resolves to the new AiUsage row id, or null when the write failed. */
+export async function recordUsage(
   attribution: Attribution,
   model: string,
-  inputTokens: number,
-  outputTokens: number,
+  usage: DriverUsage,
   opts: { synthetic?: boolean; byok?: boolean } = {}
-): void {
-  void prisma.aiUsage
-    .create({
+): Promise<string | null> {
+  try {
+    const row = await prisma.aiUsage.create({
       data: {
         orgId: attribution.orgId,
         conversationId: attribution.conversationId,
         purpose: attribution.purpose,
         model,
-        inputTokens,
-        outputTokens,
-        costMicroUsd: computeCostMicroUsd(model, inputTokens, outputTokens),
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        cacheReadTokens: usage.cacheReadTokens ?? 0,
+        cacheWriteTokens: usage.cacheWriteTokens ?? 0,
+        costMicroUsd: computeCostMicroUsd(model, usage.inputTokens, usage.outputTokens),
         synthetic: opts.synthetic ?? false,
         byok: opts.byok ?? false,
       },
-    })
-    .catch(() => {
-      // Metering must never break the call it measures.
+      select: { id: true },
     });
+    return row.id;
+  } catch {
+    // Metering must never break the call it measures.
+    return null;
+  }
 }
 
 /** Keyless/simulation fallbacks call this so the meter still moves. */
@@ -88,11 +95,10 @@ export function recordSyntheticUsage(
   replyText: string,
   model = "synthetic"
 ): void {
-  recordUsage(
+  void recordUsage(
     attribution,
     model,
-    estimateTokens(promptText),
-    estimateTokens(replyText),
+    { inputTokens: estimateTokens(promptText), outputTokens: estimateTokens(replyText) },
     { synthetic: true }
   );
 }

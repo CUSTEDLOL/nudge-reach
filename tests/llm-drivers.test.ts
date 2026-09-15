@@ -3,11 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * E3: the OpenAI and Gemini drivers marshal the neutral chat/agent shapes
  * into their SDK wire formats correctly — tool loop included. SDKs mocked.
+ * The Anthropic driver additionally surfaces prompt-cache tokens, which the
+ * credit ledger prices separately (cache reads are ~10% of input price).
  */
 
-const { openaiCreate, geminiGenerate } = vi.hoisted(() => ({
+const { openaiCreate, geminiGenerate, anthropicCreate } = vi.hoisted(() => ({
   openaiCreate: vi.fn(),
   geminiGenerate: vi.fn(),
+  anthropicCreate: vi.fn(),
 }));
 
 vi.mock("openai", () => ({
@@ -20,9 +23,15 @@ vi.mock("@google/genai", () => ({
     models = { generateContent: geminiGenerate };
   },
 }));
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: class {
+    messages = { create: anthropicCreate };
+  },
+}));
 
 import { openaiDriver } from "@/lib/model-router/drivers/openai";
 import { geminiDriver } from "@/lib/model-router/drivers/gemini";
+import { anthropicDriver } from "@/lib/model-router/drivers/anthropic";
 
 const rt = { model: "test-model", apiKey: "sk-x" };
 const TOOLS = [
@@ -36,6 +45,101 @@ const TOOLS = [
 beforeEach(() => {
   openaiCreate.mockReset();
   geminiGenerate.mockReset();
+  anthropicCreate.mockReset();
+});
+
+describe("anthropicDriver", () => {
+  it("chat: surfaces cache read/write tokens alongside input/output", async () => {
+    anthropicCreate.mockResolvedValue({
+      content: [{ type: "text", text: " hello " }],
+      stop_reason: "end_turn",
+      usage: {
+        input_tokens: 11,
+        output_tokens: 7,
+        cache_read_input_tokens: 900,
+        cache_creation_input_tokens: 100,
+      },
+    });
+    const r = await anthropicDriver.chat(rt, {
+      system: "sys",
+      messages: [{ role: "user", text: "hi" }],
+      maxTokens: 100,
+    });
+    expect(r.text).toBe("hello");
+    expect(r.usage).toEqual({
+      inputTokens: 11,
+      outputTokens: 7,
+      cacheReadTokens: 900,
+      cacheWriteTokens: 100,
+    });
+  });
+
+  it("chat: null cache fields (no caching) read as 0", async () => {
+    anthropicCreate.mockResolvedValue({
+      content: [{ type: "text", text: "hi" }],
+      stop_reason: "end_turn",
+      usage: {
+        input_tokens: 5,
+        output_tokens: 2,
+        cache_read_input_tokens: null,
+        cache_creation_input_tokens: null,
+      },
+    });
+    const r = await anthropicDriver.chat(rt, {
+      system: "sys",
+      messages: [{ role: "user", text: "hi" }],
+      maxTokens: 100,
+    });
+    expect(r.usage).toEqual({
+      inputTokens: 5,
+      outputTokens: 2,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+    });
+  });
+
+  it("agent loop: tallies cache tokens across every step, closing call included", async () => {
+    anthropicCreate
+      .mockResolvedValueOnce({
+        content: [{ type: "tool_use", id: "t1", name: "check_order_status", input: {} }],
+        stop_reason: "tool_use",
+        usage: {
+          input_tokens: 10,
+          output_tokens: 5,
+          cache_read_input_tokens: 100,
+          cache_creation_input_tokens: 20,
+        },
+      })
+      // maxSteps: 1 → the loop is capped and one closing call follows.
+      .mockResolvedValueOnce({
+        content: [{ type: "text", text: "Wrapping up." }],
+        stop_reason: "end_turn",
+        usage: {
+          input_tokens: 15,
+          output_tokens: 6,
+          cache_read_input_tokens: 200,
+          cache_creation_input_tokens: 30,
+        },
+      });
+    const runTool = vi.fn().mockResolvedValue({ result: "shipped" });
+
+    const r = await anthropicDriver.runAgent(rt, {
+      system: "sys",
+      messages: [{ role: "user", text: "where is order 9?" }],
+      tools: TOOLS,
+      runTool,
+      maxTokens: 100,
+      maxSteps: 1,
+    });
+    expect(runTool).toHaveBeenCalledOnce();
+    expect(r.cappedOut).toBe(true);
+    expect(r.usage).toEqual({
+      inputTokens: 25,
+      outputTokens: 11,
+      cacheReadTokens: 300,
+      cacheWriteTokens: 50,
+    });
+  });
 });
 
 describe("openaiDriver", () => {

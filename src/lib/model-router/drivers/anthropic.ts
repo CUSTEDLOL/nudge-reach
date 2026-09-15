@@ -39,8 +39,14 @@ function textOf(content: Anthropic.ContentBlock[]): string {
     .join("");
 }
 
+// input_tokens EXCLUDES cached tokens; the cache fields are priced separately.
 function usageOf(u: Anthropic.Usage | undefined): DriverUsage {
-  return { inputTokens: u?.input_tokens ?? 0, outputTokens: u?.output_tokens ?? 0 };
+  return {
+    inputTokens: u?.input_tokens ?? 0,
+    outputTokens: u?.output_tokens ?? 0,
+    cacheReadTokens: u?.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: u?.cache_creation_input_tokens ?? 0,
+  };
 }
 
 export const anthropicDriver: LlmDriver = {
@@ -95,9 +101,13 @@ export const anthropicDriver: LlmDriver = {
     const toolCalls: ToolInvocation[] = [];
     let inputTokens = 0;
     let outputTokens = 0;
+    let cacheReadTokens = 0;
+    let cacheWriteTokens = 0;
     const tally = (u: Anthropic.Usage | undefined) => {
       inputTokens += u?.input_tokens ?? 0;
       outputTokens += u?.output_tokens ?? 0;
+      cacheReadTokens += u?.cache_read_input_tokens ?? 0;
+      cacheWriteTokens += u?.cache_creation_input_tokens ?? 0;
     };
     // Neutral ToolSchema is a superset-compatible shape of Anthropic's.
     const tools = args.tools.map((t) => ({
@@ -131,7 +141,7 @@ export const anthropicDriver: LlmDriver = {
           toolCalls,
           spoken,
           cappedOut: false,
-          usage: { inputTokens, outputTokens },
+          usage: { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens },
         };
       }
 
@@ -177,7 +187,7 @@ export const anthropicDriver: LlmDriver = {
       toolCalls,
       spoken,
       cappedOut: true,
-      usage: { inputTokens, outputTokens },
+      usage: { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens },
     };
   },
 };
