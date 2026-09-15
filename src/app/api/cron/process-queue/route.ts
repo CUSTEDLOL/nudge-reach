@@ -12,6 +12,7 @@ import { tickBookingReminders } from "@/modules/followup/reminders";
 import { tickReminderCalls } from "@/modules/voice/reminder-calls";
 import { tickCrmSync } from "@/modules/crm/sync";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
+import { issueIncludedCredits } from "@/modules/billing/credits";
 import { expireTrials } from "@/modules/billing/trial";
 import { tickLeadScoring } from "@/modules/scoring/compute";
 import { boundedCount } from "@/modules/admin/health";
@@ -64,6 +65,11 @@ export async function GET(request: Request) {
     step = "expire-trials";
     const expiredTrials = await expireTrials();
 
+    // Included AI credits for any paid period without its grant yet (comped
+    // and Enterprise orgs never pass through checkout).
+    step = "issue-included-credits";
+    const includedGrants = await issueIncludedCredits();
+
     step = "score-leads";
     const rescored = await tickLeadScoring();
 
@@ -98,6 +104,7 @@ export async function GET(request: Request) {
       },
       paymentsPaid: boundedCount(paymentsPaid),
       expiredTrials: boundedCount(expiredTrials),
+      includedGrants: boundedCount(includedGrants),
       rescored: boundedCount(rescored),
       campaigns: boundedCount(sending.length),
       processed: boundedCount(processed),

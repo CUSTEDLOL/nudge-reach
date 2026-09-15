@@ -5,6 +5,7 @@ const { prisma, tx } = vi.hoisted(() => {
   const tx = {
     org: { update: vi.fn() },
     auditLog: { create: vi.fn() },
+    creditGrant: { upsert: vi.fn(), updateMany: vi.fn() },
   };
   return {
     tx,
@@ -35,6 +36,7 @@ const baseOrg = {
   suspendedAt: null as Date | null,
   trialEndsAt: null as Date | null,
   subscriptionStatus: "inactive",
+  currentPeriodEnd: null as Date | null,
   voiceMinutesOverride: null as number | null,
   featureOverrides: {} as unknown,
   whatsappAccounts: [] as { id: string }[],
@@ -47,6 +49,8 @@ beforeEach(() => {
   prisma.auditLog.create.mockResolvedValue({});
   tx.org.update.mockResolvedValue({});
   tx.auditLog.create.mockResolvedValue({});
+  tx.creditGrant.upsert.mockResolvedValue({});
+  tx.creditGrant.updateMany.mockResolvedValue({ count: 0 });
   prisma.$transaction.mockImplementation(async (work) => work(tx));
 });
 
@@ -97,10 +101,27 @@ describe("setSubscriptionStatus", () => {
   });
 
   it("writes the new status and audits it", async () => {
+    prisma.org.findUnique.mockResolvedValue({ ...baseOrg, subscriptionStatus: "active" });
+    const res = await setSubscriptionStatus("o1", "past_due", "f@x.com");
+    expect(res.ok).toBe(true);
+    expect(tx.org.update.mock.calls[0][0].data).toEqual({ subscriptionStatus: "past_due" });
+    expect(lastAudit().detail).toContain("active → past_due");
+  });
+
+  it("marking a comped org active starts a paid period so included credits can be issued", async () => {
     const res = await setSubscriptionStatus("o1", "active", "f@x.com");
     expect(res.ok).toBe(true);
+    const data = tx.org.update.mock.calls[0][0].data;
+    expect(data.subscriptionStatus).toBe("active");
+    expect(data.currentPeriodEnd.getTime()).toBeGreaterThan(Date.now() + 27 * 86400000);
+    expect(lastAudit().detail).toContain("inactive → active (period ends ");
+  });
+
+  it("leaves a live period alone when re-activating", async () => {
+    const live = new Date(Date.now() + 10 * 86400000);
+    prisma.org.findUnique.mockResolvedValue({ ...baseOrg, subscriptionStatus: "past_due", currentPeriodEnd: live });
+    await setSubscriptionStatus("o1", "active", "f@x.com");
     expect(tx.org.update.mock.calls[0][0].data).toEqual({ subscriptionStatus: "active" });
-    expect(lastAudit().detail).toContain("inactive → active");
   });
 });
 

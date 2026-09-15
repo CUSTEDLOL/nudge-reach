@@ -14,18 +14,21 @@ const {
   orgUpdate,
   recordAudit,
   revalidatePath,
+  ensureIncludedGrant,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   verifyPaymentSignature: vi.fn(),
   fetchRazorpayOrder: vi.fn(),
-  orgUpdate: vi.fn().mockResolvedValue({}),
+  orgUpdate: vi.fn().mockResolvedValue({ id: "org1", plan: "starter" }),
   recordAudit: vi.fn(),
   revalidatePath: vi.fn(),
+  ensureIncludedGrant: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/db", () => ({ prisma: { org: { update: orgUpdate } } }));
 vi.mock("@/modules/orgs/audit", () => ({ recordAudit }));
+vi.mock("@/modules/billing/credits", () => ({ ensureIncludedGrant }));
 vi.mock("@/modules/orgs/auth", () => ({
   requireOrgContext,
   requireRole: () => {}, // ADMIN assumed here; the role gate is covered elsewhere
@@ -57,6 +60,7 @@ const triple = {
 
 beforeEach(() => {
   orgUpdate.mockClear();
+  ensureIncludedGrant.mockClear();
   fetchRazorpayOrder.mockReset();
   requireOrgContext.mockResolvedValue(ctx);
   verifyPaymentSignature.mockReturnValue(true);
@@ -76,6 +80,8 @@ describe("confirmCheckoutAction — payment integrity", () => {
     expect(r.ok).toBe(true);
     expect(orgUpdate).toHaveBeenCalledTimes(1);
     expect(orgUpdate.mock.calls[0][0].data.plan).toBe("starter"); // NOT "pro"
+    // The new period's included credits are issued from the updated org.
+    expect(ensureIncludedGrant).toHaveBeenCalledWith({ id: "org1", plan: "starter" });
   });
 
   it("refuses when the paid order belongs to another org", async () => {
@@ -89,6 +95,7 @@ describe("confirmCheckoutAction — payment integrity", () => {
     const r = await confirmCheckoutAction(form({ ...triple, planId: "pro" }));
     expect(r.ok).toBe(false);
     expect(orgUpdate).not.toHaveBeenCalled();
+    expect(ensureIncludedGrant).not.toHaveBeenCalled();
   });
 
   it("refuses when the captured amount doesn't match the plan price", async () => {

@@ -16,6 +16,7 @@ const { prisma } = vi.hoisted(() => ({
     membership: { findFirst: vi.fn(), upsert: vi.fn() },
     org: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     invite: { findFirst: vi.fn(), update: vi.fn() },
+    creditGrant: { create: vi.fn() },
   },
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -58,6 +59,13 @@ describe("closed signup", () => {
 
     expect(res.org.id).toBe("org-new");
     expect(prisma.org.create).toHaveBeenCalledTimes(1);
+    // The trial's AI credits ride along, expiring with the trial.
+    const trialEndsAt = prisma.org.create.mock.calls[0][0].data.trialEndsAt;
+    expect(prisma.creditGrant.create.mock.calls[0][0].data).toMatchObject({
+      orgId: "org-new",
+      kind: "trial",
+      expiresAt: trialEndsAt,
+    });
   });
 
   it("lets an invited owner in and claims the placeholder owner", async () => {

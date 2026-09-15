@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ensureIncludedGrantFor } from "@/modules/billing/credits";
 import { verifyStripeWebhook } from "@/modules/billing/stripe";
 import { getPlan } from "@/modules/billing/plans";
 
@@ -48,6 +49,9 @@ export async function POST(request: Request) {
           currentPeriodEnd: periodEnd,
         },
       });
+      // The new period's included AI credits (credit ledger); a redelivery
+      // for the same period is a no-op.
+      await ensureIncludedGrantFor(orgId);
     }
   }
 

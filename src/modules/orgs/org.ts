@@ -1,4 +1,5 @@
 import { Membership, Org, Prisma } from "@prisma/client";
+import { issueTrialGrant } from "@/modules/billing/credits";
 import { TRIAL_PLAN, trialEndDate } from "@/modules/billing/trial";
 import { prisma } from "@/lib/db";
 import { isPendingOwner } from "@/modules/orgs/pending-owner";
@@ -124,13 +125,14 @@ export async function resolveOrgContext(
     throw new NoWorkspaceError();
   }
   const name = email ? `${email.split("@")[0]}'s shop` : "My shop";
+  const trialEndsAt = trialEndDate();
   try {
     const org = await prisma.org.create({
       data: {
         ownerUserId: userId,
         name,
         plan: TRIAL_PLAN,
-        trialEndsAt: trialEndDate(),
+        trialEndsAt,
         memberships: {
           create: {
             userId,
@@ -142,6 +144,8 @@ export async function resolveOrgContext(
       },
       include: { memberships: true },
     });
+    // The trial's AI credits (credit ledger); expire with the trial.
+    await issueTrialGrant(org.id, trialEndsAt);
     const { memberships, ...orgRow } = org;
     return { org: orgRow, membership: memberships[0] };
   } catch (err) {

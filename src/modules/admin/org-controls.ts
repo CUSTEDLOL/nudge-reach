@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { trialGrant } from "@/modules/billing/credits";
 import { sanitizeFeatureOverrides, type FeatureOverrides } from "@/modules/billing/limits";
 import { trialEndDate } from "@/modules/billing/trial";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
@@ -32,6 +33,7 @@ async function loadOrg(orgId: string) {
       suspendedAt: true,
       trialEndsAt: true,
       subscriptionStatus: true,
+      currentPeriodEnd: true,
       voiceMinutesOverride: true,
       featureOverrides: true,
       whatsappAccounts: { select: { id: true }, take: 1 },
@@ -58,9 +60,24 @@ export async function setTrial(
   }
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
-  const trialEndsAt = days === 0 ? null : new Date(Date.now() + days * DAY_MS);
+  const now = new Date();
+  const trialEndsAt = days === 0 ? null : new Date(now.getTime() + days * DAY_MS);
   await prisma.$transaction(async (tx) => {
     await tx.org.update({ where: { id: org.id }, data: { trialEndsAt } });
+    // The 100-credit trial grant lives and dies with the trial (credit
+    // ledger): a workspace that never had one gets it now; 0 days ends it.
+    if (trialEndsAt) {
+      await tx.creditGrant.upsert({
+        where: { orgId_kind_sourceKey: { orgId: org.id, kind: "trial", sourceKey: "trial" } },
+        create: { orgId: org.id, ...trialGrant(trialEndsAt) },
+        update: { expiresAt: trialEndsAt },
+      });
+    } else {
+      await tx.creditGrant.updateMany({
+        where: { orgId: org.id, kind: "trial", expiresAt: { gt: now } },
+        data: { expiresAt: now },
+      });
+    }
     await founderAudit(
       org.id,
       founderEmail,
@@ -91,14 +108,28 @@ export async function setSubscriptionStatus(
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
   if (org.subscriptionStatus === status) return { ok: false, error: `Already ${status}.` };
+  const data: { subscriptionStatus: string; currentPeriodEnd?: Date } = { subscriptionStatus: status };
+  // A comped org never went through checkout, so nothing set its period; the
+  // included credit grant is keyed on currentPeriodEnd (billing/credits.ts)
+  // and can't be issued without one. Marking it active starts a month now.
+  const now = new Date();
+  if (status === "active" && (!org.currentPeriodEnd || org.currentPeriodEnd <= now)) {
+    const periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    data.currentPeriodEnd = periodEnd;
+  }
   await prisma.$transaction(async (tx) => {
-    await tx.org.update({ where: { id: org.id }, data: { subscriptionStatus: status } });
+    await tx.org.update({ where: { id: org.id }, data });
     await founderAudit(
       org.id,
       founderEmail,
       "admin.subscription_changed",
       org.name,
-      withReason(`${org.subscriptionStatus} → ${status}`, reason),
+      withReason(
+        `${org.subscriptionStatus} → ${status}` +
+          (data.currentPeriodEnd ? ` (period ends ${fmt(data.currentPeriodEnd)})` : ""),
+        reason
+      ),
       tx
     );
   });

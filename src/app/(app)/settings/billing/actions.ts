@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { prisma } from "@/lib/db";
 import { recordAudit } from "@/modules/orgs/audit";
+import { ensureIncludedGrant } from "@/modules/billing/credits";
 import { getPlan, planPrice } from "@/modules/billing/plans";
 import { formatPlanPrice, orgCurrency } from "@/modules/billing/money";
 import {
@@ -160,7 +161,7 @@ export async function confirmCheckoutAction(
 
     const periodEnd = new Date();
     periodEnd.setMonth(periodEnd.getMonth() + 1);
-    await prisma.org.update({
+    const activated = await prisma.org.update({
       where: { id: ctx.org.id },
       data: {
         plan: plan.id,
@@ -169,6 +170,9 @@ export async function confirmCheckoutAction(
         currentPeriodEnd: periodEnd,
       },
     });
+    // The new period's included AI credits (credit ledger); idempotent with
+    // the webhook, which issues the same grant for the same period end.
+    await ensureIncludedGrant(activated);
     recordAudit(
       ctx,
       "billing.plan_changed",

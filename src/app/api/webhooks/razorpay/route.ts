@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ensureIncludedGrantFor } from "@/modules/billing/credits";
 import { verifyWebhookSignature } from "@/modules/billing/razorpay";
 import { getPlan } from "@/modules/billing/plans";
 import { markPaymentPaid } from "@/modules/payments";
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
         currentPeriodEnd: periodEnd,
       },
     });
+    // The new period's included AI credits (credit ledger); a redelivery or
+    // the client confirm action issuing the same period is a no-op.
+    await ensureIncludedGrantFor(orgId);
   }
 
   if (payload.event === "subscription.cancelled" && orgId) {
