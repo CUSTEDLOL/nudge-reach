@@ -4,8 +4,10 @@ import { Bot, MessageSquare } from "lucide-react";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseInboxFilter } from "@/modules/inbox/filters";
 import { listConversationSummaries } from "@/modules/inbox/queries";
+import { creditsExhausted } from "@/modules/billing/credits";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
+import { CreditBanner } from "@/components/features/credit-banner";
 import { ListPane } from "./list-pane";
 
 export const metadata: Metadata = { title: "Inbox" };
@@ -28,6 +30,7 @@ export default async function InboxPage({
     q,
     userId
   );
+  const aiPaused = await creditsExhausted(org.id);
 
   return (
     <>
@@ -35,6 +38,7 @@ export default async function InboxPage({
         title="Inbox"
         description="Every WhatsApp conversation in one shared team inbox."
       />
+      {aiPaused && <CreditBanner />}
       {/* Mobile subtracts extra chrome for the fixed bottom nav. */}
       <div className="grid h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] min-h-[24rem] grid-cols-1 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft lg:h-[calc(100dvh-12.5rem)] lg:min-h-[26rem] lg:grid-cols-[minmax(300px,22rem)_1fr]">
         <ListPane

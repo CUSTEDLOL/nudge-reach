@@ -22,6 +22,8 @@ const { prisma, tx, envState } = vi.hoisted(() => {
 });
 vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/lib/env", () => ({ env: envState }));
+// The low-balance notice has its own test (tests/credit-low-balance.test.ts).
+vi.mock("@/modules/billing/credit-alerts", () => ({ maybeNotifyLowCredits: vi.fn() }));
 
 import { RATE_CARD_VERSION, UnpricedModelError } from "@/modules/billing/credit-rates";
 import { debitAiUsage, settleDebit } from "@/modules/billing/credits";

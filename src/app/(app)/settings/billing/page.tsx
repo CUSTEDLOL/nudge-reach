@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import { Check, CreditCard, MessageSquare, Users } from "lucide-react";
+import { Check, CreditCard, MessageSquare, Sparkles, Users } from "lucide-react";
+import { env } from "@/lib/env";
 import { isSimulated } from "@/modules/orgs/mode";
 import { trialDaysLeft } from "@/modules/billing/trial";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { formatMoney, getMonthlyUsage } from "@/modules/billing";
+import { MICRO_USD_PER_CREDIT, creditsExhausted } from "@/modules/billing/credits";
+import { CREDIT_PACKS, packLabel, packPrice } from "@/modules/billing/credit-packs";
+import { creditSummary, formatCredits } from "@/modules/billing/credit-summary";
 import { selfServePlans, getPlan, planPrice } from "@/modules/billing/plans";
 import { formatPlanPrice, orgCurrency } from "@/modules/billing/money";
 import { isRazorpayConfigured } from "@/modules/billing/razorpay";
@@ -12,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
+import { CreditBanner } from "@/components/features/credit-banner";
 import { SectionHeader } from "../section-header";
 import { CheckoutButton } from "./checkout-button";
 
@@ -25,7 +30,11 @@ export default async function BillingSettingsPage() {
     year: "numeric",
   }).format(new Date());
 
-  const usage = await getMonthlyUsage(org.id);
+  const [usage, credits, aiPaused] = await Promise.all([
+    getMonthlyUsage(org.id),
+    creditSummary(org),
+    creditsExhausted(org.id),
+  ]);
   const currentPlan = getPlan(org.plan);
   const simulation = isSimulated(org);
   const trialDays = trialDaysLeft(org.trialEndsAt);
@@ -35,8 +44,34 @@ export default async function BillingSettingsPage() {
     currency === "INR" ? isRazorpayConfigured() : isStripeConfigured();
   const canManage = role === "OWNER" || role === "ADMIN";
 
+  // Credit ledger. Legacy plans are unmetered; under SEND_MODE=simulation the
+  // debits are shadow rows that never touch a grant, so the numbers are a demo.
+  const metered = credits.metering.kind === "metered";
+  const shortDate = new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const creditHint = !metered
+    ? "included with your plan"
+    : env.SEND_MODE === "simulation"
+      ? "test mode — usage is illustrative"
+      : [
+          credits.included
+            ? `of ${(credits.included.amountMicroUsd / MICRO_USD_PER_CREDIT).toLocaleString("en-IN")} included this period`
+            : trialDays !== null
+              ? "trial credits"
+              : "no included credits this period",
+          credits.purchasedExpiresAt
+            ? `purchased credits expire ${shortDate.format(credits.purchasedExpiresAt)}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
   return (
     <section className="flex flex-col gap-6">
+      {aiPaused && <CreditBanner />}
       <div>
         <SectionHeader
           title="Billing"
@@ -83,7 +118,7 @@ export default async function BillingSettingsPage() {
           title={`Usage — ${monthLabel}`}
           description="Campaign messages sent this month and their billable Meta cost."
         />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
             label="Messages this month"
             value={usage.messagesSent.toLocaleString("en-IN")}
@@ -106,8 +141,67 @@ export default async function BillingSettingsPage() {
                 : "unlimited"
             }
           />
+          <StatCard
+            label="AI credits"
+            value={metered ? formatCredits(credits.balanceMicroUsd) : "Unmetered"}
+            icon={<Sparkles className="h-4 w-4" aria-hidden />}
+            hint={
+              <>
+                <span className="block">{creditHint}</span>
+                {metered && (
+                  <span className="block text-neutral-500">
+                    ≈ {credits.estimatedReplies.toLocaleString("en-IN")} more AI replies
+                  </span>
+                )}
+              </>
+            }
+          />
         </div>
       </div>
+
+      {metered && (
+        <div>
+          <SectionHeader
+            title="Top up AI credits"
+            description="Purchased credits are spent after your included ones and last a year."
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {CREDIT_PACKS.map((pack) => {
+              const price = packPrice(pack, currency);
+              return (
+                <Card key={pack.id} className="flex flex-col p-5">
+                  <p className="text-sm font-semibold text-neutral-900">
+                    {packLabel(pack)}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900">
+                    {price === null ? "—" : formatPlanPrice(price, currency)}
+                  </p>
+                  <div className="mt-auto pt-5">
+                    {price === null ? (
+                      <span className="block text-center text-xs text-neutral-400">
+                        Contact us to top up in {currency}
+                      </span>
+                    ) : !canManage ? (
+                      <span className="block text-center text-xs text-neutral-400">
+                        Ask an admin to top up
+                      </span>
+                    ) : paymentsOn ? (
+                      <CheckoutButton
+                        kind="credits"
+                        id={pack.id}
+                        label={`Buy ${packLabel(pack)}`}
+                        orgName={org.name}
+                      />
+                    ) : (
+                      <Badge tone="neutral">Payments off</Badge>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div>
         <SectionHeader

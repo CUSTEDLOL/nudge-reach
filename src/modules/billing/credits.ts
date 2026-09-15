@@ -5,6 +5,7 @@ import { envSchema } from "@/lib/env-schema";
 import { getByokRuntime } from "@/lib/model-router/byok";
 import type { Attribution } from "@/lib/model-router/usage";
 import type { DriverUsage } from "@/lib/model-router/types";
+import { maybeNotifyLowCredits } from "@/modules/billing/credit-alerts";
 import { MICRO_USD_PER_CREDIT, RATE_CARD_VERSION, priceCall } from "@/modules/billing/credit-rates";
 import { applyFeatureOverrides } from "@/modules/billing/limits";
 import { getPlan } from "@/modules/billing/plans";
@@ -471,6 +472,8 @@ export async function settleDebit(a: SettleDebitArgs): Promise<void> {
       usage: a.usage,
       ...debitFlags(a.metering),
     });
+    // Only a metered debit can move the balance towards the low-water mark.
+    if (a.metering === "metered") void maybeNotifyLowCredits(orgId);
   } catch (err) {
     console.error(
       "[credits] debit failed — reconciler will retry",

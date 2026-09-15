@@ -327,8 +327,8 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** `settings/billing/page.tsx`, create `components/features/credit-banner.tsx`, inbox page, create `billing/credit-alerts.ts`; `tests/credit-low-balance.test.ts`.
 
-- [ ] Tests: `notifies the OWNER once per calendar month when balance ≤ 10% of included`; `does not notify an unmetered or simulation org`; `skips cleanly when email is unconfigured`; `estimate line uses the pure helper`.
-- [ ] Implement; keep the page server-rendered; no new UI primitives.
+- [x] Tests: `notifies the OWNER once per calendar month when balance ≤ 10% of included`; `does not notify an unmetered or simulation org`; `skips cleanly when email is unconfigured`; `estimate line uses the pure helper`. (2026-09-16: "once per paid period", per decision 4 — the notice is due again when `creditsLowNotifiedAt` predates the current included grant's `issuedAt`. Also `notifies at ≤ 0`, `does not notify above the threshold`, `does not stamp when sendEmail throws`, `settleDebit triggers the check only after a metered debit`; page pieces in `tests/credit-billing-ui.test.ts`.)
+- [x] Implement; keep the page server-rendered; no new UI primitives. (2026-09-16: the shared data read lives in `billing/credit-summary.ts` (`creditSummary`, used by the page and the email) so both show the same balance, included amount, purchase expiry and estimate. The card's "test mode — usage is illustrative" hint keys on `SEND_MODE=simulation` — shadow debits — not on the org's own WhatsApp `simulated` flag, because an unconnected org on a live deployment still pays real Sonnet calls from real grants.)
 
 ### Task 9: Concurrency integration test + docs (≈2h)
 

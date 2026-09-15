@@ -35,6 +35,8 @@ const { prisma, tx, envState, mockCreate } = vi.hoisted(() => {
 });
 vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/lib/env", () => ({ env: envState }));
+// The low-balance notice has its own test (tests/credit-low-balance.test.ts).
+vi.mock("@/modules/billing/credit-alerts", () => ({ maybeNotifyLowCredits: vi.fn() }));
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class {
     messages = { create: mockCreate };
