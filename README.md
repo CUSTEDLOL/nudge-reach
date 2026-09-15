@@ -10,17 +10,21 @@ the price of a WhatsApp plan, not a salary.**
 
 Underneath the flagship sits a full self-serve **WhatsApp CRM** — shared team
 inbox, contacts, AI broadcast campaigns, automations, analytics — offered as the
-lower tiers so a shop can start free and grow into the AI employee.
+lower tiers so a shop can start small and grow into the AI employee.
 
 ## The product, top to bottom
 
-- **AI Front Desk** (flagship, ~₹14,999/mo · S$599 · RM1,199 · $179) — the
-  done-for-you AI employee: books into the customer's real Google Calendar, runs
-  the Revenue-Recovery follow-up engine, sends payment links, takes real actions
-  in the client's systems, and ships with concierge onboarding (we set it up).
-- **Free / Starter / Growth / Pro** — the self-serve CRM tiers: shared inbox with
-  the 24-hour service-window rule, contacts + segments, AI-generated compliant
-  broadcast campaigns, automations, team seats, analytics, webhooks + API.
+- **AI Front Desk** — the done-for-you AI employee: books into the customer's
+  real Google Calendar, runs the Revenue-Recovery follow-up engine, sends
+  payment links, takes real actions in the client's systems, and ships with
+  concierge onboarding (we set it up). Its real actions ship on **Growth
+  (₹9,999/mo · S$329)** and **Pro (₹19,999/mo · S$659, adds voice)**.
+- **Entry (₹1,499/mo) / Starter (₹4,999/mo · S$89)** — the self-serve tiers
+  underneath: AI replies, shared inbox with the 24-hour service-window rule,
+  contacts + segments, AI-generated compliant broadcast campaigns, automations,
+  team seats, analytics. Every plan includes a monthly AI-credit allowance
+  (200 / 1,000 / 2,500 / 5,000 for Entry / Starter / Growth / Pro). Prices of
+  record: `src/modules/billing/plans.ts`.
 
 Everything runs on the **official WhatsApp Cloud API**, with Meta-policy
 compliance (opt-in, opt-out, the 24-hour window) enforced in code. Built for

@@ -27,7 +27,7 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
     title: "Start",
     links: [
       { label: "Book a demo", demo: true },
-      { label: "Start free", href: "/login" },
+      { label: "Start your trial", href: "/login" },
       { label: "Contact", href: "mailto:hqnudge@gmail.com" },
     ],
   },

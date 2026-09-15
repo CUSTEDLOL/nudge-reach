@@ -79,17 +79,23 @@ decision must strengthen at least one.
 Priced against the human it replaces, in each market's LOCAL currency (rounded,
 founder-tunable, not live FX).
 
-| Plan | India | Singapore | Malaysia | US | Role |
-|---|---|---|---|---|---|
-| Free / Starter / Growth / Pro | ₹0 / 999 / 2,499 / 5,999 | S$0 / 39 / 95 / 219 | RM0 / 49 / 139 / 329 | $0 / 29 / 69 / 159 | Self-serve tool tiers (parity + price anchor) |
-| **AI Front Desk** (flagship) | **₹14,999** | **~S$599** | **~RM1,199** | **~$179** | Agent + integrations + follow-up + concierge |
+| Plan | India | Singapore | Included AI credits / mo | Role |
+|---|---|---|---|---|
+| Entry | ₹1,499 | undecided | 200 | A chatbot that answers, never acts (price anchor) |
+| Starter | ₹4,999 | S$89 | 1,000 | Full workspace, AI replies to everyone |
+| **Growth** | **₹9,999** | **S$329** | **2,500** | **AI Front Desk: books, collects, chases** |
+| Pro | ₹19,999 | S$659 | 5,000 | + voice, custom actions, BYO AI key |
+
+No setup fee. Prices of record (re-set 2026-09-15): `src/modules/billing/plans.ts`.
+The other eight currencies in `PLAN_PRICES` are pre-2026-09-15 placeholders
+awaiting review before we sell in those markets.
 
 The lower tiers exist so we (a) never lose on a feature checklist and (b) make the
 flagship's price look reasonable next to a ₹22,000/mo hire. **All marketing leads
 with the flagship.** Ten currencies are supported (INR, USD, AED, SAR, SGD, MYR,
 IDR, BRL, MXN, GBP).
 
-Full mechanics — setup fee + monthly + annual, per-market price sheet, competitive
+Full mechanics — monthly + annual, credits and top-ups, per-market price sheet, competitive
 analysis, and pricing guardrails — live in **`docs/plans/2026-09-11-tiered-pricing-design.md`** (the tiered pricing
 record; `docs/PRICING.md` was retired 2026-09-15).
 
@@ -103,9 +109,9 @@ onboarding — is what all marketing leads with.
 
 ## 8. The $1M ARR math
 
-~**250–450 clients** across markets on the flagship tier ≈ **$1M ARR**. At
-₹14,999/mo (~$180), ~450 India clients ≈ $970k/yr; blended across higher-ARPU
-Singapore/UAE clients the number lands sooner. The reseller channel is how you
+~**375–750 clients** across markets on Growth/Pro ≈ **$1M ARR**. At Growth
+₹9,999/mo (~$110), ~750 India clients ≈ $1M/yr; at Pro ₹19,999/mo (~$222),
+~375; blended across higher-ARPU Singapore/UAE clients the number lands sooner. The reseller channel is how you
 get from ~25 founder-sold accounts to ~400 without a large direct sales team.
 
 ## 9. What this means for the build (the drift test)

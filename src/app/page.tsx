@@ -12,6 +12,7 @@ import { HeroV2 } from "@/components/marketing/v2/hero-v2";
 import { FinalCtaV2 } from "@/components/marketing/v2/final-cta-v2";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
+import { getPlan, PLAN_PRICES, type PlanId } from "@/modules/billing/plans";
 
 export const metadata: Metadata = {
   ...metadataFor("/"),
@@ -29,6 +30,24 @@ export const metadata: Metadata = {
  * scroll-scrubbed) beside the chapter copy. Without JS/motion, the
  * default-visible CSS produces the complete static story.
  */
+const inr = new Intl.NumberFormat("en-IN");
+
+/** One JSON-LD Offer, priced from `modules/billing/plans` — the same source the app enforces. */
+function offer(id: PlanId, description: string) {
+  const plan = getPlan(id);
+  const credits =
+    plan.includedCredits === null
+      ? ""
+      : ` Includes ${inr.format(plan.includedCredits)} AI credits a month.`;
+  return {
+    "@type": "Offer",
+    name: plan.name,
+    price: String(PLAN_PRICES[id].INR),
+    priceCurrency: "INR",
+    description: description + credits,
+  };
+}
+
 const JSON_LD = {
   "@context": "https://schema.org",
   "@graph": [
@@ -48,38 +67,22 @@ const JSON_LD = {
       description:
         "A done-for-you AI employee that runs a small business's WhatsApp: real calendar bookings, lead follow-ups and payment collection over the official WhatsApp Cloud API.",
       offers: [
-        {
-          "@type": "Offer",
-          name: "Entry",
-          price: "1499",
-          priceCurrency: "INR",
-          description:
-            "An AI chatbot trained on your business that answers customer questions around the clock, plus marketing templates. It does not book, collect or follow up.",
-        },
-        {
-          "@type": "Offer",
-          name: "Starter",
-          price: "4499",
-          priceCurrency: "INR",
-          description:
-            "AI replies and lead capture around the clock, shared inbox, contacts and campaigns. One WhatsApp number.",
-        },
-        {
-          "@type": "Offer",
-          name: "Growth",
-          price: "7499",
-          priceCurrency: "INR",
-          description:
-            "Everything in Starter plus real calendar bookings, payment links, automated follow-ups, lead scoring and CRM sync.",
-        },
-        {
-          "@type": "Offer",
-          name: "Pro",
-          price: "14999",
-          priceCurrency: "INR",
-          description:
-            "Everything in Growth plus the voice front desk, custom actions into your own systems and bring-your-own AI key.",
-        },
+        offer(
+          "entry",
+          "An AI chatbot trained on your business that answers customer questions around the clock, plus marketing templates. It does not book, collect or follow up.",
+        ),
+        offer(
+          "starter",
+          "AI replies and lead capture around the clock, shared inbox, contacts and campaigns. One WhatsApp number.",
+        ),
+        offer(
+          "growth",
+          "Everything in Starter plus real calendar bookings, payment links, automated follow-ups, lead scoring and CRM sync.",
+        ),
+        offer(
+          "pro",
+          "Everything in Growth plus the voice front desk, custom actions into your own systems and bring-your-own AI key.",
+        ),
       ],
     },
   ],

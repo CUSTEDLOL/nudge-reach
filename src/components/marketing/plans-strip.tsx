@@ -72,6 +72,11 @@ export function PlansStrip() {
                   </span>
                   {TURNING_POINT[plan.id] ?? plan.tagline}
                 </p>
+                {plan.includedCredits !== null && (
+                  <p className="mt-2 font-mono text-[10.5px] font-bold uppercase tracking-[0.1em] text-ink/50">
+                    {inr.format(plan.includedCredits)} AI credits / mo
+                  </p>
+                )}
               </div>
             );
           })}

@@ -6,7 +6,7 @@ import { LeadForm } from "./lead-form";
 import { Reveal } from "./motion-primitives";
 
 const POINTS = [
-  "Free plan, no credit card",
+  "7-day trial, no credit card",
   "Official WhatsApp Cloud API",
   "Live the same day",
   "Cancel anytime",
@@ -57,7 +57,7 @@ export function FinalCTA() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <ButtonLink href="/login" variant="primary" size="lg">
-              Start free
+              Start your trial
               <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
             </ButtonLink>
             <LaunchDemoButton variant="secondary" size="lg">

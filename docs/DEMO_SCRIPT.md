@@ -164,8 +164,8 @@ then `/automations`.
   product photo, get a compliant broadcast with the opt-out line baked in, see
   the **estimated ₹ cost before you send**, then delivered/read/clicked after."
 - **Analytics:** "WhatsApp gets ~90% open rates; email gets 20. Here's your
-  funnel and agent performance." Then land it: "That's the self-serve product —
-  Free, Starter, Growth, Pro. The **AI Front Desk sits on top of all of it.**"
+  funnel and agent performance." Then land it: "That's the workspace — Entry
+  and Starter. **Growth turns it into the AI Front Desk.**"
 
 ### 4:15 — The go-live story (tab 7: `/settings/whatsapp`, 20s)
 
@@ -182,9 +182,9 @@ then `/automations`.
 
 > "So here's the decision. A front-desk person in India runs about **₹22,000 a
 > month** — and they sleep, take leave, and miss the 9pm messages. The AI Front
-> Desk is **₹14,999 a month** — that's S$599 / RM1,199 / $179 in your market —
-> and it **never sleeps, never quits, answers in seconds, and books while you're
-> closed.** A third of the cost of a human, working every hour of every day.
+> Desk on Growth is **₹9,999 a month** — S$329 in Singapore — and it **never
+> sleeps, never quits, answers in seconds, and books while you're closed.**
+> Less than half the cost of a human, working every hour of every day.
 > One recovered no-show or one lead saved a month more than pays for it."
 
 (Optional: flash the landing page's **salary calculator** at `/#salary` — slide
@@ -205,8 +205,8 @@ it work. Shall we set that up?"
 | "Will the AI book the wrong time or double-book me?" | It never guesses. It **checks your live calendar** first and only books a genuinely free slot; if the time's taken it offers the open ones and lets the customer pick. Every booking is written as a note in the chat, and staff can take over any conversation with one tap — the AI hands off the moment it's unsure. |
 | "Does the AI message my customers on its own? Won't that get me banned?" | Only inside Meta's rules. Within the **24-hour service window** it replies to a customer who just messaged — that's allowed and expected. The reminders and follow-ups are **pre-approved templates**, sent only to opted-in contacts, and **STOP is permanent and enforced in code**. It uses only the **official WhatsApp Cloud API** — no browser bots, ever. That's the opposite of what gets numbers banned. |
 | "How is this different from Meta's own free AI on WhatsApp?" | Meta's bot can *chat*. It can't **do the job**. Nudge checks your calendar and **books the appointment**, then runs the outbound engine — reminders, no-show rebooks, quiet-lead nudges — that actually recovers revenue. Chatting is table stakes; booking and chasing is the moat. |
-| "₹14,999 is a lot — I could pay a person ₹22,000." | And that person sleeps, takes leave, and misses your 9pm messages. The AI is **a third less**, works **every hour of every day**, answers in seconds, and never has an off day. One recovered no-show or one saved lead a month covers the gap. It doesn't replace your people — it does the front-desk grind so they sell. |
-| "I'm not sure I need all that — can I start smaller?" | Yes. The self-serve tiers — Free, Starter, Growth, Pro — give you the shared inbox, CRM, AI-drafted replies and one-photo campaigns. The **AI Front Desk** is the done-for-you flagship on top, with calendar booking and Revenue Recovery. Start where you are; upgrade when you want the employee, not just the toolkit. |
+| "₹9,999 is a lot — I could pay a person ₹22,000." | And that person sleeps, takes leave, and misses your 9pm messages. The AI is **less than half**, works **every hour of every day**, answers in seconds, and never has an off day. One recovered no-show or one saved lead a month covers the gap. It doesn't replace your people — it does the front-desk grind so they sell. |
+| "I'm not sure I need all that — can I start smaller?" | Yes. Entry (₹1,499) is a chatbot that knows your business; Starter (₹4,999) gives you the shared inbox, CRM, AI replies and one-photo campaigns. The **AI Front Desk** is Growth (₹9,999) — calendar booking and Revenue Recovery — and Pro (₹19,999) adds the phone. Start where you are; upgrade when you want the employee, not just the toolkit. |
 | "Is this official? Will my number get banned?" | Nudge uses only the **official WhatsApp Cloud API** — the same one AiSensy/WATI use. No unofficial automation anywhere. What bans numbers is messaging people without consent — Nudge blocks that in code: opt-outs are permanent and enforced at the send layer. |
 | "What if Meta rejects a template?" | You see the rejection **with Meta's reason** right on the campaign, fix the wording, and resubmit — nothing sends until it's approved. Usually minutes to a day. |
 | "Can my staff use it without training?" | That's the design bar. Agents get a role that shows **only the inbox and contacts** — no settings, no billing. The AI drafts replies and handles bookings; the 24-hour rule is enforced for them; it works from their phone. If they can use WhatsApp, they can use this. |
