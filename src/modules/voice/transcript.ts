@@ -13,6 +13,12 @@ const turnSchema = z.object({
   tool_calls: z.array(z.object({ tool_name: z.string() })).nullable().optional(),
 });
 
+const dynamicVariablesSchema = z.record(z.string(), z.unknown()).default({});
+
+// ElevenLabs sends `null`, not absence, for blocks that do not apply — a
+// browser session has `metadata.phone_call: null` — so every optional block
+// here is `.nullish()`. A schema that rejected null silently dropped every
+// browser call (parsePostCall returned null → "ignored") until 2026-09-15.
 const payloadSchema = z.object({
   type: z.literal("post_call_transcription"),
   data: z.object({
@@ -24,18 +30,24 @@ const payloadSchema = z.object({
       phone_call: z
         .object({
           direction: z.enum(["inbound", "outbound"]).default("inbound"),
-          external_number: z.string().default(""),
-          agent_number: z.string().default(""),
+          external_number: z.string().nullable().default(""),
+          agent_number: z.string().nullable().default(""),
         })
-        .optional(),
+        .nullish(),
     }),
     analysis: z
       .object({
         transcript_summary: z.string().nullable().optional(),
         call_successful: z.string().nullable().optional(),
       })
-      .optional(),
-    dynamic_variables: z.record(z.string(), z.unknown()).default({}),
+      .nullish(),
+    // Where ElevenLabs actually puts the per-call variables we set at
+    // initiation (org_id, contact_phone, call_source, tool_token, …).
+    conversation_initiation_client_data: z
+      .object({ dynamic_variables: dynamicVariablesSchema })
+      .nullish(),
+    // Older/flat shape, kept so existing fixtures and any legacy sender still parse.
+    dynamic_variables: dynamicVariablesSchema,
   }),
 });
 
@@ -45,7 +57,12 @@ export function parsePostCall(raw: unknown): PostCall | null {
   const d = parsed.data.data;
   const phone = d.metadata.phone_call;
   const dynamicVariables = Object.fromEntries(
-    Object.entries(d.dynamic_variables).map(([k, v]) => [k, String(v ?? "")])
+    Object.entries({
+      ...d.dynamic_variables,
+      ...(d.conversation_initiation_client_data?.dynamic_variables ?? {}),
+    })
+      .filter(([k]) => !k.startsWith("system__"))
+      .map(([k, v]) => [k, String(v ?? "")])
   );
   const transcript: PostCallTurn[] = d.transcript.map((t) => ({
     role: t.role,

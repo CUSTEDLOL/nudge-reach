@@ -46,6 +46,52 @@ describe("parsePostCall", () => {
   it("returns null for non-transcription events", () => {
     expect(parsePostCall({ type: "post_call_audio", data: {} })).toBeNull();
   });
+
+  // The shape ElevenLabs really sends for a browser (js_sdk / react_sdk)
+  // session, captured from production on 2026-09-15: phone_call is null, and
+  // the per-call variables sit under conversation_initiation_client_data.
+  // Before this case existed every browser call was silently "ignored".
+  it("parses a real browser-session payload: null phone block, nested dynamic variables", () => {
+    const call = parsePostCall({
+      type: "post_call_transcription",
+      event_timestamp: 1789468000,
+      data: {
+        agent_id: "agent_1",
+        conversation_id: "conv_react",
+        status: "done",
+        transcript: [{ role: "agent", message: "Hello, you've reached Spice Garden.", time_in_call_secs: 0, tool_calls: null }],
+        metadata: { call_duration_secs: 18, phone_call: null, batch_call: null, error: null },
+        analysis: { transcript_summary: null, call_successful: null, evaluation_criteria_results: {} },
+        conversation_initiation_client_data: {
+          conversation_config_override: { agent: { prompt: null, first_message: "Hello", language: "en" } },
+          dynamic_variables: {
+            org_id: "org1",
+            contact_phone: "+999000000000",
+            contact_name: "Browser test caller",
+            call_source: "browser",
+            tool_token: "v1.1.sig",
+            purpose: "inbound",
+            system__agent_id: "agent_1",
+            system__conversation_id: "conv_react",
+          },
+        },
+      },
+    })!;
+    expect(call).not.toBeNull();
+    expect(call.direction).toBe("inbound");
+    expect(call.fromE164).toBe("+999000000000");
+    expect(call.toE164).toBe("");
+    expect(call.summary).toBeNull();
+    expect(call.callSuccessful).toBe(false);
+    expect(call.dynamicVariables).toEqual({
+      org_id: "org1",
+      contact_phone: "+999000000000",
+      contact_name: "Browser test caller",
+      call_source: "browser",
+      tool_token: "v1.1.sig",
+      purpose: "inbound",
+    });
+  });
 });
 
 describe("outcomeOf", () => {

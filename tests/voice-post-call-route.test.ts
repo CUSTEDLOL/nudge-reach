@@ -90,4 +90,34 @@ describe("POST /api/voice/post-call", () => {
     expect(fileCall).not.toHaveBeenCalled();
     state.numberOwned = true;
   });
+
+  it("files a browser call in the shape ElevenLabs really sends (phone_call null, nested variables)", async () => {
+    state.numberOwned = false;
+    const caller = "+999000000000";
+    const token = createVoiceToolToken({ orgId: "org1", contactPhone: caller, source: "browser" }, "tool-secret");
+    const realShape = JSON.stringify({
+      type: "post_call_transcription",
+      event_timestamp: Math.floor(Date.now() / 1000),
+      data: {
+        agent_id: "a",
+        conversation_id: "conv_react_1",
+        status: "done",
+        transcript: [{ role: "agent", message: "Hello", time_in_call_secs: 0, tool_calls: null }],
+        metadata: { call_duration_secs: 18, phone_call: null, batch_call: null },
+        analysis: { transcript_summary: null, call_successful: null },
+        conversation_initiation_client_data: {
+          conversation_config_override: { agent: { first_message: "Hello", language: "en" } },
+          dynamic_variables: { org_id: "org1", contact_phone: caller, call_source: "browser", tool_token: token, purpose: "inbound", system__agent_id: "a" },
+        },
+      },
+    });
+    expect((await POST(signed(realShape))).status).toBe(200);
+    expect(fileCall).toHaveBeenLastCalledWith(
+      "org1",
+      expect.objectContaining({ providerCallId: "conv_react_1", fromE164: caller }),
+      "inbound",
+      "browser"
+    );
+    state.numberOwned = true;
+  });
 });

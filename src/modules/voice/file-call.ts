@@ -38,7 +38,13 @@ export async function fileCall(
   });
   const contact = await prisma.contact.upsert({
     where: { orgId_phoneE164: { orgId, phoneE164: customerE164 } },
-    create: { orgId, phoneE164: customerE164, name: customerE164, optInSource: "voice" },
+    create: {
+      orgId,
+      phoneE164: customerE164,
+      // Initiation passes the name it resolved (or "Browser test caller").
+      name: call.dynamicVariables.contact_name?.trim() || customerE164,
+      optInSource: "voice",
+    },
     update: {},
   });
   if (!existingContact && source === "phone") {
