@@ -139,6 +139,11 @@ npm run build     # prisma generate && next build
 npm run lint      # eslint
 ```
 
+`tests/credit-concurrency.test.ts` hits a real Postgres and is skipped unless
+`TEST_DATABASE_URL` points at a throwaway database with the schema pushed
+(`DATABASE_URL=$TEST_DATABASE_URL DIRECT_URL=$TEST_DATABASE_URL npm run db:push`)
+— never the live database.
+
 ## More docs
 
 - [docs/SECURITY.md](docs/SECURITY.md) — tenant isolation, compliance guarantees, env hygiene
