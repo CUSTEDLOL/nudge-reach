@@ -11,6 +11,10 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Local linked worktrees can contain their own generated `.next` output.
+    // They are separate checkouts and must be linted from their own roots.
+    ".worktrees/**",
+    ".claude/worktrees/**",
     "next-env.d.ts",
   ]),
 ]);

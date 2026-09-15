@@ -7,7 +7,7 @@ import { adminCookieOptions } from "@/lib/supabase/admin-cookie";
 // /api/webhooks: Meta calls it (signature-verified, not cookie-auth'd).
 // /api/cron: queue tick (no session; safe — it only advances queued work).
 // /api/waitlist: public signup endpoint for the homepage lead form (demo/waitlist).
-const PUBLIC_PATHS = [
+const PUBLIC_PATH_PREFIXES = [
   "/login",
   // owner setup tokens are validated and consumed by the public route itself
   "/invite",
@@ -34,12 +34,26 @@ const PUBLIC_PATHS = [
   "/faq",
   "/privacy",
   "/terms",
+  "/industries",
+  "/resources",
+  "/features",
+  "/compare",
+  "/how-it-works",
   // SEO artifacts served by the app router
   "/sitemap.xml",
   "/robots.txt",
   "/opengraph-image",
   "/icon.svg",
 ];
+
+export function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    PUBLIC_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    )
+  );
+}
 
 /**
  * Refreshes the Supabase auth token on every matched request and redirects
@@ -82,8 +96,7 @@ export async function updateSession(request: NextRequest) {
   // actions still enforce the founder allowlist as the security boundary.
   if (isAdminPath) return supabaseResponse;
 
-  const isPublic =
-    pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic = isPublicPath(pathname);
 
   if (!claims && !isPublic) {
     const url = request.nextUrl.clone();

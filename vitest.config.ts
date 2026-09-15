@@ -14,6 +14,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      // Next aliases this sentinel by server/client graph. Unit tests run the
+      // server module directly, so use Next's inert server-side target here.
+      "server-only": path.resolve(
+        __dirname,
+        "node_modules/next/dist/compiled/server-only/empty.js"
+      ),
     },
   },
 });

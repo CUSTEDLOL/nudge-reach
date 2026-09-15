@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
 
+function isSupportedTimeZone(value: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Environment schema. Kept separate from lib/env.ts (which parses
  * process.env at boot) so it can be unit-tested without real env vars.
@@ -13,6 +22,12 @@ export const envSchema = z
     // Server-only. Used to create confirmed users from single-use owner setup
     // links; never prefix with NEXT_PUBLIC or import into client components.
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+
+    // Browser first-touch storage and Cal attribution forwarding are disabled
+    // until an approved marketing consent configuration is in place.
+    NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: z
+      .enum(["true", "false"])
+      .default("false"),
 
     // Database
     DATABASE_URL: z.string().min(1),
@@ -86,6 +101,17 @@ export const envSchema = z
     // URL (optional; leads always land in AccessRequest regardless)
     LEADS_SHEET_WEBHOOK_URL: z.string().url().optional(),
 
+    // Cal.com demo-booking webhook. Optional so simulation/local builds remain
+    // keyless; the public webhook route fails closed while the secret is unset.
+    CAL_WEBHOOK_SECRET: z.string().optional(),
+    CAL_EVENT_TYPE_SLUG: z.string().min(1).default("30min"),
+
+    // Optional GA4 Measurement Protocol credentials for server-side lead
+    // quality events. Never prefix these with NEXT_PUBLIC_: the API secret
+    // must not enter a browser bundle.
+    GA4_MEASUREMENT_ID: z.string().optional(),
+    GA4_API_SECRET: z.string().optional(),
+
     // Google Calendar OAuth (optional). Left empty, "Connect calendar" works in
     // SIMULATION with a mocked calendar — no Google app needed. Fill these only
     // for real OAuth. Deliberately NOT in the live superRefine below: even a
@@ -106,6 +132,10 @@ export const envSchema = z
     // Founder admin panel (/admin): comma-separated login emails. Unset ⇒ the
     // panel is off for everyone (fails closed). See modules/admin/auth.ts.
     FOUNDER_EMAILS: z.string().optional(),
+    FOUNDER_TIME_ZONE: z
+      .string()
+      .refine(isSupportedTimeZone, "Must be a supported IANA time zone")
+      .default("Asia/Kolkata"),
 
     // Public app origin (invite/email links, absolute URLs). Falls back to the
     // request host when unset.

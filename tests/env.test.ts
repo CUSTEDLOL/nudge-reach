@@ -11,6 +11,51 @@ describe("envSchema", () => {
   it("accepts a minimal simulation-mode config", () => {
     const parsed = envSchema.parse(baseEnv);
     expect(parsed.SEND_MODE).toBe("simulation");
+    expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("30min");
+    expect(parsed.CAL_WEBHOOK_SECRET).toBeUndefined();
+    expect(parsed.NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED).toBe("false");
+    expect(parsed.FOUNDER_TIME_ZONE).toBe("Asia/Kolkata");
+  });
+
+  it("enables marketing attribution only with an explicit public true value", () => {
+    expect(
+      envSchema.parse({
+        ...baseEnv,
+        NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: "true",
+      }).NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED
+    ).toBe("true");
+    expect(
+      envSchema.safeParse({
+        ...baseEnv,
+        NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED: "1",
+      }).success
+    ).toBe(false);
+  });
+
+  it("accepts valid founder time zones and rejects invalid values", () => {
+    expect(
+      envSchema.parse({ ...baseEnv, FOUNDER_TIME_ZONE: "America/New_York" })
+        .FOUNDER_TIME_ZONE
+    ).toBe("America/New_York");
+    expect(
+      envSchema.safeParse({ ...baseEnv, FOUNDER_TIME_ZONE: "India/Founder" })
+        .success
+    ).toBe(false);
+  });
+
+  it("accepts an optional Cal webhook secret and event-type slug", () => {
+    const parsed = envSchema.parse({
+      ...baseEnv,
+      CAL_WEBHOOK_SECRET: "cal-secret",
+      CAL_EVENT_TYPE_SLUG: "clinic-demo",
+    });
+    expect(parsed.CAL_WEBHOOK_SECRET).toBe("cal-secret");
+    expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("clinic-demo");
+  });
+
+  it("accepts an empty optional Cal secret from the example configuration", () => {
+    const parsed = envSchema.parse({ ...baseEnv, CAL_WEBHOOK_SECRET: "" });
+    expect(parsed.CAL_WEBHOOK_SECRET).toBe("");
   });
 
   it("accepts the server-only Supabase key used for owner setup", () => {

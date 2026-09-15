@@ -1,31 +1,63 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { paginate } from "@/modules/admin/queries";
 
 /**
- * Founder leads desk: the landing page's access requests ("Get access" /
- * hero form) and waitlist signups, normalised into one pipeline with a
- * status the founders move by hand. Cross-org module rules apply (see
- * queries.ts) — these tables are platform-level, not tenant data.
+ * Founder leads desk: landing-page access requests, waitlist signups, and
+ * signed demo bookings normalised into one pipeline with a status the founders
+ * move by hand. Cross-org module rules apply (see queries.ts) — these tables
+ * are platform-level, not tenant data.
  */
 
-export const LEAD_STATUSES = ["new", "contacted", "converted", "dismissed"] as const;
+export const LEAD_STATUSES = [
+  "new",
+  "contacted",
+  "qualified",
+  "converted",
+  "dismissed",
+] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export function isLeadStatus(s: string): s is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(s);
 }
 
-export type LeadKind = "access" | "waitlist";
+export const LEAD_KINDS = ["access", "waitlist", "booking"] as const;
+export type LeadKind = (typeof LEAD_KINDS)[number];
+
+export function isLeadKind(value: string): value is LeadKind {
+  return (LEAD_KINDS as readonly string[]).includes(value);
+}
+
+export function isOpaqueLeadId(value: string) {
+  return /^[A-Za-z0-9_-]{1,128}$/.test(value);
+}
+
+export function formatBookingStart(
+  instant: Date,
+  timeZone = env.FOUNDER_TIME_ZONE || "Asia/Kolkata"
+) {
+  const formatted = instant.toLocaleString("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    hour12: false,
+    timeZone,
+  });
+  return `${formatted} (${timeZone})`;
+}
 
 export interface LeadRow {
   id: string;
   kind: LeadKind;
   /** Person or shop name. */
   name: string;
-  /** Email for access requests; city for waitlist signups. */
+  /** Email, city, or scheduled-date fallback according to lead kind. */
   secondary: string;
-  phoneE164: string;
+  email: string | null;
+  phoneE164: string | null;
+  /** Human-readable appointment time for bookings. */
+  scheduledFor: string | null;
   vertical: string | null;
   source: string;
   status: LeadStatus;
@@ -55,11 +87,12 @@ const LEADS_PAGE_SIZE = 50;
 
 /** Badge count for the sidebar: leads nobody has touched yet. */
 export async function newLeadsCount(): Promise<number> {
-  const [a, w] = await Promise.all([
+  const [a, w, b] = await Promise.all([
     prisma.accessRequest.count({ where: { status: "new" } }),
     prisma.waitlistSignup.count({ where: { status: "new" } }),
+    prisma.demoBooking.count({ where: { status: "new" } }),
   ]);
-  return a + w;
+  return a + w + b;
 }
 
 function accessWhere(status: LeadStatus | undefined, search: string): Prisma.AccessRequestWhereInput {
@@ -92,17 +125,32 @@ function waitlistWhere(status: LeadStatus | undefined, search: string): Prisma.W
   return terms.length === 0 ? {} : terms.length === 1 ? terms[0] : { AND: terms };
 }
 
+function bookingWhere(status: LeadStatus | undefined, search: string): Prisma.DemoBookingWhereInput {
+  const terms: Prisma.DemoBookingWhereInput[] = [];
+  if (status) terms.push({ status });
+  if (search) {
+    terms.push({
+      OR: [
+        { attendeeName: { contains: search, mode: "insensitive" } },
+        { attendeeEmail: { contains: search, mode: "insensitive" } },
+        { attendeePhoneE164: { contains: search, mode: "insensitive" } },
+      ],
+    });
+  }
+  return terms.length === 0 ? {} : terms.length === 1 ? terms[0] : { AND: terms };
+}
+
 function leadIdentity(lead: Pick<LeadRow, "kind" | "id">): string {
   return `${lead.kind}:${lead.id}`;
 }
 
 function duplicateKeys(lead: LeadRow): { reason: "phone" | "email"; key: string }[] {
-  const phone = lead.phoneE164.replace(/\D/g, "");
+  const phone = lead.phoneE164?.replace(/\D/g, "") ?? "";
   const keys: { reason: "phone" | "email"; key: string }[] = phone
     ? [{ reason: "phone", key: `phone:${phone}` }]
     : [];
-  if (lead.kind === "access") {
-    const email = lead.secondary.trim().toLocaleLowerCase("en");
+  if (lead.email) {
+    const email = lead.email.trim().toLocaleLowerCase("en");
     if (email) keys.push({ reason: "email", key: `email:${email}` });
   }
   return keys;
@@ -136,7 +184,8 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
   const search = filter.search?.trim() ?? "";
   const wantAccess = !filter.kind || filter.kind === "all" || filter.kind === "access";
   const wantWaitlist = !filter.kind || filter.kind === "all" || filter.kind === "waitlist";
-  const [access, waitlist] = await Promise.all([
+  const wantBooking = !filter.kind || filter.kind === "all" || filter.kind === "booking";
+  const [access, waitlist, bookings] = await Promise.all([
     wantAccess
       ? prisma.accessRequest.findMany({
           where: accessWhere(status, search),
@@ -172,6 +221,25 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
           },
         })
       : Promise.resolve([]),
+    wantBooking
+      ? prisma.demoBooking.findMany({
+          where: bookingWhere(status, search),
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+          take: LEADS_QUERY_LIMIT,
+          select: {
+            id: true,
+            attendeeName: true,
+            attendeeEmail: true,
+            attendeePhoneE164: true,
+            startTime: true,
+            source: true,
+            utmSource: true,
+            status: true,
+            notes: true,
+            createdAt: true,
+          },
+        })
+      : Promise.resolve([]),
   ]);
   const rows: LeadRow[] = [
     ...access.map((r) => ({
@@ -179,7 +247,9 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
       kind: "access" as const,
       name: r.name,
       secondary: r.email,
+      email: r.email,
       phoneE164: r.phoneE164,
+      scheduledFor: null,
       vertical: null,
       source: r.source,
       status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
@@ -193,7 +263,9 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
       kind: "waitlist" as const,
       name: r.shopName,
       secondary: r.city,
+      email: null,
       phoneE164: r.phoneE164,
+      scheduledFor: null,
       vertical: r.vertical,
       source: r.source,
       status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
@@ -202,6 +274,25 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
       duplicateBy: [],
       createdAt: r.createdAt,
     })),
+    ...bookings.map((r) => {
+      const scheduledFor = formatBookingStart(r.startTime);
+      return {
+        id: r.id,
+        kind: "booking" as const,
+        name: r.attendeeName?.trim() || r.attendeeEmail || "Demo booking",
+        secondary: r.attendeeEmail || scheduledFor,
+        email: r.attendeeEmail,
+        phoneE164: r.attendeePhoneE164,
+        scheduledFor,
+        vertical: "clinic",
+        source: r.utmSource ?? r.source,
+        status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
+        notes: r.notes,
+        duplicateCount: 0,
+        duplicateBy: [],
+        createdAt: r.createdAt,
+      };
+    }),
   ];
   const sorted = rows.sort(
     (a, b) =>
@@ -217,19 +308,37 @@ export interface LeadCounts {
 }
 
 export async function leadCounts(): Promise<LeadCounts> {
-  const [a, w] = await Promise.all([
+  const [a, w, b] = await Promise.all([
     prisma.accessRequest.groupBy({ by: ["status"], _count: true }),
     prisma.waitlistSignup.groupBy({ by: ["status"], _count: true }),
+    prisma.demoBooking.groupBy({ by: ["status"], _count: true }),
   ]);
-  const byStatus: Record<LeadStatus, number> = { new: 0, contacted: 0, converted: 0, dismissed: 0 };
-  for (const row of [...a, ...w]) {
+  const byStatus: Record<LeadStatus, number> = {
+    new: 0,
+    contacted: 0,
+    qualified: 0,
+    converted: 0,
+    dismissed: 0,
+  };
+  for (const row of [...a, ...w, ...b]) {
     const s = isLeadStatus(row.status) ? row.status : "new";
     byStatus[s] += row._count;
   }
   return { total: Object.values(byStatus).reduce((x, y) => x + y, 0), byStatus };
 }
 
-export type UpdateLeadResult = { ok: true } | { ok: false; error: string };
+export type LeadTransition = {
+  previous: LeadStatus;
+  current: LeadStatus;
+  gaClientId: string | null;
+} | null;
+
+export type UpdateLeadResult =
+  | { ok: true; transition: LeadTransition }
+  | { ok: false; error: string };
+
+const LEAD_EDIT_CONFLICT =
+  "Lead changed while you were editing. Refresh and try again.";
 
 /** Move a lead through the pipeline and/or save a note (max 1000 chars). */
 export async function updateLead(
@@ -237,6 +346,9 @@ export async function updateLead(
   id: string,
   patch: { status?: string; notes?: string | null }
 ): Promise<UpdateLeadResult> {
+  if (!isLeadKind(kind) || !isOpaqueLeadId(id)) {
+    return { ok: false, error: "Bad lead reference." };
+  }
   const data: { status?: LeadStatus; notes?: string | null } = {};
   if (patch.status !== undefined) {
     if (!isLeadStatus(patch.status)) return { ok: false, error: `Unknown status "${patch.status}".` };
@@ -248,9 +360,61 @@ export async function updateLead(
   }
   if (Object.keys(data).length === 0) return { ok: false, error: "Nothing to update." };
   try {
-    if (kind === "access") await prisma.accessRequest.update({ where: { id }, data });
-    else await prisma.waitlistSignup.update({ where: { id }, data });
-    return { ok: true };
+    if (kind === "booking" && data.status) {
+      const observed = await prisma.demoBooking.findUnique({
+        where: { id },
+        select: { status: true, gaClientId: true },
+      });
+      if (!observed) return { ok: false, error: "Lead not found." };
+
+      const committed = await prisma.demoBooking.updateMany({
+        where: { id, status: observed.status },
+        data,
+      });
+      if (committed.count === 1) {
+        const previous = isLeadStatus(observed.status) ? observed.status : "new";
+        return {
+          ok: true,
+          transition:
+            previous === data.status
+              ? null
+              : {
+                  previous,
+                  current: data.status,
+                  gaClientId: observed.gaClientId,
+                },
+        };
+      }
+
+      const latest = await prisma.demoBooking.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      if (!latest) return { ok: false, error: "Lead not found." };
+      if (latest.status !== data.status) {
+        return { ok: false, error: LEAD_EDIT_CONFLICT };
+      }
+
+      if (data.notes !== undefined) {
+        const notesCommitted = await prisma.demoBooking.updateMany({
+          where: { id, status: latest.status },
+          data: { notes: data.notes },
+        });
+        if (notesCommitted.count !== 1) {
+          return { ok: false, error: LEAD_EDIT_CONFLICT };
+        }
+      }
+      return { ok: true, transition: null };
+    }
+
+    if (kind === "access") {
+      await prisma.accessRequest.update({ where: { id }, data });
+    } else if (kind === "waitlist") {
+      await prisma.waitlistSignup.update({ where: { id }, data });
+    } else {
+      await prisma.demoBooking.update({ where: { id }, data });
+    }
+    return { ok: true, transition: null };
   } catch {
     return { ok: false, error: "Lead not found." };
   }

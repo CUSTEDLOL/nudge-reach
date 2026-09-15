@@ -121,6 +121,194 @@
   Retired `docs/PRICING.md` and the three stale/duplicate pricing .docx files.
 - Tests updated for the new ladder (plan list, MRR, cost-alert fixture,
   Razorpay confirm amount). 892/892 green; build and lint clean.
+## SEO foundation final-review fix wave (2026-09-15) ✅ CODE/STATIC VERIFIED — EXTERNAL ACTIVATION PENDING
+
+- Marketing attribution now has an explicit public gate that defaults off. In
+  that state Nudge does not capture or store first-touch data, read `_ga`,
+  forward attribution to Cal, or send correlated server GA4 events; aggregate
+  CTA/form events remain under the existing GTM control surface.
+- The Cal trigger is a working direct booking link when the embed is blocked.
+  Embed initialization can retry after synchronous insertion or script-load
+  failure, and one shared aggregate-only callback handles both normal and
+  dry-run success. A bounded UID/slot-key set prevents the two provider events
+  for one completion from double-counting without placing a booking UID in the
+  browser event.
+- GA4 delivery results now produce an aggregate, privacy-safe server error only
+  on failure and never roll back an authoritative lead update. The boundary is
+  server-only and validates event names, client IDs and opaque lead IDs at
+  runtime. Founder booking times render the stored instant in the validated
+  `FOUNDER_TIME_ZONE`, defaulting to `Asia/Kolkata`, with the zone shown.
+- Resource route params, navigation, metadata, sitemap facts, visible dates and
+  Article JSON-LD now derive from the published manifest contract. Draft
+  fixtures stay out of route/navigation/sitemap output. `/resources` includes
+  BreadcrumbList JSON-LD; visible final crumbs are non-links with
+  `aria-current="page"` and mobile-safe wrapping.
+- The clinic hub now owns India-specific high-ticket clinic intent for aesthetic
+  dermatology, cosmetic dental and hair-transplant teams. Shared landing/guide
+  action colors use `brand-700` and `brand-800`, verified at **5.0792:1** and
+  **7.2388:1** against white, and the nested footer HoloCard CTA reports the
+  `footer` surface.
+- Privacy and operations/deployment copy now discloses demo-prospect and optional
+  attribution processing, Cal/Google providers, purpose, retention and rights
+  boundaries, current autonomous/BYOK behavior, and outstanding legal review.
+  The release order is a maintenance/no-ingestion window, non-atomic
+  `db:push` → immediate `db:rls`, verified `DemoBooking` RLS with zero browser
+  policies, then code deploy and later webhook activation. Debug-payload
+  validation is separate from a real authenticated send to a dedicated
+  non-production GA4 property.
+- Fresh final verification: canonical SEO/marketing/admin/webhook/env suite
+  **16 files / 180 tests**, complete suite **158 files / 1,045 tests**,
+  `npx tsc --noEmit`, production build (**81 static-generation inputs**) and
+  lint all passed. Lint retained one unrelated pre-existing warning in
+  `tests/admin-create-workspace.test.ts`. Anonymous production HTML returned
+  200 and contained the localized clinic copy, accessible CTA tokens, direct
+  Cal fallback, manifest dates and breadcrumb semantics/JSON-LD.
+- Fresh exact-size screenshots could not be captured because the configured
+  browser runtime reported no available browser session. The prior branch
+  screenshots are not reused as evidence for this changed wave; desktop/mobile
+  visual inspection remains an explicit release check.
+- Still pending: all external account, database, consent/legal, Search Console,
+  GTM/GA4 and Cal activation; authenticated/database conversion E2E; the
+  ten-attendee deployment constraint; and final legal identity/domain-email
+  trust work. No external account or database was read or changed.
+
+## Organic search foundation handoff (2026-09-15) ⚠️ STATIC/TEST VERIFIED — CONVERSION E2E INCOMPLETE
+
+- The release inventory now has eight typed, indexable canonicals: `/`,
+  `/industries/clinics`, `/resources`,
+  `/resources/whatsapp-appointment-booking-for-clinics`, `/pricing`, `/faq`,
+  `/privacy` and `/terms`. Sitemap dates are fixed review dates.
+- Measurement code covers `demo_cta_click`, aggregate browser `generate_lead`,
+  authoritative signed/deduplicated Cal bookings, and optional
+  `qualify_lead`, `disqualify_lead` and `close_convert_lead` GA4 events. Browser
+  Cal success is not treated as the authoritative booking.
+- Release verification on the local production build: focused SEO/conversion
+  suite **12 files / 136 tests**, complete suite **155 files / 1,010 tests**,
+  lint exit 0 with one pre-existing warning, production build exit 0, and diff
+  check exit 0. Build output emitted the home,
+  clinic hub, resource index, pricing, FAQ, privacy, terms, robots and sitemap
+  statically and the first guide via SSG.
+- Anonymous production-server checks with documented non-secret simulation
+  placeholders returned 200 for the home, clinic hub, resources and guide;
+  `/dashboard` returned 307 to `/login`; login returned 200 with rendered
+  `noindex, nofollow`. Rendered canonicals and JSON-LD parsed, while robots and
+  sitemap matched the eight-URL registry and fixed dates. An initial server run
+  with empty local Supabase URL/key values returned 500 before routing; no live
+  credential was used to resolve that environment-only failure.
+- Screenshot review was completed for `/`, `/industries/clinics`, `/resources`
+  and the guide at exactly **1440×900** and **390×844** using an already-installed
+  local Chromium. Headline wrapping, readable measure and visible navigation
+  showed no visible clipping. A follow-up scripted keyboard/mobile-menu/DOM probe
+  produced no result, so no automated interaction pass is claimed.
+- Added `docs/SEO_BASELINE.md` with dated evidence/unknown states and
+  `docs/SEO_OPERATIONS.md` with activation, reporting, month-2/month-4 sprint
+  checkpoints, 30/60/90 review and incident/rotation procedures. Quarterly
+  review is documented only as a post-sprint renewal cadence.
+- Still pending and not implied complete: production deployment/HTTP review,
+  Search Console domain verification and sitemap submission, DNS access, GTM/GA4
+  account configuration, GA4 credentials, Cal event/webhook/secret setup,
+  production Prisma schema application, `DemoBooking` RLS
+  verification, first-party performance/indexing/CWV/referring-domain baselines,
+  and production lead reconciliation. No external account or database was read
+  or changed for this handoff.
+- The Task 9 handoff is explicitly incomplete for interactive and
+  database/authenticated conversion E2E. The following four checks were not
+  performed: a rendered demo CTA click preserving Cal behavior; a Cal dry-run
+  success without an authoritative write; signed fixture persistence plus a
+  second controlled send proving one-row/first-touch deduplication; and an
+  authenticated qualified transition with GA4 both unconfigured and directed to
+  a mock/debug endpoint. Unit/integration coverage remains evidence for the code
+  boundaries only.
+- No disposable database was immediately available: no local Postgres binaries
+  or listening Postgres/Supabase ports, no installed repository Supabase CLI,
+  and no running Docker daemon. No database infrastructure was installed or
+  external/production data accessed to close that gap.
+
+## Qualified demo-lead pipeline and GA4 offline events (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
+
+- Added signed `DemoBooking` records to the founder-only lead desk, including
+  newest-first merging, counts, attendee search, source attribution, safe
+  nullable-phone rendering, duplicate signals, notes, and the `qualified`
+  pipeline state.
+- Booking updates derive transitions from the persisted status. Qualified,
+  dismissed and converted transitions can emit Google's recommended
+  `qualify_lead`, `disqualify_lead` and `close_convert_lead` events; notes-only,
+  same-status and client-ID-less changes emit nothing.
+- Added an optional five-second GA4 Measurement Protocol sender. Its body is
+  restricted to event name, persisted `client_id`, and internal
+  `lead_id=booking:<id>`; contact details, notes, calendar data, attribution URLs
+  and Cal UID are never sent. Analytics failure cannot alter the saved admin
+  result.
+- Verification: RED captured the unsupported booking/status contracts; focused
+  admin/GA4 tests **32/32**, complete suite **985/985**, touched-file lint and
+  production build passed. Full lint had zero errors and one unrelated existing
+  unused-variable warning in `tests/admin-create-workspace.test.ts`.
+- Fix round 1 now validates the numeric two-part GA client ID at browser capture,
+  signed Cal ingress, and GA4 egress; malformed, whitespace-padded, overlong and
+  PII-shaped values are discarded without network access. Booking transitions
+  now use an `id + observed status` compare-and-set, so concurrent same-target
+  edits emit once and competing edits return a refresh conflict. The founder
+  source filter now exposes and accepts demo bookings.
+- Fix-round verification: affected Task 6/7/8 tests **121/121**, complete suite
+  **1010/1010**, touched-file lint, Prisma generation, and production build
+  passed.
+- Activation remains off until `GA4_MEASUREMENT_ID` and `GA4_API_SECRET` are
+  configured. The Task 7 database/RLS/real-Cal activation gate is unchanged; no
+  database, analytics property, account, or secret was accessed or mutated.
+
+## Signed Cal demo-booking ingestion (2026-09-15) ✅ CODE COMPLETE — ACTIVATION PENDING
+
+- Added a fail-closed Cal.com `BOOKING_CREATED` webhook boundary that verifies
+  the raw-body HMAC, accepts only the documented payload versions and configured
+  event-type slug, and whitelists the booking and first-touch fields retained.
+- Added atomic, UID-keyed booking upserts. Delivery retries may refresh the
+  appointment and attendee fields but cannot overwrite first-touch attribution;
+  notes, meeting URLs, ICS content, raw payloads and undeclared fields are never
+  stored.
+- Added the server-only `DemoBooking` platform-lead model and its operational
+  indexes. It intentionally has no tenant relation or browser policies.
+- Verification: focused webhook/environment tests **30/30**, complete suite
+  **954/954**, Prisma format/generate/validate, touched-file lint, and the
+  production build all passed.
+- Fix round 1 now rejects absent configuration or malformed signature headers
+  before body access, streams the exact HMAC/JSON bytes under a 64 KiB ceiling,
+  and bounds every declared Cal string plus the attendee count at ingress.
+  Focused Task 7 tests **47/47**, touched lint, and the production build passed.
+- Activation remains gated on applying the Prisma schema, running the repository
+  RLS script and verifying `pg_tables.rowsecurity = true` for `DemoBooking`, then
+  configuring the Cal secret and event slug. No database or real booking was
+  touched during implementation.
+
+## Typed resources and clinic booking guide (2026-09-14) ✅
+
+- Added a published-only typed resource manifest and loader registry, plus static
+  `/resources` and SSG `/resources/[slug]` routes with canonical metadata,
+  breadcrumbs and Article structured data.
+- Published the first operational guide for clinic appointment booking, covering
+  verified availability, minimum booking data, Meta's 24-hour service window,
+  approved templates, reminders, deposits, human handoff and journey measurement.
+  The policy guidance links to the official WhatsApp Business Messaging Policy,
+  verified on 2026-09-14, and is explicitly not medical or legal advice.
+- Added Resources to desktop/mobile navigation and the footer, and registered the
+  resource family in the sitemap-backed SEO registry.
+- Verification: focused resource/SEO contracts **18/18**, complete suite
+  **913/913**, touched-file lint clean, and the production build passed with the
+  index emitted statically and the guide via SSG. Desktop/mobile browser review
+  was attempted but unavailable because no browser session was connected.
+
+## Clinic AI Front Desk search hub (2026-09-14) ✅
+
+- Published the server-rendered `/industries/clinics` commercial landing page
+  around the clinic enquiry-to-booking operating flow, compliant follow-ups,
+  payment links, human handoff and concierge setup.
+- Registered the page for canonical metadata and the sitemap, added Clinics to
+  desktop/mobile navigation and the footer, and corrected the homepage headline
+  to lead with the AI Front Desk rather than generic WhatsApp-agent leadership.
+- Verification: focused SEO/page contracts **6/6**, complete suite **904/904**,
+  touched-file lint clean, and the production build passed with the clinic hub
+  emitted as a static route. Browser screenshots were unavailable because no
+  browser session was connected; direct dev-server checks confirmed all four
+  public routes returned 200 with one H1, expected links and server HTML.
 
 ## 3–4 month SEO program design approved (2026-09-14) ✅
 

@@ -702,6 +702,33 @@ model AudienceContact {
   @@id([audienceId, contactId])
 }
 
+// Authoritative demo appointments received from Cal.com's signed webhook.
+// These are pre-signup platform leads, not tenant data. The app accesses them
+// only through server-side Prisma; enable RLS with no browser policies.
+model DemoBooking {
+  id                String   @id @default(cuid())
+  calUid            String   @unique
+  attendeeName      String?
+  attendeeEmail     String?
+  attendeePhoneE164 String?
+  eventType         String
+  startTime         DateTime
+  source            String   @default("cal")
+  status            String   @default("new")
+  landingPath       String?
+  referrer          String?
+  utmSource         String?
+  utmMedium         String?
+  utmCampaign       String?
+  gaClientId        String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
 // Public waitlist signups from the marketing landing page (/waitlist).
 // Not org-scoped — these are pre-signup leads. Inserts happen server-side via
 // Prisma (table owner); enable RLS with no policies in Supabase so the

@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
+import { metadataFor } from "@/modules/marketing/seo-pages";
 import { Navbar } from "@/components/marketing/navbar";
 import { FAQ } from "@/components/marketing/faq";
 import { FAQS } from "@/components/marketing/faq-data";
 import { ScrollTop } from "@/components/marketing/scroll-top";
 import { Footer } from "@/components/marketing/footer";
 
-export const metadata: Metadata = {
-  title: "FAQ",
-  description:
-    "Common questions about the AI Front Desk: setup, WhatsApp compliance, calendars, payments and what happens when the AI doesn't know.",
-  alternates: { canonical: "/faq" },
-};
+export const metadata: Metadata = metadataFor("/faq");
 
 const FAQ_JSON_LD = {
   "@context": "https://schema.org",

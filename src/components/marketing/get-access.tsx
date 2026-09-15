@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Loader2, X } from "lucide-react";
+import { pushMarketingEvent } from "@/modules/marketing/analytics";
 
 /**
  * "Get Access" CTA + popup form (Name / Email / Phone). Submits to the public
@@ -97,6 +98,10 @@ function GetAccessModal({
         return;
       }
       setStatus("done");
+      pushMarketingEvent({
+        event: "generate_lead",
+        lead_source: "access_form",
+      });
     } catch {
       setError("Network error. Please try again.");
       setStatus("idle");

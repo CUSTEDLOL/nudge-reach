@@ -14,6 +14,17 @@ export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 > Nudge is now positioned as an **AI Front Desk** — the AI employee books into a
 > real Google Calendar and runs a Revenue-Recovery follow-up engine — on top of
 > the existing self-serve CRM/inbox/campaigns tiers. Concretely, for a deploy:
+> - **2026-09-15 SEO measurement foundation:** the additive, server-only
+>   `DemoBooking` table backs signed Cal.com demo-booking ingestion. For its
+>   first production release, begin a **maintenance/no-ingestion window**, keep
+>   the Cal endpoint unconfigured, run **`npm run db:push` and then immediately
+>   `npm run db:rls`**, verify RLS and the absence of browser policies as
+>   described in §4, and only then deploy application code. Keep
+>   `NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED="false"`, do not publish the new
+>   GA4 event tags, and leave the server GA4 credentials unset. After the signed
+>   staging checks pass, activate the Cal.com webhook separately. This order
+>   prevents a newly created public-schema table from sitting exposed between
+>   schema application and the security backstop.
 > - **2026-09-07 admin panel v2:** additive nullable columns `Org.suspendedAt`,
 >   `Org.featureOverrides` (JSON, default `{}`), `Org.founderNotes`, and
 >   `status` (default `"new"`) + `notes` on `AccessRequest` / `WaitlistSignup`.
@@ -30,9 +41,14 @@ export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 >   then `npm run db:rls`** — new tables ship with RLS *off*, so skipping
 >   `db:rls` would leave `CalendarAccount`/`FollowUpConfig` readable through the
 >   publishable key. See §4.
-> - **New optional env:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
->   `GOOGLE_OAUTH_REDIRECT_URI` (calendar). Also `STRIPE_SECRET_KEY` /
->   `STRIPE_WEBHOOK_SECRET` (USD/global billing). All optional. See §3.
+> - **New optional env:** `NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED` (default
+>   `"false"`; only exact `"true"` enables), `CAL_WEBHOOK_SECRET`,
+>   `CAL_EVENT_TYPE_SLUG`,
+>   `GA4_MEASUREMENT_ID`, `GA4_API_SECRET` and `FOUNDER_TIME_ZONE` support the SEO
+>   measurement slice. `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and
+>   `GOOGLE_OAUTH_REDIRECT_URI` support client Calendar OAuth; Stripe variables
+>   support global billing. All are optional. See §3 and
+>   [`SEO_OPERATIONS.md`](SEO_OPERATIONS.md) before enabling measurement.
 > - **`CRON_SECRET` is recommended in production** (defense-in-depth on the cron
 >   route). See §3 and §5.
 > - **Simulation still needs zero external keys.** With the default
@@ -100,25 +116,30 @@ misconfig surfaces at first request). `.env.example` documents every var.
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | **Always** | Must be a valid URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | **Always** | The new publishable key |
+| `NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED` | Optional; default `"false"` | Only the exact value `"true"` enables Nudge first-touch browser storage, `_ga` client-ID reading and attribution forwarding to Cal. The root GTM loader and aggregate CTA/form `dataLayer` events remain separate. Enable only after the consent, privacy, retention and access configuration is approved. |
 | `DATABASE_URL` | **Always** | Pooled (pgbouncer, 6543) |
 | `DIRECT_URL` | For `db:push` / `db:rls` | Direct (5432); Prisma DDL |
 | `ANTHROPIC_API_KEY` | Optional | Without it: no AI generation; inbox drafts fall back to canned samples |
-| `RUNTIME_MODEL` | Optional | Default `claude-haiku-4-5`; expensive models are rejected in code |
+| `RUNTIME_MODEL` | Optional | Default `claude-sonnet-5`; platform-paid runtime is limited to the guarded Haiku/Sonnet set |
 | `SEND_MODE` | Optional | `simulation` (default) or `live` |
 | `WHATSAPP_API_VERSION` | Optional | Default `v23.0` |
-| `WABA_ID` | **When `SEND_MODE=live`** | Boot fails without it in live mode |
-| `PHONE_NUMBER_ID` | **When `SEND_MODE=live`** | ″ |
-| `WHATSAPP_ACCESS_TOKEN` | **When `SEND_MODE=live`** | ″ |
+| `WABA_ID` | Optional fallback sender | A workspace normally connects its own WABA under Settings → WhatsApp. Set this only for the single-number environment fallback. |
+| `PHONE_NUMBER_ID` | Optional fallback sender | Paired with `WABA_ID` for the environment fallback. |
+| `WHATSAPP_ACCESS_TOKEN` | Optional fallback sender | Paired with the fallback IDs; workspace tokens are stored encrypted instead. |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | **When `SEND_MODE=live`** | Same value entered at Meta |
 | `META_APP_SECRET` | **When `SEND_MODE=live`** | Verifies `X-Hub-Signature-256`; webhook POSTs answer 503 without it |
-| `TOKEN_ENCRYPTION_KEY` | **When `SEND_MODE=live`**, and whenever a workspace saves WhatsApp/calendar credentials | 32+ chars; `openssl rand -hex 32`. Encrypts WhatsApp tokens **and** the Google calendar refresh token at rest |
+| `TOKEN_ENCRYPTION_KEY` | **When `SEND_MODE=live`**, and whenever a workspace saves WhatsApp, calendar or customer-supplied model credentials | 32+ chars; `openssl rand -hex 32`. Encrypts supported saved credentials at rest, including WhatsApp tokens, Google Calendar refresh tokens and customer-supplied model keys |
 | `WHATSAPP_MARKETING_RATE_INR` | Optional | Default `0.99`; verify against Meta's current pricing |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Optional | INR billing. Without them billing runs in free mode ("add keys to enable payments") |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional | Required for the Razorpay webhook to accept events |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Optional | USD orgs / global markets. Without them Stripe checkout is disabled; the webhook (`/api/webhooks/stripe`) needs the secret to accept `checkout.session.completed` |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Optional | Without them invites still work via auto-join on signup; with them invitees get a real email |
+| `CAL_WEBHOOK_SECRET` | Optional; required for Cal ingestion | Server-only HMAC secret shared with the `BOOKING_CREATED` webhook. Unset/empty makes `/api/webhooks/cal` fail closed. Configure only after schema/RLS/policy verification. |
+| `CAL_EVENT_TYPE_SLUG` | Optional | Defaults to `30min`; must exactly match the Cal demo event type slug. |
+| `GA4_MEASUREMENT_ID` / `GA4_API_SECRET` | Optional; approval-gated | Server-only GA4 Measurement Protocol configuration for booked-lead status events. Leave both unset until the consent/privacy/configuration review and debug validation in `SEO_OPERATIONS.md` are complete. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google Calendar OAuth for the AI Front Desk. **Left empty, "Connect calendar" works in simulation against a mocked calendar** — set them only for real OAuth. Not in the live-mode guard: even a live WhatsApp deploy boots without a calendar |
 | `GOOGLE_OAUTH_REDIRECT_URI` | Optional (with the two above) | Must exactly match a redirect URI on the OAuth client, e.g. `https://<url>/api/integrations/google/callback` |
+| `FOUNDER_TIME_ZONE` | Optional | Defaults to `"Asia/Kolkata"`; validated IANA timezone used to render demo appointment instants in the founder lead desk. |
 | `CRON_SECRET` | Optional — **recommended in production** | When set, `/api/cron/*` requires `Authorization: Bearer <CRON_SECRET>`; Vercel Cron sends it automatically. See §5 |
 | `NEXT_PUBLIC_APP_URL` | Optional | Absolute origin for links in emails; set it once you have a custom domain |
 
@@ -128,6 +149,12 @@ Run these locally against the **production** Supabase project — Prisma and
 the scripts use whatever `DATABASE_URL`/`DIRECT_URL` are configured (the
 Prisma CLI reads `.env`; the RLS and seed scripts read `.env.local`), so
 point both files at production for this step.
+
+For a release that creates a table, begin a documented maintenance/no-ingestion
+window first. Keep application code and third-party webhooks that can reach the
+new table inactive. The same authorized operator must run the schema push and
+the RLS command back-to-back; do not resume traffic, deploy code or enable a
+webhook between them.
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
@@ -140,8 +167,34 @@ npm run db:push
 #    read tables through Supabase's Data API)
 npm run db:rls
 
-# 3. Optional: seed the demo workspace (idempotent, deterministic, no AI
-#    calls; never flips an opted-out contact back to opted-in)
+```
+
+For the server-only `DemoBooking` table, use the production SQL editor during
+the same window to verify both controls:
+
+```sql
+select tablename, rowsecurity
+from pg_tables
+where schemaname = 'public' and tablename = 'DemoBooking';
+
+select policyname, roles, cmd
+from pg_policies
+where schemaname = 'public' and tablename = 'DemoBooking';
+```
+
+Require one `DemoBooking` row with `rowsecurity = true` and zero policy rows
+(that is, no browser policies). With no policy, browser roles cannot select or
+mutate rows through the Data API. Keep the release window closed on any other
+result. These are separate, non-atomic commands; the maintenance/no-ingestion
+window is what makes the sequence safe. Only after these checks may the operator
+deploy application code; activate the Cal.com webhook later, after the signed
+staging tests in [`SEO_OPERATIONS.md`](SEO_OPERATIONS.md).
+
+After the security checks, optionally seed the demo workspace (idempotent,
+deterministic, no AI calls, and never changes an opted-out contact back to
+opted-in):
+
+```bash
 npx esbuild scripts/seed-demo.ts --bundle --platform=node --format=cjs \
   --outfile=.next/seed-demo.cjs --external:@prisma/client && node .next/seed-demo.cjs
 ```
@@ -225,22 +278,25 @@ Notes baked into the repo:
    # returns { released, resumedRuns, followUps, campaigns, processed }
    ```
 
-9. Confirm RLS: in the Supabase dashboard, *Database → Tables* — every
-   public table (including the new `CalendarAccount` and `FollowUpConfig`)
-   shows RLS enabled.
+9. Confirm RLS: in the Supabase dashboard, *Database → Tables* — every public
+   table (including `CalendarAccount`, `FollowUpConfig` and `DemoBooking`) shows
+   RLS enabled. Re-run the §4 SQL and confirm `DemoBooking` still has no browser
+   policy; a dashboard RLS badge alone is not the complete server-only-table
+   check.
 
 ## 7. Flipping SEND_MODE to live
 
 Full runbook: [GO_LIVE_WHATSAPP.md](GO_LIVE_WHATSAPP.md). The mechanical
 Vercel part:
 
-1. Add the **six** required live-mode vars from §3 — the five WhatsApp
-   credentials (`WABA_ID`, `PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`,
-   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `META_APP_SECRET`) **plus**
+1. Add the **three** required live-mode vars from §3 —
+   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `META_APP_SECRET` and
    `TOKEN_ENCRYPTION_KEY` — to Vercel Production. The app refuses to boot in
-   live mode if any are missing — deliberate guard. (The `GOOGLE_*` calendar
-   vars are *not* part of this guard; a live WhatsApp deploy still boots with a
-   mocked/simulated calendar.)
+   live mode if any of these are missing. `WABA_ID`, `PHONE_NUMBER_ID` and
+   `WHATSAPP_ACCESS_TOKEN` are optional environment fallback-sender credentials;
+   each workspace normally connects its own number. The `GOOGLE_*` calendar
+   variables are also outside this guard, so a live WhatsApp deployment still
+   boots with a mocked/simulated calendar.
 2. Set `SEND_MODE=live`.
 3. Redeploy (`npx vercel --prod --yes`) — env changes need a new deployment.
 4. Point Meta's webhook at `https://<url>/api/webhooks/whatsapp` with the
@@ -320,6 +376,7 @@ npx vercel promote <deployment-url>
 (`npx vercel rollback` steps back to the previous production deployment.)
 Database schema changes via `db:push` are not automatically reversible —
 additive-only changes have been the rule so far (the new `CalendarAccount` /
-`FollowUpConfig` tables and `BookingRequest` fields are additive); treat
+`FollowUpConfig` / `DemoBooking` tables and `BookingRequest` fields are
+additive); treat
 destructive schema changes as their own migration event with a backup
 (Supabase → *Database → Backups*).

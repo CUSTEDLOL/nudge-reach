@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { isSignupOpen } from "@/modules/orgs/signup";
 import { LoginClient } from "./login-client";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // /auth/* routes bounce here with ?error= when a link is stale or the code
 // exchange fails — say so in plain words instead of a silent login page.

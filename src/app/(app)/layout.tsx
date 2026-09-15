@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseUiPreferences } from "@/modules/dashboard/workspace-profile";
 import { AppShell } from "@/components/features/app-shell/shell";
 import { ToastProvider } from "@/components/ui/toast";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /** Authenticated app shell: dark sidebar + topbar + toasts (spec §3.6). */
 export default async function AppLayout({ children }: { children: ReactNode }) {
