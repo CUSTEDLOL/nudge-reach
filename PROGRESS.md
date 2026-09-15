@@ -21,6 +21,9 @@
   login content for `/admin` and **307 → /admin** for `/admin/orgs`, with no
   runtime errors. A controllable browser was unavailable, so the authenticated
   founder login and responsive visual pass remain the explicit manual check.
+- Production deploy initially hit Vercel Hobby's sub-daily cron restriction.
+  `vercel.json` now keeps the supported daily fallback while the existing
+  GitHub Actions workflow provides sub-daily queue ticks; no queue logic changed.
 
 ## Production readiness audit before first paying clients (2026-09-15) ✅
 

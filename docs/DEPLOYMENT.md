@@ -175,11 +175,12 @@ npx vercel --prod --yes
 
 Notes baked into the repo:
 
-- **`vercel.json`** registers one cron every five minutes — `*/5 * * * *` on
-  `/api/cron/process-queue` (changed from daily on 2026-09-15; sub-daily
-  schedules need the Vercel Pro plan — a Hobby deploy will reject it). Five
-  minutes is what makes the T-2h booking reminder and the quiet-lead nudge
-  fire on time instead of once a morning. One tick does four things: releases due scheduled
+- **`vercel.json`** registers the Hobby-compatible daily fallback cron —
+  `0 3 * * *` on `/api/cron/process-queue`. The separate GitHub Actions cron
+  in `.github/workflows/cron-tick.yml` provides the sub-daily production tick;
+  set its `CRON_SECRET` repository secret to match Vercel. Upgrade Vercel to
+  Pro before moving the five-minute schedule into `vercel.json`, because Hobby
+  rejects sub-daily schedules. One tick does four things: releases due scheduled
   campaigns, resumes waiting automation runs, fires the **Revenue-Recovery
   follow-ups** (T-24h / T-2h booking reminders, no-show rebooks, post-service
   review asks — all consent- and template-gated like any send), and advances
