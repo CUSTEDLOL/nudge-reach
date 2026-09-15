@@ -1,15 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { prisma } = vi.hoisted(() => ({
-  prisma: {
-    invite: { findFirst: vi.fn() },
-  },
-}));
+const { prisma, tx, createServiceRoleClient, createUser } = vi.hoisted(() => {
+  const tx = {
+    invite: { updateMany: vi.fn() },
+    membership: { upsert: vi.fn() },
+    org: { updateMany: vi.fn() },
+  };
+  const createUser = vi.fn();
+  return {
+    tx,
+    createUser,
+    createServiceRoleClient: vi.fn(() => ({ auth: { admin: { createUser } } })),
+    prisma: {
+      invite: { findFirst: vi.fn() },
+      $transaction: vi.fn(async (work: (client: typeof tx) => unknown) => work(tx)),
+    },
+  };
+});
 
 vi.mock("@/lib/db", () => ({ prisma }));
+vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient }));
 
 import {
   OWNER_SETUP_TTL_MS,
+  completeOwnerSetup,
   createOwnerSetupToken,
   findValidOwnerSetupInvite,
   hashOwnerSetupToken,
@@ -18,6 +32,10 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  tx.invite.updateMany.mockResolvedValue({ count: 1 });
+  tx.membership.upsert.mockResolvedValue({});
+  tx.org.updateMany.mockResolvedValue({ count: 1 });
+  createUser.mockResolvedValue({ data: { user: { id: "auth_user_1" } }, error: null });
 });
 
 describe("owner setup token security", () => {
@@ -91,3 +109,106 @@ describe("findValidOwnerSetupInvite", () => {
   });
 });
 
+describe("completeOwnerSetup", () => {
+  const NOW = new Date("2026-09-15T10:00:00.000Z");
+  const INVITE = {
+    id: "invite_1",
+    email: "owner@aster.test",
+    setupTokenExpiresAt: new Date("2026-09-22T10:00:00.000Z"),
+    org: { id: "org_1", name: "Aster Clinic" },
+  };
+
+  beforeEach(() => {
+    prisma.invite.findFirst.mockResolvedValue(INVITE);
+  });
+
+  it("creates a confirmed auth user and atomically consumes the owner invite", async () => {
+    const result = await completeOwnerSetup("raw-token", "safe-password", NOW);
+
+    expect(result).toEqual({
+      ok: true,
+      email: "owner@aster.test",
+      orgId: "org_1",
+    });
+    expect(createUser).toHaveBeenCalledWith({
+      email: "owner@aster.test",
+      password: "safe-password",
+      email_confirm: true,
+    });
+    expect(tx.invite.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "invite_1",
+        setupTokenHash: hashOwnerSetupToken("raw-token"),
+        setupTokenExpiresAt: { gt: NOW },
+        status: "pending",
+        role: "OWNER",
+      },
+      data: {
+        status: "accepted",
+        setupTokenHash: null,
+        setupTokenExpiresAt: null,
+      },
+    });
+    expect(tx.membership.upsert).toHaveBeenCalledWith({
+      where: { orgId_userId: { orgId: "org_1", userId: "auth_user_1" } },
+      create: {
+        orgId: "org_1",
+        userId: "auth_user_1",
+        email: "owner@aster.test",
+        displayName: "owner",
+        role: "OWNER",
+      },
+      update: {},
+    });
+    expect(tx.org.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "org_1",
+        ownerUserId: { startsWith: "pending-owner:" },
+      },
+      data: { ownerUserId: "auth_user_1" },
+    });
+  });
+
+  it("does not replace the password when an auth account already exists", async () => {
+    createUser.mockResolvedValue({
+      data: { user: null },
+      error: { code: "email_exists", message: "already registered" },
+    });
+
+    const result = await completeOwnerSetup("raw-token", "safe-password", NOW);
+
+    expect(result).toMatchObject({ ok: false, code: "existing_account" });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the server-only Supabase credential is missing", async () => {
+    createServiceRoleClient.mockImplementationOnce(() => {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
+    });
+
+    const result = await completeOwnerSetup("raw-token", "safe-password", NOW);
+
+    expect(result).toMatchObject({ ok: false, code: "unavailable" });
+    expect(createUser).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a race-lost or reused token without creating membership", async () => {
+    tx.invite.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    const result = await completeOwnerSetup("raw-token", "safe-password", NOW);
+
+    expect(result).toMatchObject({ ok: false, code: "invalid" });
+    expect(tx.membership.upsert).not.toHaveBeenCalled();
+    expect(tx.org.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not call privileged auth for an invalid or expired link", async () => {
+    prisma.invite.findFirst.mockResolvedValueOnce(null);
+
+    const result = await completeOwnerSetup("raw-token", "safe-password", NOW);
+
+    expect(result).toMatchObject({ ok: false, code: "invalid" });
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+});

@@ -13,6 +13,14 @@ describe("envSchema", () => {
     expect(parsed.SEND_MODE).toBe("simulation");
   });
 
+  it("accepts the server-only Supabase key used for owner setup", () => {
+    const parsed = envSchema.parse({
+      ...baseEnv,
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key",
+    });
+    expect(parsed.SUPABASE_SERVICE_ROLE_KEY).toBe("service-role-test-key");
+  });
+
   it("defaults the runtime model to Sonnet (rule 3: production tier)", () => {
     const parsed = envSchema.parse(baseEnv);
     expect(parsed.RUNTIME_MODEL).toContain("sonnet");
