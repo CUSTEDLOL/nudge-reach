@@ -58,7 +58,7 @@ those markets until they are reviewed.
 
 Buying credits never unlocks a higher plan's features.
 
-## 3. Credits (decided policy; NOT yet built — see §7)
+## 3. Credits (decided policy; built in code 2026-09-16 — see §7 for what is live)
 
 **One credit = US$0.005 of eligible AI provider cost.** A credit is a unit of
 usage, not a message and not a rupee. A short task uses less than one; a long
@@ -227,9 +227,9 @@ their Meta Business Manager. Pulling real spend from Meta's API is not built.
 If a customer's number is currently owned by a previous vendor's Business
 Manager, it must be migrated out first, which needs that vendor's cooperation.
 
-## 7. What is built and what is not (the truth as of 2026-09-15)
+## 7. What is built and what is not (the truth as of 2026-09-16)
 
-Built and live:
+Built and live in production:
 - The four subscription prices in INR and SGD, and the plan feature gates.
   Checkout (Razorpay for INR, Stripe elsewhere) charges `planPrice()` directly,
   so `plans.ts` is the price of record.
@@ -240,35 +240,55 @@ Built and live:
 - The seven-day trial and its expiry to a read-only state.
 - Included credits shown on the public pricing page and in Settings → Billing.
 
-Not built (a customer today gets *at least* the promised credits and nothing
-stops them beyond it — Nudge silently absorbs the cost):
-- A credit ledger: balance, deduction per AI call, reset each cycle, expiry.
-- Any cap or pause when a balance reaches zero.
-- Top-up pack purchase, auto-recharge, spending limits, balance UI.
-- Trial credit enforcement (the 100-credit trial allowance).
-- Per-customer AI spend alerts beyond the founder-side `PLAN_COST_ALERT_PCT`.
-- Annual checkout.
+Built in code on `main` (2026-09-16), **not yet deployed** — the credit ledger,
+`docs/superpowers/plans/2026-09-15-credit-ledger.md`, tasks 1–8 of 9:
+- An exact-model rate card (`billing/credit-rates.ts`: Sonnet 5, Haiku 4.5,
+  cache read/write priced; unknown models refused before any provider call).
+- `CreditGrant` / `CreditDebit` tables. Every platform-paid AI call goes
+  through the model-router doorway, is preflighted (metered org at ≤ 0 →
+  refused before the provider is called), recorded, and debited exactly:
+  soonest-expiring grant first, one-call overdraft, idempotent on the usage
+  row, serialised per org with `SELECT … FOR UPDATE`. A failed debit is logged
+  and re-driven by the 5-minute cron reconciler.
+- Grants: 100 credits at trial signup; the plan's included credits issued at
+  every payment for that paid period (reset on the payment date); cron
+  back-fill for comped and Enterprise workspaces; founder grants and the
+  Enterprise per-period amount from the admin panel.
+- At zero: the agent hands the conversation to a human with the usual
+  handoff line, reply drafts / summaries / campaign copy return a clear
+  message, a banner shows on Billing and the inbox, and the owner is emailed
+  once per period at 10% and at zero. Inbox, campaigns, follow-ups and voice
+  are never paused. BYOK is never metered. Knowledge setup is absorbed.
+- Top-up packs (1,000 / 5,000 / 10,000; INR and SGD only) bought through the
+  existing Razorpay/Stripe flow, idempotent on the gateway payment id, expiring
+  after 365 days, never touching the plan.
+- `SEND_MODE=simulation` records shadow debits and never blocks, so the whole
+  product still demos with zero keys.
+
+To go live it needs, in this order: `npm run db:push` then `npm run db:rls`
+against the production database (two defaulted columns on `AiUsage`, two new
+tables, two nullable columns on `Org`), then a deploy. **Deploying before the
+push breaks signup, checkout and every AI reply** — they read the new tables.
+
+Still not built:
+- Auto-recharge, spending limits, refunds of credits.
+- Annual checkout (the public "yearly" toggle is display-only).
 - Real Meta spend on the dashboard.
+- The concurrency integration test against a real Postgres (task 9; the unit
+  tests cover the logic, the lock is exercised only with `TEST_DATABASE_URL`).
 
-`src/lib/model-router/usage.ts` logs AI usage asynchronously with approximate
-model-family prices and swallows write failures. It prices anything named
-"sonnet" at US$3 / US$15, so the founder-side AI-cost analytics currently
-**overstate Sonnet 5 cost by 50%** and ignore cache tokens. It is analytics,
-not a ledger; customers must not be debited from it.
-
-The build that turns credits into a real balance is specified in
-`docs/superpowers/plans/2026-09-15-credit-ledger.md` (≈35 hours, nine
-independently shippable tasks): an exact-model rate card, an org-scoped grant
-and debit ledger debited at the model-router doorway, calendar-month resets,
-top-up purchase through the existing Razorpay/Stripe flow, founder grants,
-and a balance on Settings → Billing. It carries six founder decisions that
-must be answered before it ships.
+`src/lib/model-router/usage.ts` remains analytics only: it still prices
+anything named "sonnet" at US$3 / US$15, so the founder-side AI-cost analytics
+**overstate Sonnet 5 cost by 50%**. Customers are debited from the rate card,
+never from it.
 
 ## 8. Before live credit billing
 
 1. Measure real replies per conversation and AI cost per customer from
    `AiUsage` for at least one full month of live traffic.
-2. Build the credit ledger (§7) with tests; exclude simulation from real charges.
+2. Push the ledger schema (`db:push` → `db:rls`), deploy, and watch the cron
+   heartbeat's `creditDebits.failed` count and the `[credits]` logs for the
+   first week; the ledger itself is built and tested (§7).
 3. Decide how existing `free`, `front_desk`, trial and paid workspaces move
    to the new plans and balances. Never silently reprice, downgrade, or delete
    a subscriber's seats or numbers.

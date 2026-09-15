@@ -1,5 +1,32 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## AI credit ledger built, tasks 1–8 of 9 (2026-09-16) ✅ CODE — SCHEMA PUSH + DEPLOY PENDING
+
+- The credits promised on every plan are now metered in code. Plan and
+  decisions: `docs/superpowers/plans/2026-09-15-credit-ledger.md`; founder
+  decisions 2026-09-15: Sonnet 5 rate card, voice outside the ledger (minute
+  cap stays), concierge knowledge setup absorbed, included credits reset on
+  the customer's payment date, comped plans marked active in admin, one-call
+  overdraft accepted.
+- Rate card with exact model ids and cache prices; `CreditGrant` /
+  `CreditDebit` tables; every platform AI call preflighted and debited at the
+  model-router doorway (FIFO by expiry under `FOR UPDATE`, idempotent on the
+  `AiUsage` row, reconciler on the cron); trial / per-period / founder /
+  purchase grants; zero-balance behaviour at every call site; top-up packs via
+  Razorpay and Stripe; admin credit card; customer balance card, top-up row,
+  paused banner and low-balance email. 1,242 tests green; tsc, lint, build
+  clean. BYOK never metered; `SEND_MODE=simulation` never blocked.
+- Recovery note: another session hard-reset local `main` to the remote on the
+  15th, stranding eight commits on `backup/local-credit-ledger-2026-09-15`;
+  they were cherry-picked back on the 16th (conflicts only in docs) and the
+  measured ~US$0.18/min voice cost from that session was adopted.
+- **Deploy order:** `npm run db:push` then `npm run db:rls` on production,
+  then deploy. Deploying first breaks signup, checkout and AI replies. The
+  cron is back on the daily Hobby schedule (`411ddec`); restore `*/5 * * * *`
+  once Vercel Pro is confirmed.
+- Not done: task 9's real-Postgres concurrency test (runs only with
+  `TEST_DATABASE_URL`); `usage.ts` analytics still overstate Sonnet 5 by 50%.
+
 ## First high-volume client onboarding plan (2026-09-15) ✅
 
 - Added `docs/superpowers/plans/2026-09-15-first-client-whatsapp-onboarding.md`,
