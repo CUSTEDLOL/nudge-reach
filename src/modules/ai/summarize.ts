@@ -3,6 +3,7 @@ import { chat } from "@/lib/model-router";
 import { recordSyntheticUsage } from "@/lib/model-router/usage";
 import { env } from "@/lib/env";
 import { buildHistory } from "@/modules/agent/reply";
+import { CREDITS_EXHAUSTED_MESSAGE, CreditsExhaustedError } from "@/modules/billing/credits";
 import { crmConversationSummary } from "@/modules/crm/events";
 
 /**
@@ -73,12 +74,17 @@ export async function summarizeConversation(
     const transcript = history
       .map((h) => `${h.role === "user" ? "Customer" : "Business"}: ${h.text}`)
       .join("\n");
-    summary = await chat({
-      system: SYSTEM,
-      messages: [{ role: "user", text: transcript.slice(0, 24_000) }],
-      maxTokens: 300,
-      attribution: { orgId, conversationId, purpose: "summary" },
-    });
+    try {
+      summary = await chat({
+        system: SYSTEM,
+        messages: [{ role: "user", text: transcript.slice(0, 24_000) }],
+        maxTokens: 300,
+        attribution: { orgId, conversationId, purpose: "summary" },
+      });
+    } catch (err) {
+      if (err instanceof CreditsExhaustedError) return { ok: false, error: CREDITS_EXHAUSTED_MESSAGE };
+      throw err;
+    }
     if (!summary.trim()) return { ok: false, error: "The model returned nothing — try again." };
   }
 

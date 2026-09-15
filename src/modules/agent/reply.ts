@@ -13,6 +13,7 @@ import {
   type ToolContext,
 } from "@/modules/agent/tools";
 import { loadCustomTools } from "@/modules/agent/tools/custom";
+import { CreditsExhaustedError } from "@/modules/billing/credits";
 
 export interface AgentReply {
   text: string;
@@ -54,12 +55,15 @@ export async function generateAgentReply(
 export interface AgentActionReply extends AgentReply {
   /** Tools the agent invoked this turn (for logging / the inbox timeline). */
   actions: string[];
+  /** The org's AI credits are used up: handed off without calling the model. */
+  pausedForCredits?: true;
 }
 
 /**
  * The "worker" reply: the agent may call tools (capture lead / booking / hand
  * off) before answering. Falls back to a safe handoff line if the model
- * returns nothing.
+ * returns nothing — or if the org's credit balance is at zero, so the customer
+ * still hears back and a human picks the thread up.
  */
 export async function generateAgentActionReply(
   profile: AgentProfileInput,
@@ -78,19 +82,26 @@ export async function generateAgentActionReply(
     })),
   });
 
-  const { text, toolCalls } = await runAgent({
-    system,
-    messages: history,
-    tools: [...toolDefs(), ...customTools.map((t) => t.def)],
-    runTool: (call) => runTool(ctx, call, customTools),
-    maxTokens: 500,
-    maxSteps: 5,
-    attribution: {
-      orgId: ctx.orgId,
-      conversationId: ctx.conversationId,
-      purpose: "agent_reply",
-    },
-  });
+  let text: string;
+  let toolCalls: Awaited<ReturnType<typeof runAgent>>["toolCalls"];
+  try {
+    ({ text, toolCalls } = await runAgent({
+      system,
+      messages: history,
+      tools: [...toolDefs(), ...customTools.map((t) => t.def)],
+      runTool: (call) => runTool(ctx, call, customTools),
+      maxTokens: 500,
+      maxSteps: 5,
+      attribution: {
+        orgId: ctx.orgId,
+        conversationId: ctx.conversationId,
+        purpose: "agent_reply",
+      },
+    }));
+  } catch (err) {
+    if (!(err instanceof CreditsExhaustedError)) throw err;
+    return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+  }
 
   const handoff = calledHandoff(toolCalls);
   const actions = toolCalls.map((c) => c.name);

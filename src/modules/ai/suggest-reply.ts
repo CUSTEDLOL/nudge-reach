@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { chat } from "@/lib/model-router";
 import { recordSyntheticUsage } from "@/lib/model-router/usage";
 import { buildHistory } from "@/modules/agent/reply";
+import { CREDITS_EXHAUSTED_MESSAGE, CreditsExhaustedError } from "@/modules/billing/credits";
 import { normalizeWhatsAppMarkdown } from "@/modules/inbox/format";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { firstName } from "@/modules/inbox/format";
@@ -176,7 +177,8 @@ export async function suggestReply(
     });
     if (!draft) return { ok: false, error: "The model returned nothing — try again." };
     return { ok: true, draft: normalizeWhatsAppMarkdown(draft), sample: false };
-  } catch {
+  } catch (err) {
+    if (err instanceof CreditsExhaustedError) return { ok: false, error: CREDITS_EXHAUSTED_MESSAGE };
     return { ok: false, error: "Couldn't draft a reply right now — try again." };
   }
 }

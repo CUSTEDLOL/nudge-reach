@@ -306,8 +306,8 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** `agent/reply.ts`, `ai/suggest-reply.ts`, `ai/summarize.ts`; `tests/credit-gating.test.ts`.
 
-- [ ] Tests: `generateAgentActionReply returns the handoff line with pausedForCredits on exhaustion (no throw)`; `suggestReply and summarizeConversation return CREDITS_EXHAUSTED_MESSAGE`; `campaign copy generation surfaces CREDITS_EXHAUSTED_MESSAGE`; `knowledge ingest still runs at balance 0 (absorbed)`; `voice initiation is unaffected by balance`.
-- [ ] Implement `creditsExhausted(orgId)` (a boolean wrapper over the preflight that never throws) and the catches.
+- [x] Tests: `generateAgentActionReply returns the handoff line with pausedForCredits on exhaustion (no throw)`; `suggestReply and summarizeConversation return CREDITS_EXHAUSTED_MESSAGE`; `campaign copy generation surfaces CREDITS_EXHAUSTED_MESSAGE`; `knowledge ingest still runs at balance 0 (absorbed)`; `voice initiation is unaffected by balance`. (2026-09-16: also `inbound path still answers the customer with the handoff line and flags the conversation` and `creditsExhausted is true only for a metered org at zero`. "Ingest runs at balance 0" is already proven at the doorway in `tests/model-router-credits.test.ts`; here the ingest/distill and voice-initiation files are checked not to import `billing/credits` at all, so no call-site gate can creep in.)
+- [x] Implement `creditsExhausted(orgId)` (a boolean wrapper over the preflight that never throws) and the catches. (2026-09-16: `creditsExhausted` first asks `getByokRuntime`, so a BYOK org reads false exactly as the doorway treats it. `campaign/generate.ts` and `agent/inbound.ts` needed no change — the message already reaches the user through `err.message`, and the inbound path treats the paused reply like any other handoff.)
 
 ### Task 6: Top-up purchase (≈5h)
 

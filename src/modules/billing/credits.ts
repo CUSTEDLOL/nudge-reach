@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { envSchema } from "@/lib/env-schema";
+import { getByokRuntime } from "@/lib/model-router/byok";
 import type { Attribution } from "@/lib/model-router/usage";
 import type { DriverUsage } from "@/lib/model-router/types";
 import { MICRO_USD_PER_CREDIT, RATE_CARD_VERSION, priceCall } from "@/modules/billing/credit-rates";
@@ -346,6 +347,22 @@ export async function assertCreditsAvailable(
   }
   if (balance <= 0) throw new CreditsExhaustedError(org.id);
   return "metered";
+}
+
+/**
+ * "Is this org's platform-paid AI paused right now?" for banners and the
+ * billing page. The same answer the doorway would give a metered call:
+ * false for BYOK (never preflighted), simulation, unmetered legacy plans and
+ * anything the preflight cannot classify. Never throws.
+ */
+export async function creditsExhausted(orgId: string): Promise<boolean> {
+  try {
+    if (await getByokRuntime(orgId)) return false;
+    await assertCreditsAvailable({ orgId, purpose: "agent_reply" });
+    return false;
+  } catch (err) {
+    return err instanceof CreditsExhaustedError;
+  }
 }
 
 // ---------------------------------------------------------------------------
