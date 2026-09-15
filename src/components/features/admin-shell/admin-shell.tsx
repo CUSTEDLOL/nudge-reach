@@ -108,11 +108,11 @@ function Footer({ founderEmail }: { founderEmail: string }) {
           <ExternalLink className="h-4 w-4" aria-hidden />
           Open app
         </Link>
-        <form action="/auth/signout" method="post">
+        <form action="/admin/signout" method="post">
           <button
             type="submit"
-            title="Sign out"
-            aria-label="Sign out"
+            title="Sign out of founder portal"
+            aria-label="Sign out of founder portal"
             className="grid h-9 w-9 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
           >
             <LogOut className="h-4 w-4" aria-hidden />

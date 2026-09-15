@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { requireFounder } from "@/modules/admin/auth";
+import { getFounderContext } from "@/modules/admin/auth";
 import { newLeadsCount } from "@/modules/admin/leads";
 import { AdminShell } from "@/components/features/admin-shell/admin-shell";
 import { ToastProvider } from "@/components/ui/toast";
@@ -18,7 +18,11 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const founder = await requireFounder();
+  const founder = await getFounderContext();
+  if (!founder) {
+    return <ToastProvider>{children}</ToastProvider>;
+  }
+
   const newLeads = await newLeadsCount();
   return (
     <ToastProvider>

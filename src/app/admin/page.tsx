@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireFounder } from "@/modules/admin/auth";
+import { getFounderContext } from "@/modules/admin/auth";
 import { overviewStats } from "@/modules/admin/queries";
 import { leadCounts } from "@/modules/admin/leads";
 import { revenueOverview } from "@/modules/admin/revenue";
@@ -8,6 +8,7 @@ import { getPlan } from "@/modules/billing/plans";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminLogin } from "@/components/features/admin-shell/admin-login";
 
 const RANGES = [7, 30, 90] as const;
 
@@ -34,7 +35,9 @@ export default async function AdminOverviewPage({
 }: {
   searchParams: Promise<{ days?: string | string[] }>;
 }) {
-  await requireFounder();
+  const founder = await getFounderContext();
+  if (!founder) return <AdminLogin />;
+
   const days = parseRange((await searchParams).days);
   const [s, leads, rev] = await Promise.all([overviewStats(days), leadCounts(), revenueOverview()]);
   const maxSignups = Math.max(1, ...s.signupsByDay.map((d) => d.count));
