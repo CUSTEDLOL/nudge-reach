@@ -104,12 +104,22 @@ export async function GET(request: Request) {
     };
 
     step = "record-heartbeat";
-    await prisma.systemHeartbeat.upsert({
-      where: { key: HEARTBEAT_KEY },
-      create: { key: HEARTBEAT_KEY, status: "ok", detail: summary },
-      update: { status: "ok", detail: summary },
-    });
-    return NextResponse.json(summary);
+    // The tick's work is already done by here. A failed heartbeat write must
+    // not turn a successful tick into a 500: from 2026-09-12 to 09-15 the
+    // SystemHeartbeat table was missing in production, every 10-minute run
+    // reported "cron_failed" and the control room showed no pulse, while
+    // follow-ups, reminders and queues had in fact run.
+    let heartbeat: "ok" | "failed" = "ok";
+    try {
+      await prisma.systemHeartbeat.upsert({
+        where: { key: HEARTBEAT_KEY },
+        create: { key: HEARTBEAT_KEY, status: "ok", detail: summary },
+        update: { status: "ok", detail: summary },
+      });
+    } catch {
+      heartbeat = "failed";
+    }
+    return NextResponse.json({ ...summary, heartbeat });
   } catch {
     // Stable labels only: never persist a provider error, stack, token, payload,
     // contact, or message body in the platform heartbeat.

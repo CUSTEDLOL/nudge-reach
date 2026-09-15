@@ -101,24 +101,25 @@ automatic charge.
 ## 4. What the credits are worth — cost and margin
 
 Planning assumptions, not live quotes: US$1 = ₹90 = S$1.35. Provider rates
-checked 2026-09-11 — Haiku 4.5 US$1 in / US$5 out per million tokens; Sonnet
-4.6 US$3 / US$15. Nudge runs Sonnet at runtime (`RUNTIME_MODEL`, since
-2026-08-29). One credit therefore costs us **₹0.45 / S$0.00675**.
+checked 2026-09-15 — Haiku 4.5 US$1 in / US$5 out per million tokens; Sonnet
+5 (the production `RUNTIME_MODEL`) US$2 / US$10. An earlier draft used Sonnet
+4.6 rates and overstated those example costs by 50%. One credit still costs us
+**₹0.45 / S$0.00675**.
 
 ### What one task costs (uncached, single call; real conversations vary)
 
 | Example | Credits | Our cost (India) | Value at smallest pack (India) |
 |---|---:|---:|---:|
 | Short Haiku reply (2,000 in / 300 out) | 0.7 | ₹0.32 | ₹0.70 |
-| Same-size Sonnet reply | 2.1 | ₹0.95 | ₹2.10 |
-| Longer Sonnet summary (8,000 in / 500 out) | 6.3 | ₹2.84 | ₹6.29 |
-| One voice minute (assumed US$0.15 all-in) | 30 | ₹13.50 | ₹29.97 |
+| Same-size Sonnet 5 reply | 1.4 | ₹0.63 | ₹1.40 |
+| Longer Sonnet 5 summary (8,000 in / 500 out) | 4.2 | ₹1.89 | ₹4.20 |
+| One voice minute (measured about US$0.18 all-in) | 36 | ₹16.20 | ₹35.96 |
 
 ### How far the included credits go (Sonnet, example reply size)
 
 | | Entry 200 | Starter 1,000 | Growth 2,500 | Pro 5,000 |
 |---|---:|---:|---:|---:|
-| ≈ AI replies a month | 95 | 476 | 1,190 | 2,380 |
+| ≈ AI replies a month | 142 | 714 | 1,785 | 3,571 |
 | ≈ AI replies if run on Haiku | 285 | 1,428 | 3,571 | 7,142 |
 
 A multi-step agent action (book + confirm) can take several calls; these are
@@ -161,11 +162,13 @@ out of it. It is not profit.
 If US$1 moves to ₹100 the 10,000 pack's margin falls to 37.5%. Margin here is
 (price − cost) ÷ price, before all other expenses.
 
-Voice draws on the same credit balance. At the assumed US$0.15/minute, Pro's 5,000
-credits buy about 166 voice minutes if used for nothing else (at US$0.25, 100
-minutes). Never advertise the full chat allowance and the full voice allowance
-as simultaneously included. The voice figure is an assumption, not a carrier
-quote; verify speech, inference and carrier costs before selling live voice.
+Voice is about US$0.18/minute all-in based on three real test calls: roughly
+US$0.145 ElevenLabs, US$0.021 Haiku and US$0.01 for the line, still not a final
+carrier quote. At that cost, 5,000 credits would buy about 138 minutes if used
+for nothing else. Until the shared credit ledger ships, Pro voice is instead a
+separate flat 100-minute meter (`voiceMinutesPerMonth`) on top of chat credits,
+costing about ₹1,620 / S$24 at full use. Never advertise both the full chat
+allowance and full voice allowance as simultaneously included.
 
 ## 5. High-volume and Enterprise deals
 
@@ -173,15 +176,15 @@ The self-serve tiers are sized for a normal small business. A customer with
 **100+ inbound leads a day** is not one, and must not be sold Pro at list price.
 
 Worked example: 100 leads/day ≈ 3,000 conversations/month. Assuming 8 AI
-replies per conversation (unmeasured), that is 24,000 replies ≈ **50,400
-credits ≈ ₹22,700 of AI cost a month on Sonnet** (≈ ₹7,600 on Haiku). Pro's
-5,000 included credits cover a tenth of it; at list price Nudge loses money.
+replies per conversation (unmeasured), that is 24,000 replies ≈ **33,600
+credits ≈ ₹15,120 of AI cost a month on Sonnet 5** (≈ ₹7,600 on Haiku). Pro's
+5,000 included credits cover less than a sixth; at list price Nudge loses money.
 
 Two ways to price such a deal (both assume Pro = ₹19,999):
 
 | | Monthly | Our AI cost | Left | Risk |
 |---|---:|---:|---:|---|
-| A. Committed credit block — Pro + 50,000 credits/month at ₹0.75 | ≈ ₹57,500 | ≈ ₹22,700 | ≈ ₹34,800 | margin shrinks if conversations run longer than assumed |
+| A. Committed credit block — Pro + 50,000 credits/month at ₹0.75 | ≈ ₹57,500 | ≈ ₹15,120 | ≈ ₹42,380 | margin shrinks if conversations run longer than assumed |
 | B. Bring-your-own key — Pro-level flat fee, the customer pays their AI provider directly | ≈ ₹35,000 | ≈ ₹0 | ≈ ₹35,000 | none on AI usage |
 
 B is the safer margin; A is the bigger top line. Either way the customer pays
