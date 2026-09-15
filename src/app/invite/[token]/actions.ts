@@ -32,7 +32,15 @@ export async function completeOwnerSetupAction(
   const passwordError = validateOwnerPassword(password, confirmation);
   if (passwordError) return { status: "error", message: passwordError };
 
-  const result = await completeOwnerSetup(token, password);
+  let result: Awaited<ReturnType<typeof completeOwnerSetup>>;
+  try {
+    result = await completeOwnerSetup(token, password);
+  } catch {
+    return {
+      status: "error",
+      message: "Account setup is temporarily unavailable. Try again in a moment.",
+    };
+  }
   if (!result.ok) {
     return {
       status: result.code === "existing_account" ? "existing_account" : "error",
@@ -63,4 +71,3 @@ export async function completeOwnerSetupAction(
 
   redirect("/onboarding");
 }
-

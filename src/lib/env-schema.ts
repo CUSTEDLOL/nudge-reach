@@ -12,7 +12,7 @@ export const envSchema = z
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
     // Server-only. Used to create confirmed users from single-use owner setup
     // links; never prefix with NEXT_PUBLIC or import into client components.
-    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
     // Database
     DATABASE_URL: z.string().min(1),

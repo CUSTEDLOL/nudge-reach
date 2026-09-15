@@ -100,4 +100,18 @@ describe("completeOwnerSetupAction", () => {
     });
     expect(redirect).not.toHaveBeenCalled();
   });
+
+  it("contains unexpected setup failures without exposing internals", async () => {
+    completeOwnerSetup.mockRejectedValueOnce(
+      new Error("database connection string and secret")
+    );
+
+    const result = await completeOwnerSetupAction(INITIAL, form());
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Account setup is temporarily unavailable. Try again in a moment.",
+    });
+    expect(result.message).not.toContain("connection string");
+  });
 });

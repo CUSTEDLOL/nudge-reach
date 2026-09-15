@@ -193,6 +193,15 @@ describe("completeOwnerSetup", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("contains an unexpected privileged-auth network failure", async () => {
+    createUser.mockRejectedValueOnce(new Error("network and internal secret"));
+
+    await expect(
+      completeOwnerSetup("raw-token", "safe-password", NOW)
+    ).resolves.toMatchObject({ ok: false, code: "unavailable" });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("rejects a race-lost or reused token without creating membership", async () => {
     tx.invite.updateMany.mockResolvedValueOnce({ count: 0 });
 

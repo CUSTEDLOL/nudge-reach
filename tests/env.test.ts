@@ -21,6 +21,14 @@ describe("envSchema", () => {
     expect(parsed.SUPABASE_SERVICE_ROLE_KEY).toBe("service-role-test-key");
   });
 
+  it("keeps a blank optional owner-setup key valid in copied example env files", () => {
+    const result = envSchema.safeParse({
+      ...baseEnv,
+      SUPABASE_SERVICE_ROLE_KEY: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("defaults the runtime model to Sonnet (rule 3: production tier)", () => {
     const parsed = envSchema.parse(baseEnv);
     expect(parsed.RUNTIME_MODEL).toContain("sonnet");

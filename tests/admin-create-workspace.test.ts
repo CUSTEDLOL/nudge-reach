@@ -28,7 +28,10 @@ const { founderAudit } = vi.hoisted(() => ({ founderAudit: vi.fn() }));
 vi.mock("@/modules/admin/audit", () => ({ founderAudit }));
 
 const { sendEmail, isEmailConfigured } = vi.hoisted(() => ({
-  sendEmail: vi.fn(async (_input: { text: string; html: string }) => ({ ok: true })),
+  sendEmail: vi.fn(async (input: { text: string; html: string }) => {
+    void input;
+    return { ok: true };
+  }),
   isEmailConfigured: vi.fn(() => true),
 }));
 vi.mock("@/modules/email", () => ({

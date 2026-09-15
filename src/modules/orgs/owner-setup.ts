@@ -107,11 +107,21 @@ export async function completeOwnerSetup(
     };
   }
 
-  const { data, error } = await admin.auth.admin.createUser({
-    email: invite.email,
-    password,
-    email_confirm: true,
-  });
+  let authResult: Awaited<ReturnType<typeof admin.auth.admin.createUser>>;
+  try {
+    authResult = await admin.auth.admin.createUser({
+      email: invite.email,
+      password,
+      email_confirm: true,
+    });
+  } catch {
+    return {
+      ok: false,
+      code: "unavailable",
+      message: "Account setup is temporarily unavailable. Please try again.",
+    };
+  }
+  const { data, error } = authResult;
   if (error || !data.user) {
     if (error && isExistingAccountError(error)) {
       return {
