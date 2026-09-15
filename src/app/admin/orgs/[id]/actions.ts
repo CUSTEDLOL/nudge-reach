@@ -138,6 +138,7 @@ import {
   inviteMember,
   removeMember,
   resendInvite,
+  rotateOwnerSetupLink,
   revokeInvite,
   setMemberRole,
   transferOwnership,
@@ -165,6 +166,24 @@ export async function resendInviteAction(formData: FormData): Promise<AdminActio
       orgId,
       await resendInvite(orgId, str(formData, "inviteId"), founder.email)
     );
+  });
+}
+
+export async function rotateOwnerSetupLinkAction(
+  formData: FormData
+): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    const result = await rotateOwnerSetupLink(
+      str(formData, "orgId"),
+      str(formData, "inviteId"),
+      founder.email
+    );
+    if (!result.ok) return { ok: false, message: result.error };
+    return {
+      ok: true,
+      message: result.message,
+      setupLink: result.setupLink,
+    };
   });
 }
 

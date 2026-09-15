@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { AuditAction } from "@/modules/orgs/audit";
+import type { OwnerSetupLink } from "@/modules/orgs/owner-setup";
 
 /**
  * Every founder mutation leaves a row in the ORG's own audit log, attributed
@@ -33,7 +34,9 @@ export async function founderAudit(
 }
 
 /** Shared result shape for every founder mutation. */
-export type FounderResult = { ok: true; message: string } | { ok: false; error: string };
+export type FounderResult =
+  | { ok: true; message: string; setupLink?: OwnerSetupLink }
+  | { ok: false; error: string };
 
 /** A short "why" the founder types before a sensitive change; kept in `detail`. */
 export function withReason(detail: string, reason: string | null | undefined): string {

@@ -6,6 +6,7 @@ const {
   updateLead,
   inviteMember,
   resendInvite,
+  rotateOwnerSetupLink,
   founderConnectWhatsapp,
 } = vi.hoisted(() => ({
   requireFounder: vi.fn(),
@@ -13,6 +14,7 @@ const {
   updateLead: vi.fn(),
   inviteMember: vi.fn(),
   resendInvite: vi.fn(),
+  rotateOwnerSetupLink: vi.fn(),
   founderConnectWhatsapp: vi.fn(),
 }));
 
@@ -22,6 +24,7 @@ vi.mock("@/modules/admin/leads", () => ({ updateLead }));
 vi.mock("@/modules/admin/team", () => ({
   inviteMember,
   resendInvite,
+  rotateOwnerSetupLink,
   removeMember: vi.fn(),
   revokeInvite: vi.fn(),
   setMemberRole: vi.fn(),
@@ -46,6 +49,7 @@ import {
   connectWhatsappAction,
   inviteMemberAction,
   resendInviteAction,
+  rotateOwnerSetupLinkAction,
   setPlanAction,
 } from "@/app/admin/orgs/[id]/actions";
 import { updateLeadAction } from "@/app/admin/leads/actions";
@@ -133,6 +137,33 @@ describe("admin route actions", () => {
     expect(resendInvite).toHaveBeenCalledWith(
       "org_123",
       "invite_123",
+      "founder@nudge.test"
+    );
+  });
+
+  it("routes owner setup-link rotation through the founder gate and preserves the link", async () => {
+    const setupLink = {
+      url: `https://nudgeagent.app/invite/${"b".repeat(43)}`,
+      email: "owner@clinic.test",
+      expiresAt: "2026-09-22T15:00:00.000Z",
+    };
+    rotateOwnerSetupLink.mockResolvedValue({
+      ok: true,
+      message: "New setup link created.",
+      setupLink,
+    });
+    const form = new FormData();
+    form.set("orgId", "org_123");
+    form.set("inviteId", "invite_owner");
+
+    await expect(rotateOwnerSetupLinkAction(form)).resolves.toEqual({
+      ok: true,
+      message: "New setup link created.",
+      setupLink,
+    });
+    expect(rotateOwnerSetupLink).toHaveBeenCalledWith(
+      "org_123",
+      "invite_owner",
       "founder@nudge.test"
     );
   });

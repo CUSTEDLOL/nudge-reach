@@ -56,6 +56,7 @@ export type AuditAction =
   | "admin.invite_created"
   | "admin.invite_delivery"
   | "admin.invite_revoked"
+  | "admin.owner_setup_link_rotated"
   | "admin.integration_disconnected"
   | "admin.integration_changed"
   | "admin.agent_toggled"
@@ -114,6 +115,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.invite_created": "Nudge support created an invite",
   "admin.invite_delivery": "Nudge support sent an invite email",
   "admin.invite_revoked": "Nudge support revoked an invite",
+  "admin.owner_setup_link_rotated": "Nudge support replaced an owner setup link",
   "admin.integration_disconnected": "Nudge support disconnected an integration",
   "admin.integration_changed": "Nudge support changed an integration",
   "admin.agent_toggled": "Nudge support switched the AI Front Desk on/off",

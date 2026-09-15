@@ -8,11 +8,12 @@ const {
   isEmailConfigured,
   sendEmail,
   appOrigin,
+  createOwnerSetupToken,
 } = vi.hoisted(() => {
   const tx = {
     membership: { count: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
     org: { update: vi.fn() },
-    invite: { delete: vi.fn(), upsert: vi.fn() },
+    invite: { delete: vi.fn(), upsert: vi.fn(), updateMany: vi.fn() },
     auditLog: { create: vi.fn() },
   };
   return {
@@ -28,6 +29,11 @@ const {
     isEmailConfigured: vi.fn(),
     sendEmail: vi.fn(),
     appOrigin: vi.fn(),
+    createOwnerSetupToken: vi.fn(() => ({
+      token: "b".repeat(43),
+      hash: "new-owner-setup-hash",
+      expiresAt: new Date("2026-09-22T15:00:00.000Z"),
+    })),
   };
 });
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -37,11 +43,13 @@ vi.mock("@/modules/email", () => ({
   sendEmail,
   appOrigin,
 }));
+vi.mock("@/modules/orgs/owner-setup", () => ({ createOwnerSetupToken }));
 
 import {
   inviteMember,
   removeMember,
   resendInvite,
+  rotateOwnerSetupLink,
   revokeInvite,
   setMemberRole,
   transferOwnership,
@@ -67,6 +75,7 @@ beforeEach(() => {
   tx.org.update.mockResolvedValue({});
   tx.invite.delete.mockResolvedValue({});
   tx.invite.upsert.mockResolvedValue({ id: "i1" });
+  tx.invite.updateMany.mockResolvedValue({ count: 1 });
   tx.auditLog.create.mockResolvedValue({});
   prisma.$transaction.mockImplementation(async (work) => work(tx));
   checkTeamLimit.mockResolvedValue({ allowed: true, message: "", used: 1, limit: 5 });
@@ -287,6 +296,83 @@ describe("resendInvite", () => {
     isEmailConfigured.mockReturnValue(false);
     expect((await resendInvite("o1", "i1", "f@x.com")).ok).toBe(false);
     expect(prisma.invite.findFirst).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("rotateOwnerSetupLink", () => {
+  const ownerInvite = {
+    id: "i-owner",
+    email: "owner@glow.test",
+    org: { name: "Glow Clinic" },
+  };
+
+  it("rotates only a pending OWNER invite scoped to this org and never audits the token", async () => {
+    prisma.invite.findFirst.mockResolvedValue(ownerInvite);
+
+    const result = await rotateOwnerSetupLink("o1", "i-owner", "f@x.com");
+
+    expect(prisma.invite.findFirst).toHaveBeenCalledWith({
+      where: { id: "i-owner", orgId: "o1", status: "pending", role: "OWNER" },
+      select: {
+        id: true,
+        email: true,
+        org: { select: { name: true } },
+      },
+    });
+    expect(tx.invite.updateMany).toHaveBeenCalledWith({
+      where: { id: "i-owner", orgId: "o1", status: "pending", role: "OWNER" },
+      data: {
+        setupTokenHash: "new-owner-setup-hash",
+        setupTokenExpiresAt: new Date("2026-09-22T15:00:00.000Z"),
+      },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      setupLink: {
+        url: `https://nudgeagent.app/invite/${"b".repeat(43)}`,
+        email: "owner@glow.test",
+        expiresAt: "2026-09-22T15:00:00.000Z",
+      },
+    });
+    const audit = tx.auditLog.create.mock.calls[0][0].data;
+    expect(audit.action).toBe("admin.owner_setup_link_rotated");
+    expect(JSON.stringify(audit)).not.toContain("b".repeat(43));
+    expect(JSON.stringify(audit)).not.toContain("new-owner-setup-hash");
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("rejects accepted, teammate, missing, or cross-org invite ids", async () => {
+    prisma.invite.findFirst.mockResolvedValue(null);
+
+    const result = await rotateOwnerSetupLink("o1", "other-invite", "f@x.com");
+
+    expect(result.ok).toBe(false);
+    expect(createOwnerSetupToken).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("emails the same new setup URL when delivery is configured", async () => {
+    prisma.invite.findFirst.mockResolvedValue(ownerInvite);
+    isEmailConfigured.mockReturnValue(true);
+
+    const result = await rotateOwnerSetupLink("o1", "i-owner", "f@x.com");
+
+    expect(result.ok).toBe(true);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    const email = sendEmail.mock.calls[0][0];
+    expect(email.text).toContain(`https://nudgeagent.app/invite/${"b".repeat(43)}`);
+    expect(email.html).toContain(`https://nudgeagent.app/invite/${"b".repeat(43)}`);
+  });
+
+  it("does not audit or return a link when a concurrent request consumed the invite", async () => {
+    prisma.invite.findFirst.mockResolvedValue(ownerInvite);
+    tx.invite.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    const result = await rotateOwnerSetupLink("o1", "i-owner", "f@x.com");
+
+    expect(result.ok).toBe(false);
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+    expect(result).not.toHaveProperty("setupLink");
   });
 });
 

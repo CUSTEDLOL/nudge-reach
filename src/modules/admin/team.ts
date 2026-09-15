@@ -4,6 +4,11 @@ import { founderAudit, withReason, type FounderResult } from "@/modules/admin/au
 import { confirmationMatches, requireReason } from "@/modules/admin/confirmation";
 import { checkTeamLimit } from "@/modules/billing/limits";
 import { appOrigin, isEmailConfigured, sendEmail } from "@/modules/email";
+import { ownerSetupEmail } from "@/modules/admin/owner-setup-email";
+import {
+  createOwnerSetupToken,
+  type OwnerSetupLink,
+} from "@/modules/orgs/owner-setup";
 
 /**
  * Founder controls over an org's team. Same server-enforced rules as the
@@ -234,6 +239,84 @@ export async function resendInvite(
         ok: false,
         error: "The invite remains pending, but its email couldn't be sent.",
       };
+}
+
+/** Replace a pending owner's bearer token; the overwritten hash invalidates the old URL. */
+export async function rotateOwnerSetupLink(
+  orgId: string,
+  inviteId: string,
+  founderEmail: string
+): Promise<FounderResult> {
+  const invite = await prisma.invite.findFirst({
+    where: { id: inviteId, orgId, status: "pending", role: "OWNER" },
+    select: {
+      id: true,
+      email: true,
+      org: { select: { name: true } },
+    },
+  });
+  if (!invite) {
+    return { ok: false, error: "No pending owner invite with that id." };
+  }
+
+  const issued = createOwnerSetupToken();
+  const setupLink: OwnerSetupLink = {
+    url: `${appOrigin().replace(/\/$/, "")}/invite/${issued.token}`,
+    email: invite.email,
+    expiresAt: issued.expiresAt.toISOString(),
+  };
+  const rotated = await prisma.$transaction(async (tx) => {
+    const updated = await tx.invite.updateMany({
+      where: { id: invite.id, orgId, status: "pending", role: "OWNER" },
+      data: {
+        setupTokenHash: issued.hash,
+        setupTokenExpiresAt: issued.expiresAt,
+      },
+    });
+    if (updated.count !== 1) return false;
+    await founderAudit(
+      orgId,
+      founderEmail,
+      "admin.owner_setup_link_rotated",
+      invite.email,
+      `expires ${issued.expiresAt.toISOString()}`,
+      tx
+    );
+    return true;
+  });
+  if (!rotated) {
+    return { ok: false, error: "That owner invite is no longer pending." };
+  }
+
+  if (!isEmailConfigured()) {
+    return {
+      ok: true,
+      message: `New 7-day setup link created for ${invite.email}. Copy and share it manually.`,
+      setupLink,
+    };
+  }
+
+  let delivery: Awaited<ReturnType<typeof sendEmail>>;
+  try {
+    delivery = await sendEmail(
+      ownerSetupEmail(invite.org.name, invite.email, setupLink.url)
+    );
+  } catch {
+    delivery = { ok: false };
+  }
+  await recordInviteDelivery(
+    orgId,
+    founderEmail,
+    invite.email,
+    `owner setup link rotated: ${delivery.ok ? "sent" : "failed"}`
+  );
+  return {
+    ok: true,
+    message: delivery.ok
+      ? `New 7-day setup link created and emailed to ${invite.email}.`
+      : `New 7-day setup link created for ${invite.email}, but email failed. Copy and share it manually.`,
+    setupLink,
+  };
 }
 
 async function loadMember(orgId: string, membershipId: string) {

@@ -5,6 +5,10 @@ const read = (path: string) => (existsSync(path) ? readFileSync(path, "utf8") : 
 const actionForm = read("src/components/features/admin-shell/action-form.tsx");
 const newWorkspace = read("src/components/features/admin-shell/new-workspace.tsx");
 const linkPanel = read("src/components/features/admin-shell/setup-link-panel.tsx");
+const teamLinkAction = read(
+  "src/components/features/admin-shell/owner-setup-link-action.tsx"
+);
+const teamPage = read("src/app/admin/orgs/[id]/team/page.tsx");
 
 describe("founder owner setup-link UI", () => {
   it("keeps structured action results out of the toast and exposes a success callback", () => {
@@ -29,5 +33,12 @@ describe("founder owner setup-link UI", () => {
     expect(linkPanel).toContain('rel="noreferrer noopener"');
     expect(linkPanel).toContain("setupLink.email");
     expect(linkPanel).toContain("setupLink.expiresAt");
+  });
+
+  it("reserves inline link rotation for pending owner invites", () => {
+    expect(teamPage).toContain('inv.role === "OWNER"');
+    expect(teamPage).toContain("OwnerSetupLinkAction");
+    expect(teamLinkAction).toContain("Generate new setup link");
+    expect(teamLinkAction).toContain("SetupLinkPanel");
   });
 });

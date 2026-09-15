@@ -4,10 +4,12 @@ import { isEmailConfigured } from "@/modules/email";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
+import { OwnerSetupLinkAction } from "@/components/features/admin-shell/owner-setup-link-action";
 import {
   inviteMemberAction,
   removeMemberAction,
   resendInviteAction,
+  rotateOwnerSetupLinkAction,
   revokeInviteAction,
   setMemberRoleAction,
   transferOwnershipAction,
@@ -107,10 +109,9 @@ export default async function AdminOrgTeamPage({ params }: { params: Promise<{ i
         <CardHeader>
           <CardTitle>Pending invites ({invites.length})</CardTitle>
           <CardDescription>
-            {emailConfigured
-              ? "Invite emails are enabled. A matching signup also accepts the invite automatically."
-              : "Email delivery is not configured. Invites still accept automatically when that email signs in."}{" "}
-            Revoking deletes the pending invite.
+            Owner setup links last 7 days and can be copied even without email delivery.
+            Admin and agent invites accept automatically when that email signs in. Revoking
+            deletes the pending invite.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -159,13 +160,21 @@ export default async function AdminOrgTeamPage({ params }: { params: Promise<{ i
                     </p>
                   </div>
                   <Badge tone={ROLE_TONE[inv.role]}>{inv.role.toLowerCase()}</Badge>
-                  <ActionForm
-                    action={resendInviteAction}
-                    hidden={{ orgId: id, inviteId: inv.id }}
-                    submitLabel="Resend"
-                    variant="ghost"
-                    disabled={!emailConfigured}
-                  />
+                  {inv.role === "OWNER" ? (
+                    <OwnerSetupLinkAction
+                      action={rotateOwnerSetupLinkAction}
+                      orgId={id}
+                      inviteId={inv.id}
+                    />
+                  ) : (
+                    <ActionForm
+                      action={resendInviteAction}
+                      hidden={{ orgId: id, inviteId: inv.id }}
+                      submitLabel="Resend"
+                      variant="ghost"
+                      disabled={!emailConfigured}
+                    />
+                  )}
                   <ActionForm
                     action={revokeInviteAction}
                     hidden={{ orgId: id, inviteId: inv.id }}
