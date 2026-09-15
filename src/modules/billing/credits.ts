@@ -1,7 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import { envSchema } from "@/lib/env-schema";
-import { MICRO_USD_PER_CREDIT, priceCall } from "@/modules/billing/credit-rates";
+import type { Attribution } from "@/lib/model-router/usage";
+import type { DriverUsage } from "@/lib/model-router/types";
+import { MICRO_USD_PER_CREDIT, RATE_CARD_VERSION, priceCall } from "@/modules/billing/credit-rates";
 import { applyFeatureOverrides } from "@/modules/billing/limits";
 import { getPlan } from "@/modules/billing/plans";
 
@@ -25,10 +28,11 @@ export interface GrantSlice {
   remainingMicroUsd: number;
 }
 
-export interface Allocation {
+/** A type alias, not an interface, so the list is storable as Prisma Json. */
+export type Allocation = {
   grantId: string;
   microUsd: number;
-}
+};
 
 export interface FifoResult {
   /** In FIFO order; stored on the debit row. */
@@ -287,4 +291,262 @@ export async function topUpIncludedGrant(orgId: string, now: Date = new Date()):
     return true;
   });
   return topped ?? ensureIncludedGrant(org, now);
+}
+
+// ---------------------------------------------------------------------------
+// Preflight: the doorway asks before every platform-paid call
+// ---------------------------------------------------------------------------
+
+export const CREDITS_EXHAUSTED_MESSAGE =
+  "Your AI credits are used up, so AI replies, drafts, summaries and campaign copy are paused. Your inbox, campaigns and follow-ups keep working. Top up in Settings → Billing.";
+
+export class CreditsExhaustedError extends Error {
+  constructor(public readonly orgId: string) {
+    super(CREDITS_EXHAUSTED_MESSAGE);
+    this.name = "CreditsExhaustedError";
+  }
+}
+
+/**
+ * What one platform-paid call means to the ledger:
+ * - metered: preflighted, then debited against the org's grants;
+ * - unmetered: legacy plan — recorded as absorbed, never paused (decision 5);
+ * - shadow: SEND_MODE=simulation, no provider was paid — recorded, no grant;
+ * - absorbed: concierge ingest/distill — Nudge pays, never preflighted.
+ */
+export type MeteringClass = "metered" | "unmetered" | "shadow" | "absorbed";
+
+/** Plan decision 8: concierge setup work is never charged to the customer. */
+export function isAbsorbedPurpose(purpose: string): boolean {
+  return purpose === "ingest" || purpose === "distill";
+}
+
+/**
+ * Plan decision 6: a zero check, not a reservation — cost is unknown until
+ * the provider answers, so the org may overdraw by at most one call. At ≤ 0
+ * the current period's included grant is issued if it is missing (a comped
+ * org the cron has not reached yet) before refusing.
+ */
+export async function assertCreditsAvailable(
+  attribution: Attribution,
+  now: Date = new Date()
+): Promise<MeteringClass> {
+  if (env.SEND_MODE === "simulation") return "shadow";
+  if (isAbsorbedPurpose(attribution.purpose)) return "absorbed";
+  const org = await prisma.org.findUnique({
+    where: { id: attribution.orgId },
+    select: INCLUDED_GRANT_SELECT,
+  });
+  if (!org) throw new Error(`assertCreditsAvailable: unknown org ${attribution.orgId}`);
+  if (meteringFor(org, now).kind === "unmetered") return "unmetered";
+  let balance = await creditBalance(org.id, now);
+  if (balance <= 0) {
+    await ensureIncludedGrant(org, now);
+    balance = await creditBalance(org.id, now);
+  }
+  if (balance <= 0) throw new CreditsExhaustedError(org.id);
+  return "metered";
+}
+
+// ---------------------------------------------------------------------------
+// Debit: exact, post-hoc, idempotent on the usage row
+// ---------------------------------------------------------------------------
+
+export interface DebitAiUsageArgs {
+  orgId: string;
+  aiUsageId: string;
+  purpose: string;
+  model: string;
+  usage: DriverUsage;
+  /** No provider was paid (SEND_MODE=simulation). */
+  simulated: boolean;
+  /** Provider was paid but Nudge eats it (ingest/distill, legacy unmetered plans). */
+  absorbed: boolean;
+}
+
+interface LockedGrant extends GrantSlice {
+  expiresAt: Date;
+}
+
+/**
+ * Price the call from the rate card (an unpriced model throws — the doorway
+ * refuses those before the provider is called) and write one CreditDebit.
+ * Simulated and absorbed debits touch no grant. A metered debit locks the
+ * org's unexpired grants (`FOR UPDATE` serialises concurrent debits per org;
+ * other orgs never contend) and spends them soonest-expiring first. A
+ * duplicate aiUsageId (retry, reconciler race) is "already debited": quiet.
+ */
+export async function debitAiUsage(a: DebitAiUsageArgs): Promise<void> {
+  const amountMicroUsd = priceCall(a.model, a.usage);
+  const data = {
+    orgId: a.orgId,
+    amountMicroUsd,
+    purpose: a.purpose,
+    model: a.model,
+    rateCardVersion: RATE_CARD_VERSION,
+    aiUsageId: a.aiUsageId,
+    simulated: a.simulated,
+    absorbed: a.absorbed,
+  };
+  try {
+    if (a.simulated || a.absorbed) {
+      await prisma.creditDebit.create({ data: { ...data, allocations: [] } });
+      return;
+    }
+    await prisma.$transaction(async (tx) => {
+      const grants = await tx.$queryRaw<LockedGrant[]>`
+        SELECT id, "remainingMicroUsd", "expiresAt" FROM "CreditGrant"
+        WHERE "orgId" = ${a.orgId} AND "expiresAt" > now()
+        ORDER BY "expiresAt" ASC, "issuedAt" ASC
+        FOR UPDATE`;
+      const { allocations, overdraftOn } = allocateFifo(grants, amountMicroUsd);
+      // The debit row first, so a duplicate fails before any grant is touched.
+      await tx.creditDebit.create({ data: { ...data, allocations } });
+      for (const alloc of overdraftOn ? [...allocations, overdraftOn] : allocations) {
+        await tx.creditGrant.update({
+          where: { id: alloc.grantId },
+          data: { remainingMicroUsd: { decrement: alloc.microUsd } },
+        });
+      }
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) return; // already debited
+    throw err;
+  }
+}
+
+/** Shadow when no provider was paid; absorbed when Nudge pays (concierge work, legacy unmetered plans). */
+function debitFlags(metering: MeteringClass): Pick<DebitAiUsageArgs, "simulated" | "absorbed"> {
+  return {
+    simulated: metering === "shadow",
+    absorbed: metering === "absorbed" || metering === "unmetered",
+  };
+}
+
+export interface SettleDebitArgs {
+  attribution: Attribution;
+  model: string;
+  usage: DriverUsage;
+  /** From recordUsage; null when the usage row could not be written. */
+  aiUsageId: string | null;
+  metering: MeteringClass;
+}
+
+/**
+ * The doorway's post-call debit. Never throws: the customer's reply exists
+ * and the provider is already paid. Never silent either: a failed write is
+ * logged with a stable tag and re-driven by `reconcileCreditDebits` on the
+ * next cron tick. A missing usage row has nothing to anchor on and is the
+ * one accepted loss (the same failure class as the analytics row).
+ */
+export async function settleDebit(a: SettleDebitArgs): Promise<void> {
+  const { orgId, purpose } = a.attribution;
+  if (!a.aiUsageId) {
+    console.error("[credits] usage row missing — nothing to anchor the debit on", { orgId, purpose });
+    return;
+  }
+  try {
+    await debitAiUsage({
+      orgId,
+      aiUsageId: a.aiUsageId,
+      purpose,
+      model: a.model,
+      usage: a.usage,
+      ...debitFlags(a.metering),
+    });
+  } catch (err) {
+    console.error(
+      "[credits] debit failed — reconciler will retry",
+      { orgId, aiUsageId: a.aiUsageId, purpose },
+      err
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reconciler (cron): re-debit what the doorway could not
+// ---------------------------------------------------------------------------
+
+const RECONCILE_BATCH = 200;
+
+const METERING_SELECT = {
+  id: true,
+  plan: true,
+  featureOverrides: true,
+  includedCreditsOverride: true,
+  trialEndsAt: true,
+} as const;
+
+/**
+ * Every platform, non-synthetic AiUsage row since CREDIT_LEDGER_EPOCH with no
+ * CreditDebit, oldest first in a bounded batch. Idempotent on aiUsageId, so
+ * racing the doorway is harmless. A row that keeps failing (no grant, an
+ * unpriced model) stays visible here every tick rather than being dropped.
+ */
+export async function reconcileCreditDebits(
+  now: Date = new Date()
+): Promise<{ debited: number; failed: number }> {
+  const rows = await prisma.aiUsage.findMany({
+    where: {
+      byok: false,
+      synthetic: false,
+      createdAt: { gte: new Date(env.CREDIT_LEDGER_EPOCH) },
+      creditDebit: null,
+    },
+    orderBy: { createdAt: "asc" },
+    take: RECONCILE_BATCH,
+    select: {
+      id: true,
+      orgId: true,
+      purpose: true,
+      model: true,
+      inputTokens: true,
+      outputTokens: true,
+      cacheReadTokens: true,
+      cacheWriteTokens: true,
+    },
+  });
+  const counts = { debited: 0, failed: 0 };
+  if (rows.length === 0) return counts;
+
+  // Same classification as the doorway's preflight, per org instead of per call.
+  const orgs = await prisma.org.findMany({
+    where: { id: { in: [...new Set(rows.map((r) => r.orgId))] } },
+    select: METERING_SELECT,
+  });
+  const unmetered = new Set(
+    orgs.filter((o) => meteringFor(o, now).kind === "unmetered").map((o) => o.id)
+  );
+  const classify = (r: { orgId: string; purpose: string }): MeteringClass => {
+    if (env.SEND_MODE === "simulation") return "shadow";
+    if (isAbsorbedPurpose(r.purpose)) return "absorbed";
+    return unmetered.has(r.orgId) ? "unmetered" : "metered";
+  };
+
+  for (const r of rows) {
+    try {
+      await debitAiUsage({
+        orgId: r.orgId,
+        aiUsageId: r.id,
+        purpose: r.purpose,
+        model: r.model,
+        usage: {
+          inputTokens: r.inputTokens,
+          outputTokens: r.outputTokens,
+          cacheReadTokens: r.cacheReadTokens,
+          cacheWriteTokens: r.cacheWriteTokens,
+        },
+        ...debitFlags(classify(r)),
+      });
+      counts.debited++;
+    } catch (err) {
+      counts.failed++;
+      console.error(
+        "[credits] reconcile failed — will retry next tick",
+        { orgId: r.orgId, aiUsageId: r.id, purpose: r.purpose },
+        err
+      );
+    }
+  }
+  return counts;
 }

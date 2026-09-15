@@ -7,7 +7,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  */
 
 const { prisma } = vi.hoisted(() => ({
-  prisma: { aiUsage: { create: vi.fn().mockResolvedValue({ id: "usage_1" }) } },
+  prisma: {
+    aiUsage: { create: vi.fn().mockResolvedValue({ id: "usage_1" }) },
+    // The credit ledger's hook (SEND_MODE=simulation below → shadow debits).
+    llmAccount: { findUnique: vi.fn().mockResolvedValue(null) },
+    creditDebit: { create: vi.fn().mockResolvedValue({}) },
+  },
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
 
@@ -116,14 +121,16 @@ describe("router usage recording", () => {
     });
   });
 
-  it("chat() without attribution writes nothing", async () => {
+  it("chat() without attribution is refused before the provider is called", async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: "text", text: "hi" }],
       stop_reason: "end_turn",
       usage: { input_tokens: 10, output_tokens: 5 },
     });
-    await chat({ system: "s", messages: [{ role: "user", text: "x" }] });
-    await new Promise((r) => setTimeout(r, 0));
+    await expect(
+      chat({ system: "s", messages: [{ role: "user", text: "x" }] } as never)
+    ).rejects.toThrow(/attribution/);
+    expect(mockCreate).not.toHaveBeenCalled();
     expect(prisma.aiUsage.create).not.toHaveBeenCalled();
   });
 

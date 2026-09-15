@@ -30,10 +30,20 @@ const HANDOFF_MESSAGE =
 export async function generateAgentReply(
   profile: AgentProfileInput,
   history: ChatTurn[],
+  ctx: Pick<ToolContext, "orgId" | "conversationId">,
   promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
 ): Promise<AgentReply> {
   const system = buildAgentSystemPrompt(profile, promptOptions);
-  const raw = await chat({ system, messages: history, maxTokens: 400 });
+  const raw = await chat({
+    system,
+    messages: history,
+    maxTokens: 400,
+    attribution: {
+      orgId: ctx.orgId,
+      conversationId: ctx.conversationId,
+      purpose: "agent_reply",
+    },
+  });
 
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
     return { text: HANDOFF_MESSAGE, handoff: true };

@@ -41,6 +41,10 @@ export const envSchema = z
     // Messaging
     SEND_MODE: z.enum(["simulation", "live"]).default("simulation"),
 
+    // Credit ledger: the reconciler ignores AiUsage rows older than this, so
+    // history from before the ledger is never debited.
+    CREDIT_LEDGER_EPOCH: z.iso.date().default("2026-09-15"),
+
     // WhatsApp Cloud API (required only in live mode — see superRefine)
     WHATSAPP_API_VERSION: z.string().default("v23.0"),
     WABA_ID: z.string().optional(),

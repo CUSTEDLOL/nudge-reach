@@ -28,10 +28,16 @@ async function main() {
     mediaType: "image/jpeg" as const,
   };
 
+  // Against the test user's org: the copy is billed to it (credit ledger).
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  const org = await prisma.org.findFirstOrThrow();
+
   console.log("→ generating campaign from photo (vision path)…");
   const content = await generateCampaignContent({
     description: "Cotton summer kurtas, new stock, 20% off this week",
     image,
+    orgId: org.id,
   });
 
   console.log(JSON.stringify(content, null, 2));
@@ -43,10 +49,7 @@ async function main() {
   if (content.header.length > 60) throw new Error("header too long");
   console.log("✅ guardrails hold: one {{1}}, opt-out footer, header ≤60");
 
-  // Persist like the server action does, against the test user's org
-  const { PrismaClient } = await import("@prisma/client");
-  const prisma = new PrismaClient();
-  const org = await prisma.org.findFirstOrThrow();
+  // Persist like the server action does
   const product = await prisma.product.create({
     data: { orgId: org.id, name: content.productName, photoUrl: null },
   });

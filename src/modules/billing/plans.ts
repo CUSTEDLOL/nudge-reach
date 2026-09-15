@@ -15,9 +15,11 @@ import type { Currency } from "./money";
  * workspace. Growth adds the real actions (booking, payment links,
  * follow-ups). Pro adds voice and the bring-your-own-key options.
  *
- * CREDITS ARE DISPLAYED, NOT METERED. `includedCredits` is what each plan
- * promises; there is no credit ledger, no deduction and no cap in the product yet,
- * so a customer today gets at least that and nothing stops them past it.
+ * CREDITS ARE METERED. `includedCredits` is issued as a CreditGrant for each
+ * paid period and debited by every platform-paid LLM call through the credit
+ * ledger in billing/credits.ts; at zero, platform-paid AI pauses (the inbox,
+ * campaigns and follow-ups keep working). `null` plans are unmetered
+ * (legacy) or set per org (Enterprise).
  *
  * ENTRY IS PROVISIONAL. The founder record leaves its seats, numbers, credits
  * and Singapore price undecided, and "Entry" is a working name. The caps below
@@ -83,9 +85,9 @@ export interface Plan {
   features: string[];
   limits: PlanLimits;
   /**
-   * AI credits included per month (one credit = US$0.005 of provider cost).
-   * null = agreed per deal (Enterprise) or unmetered (legacy). Promise only —
-   * see the file comment: nothing in the product deducts or enforces this yet.
+   * AI credits included per paid period (one credit = US$0.005 of provider
+   * cost), issued as a grant and debited by billing/credits.ts. null = set
+   * per org (Enterprise, `Org.includedCreditsOverride`) or unmetered (legacy).
    */
   includedCredits: number | null;
   /** Highlighted self-serve tier in the pricing grid. */

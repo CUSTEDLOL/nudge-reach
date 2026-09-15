@@ -12,7 +12,7 @@ import { tickBookingReminders } from "@/modules/followup/reminders";
 import { tickReminderCalls } from "@/modules/voice/reminder-calls";
 import { tickCrmSync } from "@/modules/crm/sync";
 import { applySimulatedPaymentProgress } from "@/modules/payments";
-import { issueIncludedCredits } from "@/modules/billing/credits";
+import { issueIncludedCredits, reconcileCreditDebits } from "@/modules/billing/credits";
 import { expireTrials } from "@/modules/billing/trial";
 import { tickLeadScoring } from "@/modules/scoring/compute";
 import { boundedCount } from "@/modules/admin/health";
@@ -70,6 +70,10 @@ export async function GET(request: Request) {
     step = "issue-included-credits";
     const includedGrants = await issueIncludedCredits();
 
+    // Debits the doorway could not write at call time (idempotent per usage row).
+    step = "reconcile-credit-debits";
+    const reconciled = await reconcileCreditDebits();
+
     step = "score-leads";
     const rescored = await tickLeadScoring();
 
@@ -105,6 +109,10 @@ export async function GET(request: Request) {
       paymentsPaid: boundedCount(paymentsPaid),
       expiredTrials: boundedCount(expiredTrials),
       includedGrants: boundedCount(includedGrants),
+      creditDebits: {
+        reconciled: boundedCount(reconciled.debited),
+        failed: boundedCount(reconciled.failed),
+      },
       rescored: boundedCount(rescored),
       campaigns: boundedCount(sending.length),
       processed: boundedCount(processed),

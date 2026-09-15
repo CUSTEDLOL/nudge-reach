@@ -6,7 +6,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { runAgent, type AgentToolDef, type ToolInvocation } from "@/lib/model-router";
+import { anthropicDriver } from "@/lib/model-router/drivers/anthropic";
+import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
+import type { AgentToolDef, ToolInvocation } from "@/lib/model-router";
 import { buildAgentSystemPrompt } from "@/modules/agent/prompt";
 import { VOICE_WEBHOOK_TOOL_SPECS } from "@/modules/voice/elevenlabs-setup";
 
@@ -15,6 +17,13 @@ for (const line of fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").split(
   const match = line.match(/^([A-Z_]+)="?([^"]*)"?$/);
   if (match && !process.env[match[1]]) process.env[match[1]] = match[2];
 }
+
+// Straight to the platform driver, not the doorway: the doorway bills every
+// call to an org's credit ledger, and this eval has no org and writes nothing.
+// The cheap-model rule (AGENTS.md #3) still applies.
+const MODEL = process.env.RUNTIME_MODEL || "claude-haiku-4-5";
+assertRuntimeModelAllowed(MODEL);
+const RUNTIME = { model: MODEL, apiKey: process.env.ANTHROPIC_API_KEY ?? "" };
 
 const RUNS = Math.max(1, Number(process.env.EVAL_RUNS ?? 3));
 const FILTER = process.env.EVAL_FILTER?.trim();
@@ -145,7 +154,7 @@ async function evaluateScenario(scenario: (typeof scenarios)[number]) {
     now: new Date("2026-09-05T05:00:00Z"),
     timezone: "Asia/Kolkata",
   });
-  const outcome = await runAgent({
+  const outcome = await anthropicDriver.runAgent(RUNTIME, {
     system,
     messages: scenario.messages,
     tools: [...webhookDefs, ...systemDefs],

@@ -3,10 +3,17 @@ import { assertRuntimeModelAllowed } from "@/lib/model-router/guard";
 import { recordUsage, type Attribution } from "@/lib/model-router/usage";
 import { anthropicDriver } from "@/lib/model-router/drivers/anthropic";
 import { getByokRuntime } from "@/lib/model-router/byok";
+import { MODEL_RATES, UnpricedModelError } from "@/modules/billing/credit-rates";
+import {
+  assertCreditsAvailable,
+  settleDebit,
+  type MeteringClass,
+} from "@/modules/billing/credits";
 import type {
   AgentToolDef,
   ChatTurn,
   DriverRuntime,
+  DriverUsage,
   LlmDriver,
   ToolInvocation,
 } from "@/lib/model-router/types";
@@ -18,6 +25,10 @@ import type {
  * Anthropic tier (RUNTIME_MODEL, guard-checked). Enterprise orgs may bring
  * their own OpenAI / Google / Anthropic key (their cost) — resolved per call
  * from the org on the attribution, through this same doorway.
+ *
+ * The credit ledger hooks in here and nowhere else: a zero-balance preflight
+ * before the provider is called, an exact debit after it. BYOK calls are
+ * neither preflighted nor debited.
  */
 
 export type { AgentToolDef, ChatTurn, ToolInvocation } from "@/lib/model-router/types";
@@ -48,8 +59,8 @@ export interface GenerateInput {
     data: string;
   };
   maxTokens?: number;
-  /** Org/conversation the call is billed to; omit only for unattributable calls. */
-  attribution?: Attribution;
+  /** Org/conversation the call is billed to. Required: the ledger refuses unattributed spend. */
+  attribution: Attribution;
 }
 
 interface ResolvedRuntime {
@@ -65,20 +76,51 @@ interface ResolvedRuntime {
  * provider can't serve (PDF document ingest).
  */
 async function resolveRuntime(
-  attribution: Attribution | undefined,
+  attribution: Attribution,
   opts: { forcePlatform?: boolean } = {}
 ): Promise<ResolvedRuntime> {
-  if (!opts.forcePlatform && attribution?.orgId) {
+  if (!opts.forcePlatform) {
     const byok = await getByokRuntime(attribution.orgId);
     if (byok) return { driver: byok.driver, rt: byok.rt, byok: true };
   }
   const model = env.RUNTIME_MODEL || "claude-haiku-4-5";
   assertRuntimeModelAllowed(model);
+  // Never spend unpriced money: a misconfigured RUNTIME_MODEL fails at the
+  // first call instead of running free of the ledger.
+  if (!MODEL_RATES[model]) throw new UnpricedModelError(model);
   return {
     driver: anthropicDriver,
     rt: { model, apiKey: env.ANTHROPIC_API_KEY ?? "" },
     byok: false,
   };
+}
+
+/**
+ * One provider call under the ledger: resolve the runtime, preflight the
+ * balance (platform only — may throw CreditsExhaustedError before the
+ * provider is called), run, record usage, settle the debit. A call with no
+ * attribution has nothing to bill to and is refused.
+ */
+async function billed<T extends { usage: DriverUsage }>(
+  attribution: Attribution | undefined,
+  opts: { forcePlatform?: boolean },
+  call: (driver: LlmDriver, rt: DriverRuntime) => Promise<T>
+): Promise<T> {
+  if (!attribution) {
+    throw new Error(
+      "model-router: every call needs attribution (orgId + purpose) — the credit ledger refuses unattributed AI spend"
+    );
+  }
+  const { driver, rt, byok } = await resolveRuntime(attribution, opts);
+  const metering: MeteringClass | "byok" = byok
+    ? "byok"
+    : await assertCreditsAvailable(attribution);
+  const out = await call(driver, rt);
+  const aiUsageId = await recordUsage(attribution, rt.model, out.usage, { byok });
+  if (metering !== "byok") {
+    await settleDebit({ attribution, model: rt.model, usage: out.usage, aiUsageId, metering });
+  }
+  return out;
 }
 
 export async function generate({
@@ -90,19 +132,9 @@ export async function generate({
   attribution,
 }: GenerateInput): Promise<string> {
   // PDF ingest stays on the platform driver — not all providers accept PDFs.
-  const { driver, rt, byok } = await resolveRuntime(attribution, {
-    forcePlatform: Boolean(document),
-  });
-  const { text, usage } = await driver.generate(rt, {
-    system,
-    prompt,
-    image,
-    document,
-    maxTokens,
-  });
-  if (attribution) {
-    void recordUsage(attribution, rt.model, usage, { byok });
-  }
+  const { text } = await billed(attribution, { forcePlatform: Boolean(document) }, (driver, rt) =>
+    driver.generate(rt, { system, prompt, image, document, maxTokens })
+  );
   return sanitizeText(text);
 }
 
@@ -110,8 +142,8 @@ export interface ChatInput {
   system: string;
   messages: ChatTurn[];
   maxTokens?: number;
-  /** Org/conversation the call is billed to; omit only for unattributable calls. */
-  attribution?: Attribution;
+  /** Org/conversation the call is billed to. Required: the ledger refuses unattributed spend. */
+  attribution: Attribution;
 }
 
 /**
@@ -124,11 +156,9 @@ export async function chat({
   maxTokens = 400, // WhatsApp replies are short; keep cost + latency low
   attribution,
 }: ChatInput): Promise<string> {
-  const { driver, rt, byok } = await resolveRuntime(attribution);
-  const { text, usage } = await driver.chat(rt, { system, messages, maxTokens });
-  if (attribution) {
-    void recordUsage(attribution, rt.model, usage, { byok });
-  }
+  const { text } = await billed(attribution, {}, (driver, rt) =>
+    driver.chat(rt, { system, messages, maxTokens })
+  );
   return sanitizeText(text);
 }
 
@@ -141,8 +171,8 @@ export interface RunAgentInput {
   maxTokens?: number;
   /** Hard ceiling on model↔tool round trips (default 5). */
   maxSteps?: number;
-  /** Org/conversation the call is billed to; omit only for unattributable calls. */
-  attribution?: Attribution;
+  /** Org/conversation the call is billed to. Required: the ledger refuses unattributed spend. */
+  attribution: Attribution;
 }
 
 export interface RunAgentResult {
@@ -164,7 +194,8 @@ export interface RunAgentResult {
  * Tool/function-calling agent loop. The loop is HARD-CAPPED (maxSteps) so
  * the agent can chain tools but can never spin forever. The caller owns tool
  * execution via `runTool`, keeping all side effects (DB writes, tenant
- * scoping, validation) outside the model layer. One usage row per run.
+ * scoping, validation) outside the model layer. One usage row — and one
+ * debit — per run.
  */
 export async function runAgent({
   system,
@@ -175,17 +206,8 @@ export async function runAgent({
   maxSteps = 5,
   attribution,
 }: RunAgentInput): Promise<RunAgentResult> {
-  const { driver, rt, byok } = await resolveRuntime(attribution);
-  const { text, toolCalls, cappedOut, usage, spoken } = await driver.runAgent(rt, {
-    system,
-    messages,
-    tools,
-    runTool,
-    maxTokens,
-    maxSteps,
-  });
-  if (attribution) {
-    void recordUsage(attribution, rt.model, usage, { byok });
-  }
+  const { text, toolCalls, cappedOut, spoken } = await billed(attribution, {}, (driver, rt) =>
+    driver.runAgent(rt, { system, messages, tools, runTool, maxTokens, maxSteps })
+  );
   return { text: sanitizeText(text), toolCalls, cappedOut, spoken: (spoken ?? []).map(sanitizeText) };
 }

@@ -6,14 +6,28 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * SDK so we can drive the loop deterministically.
  */
 
-const { create } = vi.hoisted(() => ({ create: vi.fn() }));
+const { create, prisma } = vi.hoisted(() => ({
+  create: vi.fn(),
+  prisma: {
+    aiUsage: { create: vi.fn().mockResolvedValue({ id: "usage_1" }) },
+    llmAccount: { findUnique: vi.fn().mockResolvedValue(null) },
+    creditDebit: { create: vi.fn().mockResolvedValue({}) },
+  },
+}));
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class {
     messages = { create };
   },
 }));
+vi.mock("@/lib/db", () => ({ prisma }));
+// Simulation: the credit ledger records shadow debits and never gates.
+vi.mock("@/lib/env", () => ({
+  env: { ANTHROPIC_API_KEY: "test-key", SEND_MODE: "simulation" },
+}));
 
 import { runAgent } from "@/lib/model-router";
+
+const attribution = { orgId: "org1", purpose: "agent_reply" as const };
 
 const tools = [
   {
@@ -35,7 +49,6 @@ const finalText = {
 
 beforeEach(() => {
   create.mockReset();
-  process.env.ANTHROPIC_API_KEY = "test-key";
 });
 
 describe("runAgent — hard tool-loop cap", () => {
@@ -49,6 +62,7 @@ describe("runAgent — hard tool-loop cap", () => {
       tools,
       runTool,
       maxSteps: 3,
+      attribution,
     });
 
     expect(res.cappedOut).toBe(true);
@@ -68,6 +82,7 @@ describe("runAgent — hard tool-loop cap", () => {
       tools,
       runTool,
       maxSteps: 5,
+      attribution,
     });
 
     expect(res.cappedOut).toBe(false);

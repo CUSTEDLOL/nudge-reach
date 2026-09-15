@@ -59,8 +59,8 @@ export interface GenerateCampaignInput {
   };
   /** Market copywriting voice; defaults to the original Indian voice. */
   voice?: MarketVoice;
-  /** Org the generated copy is billed to (AI usage metering). */
-  orgId?: string;
+  /** Org the generated copy is billed to (credit ledger + usage metering). */
+  orgId: string;
 }
 
 function buildUserPrompt(description?: string): string {
@@ -87,9 +87,7 @@ export async function generateCampaignContent(
 
   const system = systemPrompt(input.voice ?? "india");
   const prompt = buildUserPrompt(input.description);
-  const attribution = input.orgId
-    ? ({ orgId: input.orgId, purpose: "campaign_copy" } as const)
-    : undefined;
+  const attribution = { orgId: input.orgId, purpose: "campaign_copy" } as const;
   let text = await generate({
     system,
     prompt,

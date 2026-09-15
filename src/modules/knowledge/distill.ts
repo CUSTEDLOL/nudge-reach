@@ -64,15 +64,13 @@ const DISTILL_SYSTEM = [
 export async function distillAnswer(
   question: string,
   answer: string,
-  orgId?: string
+  orgId: string
 ): Promise<DistilledFact[]> {
   const trimmed = answer.trim();
   if (!trimmed) return [];
   // Keyless (simulation/demo) path: deterministic, still useful.
   if (!env.ANTHROPIC_API_KEY) {
-    if (orgId) {
-      recordSyntheticUsage({ orgId, purpose: "distill" }, question, trimmed);
-    }
+    recordSyntheticUsage({ orgId, purpose: "distill" }, question, trimmed);
     return parseDistilled("", trimmed);
   }
 
@@ -86,7 +84,7 @@ export async function distillAnswer(
         },
       ],
       maxTokens: 500,
-      attribution: orgId ? { orgId, purpose: "distill" } : undefined,
+      attribution: { orgId, purpose: "distill" },
     });
     return parseDistilled(raw ?? "", trimmed);
   } catch {
