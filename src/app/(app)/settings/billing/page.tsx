@@ -9,10 +9,11 @@ import { formatPlanPrice, orgCurrency } from "@/modules/billing/money";
 import { isRazorpayConfigured } from "@/modules/billing/razorpay";
 import { isStripeConfigured } from "@/modules/billing/stripe";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { SectionHeader } from "../section-header";
-import { PlanCheckout } from "./plan-checkout";
+import { CheckoutButton } from "./checkout-button";
 
 export const metadata: Metadata = { title: "Billing settings" };
 
@@ -182,12 +183,18 @@ export default async function BillingSettingsPage() {
                       Ask an admin to upgrade
                     </span>
                   ) : paymentsOn ? (
-                    <PlanCheckout
-                      planId={plan.id}
-                      planName={plan.name}
-                      current={isCurrent}
-                      orgName={org.name}
-                    />
+                    isCurrent ? (
+                      <Button variant="secondary" size="sm" disabled className="w-full">
+                        Current plan
+                      </Button>
+                    ) : (
+                      <CheckoutButton
+                        kind="plan"
+                        id={plan.id}
+                        label={`Upgrade to ${plan.name}`}
+                        orgName={org.name}
+                      />
+                    )
                   ) : isCurrent ? (
                     <Badge tone="success">Current</Badge>
                   ) : (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ensureIncludedGrantFor } from "@/modules/billing/credits";
+import { GATEWAY_ACTOR, grantPurchasedCredits } from "@/modules/billing/credit-purchase";
 import { verifyWebhookSignature } from "@/modules/billing/razorpay";
 import { getPlan } from "@/modules/billing/plans";
 import { markPaymentPaid } from "@/modules/payments";
@@ -22,7 +23,12 @@ export async function POST(request: Request) {
   let payload: {
     event?: string;
     payload?: {
-      payment?: { entity?: { notes?: { orgId?: string; planId?: string } } };
+      payment?: {
+        entity?: {
+          id?: string;
+          notes?: { orgId?: string; planId?: string; kind?: string; packId?: string };
+        };
+      };
       payment_link?: {
         entity?: { notes?: { paymentRequestId?: string; kind?: string } };
       };
@@ -43,8 +49,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const notes = payload.payload?.payment?.entity?.notes;
+  const payment = payload.payload?.payment?.entity;
+  const notes = payment?.notes;
   const orgId = notes?.orgId;
+
+  // Credit-pack top-up (credit ledger): a purchase grant keyed on the payment
+  // id, so a redelivery is a no-op. Never touches the plan.
+  if (payload.event === "payment.captured" && notes?.kind === "credits") {
+    if (orgId && notes.packId && payment?.id) {
+      await grantPurchasedCredits({
+        orgId,
+        packId: notes.packId,
+        sourceKey: payment.id,
+        actor: GATEWAY_ACTOR.razorpay,
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const planId = notes?.planId;
 
   if (payload.event === "payment.captured" && orgId && planId) {

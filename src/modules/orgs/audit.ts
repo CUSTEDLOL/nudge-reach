@@ -20,6 +20,7 @@ export type AuditAction =
   | "webhook.created"
   | "webhook.deleted"
   | "billing.plan_changed"
+  | "billing.credits_purchased"
   | "calendar.connected"
   | "calendar.disconnected"
   | "followup.enabled"
@@ -80,6 +81,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "webhook.created": "Webhook added",
   "webhook.deleted": "Webhook removed",
   "billing.plan_changed": "Plan changed",
+  "billing.credits_purchased": "AI credits purchased",
   "calendar.connected": "Calendar connected",
   "calendar.disconnected": "Calendar disconnected",
   "followup.enabled": "Revenue Recovery enabled",

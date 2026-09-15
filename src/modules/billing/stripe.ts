@@ -20,16 +20,22 @@ export interface StripeCheckoutSession {
 }
 
 /**
- * Create a hosted Checkout session for a plan payment (amount in minor units).
- * Returns the redirect URL. Throws when unconfigured — callers gate on
- * isStripeConfigured() first.
+ * Create a hosted Checkout session for a one-time payment (amount in minor
+ * units): a plan month (`planId`/`planName`) or anything else described by
+ * `lineName` + `metadata` (a credit pack). Returns the redirect URL. Throws
+ * when unconfigured — callers gate on isStripeConfigured() first.
  */
 export async function createStripeCheckout(input: {
   /** ISO currency code (any Stripe-supported currency, e.g. "aed", "brl"). */
   currency: string;
   amountMinor: number;
-  planId: string;
-  planName: string;
+  /** Plan payment: sets metadata.planId and the default line name. */
+  planId?: string;
+  planName?: string;
+  /** Line-item name; defaults to the plan line. */
+  lineName?: string;
+  /** Extra session metadata (e.g. { kind: "credits", packId }); orgId is always set. */
+  metadata?: Record<string, string>;
   orgId: string;
   orgName: string;
   successUrl: string;
@@ -46,10 +52,15 @@ export async function createStripeCheckout(input: {
     "line_items[0][quantity]": "1",
     "line_items[0][price_data][currency]": input.currency.toLowerCase(),
     "line_items[0][price_data][unit_amount]": String(input.amountMinor),
-    "line_items[0][price_data][product_data][name]": `Nudge ${input.planName} plan — 1 month (${input.orgName})`,
-    "metadata[orgId]": input.orgId,
-    "metadata[planId]": input.planId,
+    "line_items[0][price_data][product_data][name]":
+      input.lineName ?? `Nudge ${input.planName} plan — 1 month (${input.orgName})`,
   });
+  const metadata: Record<string, string> = {
+    orgId: input.orgId,
+    ...(input.planId ? { planId: input.planId } : {}),
+    ...input.metadata,
+  };
+  for (const [k, v] of Object.entries(metadata)) body.set(`metadata[${k}]`, v);
 
   const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",

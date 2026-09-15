@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ensureIncludedGrantFor } from "@/modules/billing/credits";
+import { GATEWAY_ACTOR, grantPurchasedCredits } from "@/modules/billing/credit-purchase";
 import { verifyStripeWebhook } from "@/modules/billing/stripe";
 import { getPlan } from "@/modules/billing/plans";
 
@@ -21,7 +22,8 @@ export async function POST(request: Request) {
     type?: string;
     data?: {
       object?: {
-        metadata?: { orgId?: string; planId?: string };
+        id?: string;
+        metadata?: { orgId?: string; planId?: string; kind?: string; packId?: string };
         payment_status?: string;
       };
     };
@@ -34,8 +36,22 @@ export async function POST(request: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data?.object;
-    const orgId = session?.metadata?.orgId;
-    const planId = session?.metadata?.planId;
+    const meta = session?.metadata;
+    // Credit-pack top-up (credit ledger): a purchase grant keyed on the
+    // session id, so a redelivery is a no-op. Never touches the plan.
+    if (meta?.kind === "credits") {
+      if (meta.orgId && meta.packId && session?.id && session.payment_status === "paid") {
+        await grantPurchasedCredits({
+          orgId: meta.orgId,
+          packId: meta.packId,
+          sourceKey: session.id,
+          actor: GATEWAY_ACTOR.stripe,
+        });
+      }
+      return NextResponse.json({ ok: true });
+    }
+    const orgId = meta?.orgId;
+    const planId = meta?.planId;
     if (orgId && planId && session?.payment_status === "paid") {
       const plan = getPlan(planId);
       const periodEnd = new Date();

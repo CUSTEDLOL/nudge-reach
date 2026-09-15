@@ -313,8 +313,8 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** create `credit-packs.ts`; modify `stripe.ts`, `settings/billing/actions.ts`, both webhooks, `plan-checkout.tsx` → `checkout-button.tsx`; `tests/credit-topup.test.ts`.
 
-- [ ] Tests (style of `tests/billing-confirm.test.ts`): `startCreditCheckoutAction creates a Razorpay order with kind:"credits" notes and the INR pack price`; `SGD org gets a Stripe redirect with credits metadata`; `USD org is refused (pack not sold)`; `unknown packId refused`; `confirmCreditCheckoutAction refuses wrong org, wrong kind, wrong amount, bad signature`; `grants 1,000 credits expiring +365d idempotent on paymentId`; `razorpay webhook grants once across two deliveries`; `stripe webhook grants once and never changes Org.plan`.
-- [ ] Implement.
+- [x] Tests (style of `tests/billing-confirm.test.ts`): `startCreditCheckoutAction creates a Razorpay order with kind:"credits" notes and the INR pack price`; `SGD org gets a Stripe redirect with credits metadata`; `USD org is refused (pack not sold)`; `unknown packId refused`; `confirmCreditCheckoutAction refuses wrong org, wrong kind, wrong amount, bad signature`; `grants 1,000 credits expiring +365d idempotent on paymentId`; `razorpay webhook grants once across two deliveries`; `stripe webhook grants once and never changes Org.plan`.
+- [x] Implement. (2026-09-16: `grantPurchasedCredits` lives in its own `credit-purchase.ts` rather than `credits.ts`; the audit row is written there with the paying admin as actor from the confirm action and `system` / `gateway:<razorpay|stripe>` from a webhook, following `founderAudit`'s non-user-actor pattern. `plan-checkout.tsx` is replaced by `checkout-button.tsx` (`CheckoutButton`); the "Current plan" state moved to `page.tsx`. The Razorpay `StartCheckoutResult.checkout` carries a `description` instead of `planId`/`planName`. The packs are not yet rendered on the billing page — that is Task 8.)
 
 ### Task 7: Founder controls + admin card (≈3h)
 

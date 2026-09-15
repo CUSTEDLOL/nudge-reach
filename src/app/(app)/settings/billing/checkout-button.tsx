@@ -4,12 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { startCheckoutAction, confirmCheckoutAction } from "./actions";
+import {
+  confirmCheckoutAction,
+  confirmCreditCheckoutAction,
+  startCheckoutAction,
+  startCreditCheckoutAction,
+} from "./actions";
 
 /**
- * Razorpay Checkout button. Loads the widget script on demand, creates an order
- * server-side, opens the hosted widget, then confirms server-side. Only
- * rendered when Razorpay is configured and the viewer can manage billing.
+ * One-time checkout button for a plan month or a credit pack. Loads the
+ * Razorpay widget script on demand, starts the checkout server-side, then
+ * either redirects to hosted Stripe Checkout (non-INR) or opens the widget
+ * and confirms server-side (INR). Only rendered when the org's gateway is
+ * configured and the viewer can manage billing.
  */
 declare global {
   interface Window {
@@ -30,22 +37,23 @@ function loadRazorpay(): Promise<boolean> {
   });
 }
 
-export function PlanCheckout({
-  planId,
-  planName,
-  current,
+export function CheckoutButton({
+  kind,
+  id,
+  label,
   orgName,
 }: {
-  planId: string;
-  planName: string;
-  current: boolean;
+  kind: "plan" | "credits";
+  /** planId or credit pack id. */
+  id: string;
+  label: string;
   orgName: string;
 }) {
   const { toast } = useToast();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
-  async function upgrade() {
+  async function pay() {
     setBusy(true);
     try {
       const ok = await loadRazorpay();
@@ -54,13 +62,14 @@ export function PlanCheckout({
         return;
       }
       const fd = new FormData();
-      fd.set("planId", planId);
-      const res = await startCheckoutAction(fd);
+      fd.set("planId", id);
+      const res =
+        kind === "plan" ? await startCheckoutAction(fd) : await startCreditCheckoutAction(id);
       if (!res.ok) {
         toast({ tone: "error", description: res.message });
         return;
       }
-      // USD orgs: hosted Stripe Checkout — leave the app.
+      // Non-INR orgs: hosted Stripe Checkout — leave the app.
       if (res.redirectUrl) {
         window.location.assign(res.redirectUrl);
         return;
@@ -76,14 +85,16 @@ export function PlanCheckout({
         amount: c.amount,
         currency: c.currency,
         name: orgName,
-        description: `${c.planName} plan`,
+        description: c.description,
         handler: async (r: Record<string, string>) => {
           const confirm = new FormData();
-          confirm.set("planId", planId);
           confirm.set("razorpay_order_id", r.razorpay_order_id);
           confirm.set("razorpay_payment_id", r.razorpay_payment_id);
           confirm.set("razorpay_signature", r.razorpay_signature);
-          const result = await confirmCheckoutAction(confirm);
+          const result =
+            kind === "plan"
+              ? await confirmCheckoutAction(confirm)
+              : await confirmCreditCheckoutAction(confirm);
           toast({
             tone: result.ok ? "success" : "error",
             description: result.message,
@@ -97,17 +108,9 @@ export function PlanCheckout({
     }
   }
 
-  if (current) {
-    return (
-      <Button variant="secondary" size="sm" disabled className="w-full">
-        Current plan
-      </Button>
-    );
-  }
-
   return (
-    <Button size="sm" className="w-full" loading={busy} onClick={upgrade}>
-      Upgrade to {planName}
+    <Button size="sm" className="w-full" loading={busy} onClick={pay}>
+      {label}
     </Button>
   );
 }
