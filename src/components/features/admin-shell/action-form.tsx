@@ -9,8 +9,15 @@ import {
   founderActionReady,
   requireReason,
 } from "@/modules/admin/confirmation";
+import type { OwnerSetupLink } from "@/modules/orgs/owner-setup";
 
-export type ActionFn = (formData: FormData) => Promise<{ ok: boolean; message: string }>;
+export interface ActionResult {
+  ok: boolean;
+  message: string;
+  setupLink?: OwnerSetupLink;
+}
+
+export type ActionFn = (formData: FormData) => Promise<ActionResult>;
 
 /**
  * The one form pattern for founder mutations: fields → optional confirm
@@ -28,6 +35,7 @@ export function ActionForm({
   askReason = false,
   disabled,
   className,
+  onSuccess,
 }: {
   action: ActionFn;
   /** Hidden inputs (orgId etc.). */
@@ -43,6 +51,8 @@ export function ActionForm({
   askReason?: boolean;
   disabled?: boolean;
   className?: string;
+  /** Receives structured data after a successful action; never put secrets in a toast. */
+  onSuccess?: (result: ActionResult) => void;
 }) {
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -92,6 +102,7 @@ export function ActionForm({
       if (res.ok) {
         setReason("");
         setConfirmation("");
+        onSuccess?.(res);
       }
     });
   }

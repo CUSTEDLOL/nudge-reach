@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { ActionForm, type ActionFn } from "./action-form";
+import { SetupLinkPanel } from "./setup-link-panel";
+import type { OwnerSetupLink } from "@/modules/orgs/owner-setup";
 
 /**
  * Founder-only: create a client's workspace after they pay on the demo call.
@@ -26,6 +28,7 @@ export function NewWorkspace({
   plans: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
+  const [setupLink, setSetupLink] = useState<OwnerSetupLink | null>(null);
 
   if (!open) {
     return (
@@ -46,11 +49,13 @@ export function NewWorkspace({
     <section className="mt-4 rounded-xl border border-neutral-200 bg-white p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-neutral-900">New workspace</h2>
+          <h2 className="text-sm font-semibold text-neutral-900">
+            {setupLink ? "Workspace created" : "New workspace"}
+          </h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-            Creates the workspace on the plan they paid for and emails the owner
-            a link to set their own password. It opens in test mode until a real
-            WhatsApp number is connected.
+            {setupLink
+              ? "Send this private link to the owner so they can choose a password and start onboarding."
+              : "Creates the workspace on the plan they paid for and a 7-day owner setup link. Email is sent when delivery is configured."}
           </p>
         </div>
         <button
@@ -63,6 +68,19 @@ export function NewWorkspace({
         </button>
       </div>
 
+      {setupLink ? (
+        <div className="mt-4 space-y-3">
+          <SetupLinkPanel setupLink={setupLink} />
+          <button
+            type="button"
+            onClick={() => setSetupLink(null)}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Create another workspace
+          </button>
+        </div>
+      ) : (
       <ActionForm
         action={action}
         submitLabel="Create workspace and invite the owner"
@@ -71,7 +89,10 @@ export function NewWorkspace({
         confirm={{
           title: "Create this workspace?",
           description:
-            "The owner is emailed a setup link straight away. Check the plan and the email address first.",
+            "A private 7-day setup link will be created. Check the plan and owner email first.",
+        }}
+        onSuccess={(result) => {
+          if (result.setupLink) setSetupLink(result.setupLink);
         }}
       >
         <div className="grid gap-3 sm:grid-cols-2">
@@ -117,6 +138,7 @@ export function NewWorkspace({
           </label>
         </div>
       </ActionForm>
+      )}
     </section>
   );
 }
