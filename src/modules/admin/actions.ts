@@ -1,8 +1,10 @@
 import { requireFounder, type FounderContext } from "@/modules/admin/auth";
+import type { OwnerSetupLink } from "@/modules/orgs/owner-setup";
 
 export interface AdminActionResult {
   ok: boolean;
   message: string;
+  setupLink?: OwnerSetupLink;
 }
 
 const SAFE_FAILURE_MESSAGE =

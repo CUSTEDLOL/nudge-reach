@@ -11,6 +11,12 @@ export interface OwnerSetupToken {
   expiresAt: Date;
 }
 
+export interface OwnerSetupLink {
+  url: string;
+  email: string;
+  expiresAt: string;
+}
+
 /** Issue a bearer token; callers persist only the hash and return the raw value once. */
 export function createOwnerSetupToken(now = new Date()): OwnerSetupToken {
   const token = randomBytes(32).toString("base64url");

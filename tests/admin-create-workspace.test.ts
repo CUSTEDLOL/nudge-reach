@@ -37,6 +37,15 @@ vi.mock("@/modules/email", () => ({
   appOrigin: () => "https://nudgeagent.app",
 }));
 
+const { createOwnerSetupToken } = vi.hoisted(() => ({
+  createOwnerSetupToken: vi.fn(() => ({
+    token: "a".repeat(43),
+    hash: "hashed-owner-setup-token",
+    expiresAt: new Date("2026-09-22T12:00:00.000Z"),
+  })),
+}));
+vi.mock("@/modules/orgs/owner-setup", () => ({ createOwnerSetupToken }));
+
 import { createWorkspace } from "@/modules/admin/create-workspace";
 import { PENDING_OWNER_PREFIX } from "@/modules/orgs/pending-owner";
 
@@ -76,12 +85,25 @@ describe("createWorkspace", () => {
   });
 
   it("invites the owner by email, normalized, and never issues a password", async () => {
-    await createWorkspace(INPUT);
+    const result = await createWorkspace(INPUT);
 
     expect(tx.invite.create).toHaveBeenCalledWith({
-      data: { orgId: "org-1", email: "owner@aster.in", role: "OWNER" },
+      data: {
+        orgId: "org-1",
+        email: "owner@aster.in",
+        role: "OWNER",
+        setupTokenHash: "hashed-owner-setup-token",
+        setupTokenExpiresAt: new Date("2026-09-22T12:00:00.000Z"),
+      },
+    });
+    expect(result.setupLink).toEqual({
+      url: `https://nudgeagent.app/invite/${"a".repeat(43)}`,
+      email: "owner@aster.in",
+      expiresAt: "2026-09-22T12:00:00.000Z",
     });
     const mail = sendEmail.mock.calls[0][0];
+    expect(mail.text).toContain(result.setupLink?.url);
+    expect(mail.html).toContain(result.setupLink?.url);
     expect(mail.text).not.toMatch(/password is|temporary password/i);
     expect(mail.html).toContain("you choose your own");
   });
@@ -128,6 +150,7 @@ describe("createWorkspace", () => {
 
     expect(res.ok).toBe(true);
     expect(res.message).toMatch(/couldn't be sent/i);
+    expect(res.setupLink?.url).toMatch(/\/invite\/[A-Za-z0-9_-]{43}$/);
   });
 
   it("records the creation in the workspace's own audit log", async () => {

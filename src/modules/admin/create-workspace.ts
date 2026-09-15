@@ -3,6 +3,10 @@ import { founderAudit } from "@/modules/admin/audit";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
 import { PLANS } from "@/modules/billing/plans";
 import { appOrigin, isEmailConfigured, sendEmail } from "@/modules/email";
+import {
+  createOwnerSetupToken,
+  type OwnerSetupLink,
+} from "@/modules/orgs/owner-setup";
 import { PENDING_OWNER_PREFIX, pendingOwnerId } from "@/modules/orgs/pending-owner";
 
 /**
@@ -20,6 +24,7 @@ export interface CreateWorkspaceResult {
   ok: boolean;
   message: string;
   orgId?: string;
+  setupLink?: OwnerSetupLink;
 }
 
 /** Plans a founder may put a new workspace on: everything except retired tiers. */
@@ -36,9 +41,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#039;");
 }
 
-function ownerInviteEmail(orgName: string, email: string) {
-  // ?invited=1 reveals the sign-up form even while open signup is closed.
-  const setupUrl = `${appOrigin()}/login?invited=1`;
+function ownerInviteEmail(orgName: string, email: string, setupUrl: string) {
   return {
     to: email,
     subject: `Set up your Nudge workspace, ${orgName}`,
@@ -121,6 +124,8 @@ export async function createWorkspace(input: {
     };
   }
 
+  const issued = createOwnerSetupToken();
+
   const org = await prisma.$transaction(async (tx) => {
     const created = await tx.org.create({
       data: {
@@ -136,7 +141,13 @@ export async function createWorkspace(input: {
       select: { id: true, name: true },
     });
     await tx.invite.create({
-      data: { orgId: created.id, email, role: "OWNER" },
+      data: {
+        orgId: created.id,
+        email,
+        role: "OWNER",
+        setupTokenHash: issued.hash,
+        setupTokenExpiresAt: issued.expiresAt,
+      },
     });
     await founderAudit(
       created.id,
@@ -148,18 +159,24 @@ export async function createWorkspace(input: {
     );
     return created;
   });
+  const setupLink: OwnerSetupLink = {
+    url: `${appOrigin().replace(/\/$/, "")}/invite/${issued.token}`,
+    email,
+    expiresAt: issued.expiresAt.toISOString(),
+  };
 
   if (!isEmailConfigured()) {
     return {
       ok: true,
       orgId: org.id,
-      message: `Created "${org.name}" on ${plan.name}. Email isn't configured, so send ${email} the sign-in link yourself — they'll land in this workspace.`,
+      setupLink,
+      message: `Created "${org.name}" on ${plan.name}. Copy the 7-day setup link and send it to ${email}.`,
     };
   }
 
   let delivered = false;
   try {
-    delivered = (await sendEmail(ownerInviteEmail(org.name, email))).ok;
+    delivered = (await sendEmail(ownerInviteEmail(org.name, email, setupLink.url))).ok;
   } catch {
     delivered = false;
   }
@@ -167,6 +184,7 @@ export async function createWorkspace(input: {
   return {
     ok: true,
     orgId: org.id,
+    setupLink,
     message: delivered
       ? `Created "${org.name}" on ${plan.name}. A setup email is on its way to ${email}.`
       : `Created "${org.name}" on ${plan.name}. The setup email couldn't be sent — send ${email} the sign-in link yourself.`,

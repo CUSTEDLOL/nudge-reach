@@ -26,6 +26,6 @@ export async function createWorkspaceAction(
       revalidatePath("/admin/orgs");
       revalidatePath("/admin");
     }
-    return { ok: res.ok, message: res.message };
+    return { ok: res.ok, message: res.message, setupLink: res.setupLink };
   });
 }
