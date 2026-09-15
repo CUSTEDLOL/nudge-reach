@@ -62,6 +62,16 @@
   + 12 restaurant facts; 13 stale test questions dismissed).
   `scripts/prod-env-setup.sh` sets `FOUNDER_EMAILS` + `CRON_SECRET` (Vercel
   + GitHub) and optionally Razorpay/Resend, then redeploys — founder runs it.
+- **Voice, two more fixes (same day):** (a) "Call your AI" was gated to the
+  single `VOICE_TEST_ORG_ID` workspace. Proven with a fake-mic js_sdk session
+  that ElevenLabs applies only the client-supplied overrides/dynamic
+  variables (the initiation webhook is not consulted for browser sessions),
+  so the gate went and the webhook now 404s any request without a dialled
+  number. `VOICE_TEST_ORG_ID` removed everywhere. (b) `next.config.ts` had
+  sent `Permissions-Policy: microphone=()` since 2026-08-29, which blocks
+  getUserMedia in Chrome on every page — the browser call could never start;
+  now `microphone=(self)`. Verified through the deployed app with a fake
+  microphone ("Your AI is talking", hang-up, filed).
 
 ## Pricing re-set with included credits; one pricing record (2026-09-15) ✅
 

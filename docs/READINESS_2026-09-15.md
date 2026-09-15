@@ -22,6 +22,16 @@ number and an email key that only the account holders can obtain.
   restaurant facts, 13 stale test questions dismissed. Verified: the AI now
   quotes the private room for 20 and tandoori prawns at ₹650.
 - `scripts/prod-env-setup.sh` written for the two Vercel switches.
+- **Third and fourth defects, found when the founder pressed Call your AI in
+  another workspace.** (a) Browser calls were limited to the one workspace
+  named in `VOICE_TEST_ORG_ID`. Verified against ElevenLabs that a browser
+  session runs entirely on the prompt and signed token our server hands the
+  browser, so the gate was unnecessary; removed, every workspace can call
+  its own AI, none can reach another's. (b) A security header added on
+  29 August (`Permissions-Policy: microphone=()`) blocked the microphone on
+  every page in Chrome, so the browser call could never start; now
+  `microphone=(self)`. Verified after deploy with an automated fake-microphone
+  call through the real app: "Your AI is talking".
 
 ## What was tested, on production, as a real logged-in client
 
