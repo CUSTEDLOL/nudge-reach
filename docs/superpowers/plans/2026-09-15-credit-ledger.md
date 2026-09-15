@@ -320,8 +320,8 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** `admin/org-controls.ts`, `orgs/audit.ts`, `admin/orgs/[id]/actions.ts`, `admin/orgs/[id]/controls/page.tsx`; `tests/credit-founder-controls.test.ts`.
 
-- [ ] Tests: `grantCredits rejects 0, non-integers, > 400,000, > 730 days`; `writes the founder grant in the same transaction as the admin.credits_granted audit row`; `setIncludedCreditsOverride audits before → after and tops up this month`; `null clears the override`.
-- [ ] Implement; add the card.
+- [x] Tests: `grantCredits rejects 0, non-integers, > 400,000, > 730 days`; `writes the founder grant in the same transaction as the admin.credits_granted audit row`; `setIncludedCreditsOverride audits before → after and tops up this month`; `null clears the override`. (2026-09-16: also `rejects negative or non-integer overrides`, `accepts 0`, `orgCreditSummary lists only the org's unexpired grants, newest first`.)
+- [x] Implement; add the card. (2026-09-16: the grant writer and the card's summary query live in `billing/credit-admin.ts`, not `credits.ts`; `founderAudit` now returns the audit row id so the founder grant can be keyed on it inside the same transaction.)
 
 ### Task 8: Customer UI + low-balance email (≈4h)
 

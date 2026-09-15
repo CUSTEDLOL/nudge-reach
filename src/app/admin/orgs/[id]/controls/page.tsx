@@ -4,11 +4,21 @@ import { prisma } from "@/lib/db";
 import { getPlan, PLANS } from "@/modules/billing/plans";
 import { sanitizeFeatureOverrides } from "@/modules/billing/limits";
 import { trialDaysLeft } from "@/modules/billing/trial";
+import { microUsdToCredits } from "@/modules/billing/credit-rates";
+import {
+  DEFAULT_FOUNDER_GRANT_DAYS,
+  MAX_FOUNDER_CREDITS,
+  MAX_FOUNDER_GRANT_DAYS,
+  orgCreditSummary,
+} from "@/modules/billing/credit-admin";
 import { SUBSCRIPTION_STATUSES } from "@/modules/admin/org-controls";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
 import {
+  grantCreditsAction,
   setFeatureOverridesAction,
+  setIncludedCreditsOverrideAction,
   setLiveModeAction,
   setPlanAction,
   setSubscriptionStatusAction,
@@ -19,6 +29,10 @@ import {
 
 const inputCls =
   "h-9 rounded-lg border border-neutral-300 bg-white px-2.5 text-sm outline-none focus:border-neutral-500";
+
+/** Micro-USD → credits with one decimal, for the credit card. */
+const fmtCredits = (micro: number) =>
+  microUsdToCredits(micro).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const FLAGS = [
   ["aiFrontDesk", "Real actions (booking, payment links, follow-ups)"],
@@ -53,13 +67,16 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
       trialEndsAt: true,
       subscriptionStatus: true,
       voiceMinutesOverride: true,
+      includedCreditsOverride: true,
       featureOverrides: true,
       _count: { select: { whatsappAccounts: true } },
     },
   });
   if (!org) notFound();
+  const credits = await orgCreditSummary(org.id);
 
   const plan = getPlan(org.plan);
+  const enterpriseWithoutAmount = plan.contactOnly && org.includedCreditsOverride === null;
   const overrides = sanitizeFeatureOverrides(org.featureOverrides) as Record<string, unknown>;
   const trialLeft = trialDaysLeft(org.trialEndsAt);
   const hidden = { orgId: org.id };
@@ -223,6 +240,118 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
             />
             <span className="text-sm text-neutral-500">minutes / month</span>
           </ActionForm>
+        </CardContent>
+      </Card>
+
+      <Card className={`lg:col-span-2 ${enterpriseWithoutAmount ? "border-amber-200" : ""}`}>
+        <CardHeader>
+          <CardTitle>AI credits</CardTitle>
+          <CardDescription>
+            Balance <span className="font-medium text-neutral-900">{fmtCredits(credits.balanceMicroUsd)} credits</span>.{" "}
+            {plan.contactOnly
+              ? org.includedCreditsOverride === null
+                ? "Enterprise: no included amount set."
+                : `Enterprise: ${org.includedCreditsOverride} included credits per paid period.`
+              : `${plan.name} includes ${plan.includedCredits ?? "no"} credits per paid period.`}{" "}
+            Purchased and founder credits are spent soonest-expiring first.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {enterpriseWithoutAmount && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Enterprise with no included-credits amount: AI is paused until one is set.
+            </p>
+          )}
+
+          {credits.grants.length === 0 ? (
+            <p className="text-sm text-neutral-500">No unexpired credit grants.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-neutral-100">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-t-0 hover:bg-transparent">
+                    <TableHead>Kind</TableHead>
+                    <TableHead className="text-right">Remaining / issued</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead>Note</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {credits.grants.map((g) => (
+                    <TableRow key={g.id}>
+                      <TableCell className="capitalize">{g.kind}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {fmtCredits(g.remainingMicroUsd)} / {fmtCredits(g.amountMicroUsd)}
+                      </TableCell>
+                      <TableCell className="tabular-nums">{g.expiresAt.toISOString().slice(0, 10)}</TableCell>
+                      <TableCell className="text-neutral-500">{g.note ?? ""}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-neutral-900">Grant credits</p>
+              <ActionForm
+                action={grantCreditsAction}
+                hidden={hidden}
+                submitLabel="Grant"
+                confirm={{ title: "Grant AI credits?", description: "Written to the org's audit log with your reason." }}
+                askReason
+                className="flex flex-wrap items-center gap-2"
+              >
+                <input
+                  name="credits"
+                  type="number"
+                  min={1}
+                  max={MAX_FOUNDER_CREDITS}
+                  placeholder="credits"
+                  className={`${inputCls} w-28`}
+                  aria-label="Credits to grant"
+                />
+                <input
+                  name="expiresInDays"
+                  type="number"
+                  min={1}
+                  max={MAX_FOUNDER_GRANT_DAYS}
+                  placeholder={String(DEFAULT_FOUNDER_GRANT_DAYS)}
+                  className={`${inputCls} w-24`}
+                  aria-label="Expires in days"
+                />
+                <span className="text-sm text-neutral-500">days</span>
+              </ActionForm>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-neutral-900">Included credits (Enterprise)</p>
+              <ActionForm
+                action={setIncludedCreditsOverrideAction}
+                hidden={hidden}
+                submitLabel="Save amount"
+                confirm={{
+                  title: "Change the included credits?",
+                  description: "Applies to this period immediately and to every period after.",
+                }}
+                askReason
+                className="flex flex-wrap items-center gap-2"
+              >
+                <input
+                  name="credits"
+                  type="number"
+                  min={0}
+                  max={MAX_FOUNDER_CREDITS}
+                  defaultValue={org.includedCreditsOverride ?? ""}
+                  placeholder="none"
+                  className={`${inputCls} w-28`}
+                  aria-label="Included credits per period"
+                />
+                <span className="text-sm text-neutral-500">credits / period · blank clears</span>
+              </ActionForm>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

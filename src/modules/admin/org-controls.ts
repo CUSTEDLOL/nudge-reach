@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { trialGrant } from "@/modules/billing/credits";
+import { topUpIncludedGrant, trialGrant } from "@/modules/billing/credits";
+import { MAX_FOUNDER_CREDITS, founderGrantError, grantFounderCredits } from "@/modules/billing/credit-admin";
 import { sanitizeFeatureOverrides, type FeatureOverrides } from "@/modules/billing/limits";
 import { trialEndDate } from "@/modules/billing/trial";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
@@ -35,6 +36,7 @@ async function loadOrg(orgId: string) {
       subscriptionStatus: true,
       currentPeriodEnd: true,
       voiceMinutesOverride: true,
+      includedCreditsOverride: true,
       featureOverrides: true,
       whatsappAccounts: { select: { id: true }, take: 1 },
     },
@@ -198,6 +200,73 @@ export async function setVoiceMinutes(
     );
   });
   return { ok: true, message: minutes === null ? "Back on the plan's minutes." : `${minutes} minutes/month.` };
+}
+
+/**
+ * Add AI credits to the org's ledger (goodwill, an offline deal, a pilot).
+ * The audit row is written first and the grant is keyed on its id, in one
+ * transaction: no grant without its record, and a retry cannot grant twice.
+ */
+export async function grantCredits(
+  orgId: string,
+  credits: number,
+  expiresInDays: number | null,
+  founderEmail: string,
+  reason?: string
+): Promise<FounderResult> {
+  const invalid = founderGrantError(credits, expiresInDays);
+  if (invalid) return { ok: false, error: invalid };
+  const org = await loadOrg(orgId);
+  if (!org) return { ok: false, error: "Org not found." };
+  const { expiresAt } = await prisma.$transaction(async (tx) => {
+    const auditId = await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.credits_granted",
+      org.name,
+      withReason(`+${credits} credits, ${expiresInDays === null ? "default" : `${expiresInDays}-day`} expiry`, reason),
+      tx
+    );
+    return grantFounderCredits(tx, { orgId: org.id, credits, expiresInDays, auditId, note: reason });
+  });
+  return { ok: true, message: `${credits} credits granted, expiring ${fmt(expiresAt)}.` };
+}
+
+/** Enterprise's included credits per paid period; null clears it (AI pauses until one is set). */
+export async function setIncludedCreditsOverride(
+  orgId: string,
+  credits: number | null,
+  founderEmail: string,
+  reason?: string
+): Promise<FounderResult> {
+  if (credits !== null && (!Number.isInteger(credits) || credits < 0 || credits > MAX_FOUNDER_CREDITS)) {
+    return {
+      ok: false,
+      error: `Credits must be a whole number from 0 to ${MAX_FOUNDER_CREDITS.toLocaleString("en-US")}, or blank to clear.`,
+    };
+  }
+  const org = await loadOrg(orgId);
+  if (!org) return { ok: false, error: "Org not found." };
+  if (org.includedCreditsOverride === credits) return { ok: false, error: "No change." };
+  await prisma.$transaction(async (tx) => {
+    await tx.org.update({ where: { id: org.id }, data: { includedCreditsOverride: credits } });
+    await founderAudit(
+      org.id,
+      founderEmail,
+      "admin.included_credits_changed",
+      org.name,
+      withReason(`${org.includedCreditsOverride ?? "none"} → ${credits ?? "none"}`, reason),
+      tx
+    );
+  });
+  // An Enterprise org gets this period's credits now rather than on the next
+  // cron tick. Only Enterprise reads the override (meteringFor), so for every
+  // other plan this finds nothing to add and is a no-op.
+  await topUpIncludedGrant(org.id);
+  return {
+    ok: true,
+    message: credits === null ? "Included credits cleared — AI is paused until an amount is set." : `${credits} included credits per period.`,
+  };
 }
 
 /** Suspend: app locked + every outbound send refused (enforced in core). */

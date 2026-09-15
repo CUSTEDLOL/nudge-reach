@@ -9,6 +9,8 @@ import type { OwnerSetupLink } from "@/modules/orgs/owner-setup";
  * their workspace (Settings → Audit log renders the admin.* labels). Founders
  * are not org members, so this writes directly rather than via recordAudit.
  * Awaited, not fire-and-forget: an unaudited founder change must not happen.
+ * Returns the row id so a change can be keyed on its own audit entry (a
+ * founder credit grant uses it as the grant's idempotency key).
  */
 export type FounderAuditAction = Extract<AuditAction, `admin.${string}`>;
 type AuditClient = Pick<Prisma.TransactionClient, "auditLog">;
@@ -20,8 +22,8 @@ export async function founderAudit(
   target?: string | null,
   detail?: string | null,
   db: AuditClient = prisma
-): Promise<void> {
-  await db.auditLog.create({
+): Promise<string> {
+  const row = await db.auditLog.create({
     data: {
       orgId,
       actorUserId: "founder",
@@ -30,7 +32,9 @@ export async function founderAudit(
       target: target?.slice(0, 200) ?? null,
       detail: detail?.slice(0, 500) ?? null,
     },
+    select: { id: true },
   });
+  return row.id;
 }
 
 /** Shared result shape for every founder mutation. */

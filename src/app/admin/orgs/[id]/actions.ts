@@ -5,9 +5,11 @@ import { runFounderAction, type AdminActionResult } from "@/modules/admin/action
 import { requireReason } from "@/modules/admin/confirmation";
 import { setOrgPlan } from "@/modules/admin/set-plan";
 import {
+  grantCredits,
   parseOverridesForm,
   setFeatureOverrides,
   setFounderNotes,
+  setIncludedCreditsOverride,
   setLiveMode,
   setSubscriptionStatus,
   setSuspended,
@@ -90,6 +92,29 @@ export async function setVoiceMinutesAction(formData: FormData): Promise<AdminAc
       const raw = str(formData, "minutes");
       const minutes = raw === "" ? null : Number(raw);
       return done(orgId, await setVoiceMinutes(orgId, minutes, founder.email, reason));
+    });
+  });
+}
+
+export async function grantCreditsAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    return withRequiredReason(formData, async (reason) => {
+      const orgId = str(formData, "orgId");
+      const credits = Number(str(formData, "credits"));
+      const rawDays = str(formData, "expiresInDays");
+      const expiresInDays = rawDays === "" ? null : Number(rawDays);
+      return done(orgId, await grantCredits(orgId, credits, expiresInDays, founder.email, reason));
+    });
+  });
+}
+
+export async function setIncludedCreditsOverrideAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    return withRequiredReason(formData, async (reason) => {
+      const orgId = str(formData, "orgId");
+      const raw = str(formData, "credits");
+      const credits = raw === "" ? null : Number(raw);
+      return done(orgId, await setIncludedCreditsOverride(orgId, credits, founder.email, reason));
     });
   });
 }

@@ -48,6 +48,8 @@ export type AuditAction =
   | "admin.subscription_changed"
   | "admin.mode_changed"
   | "admin.voice_minutes_changed"
+  | "admin.credits_granted"
+  | "admin.included_credits_changed"
   | "admin.suspended"
   | "admin.unsuspended"
   | "admin.overrides_changed"
@@ -108,6 +110,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.subscription_changed": "Nudge support changed the subscription status",
   "admin.mode_changed": "Nudge support switched live/test mode",
   "admin.voice_minutes_changed": "Nudge support changed the call-minute allowance",
+  "admin.credits_granted": "Nudge support granted AI credits",
+  "admin.included_credits_changed": "Nudge support changed the included AI credits",
   "admin.suspended": "Nudge support suspended the workspace",
   "admin.unsuspended": "Nudge support lifted the suspension",
   "admin.overrides_changed": "Nudge support changed feature overrides",
