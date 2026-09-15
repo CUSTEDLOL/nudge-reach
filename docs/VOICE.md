@@ -42,10 +42,7 @@ month, no card) with no carrier and no number:
    shared agent, the webhook tools and the post-call webhook, enables the
    permitted per-call overrides, and prints `ELEVENLABS_AGENT_ID` and
    `ELEVENLABS_WEBHOOK_SECRET` — add both to `.env.local`.
-4. Set `VOICE_TEST_ORG_ID` to the workspace you want to test with (its org id).
-   A browser conversation carries no dialled number, so this names the single
-   workspace such a call may reach — we refuse rather than guess a tenant.
-5. Restart the app, open **Settings → Voice**, and press **Call your AI**. Allow
+4. Restart the app, open **Settings → Voice**, and press **Call your AI**. Allow
    the microphone. You are talking to your own front desk, with your knowledge
    base, tone and language, and its bookings land in your inbox.
 

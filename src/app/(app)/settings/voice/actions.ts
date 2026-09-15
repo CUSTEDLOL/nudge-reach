@@ -112,9 +112,11 @@ export interface BrowserCallResult extends ActionResult {
  * no carrier, no per-minute carrier fee. The conversation still runs through
  * the real agent, so it hears the same knowledge and uses the same tools.
  *
- * A browser conversation carries no dialled number, so ElevenLabs cannot tell
- * us which business it belongs to. VOICE_TEST_ORG_ID names the single
- * workspace such a call is allowed to reach; we refuse rather than guess.
+ * A browser conversation carries no dialled number, so the phone-call
+ * initiation webhook cannot name its business — and it does not need to:
+ * this action builds the workspace's own prompt and a signed tool token and
+ * the browser passes them straight into the session. Every workspace can
+ * call its own AI; none can reach another's.
  */
 export async function startBrowserCallAction(): Promise<BrowserCallResult> {
   const ctx = await requireOrgContext();
@@ -127,12 +129,11 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
   if (!env.ELEVENLABS_API_KEY || !env.ELEVENLABS_AGENT_ID || !env.VOICE_TOOLS_SECRET) {
     return { ok: false, message: "Voice isn't configured yet — add the ElevenLabs keys and run the setup script." };
   }
-  if (env.VOICE_TEST_ORG_ID !== ctx.org.id) {
-    return {
-      ok: false,
-      message: "Browser calls are switched on for one workspace at a time. Ask Nudge to point VOICE_TEST_ORG_ID at this one.",
-    };
-  }
+  // Any workspace may call its own AI from the browser. The session is
+  // tenant-bound by what this action hands the browser: the prompt override
+  // and dynamic variables (org_id + a signed tool token). Verified on
+  // 2026-09-15 against ElevenLabs: a js_sdk session runs on the client's
+  // overrides and variables; the phone-call initiation webhook is not applied.
 
   const [number, profile, entries] = await Promise.all([
     prisma.voiceNumber.findFirst({ where: { orgId: ctx.org.id, enabled: true } }),

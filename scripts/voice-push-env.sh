@@ -18,7 +18,7 @@ echo "run: vercel logout && vercel login && vercel link --yes --project nudge-re
 read -r -p "Push the voice env to THIS account's project and deploy? [y/N] " ok
 [ "$ok" = "y" ] || { echo "Aborted."; exit 1; }
 for name in ELEVENLABS_API_KEY ELEVENLABS_AGENT_ID ELEVENLABS_WEBHOOK_SECRET ELEVENLABS_LLM \
-            VOICE_INITIATION_SECRET VOICE_TOOLS_SECRET VOICE_TEST_ORG_ID; do
+            VOICE_INITIATION_SECRET VOICE_TOOLS_SECRET; do
   # `|| true`: a missing key must skip, not abort the loop under set -e/pipefail.
   value=$(grep -E "^${name}=" .env.local | head -1 | cut -d= -f2- | sed -E 's/^"//; s/"$//' || true)
   if [ -z "$value" ]; then echo "skip  $name (not in .env.local)"; continue; fi

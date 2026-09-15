@@ -59,7 +59,6 @@ export const envSchema = z
     // identify a tenant on their own. This names the single workspace such a
     // conversation is allowed to reach — a founder demo switch, never a client
     // feature. Unset = browser test calls are refused.
-    VOICE_TEST_ORG_ID: z.string().optional(),
 
     // CRM integrations (optional — without keys the simulation provider is used)
     ZOHO_CLIENT_ID: z.string().optional(),

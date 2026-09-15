@@ -1,11 +1,18 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ testOrg: "org1" as string | undefined }));
+/**
+ * The initiation webhook serves phone calls only. A browser "Call your AI"
+ * session never comes through here: the settings page builds the workspace's
+ * own prompt and a signed tool token and hands them to the browser directly
+ * (verified against ElevenLabs on 2026-09-15 — a js_sdk session runs on the
+ * client's overrides and variables). So a request with no dialled number has
+ * no tenant, and the route must refuse rather than guess one.
+ */
+
 vi.mock("@/lib/env", () => ({
   env: {
     get VOICE_INITIATION_SECRET() { return "s3cret"; },
     VOICE_TOOLS_SECRET: "tool-secret",
-    get VOICE_TEST_ORG_ID() { return state.testOrg; },
     SEND_MODE: "live",
   },
 }));
@@ -13,10 +20,14 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     voiceNumber: {
       findUnique: vi.fn(async () => null),
-      findFirst: vi.fn(async () => ({
-        id: "vn1", orgId: "org1", phoneE164: "+918000000001", language: "hi",
-        voiceId: "v1", transferTo: "+919800000000", enabled: true,
-      })),
+      findFirst: vi.fn(async ({ where }: { where: { phoneE164?: string } }) =>
+        where.phoneE164 === "+918000000001"
+          ? {
+              id: "vn1", orgId: "org1", phoneE164: "+918000000001", language: "hi",
+              voiceId: "v1", transferTo: "+919800000000", enabled: true,
+            }
+          : null
+      ),
     },
     org: {
       findUnique: vi.fn(async ({ select }: { select?: Record<string, boolean> }) =>
@@ -44,23 +55,20 @@ const ring = (body: unknown) =>
     headers: { "content-type": "application/json", "x-nudge-voice-secret": "s3cret" },
   }));
 
-beforeEach(() => { state.testOrg = "org1"; });
+describe("initiation webhook tenant resolution", () => {
+  it("refuses a request with no dialled number — never guesses a tenant", async () => {
+    expect((await ring({ agent_id: "a", conversation_id: "c" })).status).toBe(404);
+    expect((await ring({ caller_id: "+919876543210", agent_id: "a" })).status).toBe(404);
+  });
 
-describe("browser / no-phone conversations", () => {
-  it("serves the configured test workspace when there is no dialled number", async () => {
-    const res = await ring({ agent_id: "a", conversation_id: "c" });
+  it("serves the business behind the dialled number, with that line's settings", async () => {
+    const res = await ring({ caller_id: "+919876543210", called_number: "+918000000001", agent_id: "a" });
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.dynamic_variables.org_id).toBe("org1");
+    expect(json.dynamic_variables.call_source).toBe("phone");
     expect(json.conversation_config_override.agent.prompt.prompt).toContain("Open 9–7");
-    // it borrows the org's own number settings so the test sounds like the real line
     expect(json.conversation_config_override.agent.language).toBe("hi");
     expect(json.conversation_config_override.tts).toEqual({ voice_id: "v1" });
-    expect(json.conversation_config_override.agent.prompt.prompt).not.toContain("call `transfer_to_number`");
-  });
-
-  it("refuses when no test workspace is configured — never guesses a tenant", async () => {
-    state.testOrg = undefined;
-    expect((await ring({ agent_id: "a" })).status).toBe(404);
   });
 });

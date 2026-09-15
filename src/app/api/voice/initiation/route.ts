@@ -38,25 +38,17 @@ export async function POST(request: Request) {
   };
   const called = e164(body.called_number);
   const caller = e164(body.caller_id);
-  const source = called && caller ? "phone" : "browser";
+  const source = "phone" as const;
   const contactPhone = caller || "+999000000000";
 
-  // A phone call names the business by the number it dialled. A browser or
-  // dashboard test call names nothing, so it may only reach the one workspace
-  // VOICE_TEST_ORG_ID points at — we never guess a tenant from client input.
+  // A phone call names the business by the number it dialled; that is the
+  // only way this webhook may pick a tenant. Browser test calls never come
+  // through here: the settings page hands the browser its own workspace's
+  // prompt and a signed tool token directly (verified 2026-09-15), so a
+  // request without a dialled number is refused rather than guessed.
   const number = called
     ? await prisma.voiceNumber.findFirst({ where: { phoneE164: called, enabled: true } })
-    : env.VOICE_TEST_ORG_ID
-      ? ((await prisma.voiceNumber.findFirst({
-          where: { orgId: env.VOICE_TEST_ORG_ID, enabled: true },
-        })) ?? {
-          orgId: env.VOICE_TEST_ORG_ID,
-          phoneE164: "browser",
-          language: "en",
-          voiceId: null,
-          transferTo: null,
-        })
-      : null;
+    : null;
   if (!number) {
     return NextResponse.json({ error: "unknown number" }, { status: 404 });
   }

@@ -9,7 +9,6 @@ touch a live vendor for the first time are marked **first-run**.
 1. ElevenLabs account → **API keys** → create one.
 2. `.env.local`: `ELEVENLABS_API_KEY`, `ELEVENLABS_LLM=claude-haiku-4-5`,
    `VOICE_INITIATION_SECRET` and `VOICE_TOOLS_SECRET` (two long random strings),
-   `VOICE_TEST_ORG_ID` (the org the **Call your AI** button talks to),
    `NEXT_PUBLIC_APP_URL=https://nudgeagent.app`.
 3. **First-run:** run the setup script (command at the top of
    `scripts/voice-setup.ts`). It creates the shared agent, the three webhook
@@ -53,7 +52,7 @@ touch a live vendor for the first time are marked **first-run**.
 4. Knowledge: the AI answers only from what's on **AI Agent → Knowledge**.
    Hours, prices, services, address, booking policy must be there. Ask it
    "how much is a consultation?" on **Settings → Voice → Call your AI**
-   (set `VOICE_TEST_ORG_ID` to this workspace's org id for that button).
+   (works in every workspace; no configuration needed).
 5. **Reminder calls stay off** unless the client asks (Settings → Voice).
 
 ### The 5-minute live test (do it on the client's line, with them)
