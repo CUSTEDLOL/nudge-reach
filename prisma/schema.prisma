@@ -181,16 +181,18 @@ model Membership {
   @@index([userId])
 }
 
-// Email invite to join an org. status: "pending" | "accepted". No invite
-// emails in the MVP — a matching signup auto-accepts (lib/org.ts).
+// Invite to join an org. status: "pending" | "accepted". Owner invites may
+// carry a hashed, expiring setup token; a matching signup also auto-accepts.
 model Invite {
-  id        String   @id @default(cuid())
-  orgId     String
-  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  email     String
-  role      OrgRole  @default(AGENT)
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
+  id                  String    @id @default(cuid())
+  orgId               String
+  org                 Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email               String
+  role                OrgRole   @default(AGENT)
+  status              String    @default("pending")
+  setupTokenHash      String?   @unique
+  setupTokenExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
 
   @@unique([orgId, email])
 }
