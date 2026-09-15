@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Database tasks require the `supabase:supabase-postgres-best-practices` skill before editing `prisma/schema.prisma`.
 
-**Goal:** Turn "included AI credits" from a displayed promise into a real, metered balance: every platform-paid LLM call and every Nudge-funded voice minute debits an org-scoped credit ledger; a zero balance pauses platform-paid AI and voice only; included credits reset each cycle; purchased credits expire after 12 months and are spent soonest-expiring first; top-up packs are bought through the existing Razorpay/Stripe flows; founders can grant credits and set Enterprise amounts.
+**Goal:** Turn "included AI credits" from a displayed promise into a real, metered balance: every platform-paid LLM call that serves the customer (agent replies, reply suggestions, summaries, campaign copy) debits an org-scoped credit ledger; a zero balance pauses platform-paid AI only; included credits are issued per paid billing period; purchased credits expire after 12 months and are spent soonest-expiring first; top-up packs are bought through the existing Razorpay/Stripe flows; founders can grant credits and set Enterprise amounts.
+
+**Founder decisions (2026-09-15) that shaped this revision:** rate card on Sonnet 5 ($2/$10); voice minutes are included free and stay on the existing per-plan minute cap — voice never touches the ledger; knowledge ingest/distill (concierge setup) is absorbed by Nudge, never charged; included credits reset on the customer's payment date, not the calendar month; comped plans must be marked active in admin to receive credits; a one-call overdraft is accepted.
 
 **Architecture:** Two new tables in `src/modules/billing/` (`CreditGrant` = every positive balance with its own expiry; `CreditDebit` = one row per priced call, idempotent on the `AiUsage`/`VoiceCall` row it prices). Balance = `SUM(remainingMicroUsd)` over unexpired grants. Debits allocate FIFO-by-expiry inside a single Postgres transaction using `SELECT … FOR UPDATE` on the org's grant rows. The unit of account is **micro-USD** (integer; `1 credit = 5,000 micro-USD`), already the convention in `AiUsage.costMicroUsd`, so fractions accumulate exactly and nothing is ever rounded up per call. The debit hook lives in `src/lib/model-router/index.ts` (the single doorway, invariant #3): a cheap preflight (balance > 0) before the provider call, an exact post-hoc debit after it. `src/lib/model-router/usage.ts` stays as analytics; the ledger never reads its prices.
 
@@ -15,7 +17,7 @@
 - Never write the banned word list from `tests/no-crypto-references.test.ts` anywhere (say "credit ledger" / "credit balance").
 - Every ledger function takes `orgId` and every query filters by it (invariant #5). New tables get RLS enabled with no policies via `npm run db:rls` after `npm run db:push` (see `scripts/enable-rls.ts`, `PROGRESS.md` "RLS enabled on Org").
 - Missing cost information is never free: an unpriced model is refused **before** the provider is called; a failed debit write is logged with a stable tag and re-driven by the reconciler; it is never swallowed like `usage.ts:76-79`.
-- The ledger only ever pauses platform-paid AI and Nudge-funded voice. It must not touch `sendMessage`, the send queue, follow-ups, campaigns, CRM sync, scoring or the API.
+- The ledger only ever pauses platform-paid AI. It must not touch `sendMessage`, the send queue, follow-ups, campaigns, CRM sync, scoring, the API, or voice (voice keeps its own minute cap in `src/modules/voice/usage.ts`).
 - BYOK inference (`getByokRuntime` in `src/lib/model-router/byok.ts`) is never preflighted or debited.
 - Keep it minimum viable: no reservations, no spending limits, no auto-recharge, no refunds UI.
 
@@ -23,12 +25,12 @@
 
 1. **Unit of account = micro-USD integers.** `AiUsage.costMicroUsd` (`prisma/schema.prisma:769-793`) already uses it. Credits are a display conversion (`microUsd / 5_000`, one decimal). Row amounts fit `Int` up to ~429,000 credits per row; founder grants are capped at 400,000 credits.
 2. **Simulation = shadow ledger, never gated.** "Simulated" for the ledger means *no provider was paid*: `env.SEND_MODE === "simulation"` (global switch, `src/lib/env-schema.ts:24`) **or** the call was the synthetic keyless path (`recordSyntheticUsage` callers in `suggest-reply.ts:139`, `summarize.ts:57`, `distill.ts:64`). Shadow debits are written with `simulated: true`, allocations empty, and touch no grant. They never block. This is stronger than the spec's "never consumes purchased credit" and is what lets the whole product demo with zero keys (invariant #4). `Org.simulated` (test-mode org on a live deployment) is **not** simulation for the ledger: with an `ANTHROPIC_API_KEY` set those calls cost Nudge real money and are metered and gated (this is how the 100-credit trial is enforced). Tradeoff: a dev deployment running `SEND_MODE=simulation` with a real key meters nothing; production runs live.
-3. **Included credits reset on the calendar month (UTC).** There is no recurring subscription: checkout is a one-time monthly payment that sets `Org.currentPeriodEnd = now + 1 month` (`settings/billing/actions.ts:170-181`, `webhooks/razorpay/route.ts:48-61`, `webhooks/stripe/route.ts:33-50`). Campaign messages and voice minutes already reset on the calendar month (`limits.ts:262`, `voice/usage.ts:36-38`). The included grant for month `YYYY-MM` is idempotent on `(orgId, "included", "YYYY-MM")` and expires at the first of the next month. Tradeoff: a customer who pays on the 20th gets a full month's credits for ten days, then a fresh grant on the 1st; simple and consistent with the rest of the product. Alternative (tie to `currentPeriodEnd`) is noted as out of scope.
-4. **Who gets a monthly included grant:** metered orgs with `subscriptionStatus === "active"` or `plan === "enterprise"`, and no live trial. A founder who comps a plan via `npm run plan:set` must also mark the subscription active in the admin panel (`setSubscriptionStatus`, `org-controls.ts:93-113`) for credits to flow. Expired trials fall to `free` (`trial.ts:25-31`, `includedCredits: 0`) and are therefore paused, which matches spec §3 "AI and paid outbound pause until a plan is bought".
+3. **Included credits are issued per paid billing period (founder decision: reset on the payment date).** There is no recurring subscription: checkout is a one-time monthly payment that sets `Org.currentPeriodEnd = now + 1 month` (`settings/billing/actions.ts:170-181`, `webhooks/razorpay/route.ts:48-61`, `webhooks/stripe/route.ts:33-50`). The included grant is keyed on the period it pays for — `(orgId, "included", <currentPeriodEnd ISO date>)` — and expires at that `currentPeriodEnd`. It is issued at the moment a payment activates the period (the three activation sites above), and a cron step back-fills it for any active org whose current period has no grant yet (founder-comped and Enterprise orgs, whose periods the founder extends in admin). The unique key makes double-issue impossible from either path. Note that campaign messages and voice minutes still reset on the calendar month (`limits.ts:262`, `voice/usage.ts:36-38`); credits are the only per-period allowance. Implementer must verify how `setSubscriptionStatus` (`org-controls.ts:93-113`) and `scripts/set-plan.ts` set `currentPeriodEnd` — if a comped org has none, the admin action must set one, or no grant can be issued.
+4. **Who gets an included grant:** metered orgs with `subscriptionStatus === "active"` (Enterprise included) whose `currentPeriodEnd` is in the future, and no live trial. A founder who comps a plan must mark the subscription active in the admin panel for credits to flow (founder accepted this). Expired trials fall to `free` (`trial.ts:25-31`, `includedCredits: 0`) and are therefore paused, which matches spec §3 "AI and paid outbound pause until a plan is bought". A lapsed period (no payment) issues nothing — correct, they have not paid.
 5. **Metering classes** (pure `meteringFor(org)`): `includedCredits === null && !contactOnly` (legacy `front_desk`) → **unmetered** (shadow only, never paused; "never silently reprice" a legacy subscriber). Enterprise → metered, amount = `Org.includedCreditsOverride ?? 0` (0 makes a forgotten override visible: AI pauses and the admin card says so). Everything else → metered with `plan.includedCredits`. Trial orgs → metered against the trial grant only.
 6. **Preflight is a zero check, debit is exact and post-hoc.** Cost is unknown until the provider answers. Two racing calls with 1 credit left both pass preflight; the second overdraws by at most one call (`maxTokens` ≤ 1,500 across all call sites → a few credits). Overdraft lands on the org's latest-expiring unexpired grant, which goes negative, so the next preflight blocks. If the overdraft sits on a purchased grant it is honoured against the next top-up; if on an included grant it dies with the month (Nudge absorbs at most one call per org per month).
-7. **Voice:** every Nudge-funded minute debits `VOICE_MICRO_USD_PER_MINUTE` (150,000 = 30 credits, the spec's *assumption*), **and** the existing minute cap (`voiceUsage`, 402 in the initiation route) stays. This is the reading of spec §4 "Voice draws on the same credit balance … never advertise both allowances as simultaneously included"; the founder must confirm (see Open questions).
-8. **Knowledge ingest and distill are charged.** They are platform-paid LLM calls with attribution (`ingest.ts:153-158,437-446`, `distill.ts:79-90`). Concierge onboarding run by the founder will therefore spend the client's credits; founder can top up with a grant. Flagged as an open question.
+7. **Voice is outside the ledger (founder decision).** Included minutes are free of credits; the existing per-plan minute cap (`voiceUsage`, 402 in the initiation route, `npm run voice:minutes` override) is the only limit on voice. No voice debit, no voice preflight, no `VoiceCall` relation. At the spec's assumed US$0.15/minute, Pro's 100 minutes cost Nudge up to ₹1,350/month — accepted.
+8. **Knowledge ingest and distill are absorbed (founder decision).** They are platform-paid LLM calls (`ingest.ts:153-158,437-446`, `distill.ts:79-90`) but they are concierge setup work, so they are recorded as **absorbed** debits (`absorbed: true`, `allocations: []`, no grant touched) and never preflighted. Only purposes that serve the customer in production debit: `agent_reply`, `suggest`, `summary`, `campaign_copy`. The purpose comes from the call's attribution, so the rule is one lookup in `settleDebit`.
 
 ## Spec/code conflicts to surface (state the tradeoff, do not guess)
 
@@ -43,8 +45,8 @@
 
 ### Billing module (home of the ledger, product-2 reusable)
 
-- Create `src/modules/billing/credit-rates.ts`: versioned rate card, exact model ids, cache prices, voice per-minute price, `priceCall()`, `UnpricedModelError`, credit/micro-USD conversion. Pure.
-- Create `src/modules/billing/credits.ts`: `meteringFor`, `creditBalance`, `allocateFifo` (pure), `debitAiUsage`, `debitVoiceCall`, `assertCreditsAvailable`, `CreditsExhaustedError`, `CREDITS_EXHAUSTED_MESSAGE`, `issueTrialGrant`, `ensureIncludedGrant`, `issueIncludedCredits`, `topUpIncludedGrant`, `grantPurchasedCredits`, `grantFounderCredits`, `reconcileCreditDebits`, `estimateRemainingReplies` (pure).
+- Create `src/modules/billing/credit-rates.ts`: versioned rate card, exact model ids, cache prices, `priceCall()`, `UnpricedModelError`, credit/micro-USD conversion. Pure.
+- Create `src/modules/billing/credits.ts`: `meteringFor`, `creditBalance`, `allocateFifo` (pure), `debitAiUsage`, `assertCreditsAvailable`, `CreditsExhaustedError`, `CREDITS_EXHAUSTED_MESSAGE`, `issueTrialGrant`, `ensureIncludedGrant`, `issueIncludedCredits`, `topUpIncludedGrant`, `grantPurchasedCredits`, `grantFounderCredits`, `reconcileCreditDebits`, `estimateRemainingReplies` (pure).
 - Create `src/modules/billing/credit-packs.ts`: pack config (pure, importable by client components).
 - Create `src/modules/billing/credit-alerts.ts`: low-balance email (reuses `src/modules/email`).
 - Modify `src/modules/billing/plans.ts`: replace the "CREDITS ARE DISPLAYED, NOT METERED" comments (lines 18-21, 96-102) with the truth once Task 4 ships.
@@ -59,15 +61,14 @@
 
 ### Schema
 
-- Modify `prisma/schema.prisma`: `CreditGrant`, `CreditDebit`; `Org.includedCreditsOverride Int?`, `Org.creditsLowNotifiedAt DateTime?`, relations; `AiUsage.cacheReadTokens`, `AiUsage.cacheWriteTokens`; `VoiceCall.creditDebit` relation.
+- Modify `prisma/schema.prisma`: `CreditGrant`, `CreditDebit`; `Org.includedCreditsOverride Int?`, `Org.creditsLowNotifiedAt DateTime?`, relations; `AiUsage.cacheReadTokens`, `AiUsage.cacheWriteTokens`.
 
 ### Call sites (gating)
 
 - Modify `src/modules/agent/reply.ts`: catch `CreditsExhaustedError` in `generateAgentActionReply` (70-91) → handoff line; add attribution to `generateAgentReply` (36).
-- Modify `src/modules/ai/suggest-reply.ts` (167-180), `src/modules/ai/summarize.ts` (74-80), `src/modules/knowledge/distill.ts` (78-95): return/propagate `CREDITS_EXHAUSTED_MESSAGE`.
+- Modify `src/modules/ai/suggest-reply.ts` (167-180), `src/modules/ai/summarize.ts` (74-80): return `CREDITS_EXHAUSTED_MESSAGE`.
 - Modify `src/modules/campaign/generate.ts`: `orgId` required (74); the error propagates to `src/app/(app)/campaigns/actions.ts:128`.
-- Modify `src/app/api/voice/initiation/route.ts` (79-86) and `src/modules/voice/reminder-calls.ts` (43): credit preflight beside the minute check.
-- Modify `src/modules/voice/file-call.ts` (77-97): debit after the `VoiceCall` write; `simulated` flag parameter; `src/app/(app)/settings/voice/actions.ts:77-98` passes `simulated: true`.
+- `src/modules/knowledge/ingest.ts` / `distill.ts` and everything under `src/modules/voice/` and `src/app/api/voice/`: **untouched** (absorbed / outside the ledger).
 
 ### Grants, reset, reconciliation
 
@@ -131,24 +132,23 @@ model CreditDebit {
   orgId           String
   org             Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   amountMicroUsd  Int
-  purpose         String    // agent_reply | suggest | distill | ingest | campaign_copy | summary | voice
-  model           String    // exact model id, or "voice"
+  purpose         String    // agent_reply | suggest | summary | campaign_copy | distill | ingest
+  model           String    // exact model id
   rateCardVersion String
   aiUsageId       String?   @unique
   aiUsage         AiUsage?  @relation(fields: [aiUsageId], references: [id], onDelete: SetNull)
-  voiceCallId     String?   @unique
-  voiceCall       VoiceCall? @relation(fields: [voiceCallId], references: [id], onDelete: SetNull)
-  // [{ grantId, microUsd }] in FIFO order; [] for simulated (shadow) debits.
+  // [{ grantId, microUsd }] in FIFO order; [] for simulated or absorbed debits.
   allocations     Json
-  simulated       Boolean   @default(false)
+  simulated       Boolean   @default(false)   // no provider was paid (SEND_MODE=simulation / keyless synthetic path)
+  absorbed        Boolean   @default(false)   // provider was paid but Nudge eats it (knowledge ingest/distill)
   createdAt       DateTime  @default(now())
   @@index([orgId, createdAt])
 }
 ```
 
-Additions: `Org.includedCreditsOverride Int?` (mirrors `voiceMinutesOverride`, line 46), `Org.creditsLowNotifiedAt DateTime?`, `Org.creditGrants CreditGrant[]`, `Org.creditDebits CreditDebit[]`; `AiUsage.cacheReadTokens Int @default(0)`, `AiUsage.cacheWriteTokens Int @default(0)`, `AiUsage.creditDebit CreditDebit?`; `VoiceCall.creditDebit CreditDebit?`.
+Additions: `Org.includedCreditsOverride Int?` (mirrors `voiceMinutesOverride`, line 46), `Org.creditsLowNotifiedAt DateTime?`, `Org.creditGrants CreditGrant[]`, `Org.creditDebits CreditDebit[]`; `AiUsage.cacheReadTokens Int @default(0)`, `AiUsage.cacheWriteTokens Int @default(0)`, `AiUsage.creditDebit CreditDebit?`.
 
-Migration steps (this repo has no `prisma/migrations`): `npm run db:push` → `npm run db:rls` (enables RLS, no policies, on the two new tables; Prisma is table owner and bypasses RLS; the Supabase publishable key cannot read them) → `prisma generate` runs on postinstall/build. Reconciliation identity: `SUM(CreditGrant.amountMicroUsd) − SUM(CreditDebit.amountMicroUsd WHERE NOT simulated) = SUM(CreditGrant.remainingMicroUsd)` per org, checked by the reconciler and reported in the heartbeat.
+Migration steps (this repo has no `prisma/migrations`): `npm run db:push` → `npm run db:rls` (enables RLS, no policies, on the two new tables; Prisma is table owner and bypasses RLS; the Supabase publishable key cannot read them) → `prisma generate` runs on postinstall/build. Reconciliation identity: `SUM(CreditGrant.amountMicroUsd) − SUM(CreditDebit.amountMicroUsd WHERE NOT simulated AND NOT absorbed) = SUM(CreditGrant.remainingMicroUsd)` per org, checked by the reconciler and reported in the heartbeat.
 
 ## Pricing a call (Task 1)
 
@@ -165,9 +165,6 @@ export const MODEL_RATES: Record<string, { input: number; output: number; cacheR
   "claude-haiku-4-5": { input: 1_000_000, output: 5_000_000,  cacheRead: 100_000, cacheWrite: 1_250_000 },
 };
 
-/** Spec §4 assumption (US$0.15/min = 30 credits). FOUNDER TO CONFIRM with carrier + ElevenLabs quotes. */
-export const VOICE_MICRO_USD_PER_MINUTE = 150_000;
-
 export class UnpricedModelError extends Error {}
 
 export function priceCall(model: string, u: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }): number {
@@ -175,7 +172,6 @@ export function priceCall(model: string, u: { inputTokens: number; outputTokens:
   if (!r) throw new UnpricedModelError(`No rate for model "${model}" (rate card ${RATE_CARD_VERSION})`);
   return Math.round((u.inputTokens * r.input + u.outputTokens * r.output + (u.cacheReadTokens ?? 0) * r.cacheRead + (u.cacheWriteTokens ?? 0) * r.cacheWrite) / 1_000_000);
 }
-export function priceVoiceMinutes(minutes: number): number { return minutes * VOICE_MICRO_USD_PER_MINUTE; }
 export function microUsdToCredits(micro: number): number { return micro / MICRO_USD_PER_CREDIT; }
 ```
 
@@ -187,10 +183,10 @@ In `src/lib/model-router/index.ts`, each of `generate`, `chat`, `runAgent` becom
 
 ```ts
 const { driver, rt, byok } = await resolveRuntime(attribution, opts);   // throws UnpricedModelError for an unpriced platform model
-const metering = byok ? "byok" : await assertCreditsAvailable(attribution.orgId); // "metered" | "unmetered" | "shadow"; throws CreditsExhaustedError
+const metering = byok ? "byok" : await assertCreditsAvailable(attribution); // "metered" | "unmetered" | "shadow" | "absorbed"; throws CreditsExhaustedError (never for absorbed purposes)
 const { text, usage } = await driver.chat(rt, …);
 const aiUsageId = await recordUsage(attribution, rt.model, usage, { byok });      // awaited; still never throws (returns null on failure)
-if (metering !== "byok") await settleDebit({ attribution, model: rt.model, usage, aiUsageId, simulated: metering === "shadow" });
+if (metering !== "byok") await settleDebit({ attribution, model: rt.model, usage, aiUsageId, simulated: metering === "shadow", absorbed: metering === "absorbed" });
 return sanitizeText(text);
 ```
 
@@ -214,13 +210,14 @@ await prisma.$transaction(async (tx) => {
 
 Row-level `FOR UPDATE` serialises debits per org (Postgres blocks the second transaction until the first commits, then it re-reads the decremented rows). Two orgs never contend. Prisma interactive transactions pin one connection, which is fine through Supabase's transaction-mode pooler (`DATABASE_URL` with pgbouncer, per `PROGRESS.md`). A `P2002` on `aiUsageId` means "already debited" → return without error. Shadow debits skip the lock entirely (`allocations: []`, no grant update).
 
-Preflight `assertCreditsAvailable(orgId)`: `SEND_MODE === "simulation"` → `"shadow"`; `meteringFor(org) === "unmetered"` → `"unmetered"`; else `creditBalance(orgId)` (one `aggregate` `_sum.remainingMicroUsd` over unexpired grants); if `≤ 0`, call `ensureIncludedGrant(org, now)` (covers the ≤5-minute gap after month rollover before the cron issues it; idempotent) and re-read; if still `≤ 0` throw `CreditsExhaustedError`. Two reads per call is acceptable at Nudge's volume; no cache.
+Preflight `assertCreditsAvailable(attribution)`: `SEND_MODE === "simulation"` → `"shadow"`; purpose is `ingest` or `distill` → `"absorbed"`; `meteringFor(org) === "unmetered"` → `"unmetered"`; else `creditBalance(orgId)` (one `aggregate` `_sum.remainingMicroUsd` over unexpired grants); if `≤ 0`, call `ensureIncludedGrant(org, now)` (issues the current paid period's grant if it is missing — covers a comped org before the cron back-fills; idempotent) and re-read; if still `≤ 0` throw `CreditsExhaustedError`. Two reads per call is acceptable at Nudge's volume; no cache.
 
 ## Monthly reset and grants (Task 3)
 
 - **Trial:** `issueTrialGrant(orgId, trialEndsAt)` — kind `trial`, sourceKey `"trial"`, 100 credits, `expiresAt = trialEndsAt`. Called where orgs are created with a trial: `src/modules/orgs/org.ts:127-143` and the founder path in `src/modules/admin/create-workspace.ts` (grep `trialEndsAt:`). `setTrial` in `org-controls.ts:49-77` updates the trial grant's `expiresAt` in the same transaction (0 days → expire now).
-- **Included:** `issueIncludedCredits(now)` runs as a cron step. Selects orgs `where: { trialEndsAt: null, OR: [{ subscriptionStatus: "active" }, { plan: "enterprise" }] }` with `plan, featureOverrides, includedCreditsOverride`, computes amount via `meteringFor`, and does one `creditGrant.createMany({ data, skipDuplicates: true })` with `sourceKey = "YYYY-MM"` (UTC), `expiresAt = Date.UTC(y, m + 1, 1)`. The unique constraint makes double-issue impossible regardless of how many ticks run.
-- **Upgrade mid-month:** `topUpIncludedGrant(orgId, now)` after every plan activation (`confirmCheckoutAction` line ~181, both webhooks): inside a `FOR UPDATE` on this month's included grant, if `amountMicroUsd < newPlanAmount`, add the difference to both `amountMicroUsd` and `remainingMicroUsd`. Downgrades leave the grant alone.
+- **Included, at payment:** every plan activation (`confirmCheckoutAction` line ~181, both webhooks) sets the new `currentPeriodEnd` and, in the same transaction, calls `ensureIncludedGrant(org, now)`: `creditGrant.create` with `kind: "included"`, `sourceKey = currentPeriodEnd.toISOString().slice(0, 10)`, amount via `meteringFor`, `expiresAt = currentPeriodEnd`; `P2002` → already issued. A renewal is a new `currentPeriodEnd`, hence a new key, hence a fresh grant — that is the "reset on the payment date".
+- **Included, back-fill:** `issueIncludedCredits(now)` runs as a cron step for orgs `where: { trialEndsAt: null, subscriptionStatus: "active", currentPeriodEnd: { gt: now } }` and calls the same `ensureIncludedGrant` for each — this is how founder-comped and Enterprise orgs (no checkout) get their credits when the founder extends their period in admin. Idempotent by the unique key.
+- **Upgrade mid-period:** `topUpIncludedGrant(orgId, now)` after a plan change inside the same period: inside a `FOR UPDATE` on the current period's included grant, if `amountMicroUsd < newPlanAmount`, add the difference to both `amountMicroUsd` and `remainingMicroUsd`. Downgrades leave the grant alone. (When the upgrade is itself a payment that extends the period, the new period simply gets a new full grant and the old one expires early — implementer to decide whether to expire the old grant at the new payment or let both live; both are correct, the former is stricter.)
 - **Expiry** needs no job: every read filters `expiresAt > now()`.
 
 ## Zero-balance behaviour (Task 5)
@@ -233,11 +230,8 @@ Preflight `assertCreditsAvailable(orgId)`: `SEND_MODE === "simulation"` → `"sh
 | `ai/suggest-reply.ts` (167-180) | `{ ok: false, error: CREDITS_EXHAUSTED_MESSAGE }` |
 | `ai/summarize.ts` (74-80) | `{ ok: false, error: CREDITS_EXHAUSTED_MESSAGE }` |
 | `campaign/generate.ts` (98-127) | rethrow with `CREDITS_EXHAUSTED_MESSAGE`; `campaigns/actions.ts:128` already surfaces `err.message` |
-| `knowledge/distill.ts` (78-95) | existing catch → raw-answer fallback (never load-bearing); `knowledge/ingest.ts` `ingestFile` (431) rethrows the message |
-| `api/voice/initiation/route.ts` (79-86) | after the minute check: `if (await creditsExhausted(orgId)) return 402 { error: "credits exhausted" }` |
-| `voice/reminder-calls.ts` (43) | `if (await creditsExhausted(org.id)) continue;` |
 
-Never gated: `sendMessage`, `send/queue`, `followup/*`, `automation/*`, `crm/*`, `scoring/*`, `api/v1/*`, BYOK orgs.
+Never gated: `sendMessage`, `send/queue`, `followup/*`, `automation/*`, `crm/*`, `scoring/*`, `api/v1/*`, `voice/*`, `knowledge/ingest.ts`, `knowledge/distill.ts`, BYOK orgs.
 
 ## Top-up purchase (Task 6)
 
@@ -280,7 +274,7 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** create `src/modules/billing/credit-rates.ts`; modify `src/lib/model-router/types.ts`, `drivers/anthropic.ts`, `usage.ts`, `prisma/schema.prisma` (AiUsage cache columns); tests `tests/credit-rates.test.ts`, update `tests/ai-usage.test.ts`, `tests/llm-drivers.test.ts`.
 
-- [ ] Write `tests/credit-rates.test.ts`: `prices claude-sonnet-5 exactly (1M in + 1M out + 1M cache read + 1M cache write)`; `prices claude-haiku-4-5 exactly`; `does not substring-match ("claude-sonnet-5-turbo" throws UnpricedModelError)`; `rounds to the nearest micro-USD, never up to a credit (1 token in on Haiku = 1 micro-USD = 0.0002 credits)`; `every Anthropic model in BYOK_ALLOWED_MODELS.anthropic and the env RUNTIME_MODEL default is priced`; `priceVoiceMinutes(3) === 450_000`.
+- [ ] Write `tests/credit-rates.test.ts`: `prices claude-sonnet-5 exactly (1M in + 1M out + 1M cache read + 1M cache write)`; `prices claude-haiku-4-5 exactly`; `does not substring-match ("claude-sonnet-5-turbo" throws UnpricedModelError)`; `rounds to the nearest micro-USD, never up to a credit (1 token in on Haiku = 1 micro-USD = 0.0002 credits)`; `every Anthropic model in BYOK_ALLOWED_MODELS.anthropic and the env RUNTIME_MODEL default is priced`.
 - [ ] Implement the rate card; extend `DriverUsage`; read `cache_read_input_tokens` / `cache_creation_input_tokens` in `usageOf` and `tally`; make `recordUsage` `async`, return the row id (null on failure), store cache tokens. Keep `computeCostMicroUsd` as-is for analytics.
 - [ ] `npm run db:push && npm run db:rls`; run tests, lint, build.
 
@@ -295,24 +289,24 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 
 **Files:** `credits.ts`; `orgs/org.ts`, `admin/create-workspace.ts`, `admin/org-controls.ts` (`setTrial`); `api/cron/process-queue/route.ts`; `settings/billing/actions.ts`, both webhooks (`topUpIncludedGrant`); `tests/credit-reset.test.ts`.
 
-- [ ] Tests (hoisted prisma mock, `$transaction` running the callback like `tests/admin-org-controls.test.ts`): `issueIncludedCredits builds YYYY-MM rows only for active/enterprise, non-trial, metered orgs and calls createMany with skipDuplicates`; `second run in the same month issues nothing new`; `month boundary uses UTC`; `enterprise uses includedCreditsOverride`; `ensureIncludedGrant is a no-op when the month's grant exists`; `topUpIncludedGrant adds only the difference on upgrade and nothing on downgrade`; `issueTrialGrant is 100 credits expiring at trialEndsAt`; `setTrial moves the trial grant expiry`.
-- [ ] Implement; wire cron step `issue-included-credits`; wire `issueTrialGrant` at both org-creation sites; wire `topUpIncludedGrant` at the three activation sites.
+- [ ] Tests (hoisted prisma mock, `$transaction` running the callback like `tests/admin-org-controls.test.ts`): `ensureIncludedGrant keys the grant on currentPeriodEnd and expires it there`; `a second call for the same period is a no-op (P2002)`; `a renewal (new currentPeriodEnd) issues a fresh grant`; `issueIncludedCredits back-fills only active, non-trial, metered orgs with a future currentPeriodEnd`; `enterprise uses includedCreditsOverride`; `topUpIncludedGrant adds only the difference on upgrade and nothing on downgrade`; `issueTrialGrant is 100 credits expiring at trialEndsAt`; `setTrial moves the trial grant expiry`.
+- [ ] Implement; wire `ensureIncludedGrant` into the three activation sites; wire cron step `issue-included-credits`; wire `issueTrialGrant` at both org-creation sites; wire `topUpIncludedGrant` on same-period plan changes.
 
 ### Task 4: Debit hook in the router + reconciler (≈6h)
 
 **Files:** `src/lib/model-router/index.ts`, `credits.ts` (`assertCreditsAvailable`, `debitAiUsage`, `settleDebit`, `reconcileCreditDebits`), `agent/reply.ts` (attribution on `generateAgentReply`), `campaign/generate.ts` (`orgId` required), `env-schema.ts` + `.env.example` (`CREDIT_LEDGER_EPOCH`), cron step `reconcile-credit-debits`; `tests/credit-debit.test.ts`, `tests/model-router-credits.test.ts`, `tests/credit-reconcile.test.ts`.
 
-- [ ] `tests/credit-debit.test.ts`: `locks the org's unexpired grants with SELECT … FOR UPDATE ordered by expiresAt`; `writes allocations and decrements each grant`; `P2002 on aiUsageId returns without a second decrement`; `simulated debit writes allocations [] and touches no grant`; `byok never debits`.
-- [ ] `tests/model-router-credits.test.ts` (extends the `tests/ai-usage.test.ts` harness): `preflight throws CreditsExhaustedError at balance ≤ 0 and the provider is never called`; `preflight retries via ensureIncludedGrant before refusing`; `BYOK path skips preflight and debit`; `SEND_MODE=simulation → no gate, shadow debit`; `unpriced RUNTIME_MODEL is refused before mockCreate`; `platform call without attribution is refused`; `debit failure is logged with "[credits]" and the reply is still returned`; `runAgent debits once for the whole loop including cache tokens`.
-- [ ] `tests/credit-reconcile.test.ts`: `re-debits platform non-synthetic AiUsage rows after the epoch with no CreditDebit`; `ignores byok, synthetic and pre-epoch rows`; `reports counts`.
+- [ ] `tests/credit-debit.test.ts`: `locks the org's unexpired grants with SELECT … FOR UPDATE ordered by expiresAt`; `writes allocations and decrements each grant`; `P2002 on aiUsageId returns without a second decrement`; `simulated debit writes allocations [] and touches no grant`; `absorbed debit (ingest/distill) writes allocations [] and touches no grant`; `byok never debits`.
+- [ ] `tests/model-router-credits.test.ts` (extends the `tests/ai-usage.test.ts` harness): `preflight throws CreditsExhaustedError at balance ≤ 0 and the provider is never called`; `preflight retries via ensureIncludedGrant before refusing`; `ingest/distill purposes are never preflighted even at balance 0`; `BYOK path skips preflight and debit`; `SEND_MODE=simulation → no gate, shadow debit`; `unpriced RUNTIME_MODEL is refused before mockCreate`; `platform call without attribution is refused`; `debit failure is logged with "[credits]" and the reply is still returned`; `runAgent debits once for the whole loop including cache tokens`.
+- [ ] `tests/credit-reconcile.test.ts`: `re-debits platform non-synthetic AiUsage rows after the epoch with no CreditDebit`; `ignores byok, synthetic, absorbed-purpose and pre-epoch rows`; `reports counts`.
 - [ ] Implement; make `attribution` required on the platform path; update the `plans.ts` header comments to the new truth.
 
-### Task 5: Zero-balance gating at call sites + voice (≈4h)
+### Task 5: Zero-balance gating at call sites (≈2h)
 
-**Files:** `agent/reply.ts`, `ai/suggest-reply.ts`, `ai/summarize.ts`, `knowledge/distill.ts`, `knowledge/ingest.ts`, `api/voice/initiation/route.ts`, `voice/reminder-calls.ts`, `voice/file-call.ts`, `settings/voice/actions.ts`; `tests/credit-gating.test.ts`.
+**Files:** `agent/reply.ts`, `ai/suggest-reply.ts`, `ai/summarize.ts`; `tests/credit-gating.test.ts`.
 
-- [ ] Tests: `generateAgentActionReply returns the handoff line with pausedForCredits on exhaustion (no throw)`; `suggestReply and summarizeConversation return CREDITS_EXHAUSTED_MESSAGE`; `distillAnswer falls back to the raw fact`; `voice initiation returns 402 "credits exhausted" after the minute check`; `tickReminderCalls skips an exhausted org`; `fileCall debits ceil(durationSecs/60) × VOICE_MICRO_USD_PER_MINUTE anchored on voiceCallId, idempotent on redelivery`; `simulateCallAction files a shadow debit`.
-- [ ] Implement `debitVoiceCall`, `creditsExhausted(orgId)` (a boolean wrapper over the preflight that never throws), the catches, and the `simulated` parameter on `fileCall`.
+- [ ] Tests: `generateAgentActionReply returns the handoff line with pausedForCredits on exhaustion (no throw)`; `suggestReply and summarizeConversation return CREDITS_EXHAUSTED_MESSAGE`; `campaign copy generation surfaces CREDITS_EXHAUSTED_MESSAGE`; `knowledge ingest still runs at balance 0 (absorbed)`; `voice initiation is unaffected by balance`.
+- [ ] Implement `creditsExhausted(orgId)` (a boolean wrapper over the preflight that never throws) and the catches.
 
 ### Task 6: Top-up purchase (≈5h)
 
@@ -342,17 +336,17 @@ Note (out of scope): the existing plan webhooks are not idempotent on provider e
 - [ ] `describe.skipIf(!process.env.TEST_DATABASE_URL)`: against a real Postgres, seed one org with a 10-credit grant; fire 20 concurrent `debitAiUsage` calls of 1 credit each; assert `remainingMicroUsd === −50_000` (10 covered, 10 overdrawn on the same grant), 20 debit rows, and the reconciliation identity holds; then fire the same 20 `aiUsageId`s again and assert nothing changes.
 - [ ] Update the spec's "Built and live / Not built" lists and `PROGRESS.md`.
 
-**Total estimate: ≈35 hours (about five focused days).**
+**Total estimate: ≈33 hours (about five focused days).**
 
 ## NOT in scope
 
-Auto-recharge; spending limits or alerts beyond the single low-balance email; refunds/reversals and their UI; annual checkout; real Meta spend; credit packs in currencies other than INR/SGD; migrating legacy `free`/`front_desk` workspaces onto balances (they stay unmetered by design); idempotency of the *plan* webhooks on provider event id; removing or redesigning `usage.ts`; per-request "regeneration" semantics (every call is already new usage); verifying voice carrier/ElevenLabs costs; credit-expiry reminder emails; timezone-local month boundaries; a CLI for credit grants.
+Auto-recharge; spending limits or alerts beyond the single low-balance email; refunds/reversals and their UI; annual checkout; real Meta spend; credit packs in currencies other than INR/SGD; migrating legacy `free`/`front_desk` workspaces onto balances (they stay unmetered by design); idempotency of the *plan* webhooks on provider event id; removing or redesigning `usage.ts`; per-request "regeneration" semantics (every call is already new usage); voice of any kind (minute cap stays as is); credit-expiry reminder emails; a CLI for credit grants.
 
-## Open questions for the founder
+## Founder decisions (answered 2026-09-15)
 
-1. Confirm the rate card: is production really `claude-sonnet-5` ($2/$10) or Sonnet 4.6 ($3/$15) as the spec says? The credit examples in spec §4 change either way.
-2. Voice: minute cap **and** 30 credits/min from the same balance (this plan's reading), or included minutes free of credits? And confirm the US$0.15/min assumption.
-3. Should concierge-run knowledge ingest/distill spend the client's credits (default here: yes, they are platform-paid)?
-4. Calendar-month reset (default here) versus reset on each monthly payment date.
-5. Founder-comped plans need `subscriptionStatus = active` to receive monthly credits — acceptable?
-6. Bounded overdraft of one call per org (Nudge absorbs it on included grants) — acceptable?
+1. Rate card on `claude-sonnet-5` at $2/$10 (and Haiku 4.5 at $1/$5). Confirmed against Anthropic's price sheet the same day.
+2. Voice: included minutes are free of credits; voice stays on the per-plan minute cap and is outside the ledger. (100 minutes would have been 3,000 credits at the assumed rate.)
+3. Concierge knowledge ingest/distill is absorbed by Nudge, never charged.
+4. Included credits reset on the customer's payment date (per paid period), not the calendar month.
+5. Founder-comped plans must be marked active (with a period end) in admin to receive credits.
+6. One-call overdraft per org is accepted; Nudge absorbs it.

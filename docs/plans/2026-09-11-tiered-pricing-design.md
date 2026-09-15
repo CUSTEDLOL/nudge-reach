@@ -67,7 +67,7 @@ one uses several. Fractions accumulate precisely and are not rounded up per call
 | Activity | Uses credits? |
 |---|---|
 | AI reply, summary, campaign copy, AI personalisation | Yes — for the AI work |
-| Voice on an eligible plan (Nudge-funded speech + carrier) | Yes |
+| Voice calls (Pro's 100 minutes, Enterprise as agreed) | No — voice is limited by included minutes, not credits (founder decision 2026-09-15) |
 | Sending an already-written campaign or a manual message | No |
 | Follow-up reminders, no-show recovery, quiet-lead nudges (pre-written templates) | No |
 | Ordinary CRM sync, rule-based lead scoring, API calls | No |
@@ -78,12 +78,16 @@ Meta's per-conversation charges are the customer's own bill and are never
 converted into credits. Drafting one campaign uses credits once; sending that
 text to 1,000 opted-in people does not.
 
-**Balance rules.** Included credits reset every billing cycle. Purchased credits
-expire 12 months after purchase; the soonest-expiring eligible balance is spent
-first. Auto-recharge is off by default. A zero balance pauses Nudge-funded AI
-and voice, never the manual inbox, campaigns or follow-ups the plan already
-includes. Simulation mode never consumes purchased credit. Nudge absorbs its
-own failed or retried AI work; a customer-requested regeneration is new usage.
+**Balance rules.** Included credits are issued fresh with each monthly payment
+and expire at the end of that paid period (founder decision 2026-09-15: reset
+on the payment date, not the calendar month). Purchased credits expire 12
+months after purchase; the soonest-expiring eligible balance is spent first.
+Auto-recharge is off by default. A zero balance pauses Nudge-funded AI replies,
+drafts, summaries and campaign copy — never the manual inbox, campaigns,
+follow-ups or voice the plan already includes. Simulation mode never consumes
+purchased credit. Nudge absorbs its own failed or retried AI work and the AI
+used to set up a customer's knowledge base during onboarding; a
+customer-requested regeneration is new usage.
 
 **Top-up packs (decided prices).**
 
@@ -165,11 +169,12 @@ out of it. It is not profit.
 If US$1 moves to ₹100 the 10,000 pack's margin falls to 37.5%. Margin here is
 (price − cost) ÷ price, before all other expenses.
 
-Voice draws on the same credit balance. At the assumed US$0.15/minute, Pro's 5,000
-credits buy about 166 voice minutes if used for nothing else (at US$0.25, 100
-minutes). Never advertise the full chat allowance and the full voice allowance
-as simultaneously included. The voice figure is an assumption, not a carrier
-quote; verify speech, inference and carrier costs before selling live voice.
+Voice does not use credits (founder decision 2026-09-15). Pro's 100 included
+minutes are limited by the per-plan minute cap, and at the assumed
+US$0.15/minute they cost Nudge up to ₹1,350 a month if fully used — so Pro's
+"left after AI cost" above is about ₹16,400 (82%) for a customer who also uses
+every voice minute. The voice figure is an assumption, not a carrier quote;
+verify speech, inference and carrier costs before selling live voice.
 
 ## 5. High-volume and Enterprise deals
 
