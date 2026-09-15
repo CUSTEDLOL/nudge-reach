@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { adminCookieOptions } from "@/lib/supabase/admin-cookie";
 
 // "/" (exact match, handled below): the public marketing homepage. Kept out of
 //   this prefix list so a stray "/" wouldn't make every route public.
@@ -45,11 +46,14 @@ const PUBLIC_PATHS = [
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      ...(isAdminPath ? { cookieOptions: adminCookieOptions() } : {}),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -72,7 +76,10 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
 
-  const { pathname } = request.nextUrl;
+  // /admin owns a separate session and a signed-out login screen. Pages and
+  // actions still enforce the founder allowlist as the security boundary.
+  if (isAdminPath) return supabaseResponse;
+
   const isPublic =
     pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
