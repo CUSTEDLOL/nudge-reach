@@ -1,5 +1,27 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Seven-day owner setup links (2026-09-15) ✅
+
+- Founder workspace creation now returns a copyable owner setup link instead
+  of depending on email delivery. Existing pending OWNER invitations can be
+  rotated from the workspace Team page; rotation immediately invalidates the
+  previous link and is recorded in the founder audit log without the token.
+- Each link is single-use, expires exactly seven days after issue, is restricted
+  to the invited email and workspace, and stores only a SHA-256 token hash in
+  Postgres. Used, expired, malformed and superseded links share a neutral error
+  state so the public route does not reveal invitation details.
+- The branded `/invite/[token]` handoff keeps the invited email locked and both
+  password fields blank. A successful submission creates a confirmed Supabase
+  account, atomically grants the OWNER membership, signs the owner in through
+  the normal workspace session and sends them to onboarding. Existing accounts
+  are never overwritten and are directed to sign in.
+- Production Prisma schema is synchronized and the server-only Supabase admin
+  credential is encrypted in Vercel. Resend remains optional: when configured,
+  the same link is emailed; otherwise the founder can copy and send it manually.
+- Verification: focused token, acceptance, action and admin UI coverage is part
+  of the complete suite (**950/950**); TypeScript, lint and the Next.js production
+  build pass, including the dynamic `/invite/[token]` route.
+
 ## Isolated founder admin login (2026-09-15) ✅
 
 - `/admin` now owns a separate Supabase email/password session whose HttpOnly,
