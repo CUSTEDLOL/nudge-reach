@@ -9,7 +9,6 @@ type FooterLink = {
   label: string;
   href?: string;
   demo?: boolean;
-  external?: boolean;
 };
 
 const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
@@ -28,21 +27,6 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
       { label: "Book a demo", demo: true },
       { label: "Start free", href: "/login" },
       { label: "Contact", href: "mailto:hqnudge@gmail.com" },
-    ],
-  },
-  {
-    title: "Founders",
-    links: [
-      {
-        label: "Vishesh Jain",
-        href: "https://www.linkedin.com/in/visheshvjain/",
-        external: true,
-      },
-      {
-        label: "Dhairya Kakkar",
-        href: "https://www.linkedin.com/in/dhairyakakkar/",
-        external: true,
-      },
     ],
   },
   {
@@ -68,20 +52,6 @@ function FooterTextLink({ link }: { link: FooterLink }) {
         {link.label}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-0.5" />
       </LaunchDemoButton>
-    );
-  }
-
-  if (link.external) {
-    return (
-      <a
-        href={link.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-      >
-        {link.label}
-        {arrow}
-      </a>
     );
   }
 
@@ -133,7 +103,7 @@ export function Footer() {
               The AI front desk for WhatsApp.
             </p>
 
-            <div className="mt-9 grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <div className="mt-9 grid grid-cols-2 gap-8 sm:grid-cols-3">
               {LINK_GROUPS.map((group) => (
                 <div key={group.title}>
                   <h3 className="font-mono text-[11px] font-black uppercase tracking-[0.18em] text-ink/42">
