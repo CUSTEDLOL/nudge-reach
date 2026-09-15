@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin-server";
 import { env } from "@/lib/env";
 
 /**
@@ -9,8 +9,8 @@ import { env } from "@/lib/env";
  * across orgs (src/modules/admin is the one cross-org module — everything
  * else in the repo stays tenant-scoped, invariant 5). Access is an env
  * allowlist checked server-side on EVERY page; with FOUNDER_EMAILS unset the
- * panel is off for everyone — it fails closed. Outsiders get a plain 404 so
- * the panel's existence is not advertised.
+ * panel is off for everyone — it fails closed. Authentication uses a dedicated
+ * /admin-scoped Supabase session so the normal app session stays untouched.
  */
 
 /** Pure allowlist check — unit-tested; fails closed on empty/unset lists. */
@@ -33,13 +33,18 @@ export interface FounderContext {
   email: string;
 }
 
-/** 404s unless the signed-in user is on the FOUNDER_EMAILS allowlist. */
-export async function requireFounder(): Promise<FounderContext> {
-  const supabase = await createClient();
+/** Reads the isolated session without redirecting so /admin can show login. */
+export async function getFounderContext(): Promise<FounderContext | null> {
+  const supabase = await createAdminClient();
   const { data } = await supabase.auth.getClaims();
   const email = data?.claims?.email as string | undefined;
-  if (!isFounderEmail(email, env.FOUNDER_EMAILS)) {
-    notFound();
-  }
+  if (!isFounderEmail(email, env.FOUNDER_EMAILS)) return null;
   return { email: email!.trim().toLowerCase() };
+}
+
+/** Redirects unauthorized admin requests to the stable founder login entry. */
+export async function requireFounder(): Promise<FounderContext> {
+  const founder = await getFounderContext();
+  if (!founder) redirect("/admin");
+  return founder;
 }
