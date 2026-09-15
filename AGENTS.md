@@ -1,12 +1,14 @@
 # AGENTS.md — Nudge
 
-> **Approved pricing override (2026-09-11):**
-> `docs/plans/2026-09-11-tiered-pricing-design.md` supersedes the legacy
-> single-flagship/mandatory-setup pricing guidance below. Starter includes AI;
-> Growth adds business actions; Pro adds voice and advanced capabilities.
-> Keep AI Front Desk positioning and all seven protected invariants. This is
-> a design decision, not evidence that billing changes have shipped. Proposed
-> credit rates/allowances require approval before implementation.
+> **Approved pricing override (2026-09-11, prices re-set 2026-09-15):**
+> `docs/plans/2026-09-11-tiered-pricing-design.md` is the ONLY pricing
+> record and supersedes the legacy single-flagship/mandatory-setup guidance
+> below. India: Entry ₹1,499 / Starter ₹4,999 / Growth ₹9,999 / Pro ₹19,999;
+> Singapore S$89 / S$329 / S$659 (Entry undecided). Each plan includes AI
+> credits (200 / 1,000 / 2,500 / 5,000) — displayed and promised, but NOT yet
+> metered: no credit ledger, deduction, cap or top-up purchase exists in the product.
+> Starter includes AI; Growth adds business actions; Pro adds voice and BYOK.
+> Keep AI Front Desk positioning and all seven protected invariants.
 
 Read automatically at the start of every session. It is the contract for how you
 work in this repo and, above all, **what this product is**. Keep it short and true.

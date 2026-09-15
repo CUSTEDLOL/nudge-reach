@@ -7,7 +7,7 @@ import { Footer } from "@/components/marketing/footer";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Entry ₹1,499, Starter ₹4,499, Growth ₹7,499, Pro ₹14,999 a month. Every plan includes an AI that answers your WhatsApp around the clock. No setup fee.",
+    "Entry ₹1,499, Starter ₹4,999, Growth ₹9,999, Pro ₹19,999 a month, AI credits included. Every plan includes an AI that answers your WhatsApp around the clock. No setup fee.",
   alternates: { canonical: "/pricing" },
 };
 

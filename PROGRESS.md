@@ -1,5 +1,23 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Pricing re-set with included credits; one pricing record (2026-09-15) ✅
+
+- Founder set the plan prices and included AI credits: India Entry ₹1,499 /
+  Starter ₹4,999 / Growth ₹9,999 / Pro ₹19,999; Singapore S$89 / S$329 / S$659
+  (Entry undecided); credits 200 / 1,000 / 2,500 / 5,000 a month. Top-up pack
+  prices unchanged. Other currencies are stale placeholders, flagged in code.
+- `plans.ts` is the price of record and checkout charges it directly, so the
+  new INR/SGD prices are live for new checkouts. Added `includedCredits` to
+  each plan; printed on the public pricing page and Settings → Billing.
+- Credits are a promise, not a meter: no ledger, deduction, cap or top-up
+  purchase exists. The record says so plainly.
+- `docs/plans/2026-09-11-tiered-pricing-design.md` rewritten as the single
+  pricing record (decided / built / not built); the customer-facing
+  `docs/NUDGE_PRICING_EXPLAINED_UPDATED.docx` is generated from it with pandoc.
+  Retired `docs/PRICING.md` and the three stale/duplicate pricing .docx files.
+- Tests updated for the new ladder (plan list, MRR, cost-alert fixture,
+  Razorpay confirm amount). 892/892 green; build and lint clean.
+
 ## 3–4 month SEO program design approved (2026-09-14) ✅
 
 - Audited the live and local marketing surface, current search results,

@@ -7,12 +7,17 @@ import type { Currency } from "./money";
  * the WhatsApp per-message cost is separate and passed through from Meta.
  * Limits are enforced server-side in billing/limits.ts.
  *
- * Tiering approved 2026-09-11, amended with a permanent Entry plan
+ * Tiering approved 2026-09-11, amended with a permanent Entry plan; prices
+ * and included credits re-set by the founder 2026-09-15
  * (docs/plans/2026-09-11-tiered-pricing-design.md): Entry / Starter / Growth /
  * Pro / custom Enterprise, replacing the old single flagship plus mandatory
  * setup fee. Entry answers questions but never acts. Starter adds the full
  * workspace. Growth adds the real actions (booking, payment links,
  * follow-ups). Pro adds voice and the bring-your-own-key options.
+ *
+ * CREDITS ARE DISPLAYED, NOT METERED. `includedCredits` is what each plan
+ * promises; there is no credit ledger, no deduction and no cap in the product yet,
+ * so a customer today gets at least that and nothing stops them past it.
  *
  * ENTRY IS PROVISIONAL. The founder record leaves its seats, numbers, credits
  * and Singapore price undecided, and "Entry" is a working name. The caps below
@@ -77,6 +82,12 @@ export interface Plan {
   tagline: string;
   features: string[];
   limits: PlanLimits;
+  /**
+   * AI credits included per month (one credit = US$0.005 of provider cost).
+   * null = agreed per deal (Enterprise) or unmetered (legacy). Promise only —
+   * see the file comment: nothing in the product deducts or enforces this yet.
+   */
+  includedCredits: number | null;
   /** Highlighted self-serve tier in the pricing grid. */
   highlighted?: boolean;
   /**
@@ -96,13 +107,13 @@ export interface Plan {
  * per region — deliberately not live FX, so a Dubai clinic sees "AED 329",
  * not "AED 327.41".
  *
- * India is the approved figure for every tier; Singapore is approved for
- * Starter, Growth and Pro. Everything else is DERIVED from each market's
- * previously tuned flagship price (which becomes Pro), holding the India
- * ladder shape: Entry a tenth, Starter three tenths, Growth a half. Those are
- * sane placeholders, not signed-off market prices — review before promoting
- * those markets. Entry's Singapore price is explicitly undecided, so the
- * public pricing page does not print one.
+ * India and Singapore are the founder-set figures (2026-09-15) for Starter,
+ * Growth and Pro; India alone for Entry. Every other currency is an OLD
+ * placeholder derived from the pre-2026-09-15 ladder and has NOT been
+ * re-derived — they now sit below the India/Singapore level (e.g. Pro is
+ * US$179 while ₹19,999 is ≈US$222 at the planning rate). Review before
+ * selling in those markets. Entry's Singapore price is explicitly undecided,
+ * so the public pricing page does not print one.
  */
 export const PLAN_PRICES: Record<PlanId, Record<Currency, number>> = {
   entry: {
@@ -110,15 +121,15 @@ export const PLAN_PRICES: Record<PlanId, Record<Currency, number>> = {
     IDR: 299_000, BRL: 89, MXN: 349, GBP: 15,
   },
   starter: {
-    INR: 4_499, USD: 49, AED: 199, SAR: 209, SGD: 79, MYR: 359,
+    INR: 4_999, USD: 49, AED: 199, SAR: 209, SGD: 89, MYR: 359,
     IDR: 899_000, BRL: 269, MXN: 1_049, GBP: 45,
   },
   growth: {
-    INR: 7_499, USD: 89, AED: 329, SAR: 339, SGD: 249, MYR: 599,
+    INR: 9_999, USD: 89, AED: 329, SAR: 339, SGD: 329, MYR: 599,
     IDR: 1_499_000, BRL: 449, MXN: 1_749, GBP: 75,
   },
   pro: {
-    INR: 14_999, USD: 179, AED: 659, SAR: 679, SGD: 499, MYR: 1_199,
+    INR: 19_999, USD: 179, AED: 659, SAR: 679, SGD: 659, MYR: 1_199,
     IDR: 2_999_000, BRL: 899, MXN: 3_499, GBP: 149,
   },
   // Contact-us tier — 0 everywhere because it is never sold through checkout.
@@ -161,6 +172,7 @@ export const PLANS: Plan[] = [
     id: "entry",
     name: "Entry",
     tagline: "A chatbot that knows your business. It answers, it doesn't act.",
+    includedCredits: 200,
     features: [
       "AI chatbot trained on your business",
       "Answers customer questions around the clock",
@@ -189,6 +201,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     tagline: "The whole workspace, with the AI answering every message.",
+    includedCredits: 1_000,
     features: [
       "Everything in Entry",
       "AI replies to every customer, 24/7",
@@ -221,6 +234,7 @@ export const PLANS: Plan[] = [
     id: "growth",
     name: "Growth",
     tagline: "It books, collects and chases — not just replies.",
+    includedCredits: 2_500,
     features: [
       "Everything in Starter",
       "Books into your real Google Calendar",
@@ -254,6 +268,7 @@ export const PLANS: Plan[] = [
     id: "pro",
     name: "Pro",
     tagline: "It picks up the phone too.",
+    includedCredits: 5_000,
     features: [
       "Everything in Growth",
       "Voice front desk — the AI answers calls",
@@ -284,6 +299,7 @@ export const PLANS: Plan[] = [
     id: "enterprise",
     name: "Enterprise",
     tagline: "Agreed capacity and service, scoped with you.",
+    includedCredits: null,
     features: [
       "Everything in Pro",
       "Capacity agreed to your volume",
@@ -318,6 +334,7 @@ export const PLANS: Plan[] = [
     id: "free",
     name: "Free",
     tagline: "Retired. Also where an expired trial rests.",
+    includedCredits: 0,
     features: ["Read and export your history", "Manual replies stay available"],
     limits: {
       contacts: 250,
@@ -341,6 +358,7 @@ export const PLANS: Plan[] = [
     id: "front_desk",
     name: "AI Front Desk (legacy)",
     tagline: "Retired flagship. Existing workspaces keep everything.",
+    includedCredits: null,
     features: ["Everything in Pro, with no seat or number cap"],
     limits: {
       contacts: null,

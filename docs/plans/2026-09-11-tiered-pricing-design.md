@@ -1,182 +1,266 @@
-# Nudge — tiered pricing decision and credit proposal
+# Nudge pricing — the single record
 
-Date: 2026-09-11. Status: subscription direction approved; credit economics
-below are a proposal, not approved prices. No runtime or payment configuration
-is changed by this document. Supersedes legacy single-flagship pricing in
-PRICING.md, STRATEGY.md and AGENTS.md, not the product's safety invariants.
+Decided 2026-09-11 (tiers). Prices, included credits and Singapore re-set by the
+founder on 2026-09-15. This file is the only pricing record; the customer-facing
+copy `docs/NUDGE_PRICING_EXPLAINED_UPDATED.docx` is generated from it. Every
+older pricing document has been deleted.
 
-## 1. Approved direction
+Rule for this file: it says what is decided, what is built, and what is not.
+Nothing here is a forecast dressed as a fact.
 
-Nudge is an AI Front Desk that answers customers, captures leads, and, on higher
-plans, books appointments, collects payments and follows up. The inbox, CRM and
-campaign tools support that employee; they are not the headline.
+## 1. The model in one line
 
-| Monthly, excluding taxes | Entry | Starter | Growth | Pro | Enterprise |
+Plans pay for the software. Credits pay for the AI. Meta bills the customer
+directly for WhatsApp messaging, with no Nudge markup.
+
+## 2. Plans (decided)
+
+Monthly, excluding tax.
+
+| | Entry | Starter | Growth | Pro | Enterprise |
 |---|---:|---:|---:|---:|---|
-| India | ₹1,499 | ₹4,499 | ₹7,499 | ₹14,999 | Custom |
-| Singapore | Undecided | S$79 | S$249 | S$499 | Custom |
-| Team members | Undecided | 3 | 10 | 25 | Agreed limits |
-| WhatsApp numbers | Undecided | 1 | 2 | 5 | Agreed limits |
+| India | ₹1,499 | ₹4,999 | ₹9,999 | ₹19,999 | Custom |
+| Singapore | Undecided | S$89 | S$329 | S$659 | Custom |
+| Included AI credits / month | 200 | 1,000 | 2,500 | 5,000 | Agreed per deal |
+| Team members | 2 | 3 | 10 | 25 | Agreed |
+| WhatsApp numbers | 1 | 1 | 2 | 5 | Agreed |
+| Contacts | 1,000 | 5,000 | 25,000 | Unlimited | Unlimited |
+| Campaign messages / month | 2,000 | 5,000 | 30,000 | Unlimited | Unlimited |
 
-Founder amendment: Entry is a permanent entry-level plan, not temporary early
-access. Its name is provisional. It includes only a business-specific AI chatbot
-and marketing templates, not an action-taking agent. No bookings, payments or
-other agent actions. Template limits and sending scope remain to be defined.
-Its credit allowance and Singapore price are undecided; do not assume unlimited
-AI or inherit Starter's features. The seven-day trial is unchanged.
+Entry's seats, numbers, contacts and campaign cap are conservative placeholders
+so the tier can be enforced; its Singapore price is undecided and is not
+printed anywhere. "Entry" is a working name.
 
-These are the working subscription prices discussed with the founder; launch
-economics still need validation. Regional prices are deliberate, not live FX.
+**Other currencies (USD, AED, SAR, MYR, IDR, BRL, MXN, GBP) are stale.** They
+were derived from the pre-2026-09-15 ladder and have not been re-set; Pro is
+US$179 while ₹19,999 is roughly US$222 at the planning rate. Do not sell in
+those markets until they are reviewed.
 
-- Starter and higher: autonomous AI replies/lead capture, inbox, contacts, campaigns,
-  website WhatsApp button, AI campaign drafting and chat summaries.
-- Growth adds bookings, payment links, automated follow-ups, lead scoring,
-  developer API, webhooks, standard CRM sync and per-number staff restrictions.
-- Pro adds voice, custom backend actions and bring-your-own AI keys.
-- Enterprise adds negotiated capacity/service; do not promise unbuilt SSO,
-  compliance certifications, SLAs or unlimited usage.
-- Starter is eventually self-service. Early founder configuration help is a
-  launch service, not a permanent unlimited concierge commitment. Mandatory
-  setup fees are removed; separately scoped paid implementation remains an
-  option to decide, not a new approved fee.
-- Feature entitlement is the target design, not a claim about current gates.
-  The current website widget is a WhatsApp link, not embedded live chat. Voice
-  availability must be verified by channel; do not advertise WhatsApp calling
-  merely because phone-call simulation exists.
+### What each plan unlocks (this matches the gates in `src/modules/billing/plans.ts`)
 
-## 2. Trial and billing rules
+- **Entry** — an AI chatbot trained on the business that answers questions, plus
+  marketing templates. No bookings, payments, follow-ups or any other action.
+- **Starter** — everything in Entry plus the full workspace: AI replies and lead
+  capture, shared team inbox with AI drafts, contacts/tags/segments/notes,
+  broadcast campaigns with AI-written copy, conversation summaries, the website
+  WhatsApp button.
+- **Growth** — everything in Starter plus the agent's real actions: booking into
+  Google Calendar, payment links in chat, the follow-up engine (reminders,
+  no-show recovery, quiet-lead nudges), lead scoring, Zoho/Salesforce sync,
+  developer API and webhooks, per-number staff restrictions.
+- **Pro** — everything in Growth plus the voice front desk (100 call minutes a
+  month), custom actions into the customer's own systems, bring-your-own AI key,
+  unlimited contacts and campaign messages.
+- **Enterprise** — Pro's features with capacity, numbers, seats, voice minutes
+  and credits agreed per deal, and a named support contact. Assigned by the
+  founder (`npm run plan:set`), invoiced outside checkout. Do not promise SSO,
+  compliance certifications, SLAs or unlimited usage — none exist.
 
-- Seven days from signup, no card, showcasing Growth. No permanent free tier.
-- At expiry without purchase: preserve configuration and history, allow reading
-  and exports, pause AI and outbound paid operations. No automatic charge or
-  guaranteed conversion; the customer must subscribe.
-- One shared Nudge credit balance for Nudge-funded AI and voice, not one per feature.
-- Meta bills the customer directly. No Nudge markup on Meta charges.
-- Ordinary campaign sending, manual messages, prewritten reminders and
-  deterministic CRM/scoring/API operations use zero credits. Subscription
-  covers their infrastructure; zero credits does not mean zero operating cost.
-- AI drafting, personalization, replies, summaries and other paid inference
-  consume credits. Booking/payment execution is not a second charge on top of
-  the AI work. Show one consolidated operation, not a reply plus an action toll.
-- BYO inference consumes no Nudge credits. Nudge-funded speech/telephony still
-  consumes credits. Paid fallback requires explicit customer opt-in.
-- Included credits reset each billing cycle. Purchased credits expire twelve
-  months after purchase; spend the soonest-expiring eligible balance first.
-- Auto-recharge is off by default. A zero balance pauses Nudge-funded AI/voice,
-  not an active subscriber's manual inbox or non-AI campaigns/automations.
-  Entitled BYO inference can continue. Top-ups do not unlock higher-tier features.
+Buying credits never unlocks a higher plan's features.
 
-## 3. Proposed credit design — not yet approved
+## 3. Credits (decided policy; NOT yet built — see §7)
 
-Three choices: fixed prices per feature (simplest, but long chats can lose money),
-raw provider-cost pass-through (transparent but little usage margin), or one
-cost-weighted credit balance with plain-English estimates. Recommend the third while
-measuring real workloads. Do not promise a fixed number of replies per credit.
+**One credit = US$0.005 of eligible AI provider cost.** A credit is a unit of
+usage, not a message and not a rupee. A short task uses less than one; a long
+one uses several. Fractions accumulate precisely and are not rounded up per call.
 
-**Proposed internal conversion: one credit per US$0.005 of eligible provider
-cost.** Fractional credits are allowed, accumulated precisely, not rounded up
-on every model call. This is a usage unit, not cash or a redeemable currency.
-Use a published versioned rate card; do not silently change deductions with FX.
-Expose estimates and spending limits, not token jargon, in customer-facing UI.
+| Activity | Uses credits? |
+|---|---|
+| AI reply, summary, campaign copy, AI personalisation | Yes — for the AI work |
+| Voice on an eligible plan (Nudge-funded speech + carrier) | Yes |
+| Sending an already-written campaign or a manual message | No |
+| Follow-up reminders, no-show recovery, quiet-lead nudges (pre-written templates) | No |
+| Ordinary CRM sync, rule-based lead scoring, API calls | No |
+| Booking or payment-link execution after AI work | No extra charge |
+| AI running on the customer's own provider key (Pro / Enterprise) | No |
 
-| Proposed allowance | Trial (total) | Starter/month | Growth/month | Pro/month |
+Meta's per-conversation charges are the customer's own bill and are never
+converted into credits. Drafting one campaign uses credits once; sending that
+text to 1,000 opted-in people does not.
+
+**Balance rules.** Included credits reset every billing cycle. Purchased credits
+expire 12 months after purchase; the soonest-expiring eligible balance is spent
+first. Auto-recharge is off by default. A zero balance pauses Nudge-funded AI
+and voice, never the manual inbox, campaigns or follow-ups the plan already
+includes. Simulation mode never consumes purchased credit. Nudge absorbs its
+own failed or retried AI work; a customer-requested regeneration is new usage.
+
+**Top-up packs (decided prices).**
+
+| Credits | India | Singapore |
+|---:|---:|---:|
+| 1,000 | ₹999 | S$19 |
+| 5,000 | ₹4,499 | S$89 |
+| 10,000 | ₹7,999 | S$169 |
+
+**Trial.** Seven days from signup, no card, showcasing Growth, with 100 credits
+in total. At expiry the workspace keeps its configuration and history (readable
+and exportable); AI and paid outbound pause until a plan is bought. No
+automatic charge.
+
+## 4. What the credits are worth — cost and margin
+
+Planning assumptions, not live quotes: US$1 = ₹90 = S$1.35. Provider rates
+checked 2026-09-11 — Haiku 4.5 US$1 in / US$5 out per million tokens; Sonnet
+4.6 US$3 / US$15. Nudge runs Sonnet at runtime (`RUNTIME_MODEL`, since
+2026-08-29). One credit therefore costs us **₹0.45 / S$0.00675**.
+
+### What one task costs (uncached, single call; real conversations vary)
+
+| Example | Credits | Our cost (India) | Value at smallest pack (India) |
+|---|---:|---:|---:|
+| Short Haiku reply (2,000 in / 300 out) | 0.7 | ₹0.32 | ₹0.70 |
+| Same-size Sonnet reply | 2.1 | ₹0.95 | ₹2.10 |
+| Longer Sonnet summary (8,000 in / 500 out) | 6.3 | ₹2.84 | ₹6.29 |
+| One voice minute (assumed US$0.15 all-in) | 30 | ₹13.50 | ₹29.97 |
+
+### How far the included credits go (Sonnet, example reply size)
+
+| | Entry 200 | Starter 1,000 | Growth 2,500 | Pro 5,000 |
 |---|---:|---:|---:|---:|
-| Shared credits | 100 | 500 | 1,500 | 3,000 |
-| Corresponding eligible provider spend | $0.50 | $2.50 | $7.50 | $15.00 |
+| ≈ AI replies a month | 95 | 476 | 1,190 | 2,380 |
+| ≈ AI replies if run on Haiku | 285 | 1,428 | 3,571 | 7,142 |
 
-Trial allowance is intentionally bounded and must be tested for a meaningful
-demo. Extra trial grants require an explicit founder decision. No live voice
-on the Growth trial; a labeled simulation may showcase it.
+A multi-step agent action (book + confirm) can take several calls; these are
+single-call figures. Nobody has yet measured a real clinic's replies per
+conversation. That one number decides every margin below — measure it before
+calling any allowance "enough".
 
-| Proposed top-up | India | Singapore |
-|---|---:|---:|
-| 1,000 credits | ₹999 | S$19 |
-| 5,000 credits | ₹4,499 | S$89 |
-| 10,000 credits | ₹7,999 | S$169 |
+### Subscription margin after AI cost (assumes every included credit is used)
 
-Small packs keep Starter accessible. Larger packs discount usage, not plan
-features. No forced recharge; show estimated remaining work before buying.
+India:
 
-## 4. Cost assumptions and examples
+| Plan | Customer pays | AI cost of included credits | Left | Left % |
+|---|---:|---:|---:|---:|
+| Entry | ₹1,499 | ₹90 | ₹1,409 | 94.0% |
+| Starter | ₹4,999 | ₹450 | ₹4,549 | 91.0% |
+| Growth | ₹9,999 | ₹1,125 | ₹8,874 | 88.7% |
+| Pro | ₹19,999 | ₹2,250 | ₹17,749 | 88.7% |
 
-Published base API rates checked 2026-09-11: Haiku 4.5 $1 input/$5 output per
-million tokens; Sonnet 4.6 $3/$15. These are example models, not a routing change.
-Cache writes/reads and model versions need their own prices, not substring
-matching. [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing).
+Singapore:
 
-Illustrative single-call workloads, uncached, not measured customer averages:
+| Plan | Customer pays | AI cost | Left | Left % |
+|---|---:|---:|---:|---:|
+| Starter | S$89 | S$6.75 | S$82.25 | 92.4% |
+| Growth | S$329 | S$16.88 | S$312.13 | 94.9% |
+| Pro | S$659 | S$33.75 | S$625.25 | 94.9% |
 
-| Workload | Input/output tokens | Provider cost | Proposed credits |
-|---|---|---:|---:|
-| Short Haiku reply | 2,000 / 300 | $0.0035 | 0.7 |
-| Same size Sonnet reply | 2,000 / 300 | $0.0105 | 2.1 |
-| Longer Sonnet summary | 8,000 / 500 | $0.0315 | 6.3 |
+"Left" is revenue minus eligible AI cost only. Hosting, database, storage,
+payment fees, support and onboarding time, number rental, provider minimums,
+absorbed failures, refunds, fraud, sales, marketing and development still come
+out of it. It is not profit.
 
-A multi-step agent can make several calls. Aggregate actual eligible inference
-once per operation; the above is not a guarantee of end-to-end reply cost.
-At the illustrative Haiku size, 500 credits supports about 714 replies with
-nothing else used; at the Sonnet size about 238. This difference is why we must
-measure real traffic before calling an allowance sufficient for a normal clinic.
+### Top-up margin (assumes the whole pack is consumed)
 
-Voice consumes the same credit balance, but its cost must include speech service,
-inference and the selected carrier route, including any burst charges.
-[ElevenLabs pricing](https://elevenlabs.io/pricing/agents) is only one component;
-no carrier quote or actual voice invoice has been validated here. For a stress
-scenario of $0.15 all-in per minute (assumption, not vendor quote), voice uses
-30 credits/minute and Pro's 3,000 credits buys 100 minutes if used only for voice.
-At $0.25/minute it buys 60 minutes. Do not also deduct the same inference cost
-as a separate chat charge. Number rental and provider minimum commitments must
-be allocated separately or explicitly priced before launch.
+| Pack | India price | Our cost | Left | Margin | Singapore price | Our cost | Left | Margin |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1,000 | ₹999 | ₹450 | ₹549 | 55.0% | S$19 | S$6.75 | S$12.25 | 64.5% |
+| 5,000 | ₹4,499 | ₹2,250 | ₹2,249 | 50.0% | S$89 | S$33.75 | S$55.25 | 62.1% |
+| 10,000 | ₹7,999 | ₹4,500 | ₹3,499 | 43.7% | S$169 | S$67.50 | S$101.50 | 60.1% |
 
-## 5. Economics checks, not a profit forecast
+If US$1 moves to ₹100 the 10,000 pack's margin falls to 37.5%. Margin here is
+(price − cost) ÷ price, before all other expenses.
 
-Planning FX assumptions only: US$1 = ₹90 and S$1.35; not current exchange quotes.
-Full included consumption costs ₹225/₹675/₹1,350 for Starter/Growth/Pro, or
-about 5%/9%/9% of India subscription revenue, before every other operating expense.
-At the revised Starter price, ₹4,274 remains after eligible provider usage cost,
-not net profit. Entry margin remains undecided until its allowance is set;
-each 100 credits costs ₹45 at the planning exchange rate if fully consumed.
-At these assumptions the 10,000-credit pack costs ₹4,500/S$67.50 in eligible
-provider spend, leaving about 44%/60% respectively before fees and overhead.
-At INR/USD 100, that India pack leaves about 37.5%. No claim of total gross
-margin follows: payment fees, tax treatment, support, onboarding, hosting,
-minimum provider plans, storage, fraud, refunds and absorbed failures remain.
+Voice draws on the same credit balance. At the assumed US$0.15/minute, Pro's 5,000
+credits buy about 166 voice minutes if used for nothing else (at US$0.25, 100
+minutes). Never advertise the full chat allowance and the full voice allowance
+as simultaneously included. The voice figure is an assumption, not a carrier
+quote; verify speech, inference and carrier costs before selling live voice.
 
-Examples at the single-call Haiku size:
-- Light Starter: 300 replies = 210 credits; inside the allowance.
-- Growth: 1,800 replies + 20 example summaries = 1,386 credits; inside allowance.
-- Heavy Growth: 5,000 replies + 50 summaries = 3,815 credits; 2,315 beyond allowance.
-- Voice-heavy Pro: 100 minutes at assumed $0.15/minute consumes the entire balance,
-  leaving no included credits for chat. Explain this openly, never advertise
-  both maximum chat and maximum voice as simultaneously included.
+## 5. High-volume and Enterprise deals
 
-These quantities are a pilot starting point, not validated willingness-to-pay
-or workload distribution. Test with real clinic traces and provider invoices;
-raise included allowances or change pack prices if normal use causes constant
-recharges. Avoid annual discounts until fully consumed economics are known.
+The self-serve tiers are sized for a normal small business. A customer with
+**100+ inbound leads a day** is not one, and must not be sold Pro at list price.
 
-## 6. Implementation boundary and launch checks
+Worked example: 100 leads/day ≈ 3,000 conversations/month. Assuming 8 AI
+replies per conversation (unmeasured), that is 24,000 replies ≈ **50,400
+credits ≈ ₹22,700 of AI cost a month on Sonnet** (≈ ₹7,600 on Haiku). Pro's
+5,000 included credits cover a tenth of it; at list price Nudge loses money.
 
-Current `src/lib/model-router/usage.ts` logs usage asynchronously and swallows
-write failures. Its approximate model-family prices and synthetic rows are
-useful analytics, not a trustworthy prepaid billing ledger. Do not debit
-customers directly from it without redesign and reconciliation.
+Two ways to price such a deal (both assume Pro = ₹19,999):
 
-Before building: approve section 3; resolve migration of existing free,
-front_desk, annual and paid accounts, remaining balances, and downgrade limits.
-Never silently reprice existing subscribers or delete excess seats/numbers.
+| | Monthly | Our AI cost | Left | Risk |
+|---|---:|---:|---:|---|
+| A. Committed credit block — Pro + 50,000 credits/month at ₹0.75 | ≈ ₹57,500 | ≈ ₹22,700 | ≈ ₹34,800 | margin shrinks if conversations run longer than assumed |
+| B. Bring-your-own key — Pro-level flat fee, the customer pays their AI provider directly | ≈ ₹35,000 | ≈ ₹0 | ≈ ₹35,000 | none on AI usage |
 
-Implementation plan must cover atomic reservations/debits, idempotent payment
-webhooks, concurrent calls, expiration, refunds, duplicate provider events,
-cache-specific costs, exact model versions, customer caps and reconciliation.
-Simulation never consumes purchased credit. Proposed policy: Nudge absorbs its
-own failed/internal retry work; completed customer-requested regeneration is
-new usage, disclosed before running. Missing cost information must not be
-silently treated as free or guessed for customer billing.
+B is the safer margin; A is the bigger top line. Either way the customer pays
+55–70% less than the US$1,500/month they paid their previous vendor.
 
-Voice requires preflight balance and a bounded call reserve with graceful
-handoff when exhausted. Usage alone is not permission to contact someone:
-consent, STOP, 24-hour windows, tenant isolation and role gates still apply.
+**Implementation fee.** Mandatory setup fees were removed from the self-serve
+tiers on 2026-09-11. A separately scoped, paid implementation for an Enterprise
+deal (knowledge base, templates, calendar and CRM integration, Meta setup) is
+allowed and recommended; founder guidance is ₹75,000–₹1,50,000 one-time,
+decided per deal. It is not a list price.
 
-Validate a full billing cycle with test payments and representative real AI
-traces before enabling live charges. This document does not authorize deployment.
+**Annual billing.** No annual discount has been approved. The public pricing
+page shows a "yearly, 2 months free" toggle (`ANNUAL_MONTHS_CHARGED = 10`) but
+checkout only charges monthly — the yearly figure is display-only today. Avoid
+annual discounts until a real month of consumption per customer has been
+measured.
+
+## 6. Meta billing (how it works today)
+
+The customer owns their Meta Business Manager, WhatsApp Business Account,
+phone number and the card attached to it. Meta charges that card for every
+conversation. Nudge connects with the customer's access token
+(`WhatsappAccount` stores the WABA id, phone-number id and encrypted token).
+This is Meta's "Model A" and does not require Nudge to be a Tech Provider —
+that only matters for self-serve Embedded Signup at scale.
+
+The dashboard shows an **estimate** of Meta cost per campaign (rate ×
+recipients). It does not show the customer's actual Meta bill; that lives in
+their Meta Business Manager. Pulling real spend from Meta's API is not built.
+
+If a customer's number is currently owned by a previous vendor's Business
+Manager, it must be migrated out first, which needs that vendor's cooperation.
+
+## 7. What is built and what is not (the truth as of 2026-09-15)
+
+Built and live:
+- The four subscription prices in INR and SGD, and the plan feature gates.
+  Checkout (Razorpay for INR, Stripe elsewhere) charges `planPrice()` directly,
+  so `plans.ts` is the price of record.
+- Plan limits on contacts, seats, numbers, automations and campaign messages.
+- Bring-your-own AI key on Pro (`byoLlm`, `LlmAccount`, restricted to
+  `BYOK_ALLOWED_MODELS`).
+- Enterprise plan assignment and per-org `featureOverrides` for bespoke caps.
+- The seven-day trial and its expiry to a read-only state.
+- Included credits shown on the public pricing page and in Settings → Billing.
+
+Not built (a customer today gets *at least* the promised credits and nothing
+stops them beyond it — Nudge silently absorbs the cost):
+- A credit ledger: balance, deduction per AI call, reset each cycle, expiry.
+- Any cap or pause when a balance reaches zero.
+- Top-up pack purchase, auto-recharge, spending limits, balance UI.
+- Trial credit enforcement (the 100-credit trial allowance).
+- Per-customer AI spend alerts beyond the founder-side `PLAN_COST_ALERT_PCT`.
+- Annual checkout.
+- Real Meta spend on the dashboard.
+
+`src/lib/model-router/usage.ts` logs AI usage asynchronously with approximate
+model-family prices and swallows write failures. It is analytics, not a
+ledger; customers must not be debited from it without a redesign that covers
+atomic reservations and debits, idempotent payment webhooks, concurrent calls,
+expiry, refunds, duplicate provider events, cache-specific and exact-model
+pricing, customer caps and reconciliation.
+
+## 8. Before live credit billing
+
+1. Measure real replies per conversation and AI cost per customer from
+   `AiUsage` for at least one full month of live traffic.
+2. Build the credit ledger (§7) with tests; exclude simulation from real charges.
+3. Decide how existing `free`, `front_desk`, trial and paid workspaces move
+   to the new plans and balances. Never silently reprice, downgrade, or delete
+   a subscriber's seats or numbers.
+4. Validate a full billing cycle with test payments and representative AI
+   traces before enabling live charges.
+
+Usage is never permission to contact someone: consent, STOP, the 24-hour
+service window, tenant isolation and role gates apply regardless of balance.
+
+## References
+
+- Anthropic pricing: https://platform.claude.com/docs/en/about-claude/pricing
+- ElevenLabs agents pricing (voice component only): https://elevenlabs.io/pricing/agents
+- Price of record in code: `src/modules/billing/plans.ts`

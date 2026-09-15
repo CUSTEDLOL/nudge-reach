@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * HIGH regression (payment-integrity): confirmCheckoutAction must derive the
  * activated plan from the paid ORDER (server-set notes + captured amount), NOT
- * the client-supplied planId — otherwise a genuine ₹4,499 payment could be
- * redeemed for the ₹14,999 tier.
+ * the client-supplied planId — otherwise a genuine ₹4,999 payment could be
+ * redeemed for the ₹19,999 tier.
  */
 
 const {
@@ -64,11 +64,11 @@ beforeEach(() => {
 
 describe("confirmCheckoutAction — payment integrity", () => {
   it("activates the plan from the ORDER notes, ignoring a spoofed client planId", async () => {
-    // Paid ₹4,499 for starter; order notes say starter; client claims 'pro'.
+    // Paid ₹4,999 for starter; order notes say starter; client claims 'pro'.
     fetchRazorpayOrder.mockResolvedValue({
       id: "o1",
       status: "paid",
-      amount: 4499 * 100,
+      amount: 4999 * 100,
       currency: "INR",
       notes: { orgId: "org1", planId: "starter" },
     });
@@ -82,7 +82,7 @@ describe("confirmCheckoutAction — payment integrity", () => {
     fetchRazorpayOrder.mockResolvedValue({
       id: "o1",
       status: "paid",
-      amount: 4499 * 100,
+      amount: 4999 * 100,
       currency: "INR",
       notes: { orgId: "someone-else", planId: "starter" },
     });

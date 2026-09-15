@@ -7,7 +7,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What do the plans actually include?",
-    a: "Entry at ₹1,499 a month is an AI chatbot trained on your business — it answers customer questions around the clock and sends marketing templates, but it does not act. Starter at ₹4,499 adds the full workspace: lead capture, the shared team inbox, contacts, campaigns and a website button. Growth at ₹7,499 lets the AI act — booking into your real calendar, sending payment links, chasing quiet leads and no-shows, plus lead scoring, CRM sync and the developer API. Pro at ₹14,999 adds the voice front desk, custom actions into your own systems and the option to bring your own AI key.",
+    a: "Entry at ₹1,499 a month is an AI chatbot trained on your business — it answers customer questions around the clock and sends marketing templates, but it does not act. Starter at ₹4,999 adds the full workspace: lead capture, the shared team inbox, contacts, campaigns and a website button. Growth at ₹9,999 lets the AI act — booking into your real calendar, sending payment links, chasing quiet leads and no-shows, plus lead scoring, CRM sync and the developer API. Pro at ₹19,999 adds the voice front desk, custom actions into your own systems and the option to bring your own AI key. Every plan includes a monthly allowance of AI credits — 200, 1,000, 2,500 and 5,000 respectively — which pay for the AI's replies and writing; sending campaigns, manual messages and follow-up reminders never use credits.",
   },
   {
     q: "Can I try it before paying?",

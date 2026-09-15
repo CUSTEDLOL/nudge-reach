@@ -48,8 +48,14 @@ describe("plans", () => {
       "front_desk",
     ]);
     expect(PLANS.map((p) => planPrice(p, "INR"))).toEqual([
-      1499, 4499, 7499, 14999, 0, 0, 14999,
+      1499, 4999, 9999, 19999, 0, 0, 14999,
     ]);
+  });
+
+  it("promises included AI credits on every sold tier (founder-set 2026-09-15)", () => {
+    expect(selfServePlans().map((p) => p.includedCredits)).toEqual([200, 1000, 2500, 5000]);
+    // Enterprise credits are agreed per deal, never a grid number.
+    expect(getPlan("enterprise").includedCredits).toBeNull();
   });
 
   it("gives the agent's real actions to Growth and up, never to Starter", () => {

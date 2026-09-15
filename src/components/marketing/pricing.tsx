@@ -27,8 +27,8 @@ import {
  * outside India (undecided in the founder record, so it reads "on request"
  * rather than inventing a number).
  *
- * Deliberately absent: usage credits, which stay internal until real
- * workloads are measured.
+ * Included AI credits are printed from `plan.includedCredits`. They are a
+ * promise, not a meter — nothing in the product deducts them yet.
  */
 
 /** Real markets only — the onboarding list's "Other" catch-all isn't a country. */
@@ -68,8 +68,12 @@ export function Pricing() {
     if (plan.id === "entry" && !entryPricedIn(currency)) {
       return "Ask us on the call";
     }
-    if (!yearly) return "Billed monthly · excl. tax";
-    return `${formatPlanPrice(planPriceYearly(plan, currency), currency)} billed yearly · excl. tax`;
+    const credits =
+      plan.includedCredits === null
+        ? ""
+        : ` · ${plan.includedCredits.toLocaleString("en-IN")} AI credits/mo`;
+    if (!yearly) return `Billed monthly · excl. tax${credits}`;
+    return `${formatPlanPrice(planPriceYearly(plan, currency), currency)} billed yearly · excl. tax${credits}`;
   }
 
   return (

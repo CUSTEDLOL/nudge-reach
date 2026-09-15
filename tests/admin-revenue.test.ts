@@ -11,12 +11,12 @@ describe("aggregateMrr", () => {
       { plan: "front_desk", currency: "SGD" },
     ]);
     expect(rows.map((r) => `${r.currency}:${r.plan}:${r.orgs}:${r.monthly}`)).toEqual([
-      "INR:starter:1:4499",
+      "INR:starter:1:4999",
       "INR:front_desk:2:29998",
       "SGD:front_desk:1:599",
     ]);
     expect(byCurrency).toEqual([
-      { currency: "INR", monthly: 34497, orgs: 3 },
+      { currency: "INR", monthly: 34997, orgs: 3 },
       { currency: "SGD", monthly: 599, orgs: 1 },
     ]);
   });

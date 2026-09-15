@@ -153,6 +153,11 @@ export default async function BillingSettingsPage() {
                   )}
                 </p>
                 <p className="mt-1 text-xs text-neutral-500">{plan.tagline}</p>
+                {plan.includedCredits !== null && (
+                  <p className="mt-1 text-xs font-medium text-neutral-700">
+                    {plan.includedCredits.toLocaleString("en-IN")} AI credits a month
+                  </p>
+                )}
                 <ul className="mt-4 flex flex-col gap-2">
                   {plan.features.map((feature) => (
                     <li
