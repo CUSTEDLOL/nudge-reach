@@ -71,13 +71,24 @@ AI cannot know. It should answer the first five from the facts, book the
 sixth, and say it will check with the team on the last. That last one appears
 under Needs your answer; the client answers it once and the AI learns it.
 
-**3. Connect WhatsApp (20 min, then Meta's clock).** Founder, from
-/admin → the client's workspace → Integrations → Connect a number.
-The number goes on Nudge's WhatsApp Business Account; the client keeps
-ownership of the phone. Enter display name, the WhatsApp Business Account ID,
-the Phone Number ID and the permanent token. The client receives a one-time
-code by SMS or call to verify the number. Meta then reviews the display name,
-usually the same day. Until go-live the workspace stays in test mode.
+**3. Connect WhatsApp (20 min, then Meta's clock).** Two halves, and only
+the second is inside Nudge.
+
+*In Meta's WhatsApp Manager (founder, 10 min):* add the client's number to
+Nudge's WhatsApp Business Account, choose the display name, and pick SMS or
+voice for the verification code. The code arrives on the client's phone;
+they read it out, you enter it. Meta then reviews the display name, usually
+the same day. Nudge does not do this part: number registration and the
+one-time code live in Meta's dashboard until we become a Meta Tech Provider
+with Embedded Signup.
+
+*In Nudge (founder, 5 min):* /admin → the client's workspace →
+Integrations → Connect a number. Enter the display name, the WhatsApp
+Business Account ID, the Phone Number ID and the permanent token. Nudge
+checks with Meta that the number really belongs to that account before it
+saves anything, stores the token encrypted, and writes an audit row. Until
+go-live the workspace stays in test mode. Clients with their own Meta app
+can do the same from Settings → WhatsApp → Advanced: connect manually.
 
 **4. Connect the calendar (5 min).** Integrations → Connect calendar.
 The client signs in to Google once. From then on the AI checks real
