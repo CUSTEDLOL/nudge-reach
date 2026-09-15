@@ -1,5 +1,27 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Isolated founder admin login (2026-09-15) ✅
+
+- `/admin` now owns a separate Supabase email/password session whose HttpOnly,
+  SameSite=Lax cookie has a distinct storage name and is scoped to `/admin`.
+  Founder login and sign-out no longer read, replace, or clear the normal Nudge
+  workspace session.
+- The signed-out `/admin` route renders a focused founder login with the real
+  Nudge logo and safe inline errors instead of redirecting to `/login` or
+  returning a 404. Valid Supabase users must still pass the server-side
+  `FOUNDER_EMAILS` allowlist; non-founder sessions are immediately cleared.
+- Protected `/admin/*` pages and every existing admin mutation retain the
+  `requireFounder` boundary. Signed-out deep links return to `/admin`, and no
+  cross-organization dashboard query or admin shell renders before access is
+  established.
+- Verification: focused auth/session/UI tests **26/26**; complete suite
+  **915/915**; lint **0 errors** (one unchanged warning in
+  `admin-create-workspace.test.ts`); Next.js production build passed with
+  `/admin` and `/admin/signout`. Local HTTP checks returned **200** with only
+  login content for `/admin` and **307 → /admin** for `/admin/orgs`, with no
+  runtime errors. A controllable browser was unavailable, so the authenticated
+  founder login and responsive visual pass remain the explicit manual check.
+
 ## Pricing re-set with included credits; one pricing record (2026-09-15) ✅
 
 - Founder set the plan prices and included AI credits: India Entry ₹1,499 /
