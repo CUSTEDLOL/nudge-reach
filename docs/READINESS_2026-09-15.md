@@ -1,11 +1,27 @@
 # Are we ready to sell? Production readiness audit, 15 September 2026
 
-**Short answer: the product is ready; the production configuration is not.**
-Every screen and every client flow I could drive worked on nudgeagent.app with
-zero errors. But five switches are still off, so a paying client today could
-not be given an account, could not send a real WhatsApp message, could not pay,
-and could not receive a phone call. All five are configuration you set once;
-none needs code. One real outage was found and fixed during the audit.
+**Short answer: the product is ready; four external accounts are not connected.**
+Every screen and every client flow worked on nudgeagent.app with zero errors,
+including campaign submission, a keyword automation, an in-window inbox reply
+and an end-to-end AI booking. Two real defects were found and fixed the same
+day (the cron outage below, and invited owners having no way to set a
+password). The founder admin flow that creates a client workspace was
+exercised against the live database and works. What remains is a one-line
+script for two Vercel switches, plus the Meta token, payment keys, a phone
+number and an email key that only the account holders can obtain.
+
+## Done on 15 September
+
+- Cron outage fixed (table pushed, heartbeat made non-fatal, workflow green).
+- Invited owners can now set a password: invite emails link to
+  `/login?invited=1`, which reveals the sign-up form while open signup stays
+  closed; the server still refuses anyone without a pending invite.
+- Founder create-workspace verified against the live database: Growth plan,
+  INR, Asia/Kolkata, test mode, pending owner, OWNER invite, duplicate refused.
+- Spice Garden demo workspace made coherent: restaurant identity, 12
+  restaurant facts, 13 stale test questions dismissed. Verified: the AI now
+  quotes the private room for 20 and tandoori prawns at ₹650.
+- `scripts/prod-env-setup.sh` written for the two Vercel switches.
 
 ## What was tested, on production, as a real logged-in client
 
@@ -17,9 +33,9 @@ none needs code. One real outage was found and fixed during the audit.
 | Teach the AI (add a fact) | Listed immediately |
 | Add a contact | Listed immediately, detail page opens |
 | Template | Draft saved, edit page opens. Header must be set to "None" or given text |
-| Campaign wizard | Content → Audience (10 opted-in) → Review: consent gate, ₹0.99 per message estimate, "Submit for approval". Submission itself not driven headlessly |
-| Follow-up automations | Page and validation work ("add a keyword", "add a step"). Trigger cards and step chooser not driven headlessly |
-| Inbox | Threads open. Expired thread correctly forces an approved template (24-hour rule). In-window reply not driven headlessly |
+| Campaign wizard | Content → Audience (10 opted-in) → Review: consent gate, ₹0.99 per message estimate → submitted: "In review · Waiting for Meta's approval" |
+| Follow-up automations | Keyword trigger + "Send message" step created: "Automation created" |
+| Inbox | Expired thread correctly forces an approved template (24-hour rule). With the window open, a free-form owner reply sends and appears in the thread |
 | Team invite | "They'll join automatically when they sign up with this email" |
 | WhatsApp test connection | Reports test mode (see blocker 2) |
 | CRM (Zoho, simulated) | Connect, sync, disconnect all work |
@@ -46,12 +62,18 @@ heartbeat failure can no longer mark a good tick as failed.
 Rule from now on: after any change to `prisma/schema.prisma`, run
 `npx prisma db push` against production. Nothing does it for you.
 
-## The five blockers, in the order to do them
+## What is left, in the order to do them
 
-1. **You cannot create a client workspace.** Signup is invite-only and the
-   founder admin panel is off because `FOUNDER_EMAILS` is not set in Vercel.
-   Set it to both founder emails, redeploy, then create the client in
-   `/admin` → Create workspace, on the plan they bought.
+Run once, signed in to Vercel as CUSTEDLOL: `bash scripts/prod-env-setup.sh`.
+It sets `FOUNDER_EMAILS` (turns on `/admin`) and a generated `CRON_SECRET`
+in Vercel and GitHub, optionally takes Razorpay and Resend keys, and
+redeploys. (I could not push these myself: the tool refuses to write
+environment variables to a remote service.)
+
+1. **You cannot create a client workspace until the script runs.** Signup is
+   invite-only and the founder admin panel is off because `FOUNDER_EMAILS` is
+   not set. After the script: `/admin` → Create workspace, on the plan they
+   bought, with the owner's email; send them the link the page shows.
 2. **No real WhatsApp message can leave.** Production runs in test mode
    (`SEND_MODE=simulation`) and the connected number still uses a 24-hour
    Meta token that has expired. Generate a permanent System User token in
@@ -65,18 +87,16 @@ Rule from now on: after any change to `prisma/schema.prisma`, run
    India: Exotel account, KYC, vSIP trunk. Elsewhere: a Twilio number.
    Steps are in `docs/CLIENT_GO_LIVE_VOICE_CRM.md`. Start this first; KYC is
    the long pole.
-5. **Invited owners get no email.** `RESEND_API_KEY` is not set, so the
-   client must be told to sign up with the exact email you invited. Also
-   confirm in Supabase → Authentication → URL Configuration that the Site URL
-   is `https://nudgeagent.app` and `https://nudgeagent.app/auth/**` is an
+5. **Invited owners get no email** until `RESEND_API_KEY` and `EMAIL_FROM`
+   are set (the script prompts for them). Until then, send the client
+   `https://nudgeagent.app/login?invited=1` yourself and tell them to sign up
+   with the exact email you invited. Also confirm in Supabase →
+   Authentication → URL Configuration that the Site URL is
+   `https://nudgeagent.app` and `https://nudgeagent.app/auth/**` is an
    allowed redirect, or confirmation links point at localhost.
 
-Smaller: set `CRON_SECRET` (Vercel and the GitHub secret) so the cron endpoint
-is not open to anyone; Google Calendar and CRMs are simulated in production
-until `GOOGLE_*`, `ZOHO_*`, `SALESFORCE_*` keys exist.
-
-All env changes: `vercel env add NAME production` while signed in as
-CUSTEDLOL, then `vercel --prod`.
+Google Calendar and CRMs are simulated in production until `GOOGLE_*`,
+`ZOHO_*`, `SALESFORCE_*` keys exist.
 
 ## Margins
 
@@ -87,13 +107,12 @@ client who talks on the phone for the full allowance.
 
 ## Before the first demo
 
-The Spice Garden test workspace is configured as "BrightSmile Dental" under
-AI Front Desk → Setup while its knowledge base is a saree shop. It answers
-correctly for a dental clinic, which looks broken in a restaurant demo. Fix
-the business name and facts, or reset the demo data, before showing it.
+Done: the Spice Garden workspace now has one identity (a North Indian
+restaurant on Brigade Road) with matching facts, and the AI answers from them.
 
 ## Recommendation
 
-Do blocker 1 today and blocker 4 tomorrow. With 1 and 2 done a client can be
-onboarded and served on WhatsApp. Invoice manually until 3 is set. Sell voice
-as "browser and, once the number is live, phone".
+Run the script today and start the phone-number paperwork tomorrow. With the
+script run and the Meta token in place, a client can be onboarded and served
+on WhatsApp. Invoice manually until Razorpay keys exist. Sell voice as
+"browser and, once the number is live, phone".

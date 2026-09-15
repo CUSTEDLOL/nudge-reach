@@ -51,7 +51,8 @@ function escapeHtml(value: string): string {
 }
 
 function inviteEmail(orgName: string, email: string, role: "ADMIN" | "AGENT") {
-  const signupUrl = `${appOrigin()}/login`;
+  // ?invited=1 reveals the sign-up form even while open signup is closed.
+  const signupUrl = `${appOrigin()}/login?invited=1`;
   return {
     to: email,
     subject: `You're invited to ${orgName} on Nudge`,

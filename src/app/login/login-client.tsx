@@ -77,13 +77,18 @@ function GoogleG() {
 export function LoginClient({
   initialError,
   signupOpen = false,
+  initialMode = "signin",
 }: {
   initialError: string | null;
-  /** Open signup is off by default: Nudge creates workspaces after a demo. */
+  /** Open signup is off by default: Nudge creates workspaces after a demo.
+   * The page also turns this on for /login?invited=1 so invited owners can
+   * set their password. */
   signupOpen?: boolean;
+  /** "signup" when the visitor arrived from an invite email. */
+  initialMode?: Mode;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(signupOpen ? initialMode : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);

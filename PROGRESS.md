@@ -23,9 +23,20 @@
   is simulation so no real WhatsApp message leaves; no payment keys so
   checkout shows "Payments off"; no voice phone number connected; Supabase
   Site URL / redirect allowlist unverified for the invited-owner signup.
-- The Spice Garden test org is configured as "BrightSmile Dental" in AI
-  Front Desk → Setup while its knowledge base is a saree shop: harmless, but
-  fix before using it as a demo.
+- **Second defect fixed the same day:** invite emails linked to `/login`,
+  which hides the Sign Up form while open signup is closed, so an invited
+  owner could never set a password. Invites now link to `/login?invited=1`;
+  the page reveals the form for that URL only and the server still refuses
+  anyone without a pending invite (`tests/signup-closed.test.ts` unchanged,
+  42 related tests green). Founder create-workspace exercised against the
+  live DB: Growth plan, INR, test mode, pending owner, OWNER invite, duplicate
+  refused.
+- Later the same day: campaign submitted to review, keyword automation with a
+  step created, and an in-window free-form inbox reply sent, all on
+  production. The Spice Garden demo org was made coherent (restaurant identity
+  + 12 restaurant facts; 13 stale test questions dismissed).
+  `scripts/prod-env-setup.sh` sets `FOUNDER_EMAILS` + `CRON_SECRET` (Vercel
+  + GitHub) and optionally Razorpay/Resend, then redeploys — founder runs it.
 
 ## 34-month SEO program design approved (2026-09-14) ✅
 
