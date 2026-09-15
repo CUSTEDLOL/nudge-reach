@@ -37,7 +37,8 @@ function escapeHtml(value: string): string {
 }
 
 function ownerInviteEmail(orgName: string, email: string) {
-  const setupUrl = `${appOrigin()}/login`;
+  // ?invited=1 reveals the sign-up form even while open signup is closed.
+  const setupUrl = `${appOrigin()}/login?invited=1`;
   return {
     to: email,
     subject: `Set up your Nudge workspace, ${orgName}`,

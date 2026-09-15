@@ -12,13 +12,19 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; invited?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, invited } = await searchParams;
+  // Invite emails link to /login?invited=1: the owner has no account yet and
+  // must be able to choose a password even while open signup is closed. This
+  // only reveals the form — the server still refuses anyone without a pending
+  // invite (resolveOrgContext → "nobody invited them and signup is closed").
+  const arrivedByInvite = invited === "1";
   return (
     <LoginClient
       initialError={error ? (ERROR_MESSAGES[error] ?? null) : null}
-      signupOpen={isSignupOpen()}
+      signupOpen={isSignupOpen() || arrivedByInvite}
+      initialMode={arrivedByInvite ? "signup" : "signin"}
     />
   );
 }
