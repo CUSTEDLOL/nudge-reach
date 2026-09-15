@@ -1,9 +1,13 @@
 # Nudge — tiered pricing decision and credit proposal
 
-Date: 2026-09-11. Status: subscription direction approved; credit economics
-below are a proposal, not approved prices. No runtime or payment configuration
-is changed by this document. Supersedes legacy single-flagship pricing in
-PRICING.md, STRATEGY.md and AGENTS.md, not the product's safety invariants.
+Date: 2026-09-11, figures revised 2026-09-15. Status: subscription direction
+approved; credit economics below are a proposal, not approved prices. The plan
+ladder, seats and numbers shipped to the site and checkout on 2026-09-12; the
+credit balance and top-ups are not built. The pricing page offers a yearly
+option at ten months for twelve although §5 says to avoid annual discounts;
+the founder is deciding whether it stays. Supersedes
+legacy single-flagship pricing in PRICING.md, STRATEGY.md and AGENTS.md, not
+the product's safety invariants.
 
 ## 1. Approved direction
 
@@ -99,8 +103,9 @@ features. No forced recharge; show estimated remaining work before buying.
 
 ## 4. Cost assumptions and examples
 
-Published base API rates checked 2026-09-11: Haiku 4.5 $1 input/$5 output per
-million tokens; Sonnet 4.6 $3/$15. These are example models, not a routing change.
+Published base API rates checked 2026-09-15: Haiku 4.5 $1 input/$5 output per
+million tokens; Sonnet 5 (the production `RUNTIME_MODEL`) $2/$10. An earlier
+draft priced the Sonnet examples at Sonnet 4.6's $3/$15, 50% too high.
 Cache writes/reads and model versions need their own prices, not substring
 matching. [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing).
 
@@ -109,24 +114,29 @@ Illustrative single-call workloads, uncached, not measured customer averages:
 | Workload | Input/output tokens | Provider cost | Proposed credits |
 |---|---|---:|---:|
 | Short Haiku reply | 2,000 / 300 | $0.0035 | 0.7 |
-| Same size Sonnet reply | 2,000 / 300 | $0.0105 | 2.1 |
-| Longer Sonnet summary | 8,000 / 500 | $0.0315 | 6.3 |
+| Same size Sonnet 5 reply | 2,000 / 300 | $0.0070 | 1.4 |
+| Longer Sonnet 5 summary | 8,000 / 500 | $0.0210 | 4.2 |
 
 A multi-step agent can make several calls. Aggregate actual eligible inference
 once per operation; the above is not a guarantee of end-to-end reply cost.
 At the illustrative Haiku size, 500 credits supports about 714 replies with
-nothing else used; at the Sonnet size about 238. This difference is why we must
+nothing else used; at the Sonnet 5 size about 357. This difference is why we must
 measure real traffic before calling an allowance sufficient for a normal clinic.
 
 Voice consumes the same credit balance, but its cost must include speech service,
 inference and the selected carrier route, including any burst charges.
-[ElevenLabs pricing](https://elevenlabs.io/pricing/agents) is only one component;
-no carrier quote or actual voice invoice has been validated here. For a stress
-scenario of $0.15 all-in per minute (assumption, not vendor quote), voice uses
-30 credits/minute and Pro's 3,000 credits buys 100 minutes if used only for voice.
+[ElevenLabs pricing](https://elevenlabs.io/pricing/agents) is only one component.
+Measured on three real test calls (2.3 minutes, 2026-09-11): ElevenLabs about
+$0.145/minute at credit-plan rates (877 credits/minute; the Agents plans list
+$0.08), Claude Haiku $0.021/minute, plus roughly $0.01/minute for the line —
+about $0.18 all-in, still not a carrier quote. At that cost voice uses 36
+credits/minute and Pro's 3,000 credits buys 83 minutes if used only for voice.
 At $0.25/minute it buys 60 minutes. Do not also deduct the same inference cost
 as a separate chat charge. Number rental and provider minimum commitments must
-be allocated separately or explicitly priced before launch.
+be allocated separately or explicitly priced before launch. Until the shared
+credit balance ships, Pro's voice is a flat 100-minute meter (`voiceMinutesPerMonth`)
+separate from chat: about ₹1,620 / S$24 a month at full use on top of the
+chat credits, so Pro's full-use provider cost is nearer 19% of revenue than 9%.
 
 ## 5. Economics checks, not a profit forecast
 
@@ -144,11 +154,11 @@ minimum provider plans, storage, fraud, refunds and absorbed failures remain.
 
 Examples at the single-call Haiku size:
 - Light Starter: 300 replies = 210 credits; inside the allowance.
-- Growth: 1,800 replies + 20 example summaries = 1,386 credits; inside allowance.
-- Heavy Growth: 5,000 replies + 50 summaries = 3,815 credits; 2,315 beyond allowance.
-- Voice-heavy Pro: 100 minutes at assumed $0.15/minute consumes the entire balance,
-  leaving no included credits for chat. Explain this openly, never advertise
-  both maximum chat and maximum voice as simultaneously included.
+- Growth: 1,800 replies + 20 example summaries = 1,344 credits; inside allowance.
+- Heavy Growth: 5,000 replies + 50 summaries = 3,710 credits; 2,210 beyond allowance.
+- Voice-heavy Pro: 83 minutes at the measured $0.18/minute consumes the entire
+  balance, leaving no included credits for chat. Explain this openly, never
+  advertise both maximum chat and maximum voice as simultaneously included.
 
 These quantities are a pilot starting point, not validated willingness-to-pay
 or workload distribution. Test with real clinic traces and provider invoices;
