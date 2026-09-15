@@ -101,10 +101,13 @@ automatic charge.
 ## 4. What the credits are worth — cost and margin
 
 Planning assumptions, not live quotes: US$1 = ₹90 = S$1.35. Provider rates
-checked 2026-09-15 — Haiku 4.5 US$1 in / US$5 out per million tokens; Sonnet
-5 (the production `RUNTIME_MODEL`) US$2 / US$10. An earlier draft used Sonnet
-4.6 rates and overstated those example costs by 50%. One credit still costs us
-**₹0.45 / S$0.00675**.
+checked 2026-09-15 against Anthropic's price sheet — Haiku 4.5 US$1 in / US$5
+out per million tokens; **Sonnet 5 US$2 / US$10** (cache reads ≈ 0.1× and cache
+writes ≈ 1.25× the input rate). Nudge runs `claude-sonnet-5` at runtime
+(`RUNTIME_MODEL` default, since 2026-08-29). The 2026-09-11 version of this
+record priced everything at Sonnet 4.6's US$3 / US$15 — a third too high;
+every Sonnet figure below is now on the Sonnet 5 rate. One credit costs us
+**₹0.45 / S$0.00675** regardless of model.
 
 ### What one task costs (uncached, single call; real conversations vary)
 
@@ -115,7 +118,7 @@ checked 2026-09-15 — Haiku 4.5 US$1 in / US$5 out per million tokens; Sonnet
 | Longer Sonnet 5 summary (8,000 in / 500 out) | 4.2 | ₹1.89 | ₹4.20 |
 | One voice minute (measured about US$0.18 all-in) | 36 | ₹16.20 | ₹35.96 |
 
-### How far the included credits go (Sonnet, example reply size)
+### How far the included credits go (Sonnet 5, example reply size)
 
 | | Entry 200 | Starter 1,000 | Growth 2,500 | Pro 5,000 |
 |---|---:|---:|---:|---:|
@@ -162,13 +165,11 @@ out of it. It is not profit.
 If US$1 moves to ₹100 the 10,000 pack's margin falls to 37.5%. Margin here is
 (price − cost) ÷ price, before all other expenses.
 
-Voice is about US$0.18/minute all-in based on three real test calls: roughly
-US$0.145 ElevenLabs, US$0.021 Haiku and US$0.01 for the line, still not a final
-carrier quote. At that cost, 5,000 credits would buy about 138 minutes if used
-for nothing else. Until the shared credit ledger ships, Pro voice is instead a
-separate flat 100-minute meter (`voiceMinutesPerMonth`) on top of chat credits,
-costing about ₹1,620 / S$24 at full use. Never advertise both the full chat
-allowance and full voice allowance as simultaneously included.
+Voice draws on the same credit balance. At the assumed US$0.15/minute, Pro's 5,000
+credits buy about 166 voice minutes if used for nothing else (at US$0.25, 100
+minutes). Never advertise the full chat allowance and the full voice allowance
+as simultaneously included. The voice figure is an assumption, not a carrier
+quote; verify speech, inference and carrier costs before selling live voice.
 
 ## 5. High-volume and Enterprise deals
 
@@ -177,18 +178,21 @@ The self-serve tiers are sized for a normal small business. A customer with
 
 Worked example: 100 leads/day ≈ 3,000 conversations/month. Assuming 8 AI
 replies per conversation (unmeasured), that is 24,000 replies ≈ **33,600
-credits ≈ ₹15,120 of AI cost a month on Sonnet 5** (≈ ₹7,600 on Haiku). Pro's
-5,000 included credits cover less than a sixth; at list price Nudge loses money.
+credits ≈ ₹15,120 of AI cost a month on Sonnet 5** (≈ ₹7,560 on Haiku). Pro's
+5,000 included credits cover about a seventh of it; at list price ₹4,900 is
+left before hosting, support or anything else — not a deal to sell at list.
 
 Two ways to price such a deal (both assume Pro = ₹19,999):
 
 | | Monthly | Our AI cost | Left | Risk |
 |---|---:|---:|---:|---|
-| A. Committed credit block — Pro + 50,000 credits/month at ₹0.75 | ≈ ₹57,500 | ≈ ₹15,120 | ≈ ₹42,380 | margin shrinks if conversations run longer than assumed |
+| A. Committed credit block — Pro + 35,000 credits/month at ₹0.75 | ≈ ₹46,250 | ≈ ₹15,120 | ≈ ₹31,130 | margin shrinks if conversations run longer than assumed |
 | B. Bring-your-own key — Pro-level flat fee, the customer pays their AI provider directly | ≈ ₹35,000 | ≈ ₹0 | ≈ ₹35,000 | none on AI usage |
 
-B is the safer margin; A is the bigger top line. Either way the customer pays
-55–70% less than the US$1,500/month they paid their previous vendor.
+At these assumptions B is both the safer and the larger margin; A only wins if
+real conversations turn out much shorter than eight replies. Either way the
+customer pays 65–75% less than the US$1,500/month they paid their previous
+vendor.
 
 **Implementation fee.** Mandatory setup fees were removed from the self-serve
 tiers on 2026-09-11. A separately scoped, paid implementation for an Enterprise
@@ -242,11 +246,18 @@ stops them beyond it — Nudge silently absorbs the cost):
 - Real Meta spend on the dashboard.
 
 `src/lib/model-router/usage.ts` logs AI usage asynchronously with approximate
-model-family prices and swallows write failures. It is analytics, not a
-ledger; customers must not be debited from it without a redesign that covers
-atomic reservations and debits, idempotent payment webhooks, concurrent calls,
-expiry, refunds, duplicate provider events, cache-specific and exact-model
-pricing, customer caps and reconciliation.
+model-family prices and swallows write failures. It prices anything named
+"sonnet" at US$3 / US$15, so the founder-side AI-cost analytics currently
+**overstate Sonnet 5 cost by 50%** and ignore cache tokens. It is analytics,
+not a ledger; customers must not be debited from it.
+
+The build that turns credits into a real balance is specified in
+`docs/superpowers/plans/2026-09-15-credit-ledger.md` (≈35 hours, nine
+independently shippable tasks): an exact-model rate card, an org-scoped grant
+and debit ledger debited at the model-router doorway, calendar-month resets,
+top-up purchase through the existing Razorpay/Stripe flow, founder grants,
+and a balance on Settings → Billing. It carries six founder decisions that
+must be answered before it ships.
 
 ## 8. Before live credit billing
 

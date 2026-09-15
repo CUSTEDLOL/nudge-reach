@@ -138,6 +138,13 @@
   Retired `docs/PRICING.md` and the three stale/duplicate pricing .docx files.
 - Tests updated for the new ladder (plan list, MRR, cost-alert fixture,
   Razorpay confirm amount). 892/892 green; build and lint clean.
+- Later the same day: cron moved from daily to every five minutes (needs
+  Vercel Pro); site/docs/JSON-LD swept for old prices and the last "free
+  plan" claims; the record's Sonnet figures corrected from Sonnet 4.6's
+  $3/$15 to the $2/$10 that `claude-sonnet-5` (the runtime default) actually
+  costs; credit-ledger build plan written to
+  `docs/superpowers/plans/2026-09-15-credit-ledger.md` (not started).
+
 ## SEO foundation final-review fix wave (2026-09-15) ✅ CODE/STATIC VERIFIED — EXTERNAL ACTIVATION PENDING
 
 - Marketing attribution now has an explicit public gate that defaults off. In
