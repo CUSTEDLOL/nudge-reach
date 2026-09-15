@@ -1,5 +1,32 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Production readiness audit before first paying clients (2026-09-15) ✅
+
+- Crawled every app route on nudgeagent.app as two real accounts (legacy
+  front-desk org and a Free org) with headless Chrome: all 33 routes render,
+  no console errors, no failed requests. Drove the client flows on production:
+  AI chat, an end-to-end AI booking into the (simulated) calendar, facts,
+  contacts, template draft, campaign wizard through Review & send, team
+  invite, WhatsApp test, simulated Zoho connect + sync, API key, simulated
+  voice call, settings, analytics, the public lead form and the Cal.com demo
+  embed. All QA records were removed afterwards.
+- **Found and fixed:** the 10-minute cron had returned 500 on every run since
+  2026-09-12 — `SystemHeartbeat` (control room batch 3) was never pushed to
+  the production database. `prisma migrate diff` showed it as the only drift;
+  `prisma db push` applied it; the endpoint and the GitHub workflow are green.
+  The heartbeat write is now non-fatal so a monitoring table can never turn a
+  successful tick into a failure again. **Deploys do not migrate the DB**:
+  after any `schema.prisma` change, run `npx prisma db push` against prod.
+- **Blockers that are configuration, not code** (founder actions, documented
+  in the readiness report sent 2026-09-15): `FOUNDER_EMAILS` unset in Vercel
+  so `/admin` is a 404 and no client workspace can be created; `SEND_MODE`
+  is simulation so no real WhatsApp message leaves; no payment keys so
+  checkout shows "Payments off"; no voice phone number connected; Supabase
+  Site URL / redirect allowlist unverified for the invited-owner signup.
+- The Spice Garden test org is configured as "BrightSmile Dental" in AI
+  Front Desk → Setup while its knowledge base is a saree shop: harmless, but
+  fix before using it as a demo.
+
 ## 34-month SEO program design approved (2026-09-14) ✅
 
 - Audited the live and local marketing surface, current search results,
