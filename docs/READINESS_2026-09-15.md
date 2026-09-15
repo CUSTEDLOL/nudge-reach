@@ -32,6 +32,16 @@ number and an email key that only the account holders can obtain.
   every page in Chrome, so the browser call could never start; now
   `microphone=(self)`. Verified after deploy with an automated fake-microphone
   call through the real app: "Your AI is talking".
+- **Fifth defect, found while checking that call was filed.** The post-call
+  webhook had silently dropped every real ElevenLabs call since voice shipped;
+  only "Simulate a call" ever reached the inbox or the minutes meter. Two
+  mismatches with the payload ElevenLabs really sends: a browser session has
+  `phone_call: null` (the parser rejected null) and the per-call variables
+  sit under `conversation_initiation_client_data` (the parser read the top
+  level, so the tenant check failed). Fixed, regression tests use the captured
+  payload, verified by replaying the real call into production (filed with
+  transcript and summary), and the three real calls from 11 September were
+  backfilled into the Spice Garden inbox.
 
 ## What was tested, on production, as a real logged-in client
 

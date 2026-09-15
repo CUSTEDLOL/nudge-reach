@@ -71,7 +71,12 @@
   sent `Permissions-Policy: microphone=()` since 2026-08-29, which blocks
   getUserMedia in Chrome on every page — the browser call could never start;
   now `microphone=(self)`. Verified through the deployed app with a fake
-  microphone ("Your AI is talking", hang-up, filed).
+  microphone ("Your AI is talking", hang-up). (c) The post-call webhook had
+  dropped every real ElevenLabs call (`{"ignored":true}`): `parsePostCall`
+  rejected `metadata.phone_call: null` and read `dynamic_variables` from the
+  top level instead of `conversation_initiation_client_data`. Fixed with the
+  captured production payload as the regression fixture (45741d8); replay of
+  the real call filed it; the three 11-Sept calls were backfilled.
 
 ## Pricing re-set with included credits; one pricing record (2026-09-15) ✅
 
