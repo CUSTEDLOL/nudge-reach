@@ -17,9 +17,14 @@ import {
   Check,
   CheckCircle2,
   CircleAlert,
+  CircleHelp,
+  CreditCard,
   MessageSquareText,
   Plug,
+  RefreshCw,
+  ShieldCheck,
   Users,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { VERTICALS } from "@/modules/dashboard/verticals";
@@ -53,38 +58,55 @@ import { visibleChoiceValue } from "./question-state";
 const QUESTION_COUNT = 2;
 const SUMMARY_STEP = 3;
 
+/** Each task carries the `next` value that finishes setup and lands there. */
 const SETUP_TASKS = {
   "teach-front-desk": {
     label: "Teach your Front Desk",
     description: "Add the facts it needs to answer like your best employee.",
     icon: Bot,
+    next: "knowledge",
   },
   "try-front-desk": {
     label: "Try a customer conversation",
     description: "See how it responds safely in your test workspace.",
     icon: MessageSquareText,
+    next: "try",
   },
   "connect-whatsapp": {
     label: "Connect WhatsApp",
     description: "Link your official business number when you are ready.",
     icon: Plug,
+    next: "whatsapp",
   },
   "connect-calendar": {
     label: "Connect your calendar",
     description: "Let Nudge book against your real availability.",
     icon: CalendarDays,
+    next: "apps",
   },
   "import-contacts": {
     label: "Bring in opted-in customers",
     description: "Import only people who agreed to hear from you.",
     icon: Users,
+    next: "contacts",
   },
   "configure-followups": {
     label: "Review your follow-up plan",
     description: "Confirm how Nudge should chase quiet leads and bookings.",
     icon: ArrowRight,
+    next: "followups",
   },
 } as const;
+
+/** One glyph per priority, so the first question reads at a glance. */
+const OUTCOME_ICONS: Record<string, typeof Bot> = {
+  bookings: CalendarDays,
+  "faster-responses": Zap,
+  "follow-up": RefreshCw,
+  "fewer-no-shows": ShieldCheck,
+  payments: CreditCard,
+  support: CircleHelp,
+};
 
 type Choice = {
   value: string;
@@ -438,6 +460,7 @@ function ChoiceCards({
     <div className="grid gap-3 sm:grid-cols-2">
       {options.map((option) => {
         const selected = value === option.value;
+        const Icon = OUTCOME_ICONS[option.value];
         return (
           <button
             key={option.value}
@@ -446,15 +469,27 @@ function ChoiceCards({
             disabled={disabled}
             onClick={() => onSelect(option.value)}
             className={cn(
-              "flex min-h-20 items-start gap-3 rounded-xl border p-4 text-left outline-none transition-colors duration-150 disabled:opacity-60",
+              "group flex min-h-24 items-start gap-3.5 rounded-2xl border p-4 text-left outline-none transition-all duration-150 disabled:opacity-60",
               selected
                 ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
                 : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50",
               "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             )}
           >
-            <SelectionMark selected={selected} />
-            <span>
+            {Icon && (
+              <span
+                aria-hidden
+                className={cn(
+                  "grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-150",
+                  selected
+                    ? "bg-brand-600 text-white"
+                    : "bg-neutral-100 text-neutral-500 group-hover:bg-neutral-200"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
               <span className="block text-base font-semibold text-neutral-900">
                 {option.label}
               </span>
@@ -464,6 +499,7 @@ function ChoiceCards({
                 </span>
               )}
             </span>
+            <SelectionMark selected={selected} />
           </button>
         );
       })}
@@ -577,6 +613,9 @@ function RecommendationSummary({
     (option) => option.value === profile.primaryOutcome
   );
 
+  const plan = defaults.setupOrder.slice(0, 4);
+  const first = SETUP_TASKS[plan[0]];
+
   return (
     <>
       <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-100 text-brand-700">
@@ -590,64 +629,93 @@ function RecommendationSummary({
         {businessName || "Your workspace"} is ready
       </h1>
       <p className="mt-2 max-w-2xl text-base leading-relaxed text-neutral-600">
-        We’ll start by helping you {outcome?.label.toLowerCase() ?? "run the front desk"}.
-        You can adjust these presentation choices at any time.
+        We’ll start by helping you{" "}
+        {outcome?.label.toLowerCase() ?? "run the front desk"}. Pick where to
+        begin — you can do the rest whenever you like.
       </p>
 
-      <div className="mt-6">
-        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-          <h2 className="text-sm font-semibold text-neutral-900">Workspace status</h2>
-          <ul className="mt-3 space-y-2 text-sm text-neutral-700">
-            <StatusLine
-              done={whatsappConnected || simulationMode}
-              label={
-                whatsappConnected
-                  ? "WhatsApp connected"
-                  : simulationMode
-                    ? "Safe test workspace active"
-                    : "WhatsApp ready to connect"
-              }
-            />
-            <StatusLine
-              done={contactCount > 0}
-              label={
-                contactCount > 0
-                  ? `${contactCount} customer${contactCount === 1 ? "" : "s"} ready`
-                  : "Customer import still optional"
-              }
-            />
-          </ul>
-        </div>
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <StatusChip
+          done={whatsappConnected || simulationMode}
+          label={
+            whatsappConnected
+              ? "WhatsApp connected"
+              : simulationMode
+                ? "Safe test workspace"
+                : "WhatsApp ready to connect"
+          }
+        />
+        <StatusChip
+          done={contactCount > 0}
+          label={
+            contactCount > 0
+              ? `${contactCount} customer${contactCount === 1 ? "" : "s"} ready`
+              : "No customers imported yet"
+          }
+        />
       </div>
 
-      <div className="mt-4 rounded-xl border border-neutral-200 p-4">
-        <h2 className="text-sm font-semibold text-neutral-900">Recommended setup plan</h2>
-        <ol className="mt-3 grid gap-2 sm:grid-cols-2">
-          {defaults.setupOrder.slice(0, 4).map((task, index) => {
-            const item = SETUP_TASKS[task];
-            const Icon = item.icon;
-            return (
-              <li key={task} className="flex items-start gap-3 rounded-lg p-2">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">
-                  <Icon className="h-4 w-4" aria-hidden />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-neutral-900">
-                    {index + 1}. {item.label}
+      {/* Each step finishes setup and drops them straight into that screen. */}
+      <ol className="mt-6 flex flex-col gap-2.5">
+        {plan.map((task, index) => {
+          const item = SETUP_TASKS[task];
+          const Icon = item.icon;
+          const primary = index === 0;
+          return (
+            <li key={task}>
+              <form action={finishAction}>
+                <input type="hidden" name="next" value={item.next} />
+                <button
+                  type="submit"
+                  disabled={finishPending}
+                  className={cn(
+                    "group flex w-full items-center gap-3.5 rounded-2xl border p-4 text-left outline-none transition-colors duration-150 disabled:opacity-60",
+                    primary
+                      ? "border-brand-500 bg-brand-50/60 hover:bg-brand-50"
+                      : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50",
+                    "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
+                      primary
+                        ? "bg-brand-600 text-white"
+                        : "bg-neutral-100 text-neutral-600"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
                   </span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-neutral-500">
-                    {item.description}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-[15px] font-semibold text-neutral-950">
+                        {item.label}
+                      </span>
+                      {primary && (
+                        <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                          Start here
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block text-sm leading-snug text-neutral-500">
+                      {item.description}
+                    </span>
                   </span>
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+                  <ArrowRight
+                    className="h-4 w-4 shrink-0 text-neutral-400 transition-transform duration-150 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </button>
+              </form>
+            </li>
+          );
+        })}
+      </ol>
 
-      <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-sm leading-relaxed text-sky-900">
-        Nothing operational has been switched on. You’ll confirm every connection,
-        follow-up plan, and customer-facing action.
+      <p className="mt-5 rounded-xl bg-sky-50 px-4 py-3 text-sm leading-relaxed text-sky-900">
+        Nothing operational has been switched on. You’ll confirm every
+        connection, follow-up plan, and customer-facing action.
       </p>
 
       <div className="mt-6 flex flex-col-reverse gap-3 border-t border-neutral-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -663,29 +731,44 @@ function RecommendationSummary({
         </Button>
         <form action={finishAction}>
           <input type="hidden" name="next" value="dashboard" />
-          <Button type="submit" loading={finishPending} className="min-h-11 w-full sm:w-auto">
-            Open my Today workspace
-            <ArrowRight className="h-4 w-4" aria-hidden />
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={finishPending}
+            className="min-h-11 w-full sm:w-auto"
+          >
+            Skip to Home
           </Button>
         </form>
       </div>
+      <p className="sr-only">
+        The recommended first step is {first.label}.
+      </p>
     </>
   );
 }
 
-function StatusLine({ done, label }: { done: boolean; label: string }) {
+function StatusChip({ done, label }: { done: boolean; label: string }) {
   return (
-    <li className="flex items-center gap-2">
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium",
+        done
+          ? "bg-emerald-50 text-emerald-800"
+          : "bg-neutral-100 text-neutral-600"
+      )}
+    >
       <span
-        className={cn(
-          "grid h-5 w-5 place-items-center rounded-full",
-          done ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-600"
-        )}
         aria-hidden
+        className={cn(
+          "grid h-4 w-4 place-items-center rounded-full",
+          done ? "bg-emerald-600 text-white" : "bg-neutral-300 text-white"
+        )}
       >
-        {done ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+        {done && <Check className="h-2.5 w-2.5" />}
       </span>
       {label}
-    </li>
+    </span>
   );
 }
+

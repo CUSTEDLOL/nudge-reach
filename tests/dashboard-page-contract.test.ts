@@ -2,19 +2,36 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("Today page hierarchy", () => {
+  /**
+   * Still one vertical decision flow, with two changes made on 2026-09-16
+   * after the founder said the product felt "hiddenish":
+   *  - an unfinished workspace leads with its checklist instead of meeting
+   *    five sections of zeros before reaching it, and hides Business pulse
+   *    (every figure in it would be a zero, which reads as broken, not new);
+   *  - "Jump back in" sits under the attention queue, so the jobs buried two
+   *    levels down the sidebar are one click from Home.
+   */
   it("composes the approved single vertical decision flow", () => {
     const source = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
     const orderedComponents = [
+      "<SetupProgress",
       "<AttentionQueueSection",
+      "<QuickActions",
       "<OperationsSummary",
       "<FrontDeskSummary",
       "<BusinessPulse",
-      "<SetupProgress",
       "<RecentActivity",
     ];
     const positions = orderedComponents.map((name) => source.indexOf(name));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it("shows the checklist and the business pulse to opposite workspaces", () => {
+    const source = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
+    expect(source).toContain("const settingUp = !data.checklist.allDone");
+    expect(source).toContain("{!isAgent && settingUp && (");
+    expect(source).toContain("{!isAgent && !settingUp && (");
   });
 
   it("keeps direct Prisma calls out of the route", () => {

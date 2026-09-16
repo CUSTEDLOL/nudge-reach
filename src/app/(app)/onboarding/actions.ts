@@ -178,5 +178,20 @@ export async function completeOnboardingAction(
       message: "Couldn't finish setup — please try again.",
     };
   }
-  redirect(next === "contacts" ? "/contacts" : "/dashboard");
+  redirect(NEXT_ROUTES[next] ?? "/dashboard");
 }
+
+/**
+ * Where "finish" may land. A fixed map rather than the submitted path: the
+ * last screen hands the owner straight into their first real task, and an
+ * open redirect is not a price worth paying for that.
+ */
+const NEXT_ROUTES: Record<string, string> = {
+  dashboard: "/dashboard",
+  contacts: "/contacts",
+  knowledge: "/agent/questionnaire",
+  try: "/inbox/try",
+  whatsapp: "/settings/whatsapp",
+  apps: "/integrations",
+  followups: "/automations",
+};

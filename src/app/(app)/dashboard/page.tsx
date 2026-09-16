@@ -5,10 +5,15 @@ import { AttentionQueueSection } from "@/components/features/dashboard/attention
 import { BusinessPulse } from "@/components/features/dashboard/business-pulse";
 import { FrontDeskSummary } from "@/components/features/dashboard/front-desk-summary";
 import { OperationsSummary } from "@/components/features/dashboard/operations-summary";
+import {
+  QuickActions,
+  buildQuickActions,
+} from "@/components/features/dashboard/quick-actions";
 import { RecentActivity } from "@/components/features/dashboard/recent-activity";
 import { SetupProgress } from "@/components/features/dashboard/setup-progress";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { getPlan } from "@/modules/billing/plans";
 import {
   greetingForHour,
   hourInTimezone,
@@ -88,6 +93,18 @@ export default async function DashboardPage() {
     org.settings
   );
 
+  // A half-set-up workspace gets the checklist first and no "business pulse":
+  // every number in it would be a zero, which reads as broken rather than new.
+  const settingUp = !data.checklist.allDone;
+  const quickActions = buildQuickActions({
+    role: membership.role,
+    hasVoice: getPlan(org.plan).limits.voiceAgent,
+    knowledgeTaught:
+      data.checklist.items.find((item) => item.key === "knowledge")?.done ??
+      false,
+    hasContacts: data.contactCount > 0,
+  });
+
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -114,10 +131,16 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      {!isAgent && settingUp && (
+        <SetupProgress checklist={data.checklist} orgName={org.name} />
+      )}
+
       <AttentionQueueSection
         queue={attention}
         showDescription={workspaceDefaults.showSectionDescriptions}
       />
+
+      <QuickActions actions={quickActions} />
 
       <OperationsSummary
         items={visibleOperations}
@@ -135,7 +158,7 @@ export default async function DashboardPage() {
         showBusinessOutcomes={!isAgent}
       />
 
-      {!isAgent && (
+      {!isAgent && !settingUp && (
         <BusinessPulse
           bookingsThisMonth={data.recovery.bookingsThisMonth}
           leadsChasedThisMonth={data.recovery.followUpsThisMonth}
@@ -146,10 +169,6 @@ export default async function DashboardPage() {
           currency={org.currency}
           showDescription={workspaceDefaults.showSectionDescriptions}
         />
-      )}
-
-      {!isAgent && !data.checklist.allDone && (
-        <SetupProgress checklist={data.checklist} orgName={org.name} />
       )}
 
       <RecentActivity
