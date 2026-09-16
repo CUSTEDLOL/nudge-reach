@@ -1,5 +1,34 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## 2026-09-16 — One place to set up the AI employee (nav restructure)
+
+Founder feedback: *"first i will go to AI agent and all to set that up then i
+will go in setting to set up voice, I want everything in front and very easy to
+follow up."* Right call — the employee was split across two sections.
+
+**Moved.** `/settings/voice` → `/agent/voice`, `/settings/custom-actions` →
+`/agent/actions`. Both old paths `permanentRedirect`, so bookmarks, client docs
+and the go-live runbooks keep working. Settings is now account admin only.
+
+**AI Front Desk now has four children** in the sidebar and a matching tab strip
+on every `/agent` page: Training · Setup · Voice · Actions. The tabs are read
+from `NAV_GROUPS` rather than restated, so the rail and the strip cannot drift
+apart (`src/app/(app)/agent/front-desk-tabs.tsx`, rendered by
+`src/app/(app)/agent/layout.tsx`).
+
+**Sub-nav highlighting** is longest-prefix-wins (`activeNavChildKey`), so
+`/agent/questionnaire` and `/knowledge` light up Training while `/agent/voice`
+beats Training's broader `/agent`. Before, any sub-page left the whole list
+looking unselected.
+
+**Renamed** `app/(app)/agent/actions.ts` → `training-actions.ts`. A route folder
+`agent/actions/` beside a module `agent/actions.ts` resolved ambiguously —
+`./actions` silently preferred the file. Nothing was broken yet; it was a trap.
+
+Sidebar "Integrations" is labelled **Apps**, matching the page it opens.
+
+1126 tests green, lint clean, `DEV_AUTH_BYPASS= npm run build` clean. `db730c0`.
+
 ## Apps directory, Home quick actions, onboarding hand-off (2026-09-16) ✅
 
 - Founder feedback: the product felt "hiddenish", and integrations should be
