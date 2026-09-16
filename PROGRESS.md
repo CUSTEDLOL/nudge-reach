@@ -1,5 +1,40 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Apps directory, Home quick actions, onboarding hand-off (2026-09-16) ✅
+
+- Founder feedback: the product felt "hiddenish", and integrations should be
+  "many things where the client just clicks add". Took the directory pattern
+  from Linear's integrations page (search, category list, one tile per app
+  with a single action) rather than inventing one.
+- **Apps** (renamed from Integrations): six stacked cards → one searchable
+  grid of 20 apps in 7 categories. Connected apps sort to the front; each
+  tile has exactly one button. The existing calendar / CRM / webhook / API-key
+  cards were not rewritten — they render on the server and open in a drawer
+  from their tile. WhatsApp got a panel so the connection test and the Meta
+  webhook URL survived the rewrite.
+- Honesty is enforced in `modules/integrations/catalog.ts`, not in JSX:
+  `native` = one click, `bridge` = genuinely works today through an outbound
+  webhook (the drawer carries that app's exact steps, `bridge-recipes.ts`),
+  `planned` = no button, always "Coming soon". Plan-gated apps show an
+  upgrade link instead of a dead button. 9 unit tests cover those rules.
+- **Home**: an unfinished workspace leads with its checklist instead of five
+  sections of zeros, and hides Business pulse while every figure in it would
+  be a zero. New "Jump back in" row surfaces the six jobs owners come for.
+  `dashboard-page-contract.test.ts` updated to the new order, with the reason.
+- **Onboarding**: glyph per priority; the final screen's steps are now
+  buttons that finish setup and land on that page ("Start here" on the first).
+  `completeOnboardingAction` gained a fixed route map so the new destinations
+  cannot become an open redirect.
+- Verified on a throwaway workspace at 1440px and 390px: 20 tiles, search,
+  filters, both drawer kinds, full onboarding walk, no console errors.
+  Suite 1115/1115, lint clean, tsc clean, production build clean.
+- **Database note:** production was reset before this work — one org remains
+  (`Goldmine Infotech`, Pro, 0 memberships = owner has not opened their setup
+  link yet). The demo org the voice tests used is gone; `VOICE_TEST_ORG_ID`
+  was already removed, so browser calls now work per workspace. Prod also
+  carries `CreditGrant`/`CreditDebit` tables that `schema.prisma` does not —
+  **do not run `prisma db push` against prod** until that is reconciled.
+
 ## SEO production release gate (2026-09-15) ✅
 
 - Merged the reviewed SEO foundation onto the current `origin/main` while
