@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   activeNavChildKey,
@@ -118,6 +119,18 @@ describe("adaptive app navigation", () => {
     expect(commandsForRole("AGENT").map((command) => command.href)).not.toContain(
       "/integrations"
     );
+  });
+
+  it("leaves the Front Desk sub-pages open in the rail at all times", () => {
+    // Gating them on `active` meant you could not see Voice until you were
+    // already inside the section — the hunt the founder complained about.
+    const source = readFileSync(
+      "src/components/features/app-shell/sidebar.tsx",
+      "utf8"
+    );
+
+    expect(source).toContain("{!collapsed && item.children && (");
+    expect(source).not.toContain("active && item.children");
   });
 
   it("keeps the mobile bar away from an open inbox thread", () => {
