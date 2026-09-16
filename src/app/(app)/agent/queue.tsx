@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Textarea } from "@/components/ui/textarea";
-import { answerQuestionAction, dismissQuestionAction } from "./actions";
+import { answerQuestionAction, dismissQuestionAction } from "./training-actions";
 
 export interface QueueItem {
   id: string;

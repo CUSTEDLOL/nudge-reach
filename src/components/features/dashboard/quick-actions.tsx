@@ -88,7 +88,7 @@ export function buildQuickActions(input: {
         key: "voice",
         label: "Call your AI",
         hint: "Hear it answer the phone",
-        href: "/settings/voice",
+        href: "/agent/voice",
       });
     }
   }

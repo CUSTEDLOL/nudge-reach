@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
-  isNavChildActive,
+  activeNavChildKey,
   isNavItemActive,
   navGroupsForRole,
   type AppRole,
@@ -123,7 +123,8 @@ export function Sidebar({
                         {!collapsed && active && item.children && (
                           <ul className="mt-0.5 ml-[1.45rem] flex flex-col gap-0.5 border-l border-neutral-200 pl-2.5">
                             {item.children.map((child) => {
-                              const here = isNavChildActive(child, pathname);
+                              const here =
+                                child.key === activeNavChildKey(item, pathname);
                               return (
                                 <li key={child.key}>
                                   <Link

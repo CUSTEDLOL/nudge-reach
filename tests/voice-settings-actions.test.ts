@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseVoiceNumberForm } from "@/app/(app)/settings/voice/validate";
+import { parseVoiceNumberForm } from "@/app/(app)/agent/voice/validate";
 
 describe("parseVoiceNumberForm", () => {
   it("normalises phone numbers and defaults", () => {

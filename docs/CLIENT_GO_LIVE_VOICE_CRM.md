@@ -51,9 +51,9 @@ touch a live vendor for the first time are marked **first-run**.
    transfer number (their receptionist's mobile), the ElevenLabs phone-number id.
 4. Knowledge: the AI answers only from what's on **AI Agent → Knowledge**.
    Hours, prices, services, address, booking policy must be there. Ask it
-   "how much is a consultation?" on **Settings → Voice → Call your AI**
+   "how much is a consultation?" on **AI Front Desk → Voice → Call your AI**
    (works in every workspace; no configuration needed).
-5. **Reminder calls stay off** unless the client asks (Settings → Voice).
+5. **Reminder calls stay off** unless the client asks (AI Front Desk → Voice).
 
 ### The 5-minute live test (do it on the client's line, with them)
 | Say | Expect |
@@ -64,7 +64,7 @@ touch a live vendor for the first time are marked **first-run**.
 | "Book me for tomorrow at five, name Priya" | Confirms name + time once, then "the team will confirm shortly"; a booking appears on the Dashboard |
 | "I want to speak to a person" | "Let me connect you" and the call transfers to the number set in step 3 |
 | "Thanks, bye" | Short goodbye, call ends |
-| Afterwards | The call sits in **Chats** with a "Phone call" chip and the transcript; Settings → Voice shows minutes used |
+| Afterwards | The call sits in **Chats** with a "Phone call" chip and the transcript; AI Front Desk → Voice shows minutes used |
 
 If any row fails, the transcript in Chats shows exactly what the AI heard and said — send that.
 

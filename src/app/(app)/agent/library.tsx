@@ -27,7 +27,7 @@ import {
   archiveFactsAction,
   structureExistingInfoAction,
   updateFactAction,
-} from "./actions";
+} from "./training-actions";
 
 export interface LibraryFact {
   id: string;

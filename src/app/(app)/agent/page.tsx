@@ -68,12 +68,6 @@ export default async function AgentPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/agent/setup"
-              className={buttonVariants({ variant: "secondary", size: "sm" })}
-            >
-              Setup
-            </Link>
-            <Link
               href="/agent/questionnaire"
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >

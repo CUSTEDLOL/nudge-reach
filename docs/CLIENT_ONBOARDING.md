@@ -133,7 +133,7 @@ Start the carrier paperwork on Day 0, it is the slowest part.
   depending on the country's address and business-document checks.
 
 When the number arrives, ten minutes of work: import it into ElevenLabs and
-assign the Nudge agent, then in the client's Settings → Voice add the
+assign the Nudge agent, then in the client's AI Front Desk → Voice add the
 number, language, and the transfer number from the intake. Test with the
 client on the phone: hours, a price, a booking, "can I speak to someone".
 The transfer must ring the receptionist. Reminder calls stay off unless they
@@ -141,7 +141,7 @@ ask. The plan includes 100 minutes a month; calls stop when they run out,
 WhatsApp is unaffected.
 
 Until the number lands, the client can hear the voice agent from
-Settings → Voice → Call your AI in the browser.
+AI Front Desk → Voice → Call your AI in the browser.
 
 ## Integrations, when each is ready
 

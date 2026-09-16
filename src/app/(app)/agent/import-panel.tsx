@@ -14,7 +14,7 @@ import {
   importFileAction,
   importGbpAction,
   importWebsiteAction,
-} from "./actions";
+} from "./training-actions";
 
 export interface DraftFact {
   id: string;

@@ -39,7 +39,7 @@ mode: onboarding changes presentation and recommendations only.
    disappearing. No section requires horizontal scrolling.
 5. On desktop, collapse and expand the sidebar, then reload.
    ✅ The preference persists. The active marker follows deep routes such as
-   `/settings/voice`, `/templates`, and `/automations`. Press Cmd/Ctrl+K, type
+   `/agent/voice`, `/templates`, and `/automations`. Press Cmd/Ctrl+K, type
    `leads`, open the result, then reopen and press Escape; focus returns to the
    trigger. Expand the sidebar and confirm the three **Suggested for you**
    shortcuts match the questionnaire summary.
@@ -83,10 +83,10 @@ mode: onboarding changes presentation and recommendations only.
 1. Put the org on Free: `npm run plan:set -- --org demo.owner --plan free`
 2. Reload the app. Visit each of these and confirm the **lock/upsell** view:
    - Integrations → API keys + Webhooks cards show upsell text, no create buttons
-   - Settings → Agent actions → "An Enterprise feature"
+   - AI Front Desk → Actions → "An Enterprise feature"
    - Settings → AI model → "An Enterprise feature"
    - Settings → Website widget → "A paid-plan feature"
-   - Settings → Voice → "An AI Front Desk feature"
+   - AI Front Desk → Voice → "An AI Front Desk feature"
    - Contacts → no Score column values (—)
 3. Settings → Billing → ✅ the plan grid shows five tiers; **Enterprise is not
    listed** (contact-us only, by design).
@@ -132,7 +132,7 @@ mode: onboarding changes presentation and recommendations only.
 
 ## Phase 3 — Custom agent actions (E2)
 
-1. Settings → Agent actions → **Add action**. Keep the defaults
+1. AI Front Desk → Actions → **Add action**. Keep the defaults
    (`check_order_status`, sample schema), any `https://` URL, save.
 2. Press **Test** → ✅ output shows `"simulated": true` — proof no real network
    call happens in test mode.
@@ -217,7 +217,7 @@ mode: onboarding changes presentation and recommendations only.
 
 ## Phase 8 — Voice gating (E7 fix)
 
-1. Settings → Voice (on Enterprise) → ✅ page renders; **Simulate a call** drops
+1. AI Front Desk → Voice (on Enterprise) → ✅ page renders; **Simulate a call** drops
    a scripted phone-call transcript into the inbox (thread with a "Phone call"
    chip).
 2. `npm run plan:set -- --org demo.owner --plan growth` → reload Settings →
@@ -259,7 +259,7 @@ Optional provider benchmark:
 
 1. `npm run plan:set -- --org demo.owner --plan free`
 2. Settings → WhatsApp → disconnect the fake numbers; Settings → Website
-   widget → toggle off; Settings → Agent actions → delete the test action;
+   widget → toggle off; AI Front Desk → Actions → delete the test action;
    Settings → AI model → "Use Nudge's model"; Integrations → revoke the
    runbook API key.
 3. If the org shows as live instead of test mode afterwards (connecting a

@@ -113,7 +113,7 @@ export async function createCustomActionAction(formData: FormData): Promise<Acti
       },
     });
     recordAudit(ctx, "custom_action.created", parsed.data.name);
-    revalidatePath("/settings/custom-actions");
+    revalidatePath("/agent/actions");
     return { ok: true, message: `Action “${parsed.data.name}” added — your agent can use it now.` };
   } catch (err) {
     if (err instanceof Error && err.message.includes("Unique constraint")) {
@@ -141,7 +141,7 @@ export async function updateCustomActionAction(formData: FormData): Promise<Acti
     });
     if (updated.count === 0) return { ok: false, message: "Action not found." };
     recordAudit(ctx, "custom_action.updated", parsed.data.name);
-    revalidatePath("/settings/custom-actions");
+    revalidatePath("/agent/actions");
     return { ok: true, message: "Action updated." };
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't update the action." };
@@ -158,7 +158,7 @@ export async function toggleCustomActionAction(formData: FormData): Promise<Acti
       data: { enabled },
     });
     if (updated.count === 0) return { ok: false, message: "Action not found." };
-    revalidatePath("/settings/custom-actions");
+    revalidatePath("/agent/actions");
     return { ok: true, message: enabled ? "Action enabled." : "Action paused." };
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't update the action." };
@@ -175,7 +175,7 @@ export async function deleteCustomActionAction(formData: FormData): Promise<Acti
     });
     await prisma.customAction.deleteMany({ where: { id, orgId: ctx.org.id } });
     if (row) recordAudit(ctx, "custom_action.deleted", row.name);
-    revalidatePath("/settings/custom-actions");
+    revalidatePath("/agent/actions");
     return { ok: true, message: "Action removed." };
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't remove the action." };
