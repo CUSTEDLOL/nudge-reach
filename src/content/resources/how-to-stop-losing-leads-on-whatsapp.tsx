@@ -24,7 +24,7 @@ const LEAD_STATES = [
   },
   {
     name: "Closed",
-    rule: "The enquiry reached an outcome, was disqualified, was declined or opted out.",
+    rule: "The enquiry reached a recorded outcome, was disqualified or was declined.",
   },
 ] as const;
 
@@ -253,11 +253,28 @@ export default function HowToStopLosingLeadsOnWhatsappGuide({
               must never restore marketing eligibility after STOP.
             </p>
             <p>
+              Marketing eligibility stays separate from the business lifecycle
+              state. An opt-out blocks future marketing, but it does not close
+              an unfinished booking, support request or service enquiry. Keep
+              that work visible, owned and in its real state until the business
+              records an outcome.
+            </p>
+            <p>
               Inside the 24-hour service window measured from the latest
               customer message, a scoped free-form service reply may continue
               the conversation. Outside the 24-hour service window,
               business-initiated contact must use an appropriate approved
               message template and still pass the consent and opt-out checks.
+              Verify those controls against the current{` `}
+              <a
+                href="https://whatsappbusiness.com/policy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-brand-700 underline decoration-brand-300 underline-offset-4 hover:text-brand-800"
+              >
+                WhatsApp Business Messaging Policy
+              </a>{` `}
+              before changing a live workflow.
             </p>
           </div>
         </section>
@@ -301,7 +318,10 @@ export default function HowToStopLosingLeadsOnWhatsappGuide({
                   key={item}
                   className="flex gap-4 rounded-xl border border-ink/10 bg-white p-4 leading-7 text-ink/70"
                 >
-                  <span className="font-mono text-sm font-bold text-brand-700">
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-sm font-bold text-brand-700"
+                  >
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   {item}

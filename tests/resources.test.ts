@@ -329,6 +329,26 @@ describe("published resource loading", () => {
     const headings = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map(
       (match) => plainText(match[1]),
     );
+    const leadStates = html.match(/<dl[^>]*>[\s\S]*?<\/dl>/)?.[0] ?? "";
+    const consentSection = html.match(
+      /<section aria-labelledby="consent-context"[\s\S]*?<\/section>/,
+    )?.[0] ?? "";
+    const policyLink = consentSection.match(
+      /<a[^>]*href="https:\/\/whatsappbusiness\.com\/policy\/"[^>]*>/,
+    )?.[0];
+    const weeklyAuditSection = html.match(
+      /<section aria-labelledby="weekly-audit"[\s\S]*?<\/section>/,
+    )?.[0] ?? "";
+    const checklistNumbers = [...weeklyAuditSection.matchAll(
+      /<span([^>]*)>(0[1-6])<\/span>/g,
+    )];
+    const unsupportedClaimPatterns = [
+      /\b\d+(?:\.\d+)?\s*%(?!\w)/,
+      /\b\d+(?:\.\d+)?\s*[x×]\b/i,
+      /\b(?:recover(?:ed|s)?|convert(?:ed|s)?)\s+\d+(?:\.\d+)?\s+(?:leads?|customers?|bookings?|enquiries)\b/i,
+      /\b(?:recovery|conversion)\s+of\s+\d+(?:\.\d+)?\s+(?:leads?|customers?|bookings?|enquiries)\b/i,
+      /\b(?:our customers?|clients?) (?:achieved|increased|reduced|improved)\b/i,
+    ];
 
     expect(html.match(/<article/g)).toHaveLength(1);
     expect(html).not.toContain("<h1");
@@ -346,14 +366,44 @@ describe("published resource loading", () => {
     for (const state of ["New", "Active", "Waiting", "Follow-up due", "Closed"]) {
       expect(text).toContain(state);
     }
+    expect(plainText(leadStates)).not.toContain("opted out");
+    expect(text).toContain(
+      "Marketing eligibility stays separate from the business lifecycle state",
+    );
+    expect(text).toContain(
+      "does not close an unfinished booking, support request or service enquiry",
+    );
+    expect(policyLink).toBeDefined();
+    expect(policyLink!).toContain('target="_blank"');
+    expect(policyLink!).toContain('rel="noopener noreferrer"');
+    expect(checklistNumbers.map((match) => match[2])).toEqual([
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+    ]);
+    for (const [, attributes] of checklistNumbers) {
+      expect(attributes).toContain('aria-hidden="true"');
+    }
     expect(html).toContain('href="/whatsapp-ai-automation"');
     expect(html).toContain(
       'href="/tools/whatsapp-lead-leakage-calculator"',
     );
     expect(text).toContain("STOP as a permanent opt-out");
     expect(text).toContain("opted in");
-    expect(text).not.toMatch(/\b(?:our customers?|clients?) (?:achieved|increased|reduced|improved)\b/i);
-    expect(text).not.toMatch(/\b(?:results?|uplift|conversion rate) of \d/i);
+    expect(text).toContain("24-hour service window");
+    for (const pattern of unsupportedClaimPatterns) {
+      expect(text).not.toMatch(pattern);
+    }
+    expect("42% more leads").toMatch(unsupportedClaimPatterns[0]);
+    expect("2x more bookings").toMatch(unsupportedClaimPatterns[1]);
+    expect("Recovered 18 leads").toMatch(unsupportedClaimPatterns[2]);
+    expect("Conversion of 12 bookings").toMatch(unsupportedClaimPatterns[3]);
+    for (const pattern of unsupportedClaimPatterns) {
+      expect("the 24-hour service window").not.toMatch(pattern);
+    }
   });
 
   it("supports policy claims with a safe official primary-source link", async () => {
