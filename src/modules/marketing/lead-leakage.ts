@@ -28,7 +28,21 @@ function percentage(value: number): number {
   return Math.min(100, nonNegative(value));
 }
 
+function multiplyFinite(left: number, right: number): number {
+  if (left === 0 || right === 0) return 0;
+  return left > Number.MAX_VALUE / right
+    ? Number.MAX_VALUE
+    : left * right;
+}
+
+function addFinite(left: number, right: number): number {
+  return left > Number.MAX_VALUE - right
+    ? Number.MAX_VALUE
+    : left + right;
+}
+
 function roundToTwoDecimals(value: number): number {
+  if (value > Number.MAX_SAFE_INTEGER) return Math.round(value);
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
@@ -49,16 +63,18 @@ export function calculateLeadLeakage(
 ): LeadLeakageResult {
   const normalized = normalizeLeadLeakageInputs(inputs);
   const missedReplyLeads =
-    (normalized.monthlyLeads * normalized.missedReplyPercent) / 100;
+    normalized.monthlyLeads * (normalized.missedReplyPercent / 100);
   const repliedLeads = normalized.monthlyLeads - missedReplyLeads;
   const missingFollowupLeads =
-    (repliedLeads * normalized.missingFollowupPercent) / 100;
-  const leadsAtRisk = missedReplyLeads + missingFollowupLeads;
+    repliedLeads * (normalized.missingFollowupPercent / 100);
+  const leadsAtRisk = addFinite(missedReplyLeads, missingFollowupLeads);
   const customersAtRisk =
-    (leadsAtRisk * normalized.conversionPercent) / 100;
-  const monthlyRevenueAtRisk =
-    customersAtRisk * normalized.averageSaleValue;
-  const annualRevenueAtRisk = monthlyRevenueAtRisk * 12;
+    leadsAtRisk * (normalized.conversionPercent / 100);
+  const monthlyRevenueAtRisk = multiplyFinite(
+    customersAtRisk,
+    normalized.averageSaleValue,
+  );
+  const annualRevenueAtRisk = multiplyFinite(monthlyRevenueAtRisk, 12);
 
   return {
     missedReplyLeads: roundToTwoDecimals(missedReplyLeads),

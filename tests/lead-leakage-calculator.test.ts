@@ -106,6 +106,18 @@ describe("calculateLeadLeakage", () => {
     expect(Object.values(result).every(Number.isFinite)).toBe(true);
   });
 
+  it("keeps every result finite when finite inputs exceed arithmetic range", () => {
+    const result = calculateLeadLeakage({
+      monthlyLeads: Number.MAX_VALUE,
+      missedReplyPercent: 100,
+      missingFollowupPercent: 100,
+      conversionPercent: 100,
+      averageSaleValue: Number.MAX_VALUE,
+    });
+
+    expect(Object.values(result).every(Number.isFinite)).toBe(true);
+  });
+
   it("applies clamped percentages to the formulas", () => {
     expect(
       calculateLeadLeakage({
