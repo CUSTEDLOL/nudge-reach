@@ -14,6 +14,16 @@ export interface LeadLeakageResult {
   customersAtRisk: number;
   monthlyRevenueAtRisk: number;
   annualRevenueAtRisk: number;
+  /**
+   * True when JavaScript's numeric range forced one or more estimates to be
+   * capped. UIs must disclose that capped results are limits, not exact values.
+   */
+  calculationCapped: boolean;
+}
+
+interface FiniteArithmeticResult {
+  value: number;
+  capped: boolean;
 }
 
 function finiteOrZero(value: number): number {
@@ -28,22 +38,25 @@ function percentage(value: number): number {
   return Math.min(100, nonNegative(value));
 }
 
-function multiplyFinite(left: number, right: number): number {
-  if (left === 0 || right === 0) return 0;
+function multiplyFinite(left: number, right: number): FiniteArithmeticResult {
+  if (left === 0 || right === 0) return { value: 0, capped: false };
   return left > Number.MAX_VALUE / right
-    ? Number.MAX_VALUE
-    : left * right;
+    ? { value: Number.MAX_VALUE, capped: true }
+    : { value: left * right, capped: false };
 }
 
-function addFinite(left: number, right: number): number {
+function addFinite(left: number, right: number): FiniteArithmeticResult {
   return left > Number.MAX_VALUE - right
-    ? Number.MAX_VALUE
-    : left + right;
+    ? { value: Number.MAX_VALUE, capped: true }
+    : { value: left + right, capped: false };
 }
 
 function roundToTwoDecimals(value: number): number {
-  if (value > Number.MAX_SAFE_INTEGER) return Math.round(value);
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  const scale = 100;
+  if (value > Number.MAX_SAFE_INTEGER / scale) return Math.round(value);
+  const scaled = value * scale;
+  const relativeTolerance = Number.EPSILON * Math.abs(scaled);
+  return Math.round(scaled + relativeTolerance) / scale;
 }
 
 export function normalizeLeadLeakageInputs(
@@ -67,14 +80,21 @@ export function calculateLeadLeakage(
   const repliedLeads = normalized.monthlyLeads - missedReplyLeads;
   const missingFollowupLeads =
     repliedLeads * (normalized.missingFollowupPercent / 100);
-  const leadsAtRisk = addFinite(missedReplyLeads, missingFollowupLeads);
+  const leadsAtRiskResult = addFinite(
+    missedReplyLeads,
+    missingFollowupLeads,
+  );
+  const leadsAtRisk = leadsAtRiskResult.value;
   const customersAtRisk =
     leadsAtRisk * (normalized.conversionPercent / 100);
-  const monthlyRevenueAtRisk = multiplyFinite(
+  const monthlyRevenueAtRiskResult = multiplyFinite(
     customersAtRisk,
     normalized.averageSaleValue,
   );
-  const annualRevenueAtRisk = multiplyFinite(monthlyRevenueAtRisk, 12);
+  const annualRevenueAtRiskResult = multiplyFinite(
+    monthlyRevenueAtRiskResult.value,
+    12,
+  );
 
   return {
     missedReplyLeads: roundToTwoDecimals(missedReplyLeads),
@@ -82,7 +102,11 @@ export function calculateLeadLeakage(
     missingFollowupLeads: roundToTwoDecimals(missingFollowupLeads),
     leadsAtRisk: roundToTwoDecimals(leadsAtRisk),
     customersAtRisk: roundToTwoDecimals(customersAtRisk),
-    monthlyRevenueAtRisk: Math.round(monthlyRevenueAtRisk),
-    annualRevenueAtRisk: Math.round(annualRevenueAtRisk),
+    monthlyRevenueAtRisk: Math.round(monthlyRevenueAtRiskResult.value),
+    annualRevenueAtRisk: Math.round(annualRevenueAtRiskResult.value),
+    calculationCapped:
+      leadsAtRiskResult.capped ||
+      monthlyRevenueAtRiskResult.capped ||
+      annualRevenueAtRiskResult.capped,
   };
 }

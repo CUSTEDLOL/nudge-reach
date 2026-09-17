@@ -62,6 +62,7 @@ describe("calculateLeadLeakage", () => {
       customersAtRisk: 9.6,
       monthlyRevenueAtRisk: 48_000,
       annualRevenueAtRisk: 576_000,
+      calculationCapped: false,
     });
   });
 
@@ -82,7 +83,20 @@ describe("calculateLeadLeakage", () => {
       customersAtRisk: 3.13,
       monthlyRevenueAtRisk: 3_134,
       annualRevenueAtRisk: 37_609,
+      calculationCapped: false,
     });
+  });
+
+  it("rounds decimal lead counts using their numeric scale", () => {
+    expect(
+      calculateLeadLeakage({
+        monthlyLeads: 10.075,
+        missedReplyPercent: 100,
+        missingFollowupPercent: 0,
+        conversionPercent: 0,
+        averageSaleValue: 0,
+      }).missedReplyLeads,
+    ).toBe(10.08);
   });
 
   it("uses normalized values before calculating and never returns non-finite results", () => {
@@ -102,11 +116,15 @@ describe("calculateLeadLeakage", () => {
       customersAtRisk: 0,
       monthlyRevenueAtRisk: 0,
       annualRevenueAtRisk: 0,
+      calculationCapped: false,
     });
-    expect(Object.values(result).every(Number.isFinite)).toBe(true);
+    const numericResults = Object.values(result).filter(
+      (value): value is number => typeof value === "number",
+    );
+    expect(numericResults.every(Number.isFinite)).toBe(true);
   });
 
-  it("keeps every result finite when finite inputs exceed arithmetic range", () => {
+  it("discloses capped estimates when finite inputs exceed arithmetic range", () => {
     const result = calculateLeadLeakage({
       monthlyLeads: Number.MAX_VALUE,
       missedReplyPercent: 100,
@@ -115,7 +133,11 @@ describe("calculateLeadLeakage", () => {
       averageSaleValue: Number.MAX_VALUE,
     });
 
-    expect(Object.values(result).every(Number.isFinite)).toBe(true);
+    expect(result.calculationCapped).toBe(true);
+    const numericResults = Object.values(result).filter(
+      (value): value is number => typeof value === "number",
+    );
+    expect(numericResults.every(Number.isFinite)).toBe(true);
   });
 
   it("applies clamped percentages to the formulas", () => {
@@ -135,6 +157,7 @@ describe("calculateLeadLeakage", () => {
       customersAtRisk: 100,
       monthlyRevenueAtRisk: 1_000,
       annualRevenueAtRisk: 12_000,
+      calculationCapped: false,
     });
   });
 });
