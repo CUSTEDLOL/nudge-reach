@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { MessageSquare, Smartphone } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { MessageSquare, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,28 +33,6 @@ export function TryYourAi({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
-  if (!simulation) {
-    return (
-      <Card className="flex flex-col items-center gap-3 p-8 text-center">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-          <Smartphone className="h-5 w-5" aria-hidden />
-        </span>
-        <p className="text-sm font-semibold text-neutral-900">
-          {connectedName
-            ? `Your number “${connectedName}” is live`
-            : "Your workspace is in live mode"}
-        </p>
-        <p className="max-w-md text-sm text-neutral-500">
-          Open WhatsApp on your phone, message your business number, and watch
-          the reply land in your Inbox.
-        </p>
-        <Link href="/inbox" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          Open inbox
-        </Link>
-      </Card>
-    );
-  }
-
   async function send() {
     if (sending || !text.trim()) return;
     setSending(true);
@@ -81,6 +58,18 @@ export function TryYourAi({
 
   return (
     <Card className="p-6">
+      {!simulation && (
+        <p className="mb-4 flex items-start gap-2 rounded-xl bg-neutral-50 p-3 text-xs leading-relaxed text-neutral-600">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+          <span>
+            Replies stay on this screen — the test customer gets a practice
+            number, so nothing is sent to a real phone.
+            {connectedName
+              ? ` To test on a real phone, message “${connectedName}” from WhatsApp.`
+              : ""}
+          </span>
+        </p>
+      )}
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
@@ -89,7 +78,7 @@ export function TryYourAi({
         }}
       >
         <div>
-          <Label htmlFor="try-phone">Customer&apos;s number (any test number works)</Label>
+          <Label htmlFor="try-phone">Test customer&apos;s number (any number works)</Label>
           <div className="mt-1.5 flex items-center gap-2">
             <span className="text-sm text-neutral-500">{dialCode}</span>
             <Input

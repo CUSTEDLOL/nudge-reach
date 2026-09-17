@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Founder-created workspaces. The rules that matter: the owner is invited,
- * never issued a password; the workspace opens in test mode on the plan they
- * paid for; and an email that already belongs somewhere is refused, because
+ * never issued a password; a CLIENT workspace is live from the first sign-in
+ * and a TEST one is simulated (founder rule, 2026-09-17); and an email that
+ * already belongs somewhere is refused, because
  * an existing membership resolves before any pending invite so the invite
  * would silently never apply.
  */
@@ -60,6 +61,7 @@ const INPUT = {
   plan: "growth",
   ownerEmail: "  Owner@Aster.in ",
   founderEmail: "founder@nudge.app",
+  mode: "client",
 };
 
 beforeEach(() => {
@@ -73,18 +75,29 @@ beforeEach(() => {
 });
 
 describe("createWorkspace", () => {
-  it("creates the workspace on the paid plan, in test mode, in the right market", async () => {
+  it("creates a CLIENT workspace live from day one, on the paid plan, in the right market", async () => {
     const res = await createWorkspace(INPUT);
 
     expect(res.ok).toBe(true);
     const data = tx.org.create.mock.calls[0][0].data;
     expect(data.plan).toBe("growth");
-    expect(data.simulated).toBe(true);
+    expect(data.simulated).toBe(false);
     expect(data.currency).toBe("INR");
     expect(data.dialCode).toBe("+91");
     expect(data.timezone).toBe("Asia/Kolkata");
     // No owner exists yet, so the required owner column holds a sentinel.
     expect(String(data.ownerUserId).startsWith(PENDING_OWNER_PREFIX)).toBe(true);
+  });
+
+  it("creates a TEST workspace simulated, and refuses when no mode is chosen", async () => {
+    const test = await createWorkspace({ ...INPUT, mode: "test" });
+    expect(test.ok).toBe(true);
+    expect(tx.org.create.mock.calls[0][0].data.simulated).toBe(true);
+
+    const none = await createWorkspace({ ...INPUT, mode: "" });
+    expect(none.ok).toBe(false);
+    expect(none.message).toMatch(/client workspace or a test one/);
+    expect(tx.org.create).toHaveBeenCalledTimes(1);
   });
 
   it("invites the owner by email, normalized, and never issues a password", async () => {
