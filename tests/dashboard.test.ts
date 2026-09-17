@@ -96,25 +96,52 @@ describe("buildChecklist", () => {
     enabledAutomationCount: 0,
     knowledgeFactCount: 0,
     conversationCount: 0,
+    agentEnabled: false,
+    calendarConnected: false,
+    followupsEnabled: false,
+    voiceCallCount: 0,
+    hasFrontDesk: true,
+    hasVoice: true,
   };
 
-  it("everything pending on a fresh live-mode org", () => {
+  it("everything pending on a fresh org", () => {
     const checklist = buildChecklist(empty);
-    expect(checklist.total).toBe(5);
+    expect(checklist.total).toBe(8);
     expect(checklist.completed).toBe(0);
     expect(checklist.allDone).toBe(false);
     expect(checklist.items.every((i) => !i.done)).toBe(true);
   });
 
-  it("simulation mode counts as WhatsApp connected (AGENTS.md rule 5)", () => {
-    const checklist = buildChecklist({ ...empty, simulationMode: true });
-    expect(checklist.items.find((i) => i.key === "whatsapp")?.done).toBe(true);
+  it("leads with the AI employee and ends with going live — no campaign step", () => {
+    const keys = buildChecklist(empty).items.map((i) => i.key);
+    expect(keys).toEqual([
+      "knowledge",
+      "agent_on",
+      "tryit",
+      "calendar",
+      "followups",
+      "voice",
+      "contacts",
+      "whatsapp",
+    ]);
   });
 
-  it("leads with the AI, not broadcasting", () => {
-    const keys = buildChecklist(empty).items.map((i) => i.key);
-    expect(keys.slice(0, 2)).toEqual(["knowledge", "tryit"]);
-    expect(keys[keys.length - 1]).toBe("campaign");
+  it("only offers steps the plan includes", () => {
+    const keys = buildChecklist({ ...empty, hasFrontDesk: false, hasVoice: false }).items.map((i) => i.key);
+    expect(keys).not.toContain("calendar");
+    expect(keys).not.toContain("voice");
+    expect(keys).toContain("followups");
+  });
+
+  it("test mode never ticks 'Go live on WhatsApp' (founder rule, 2026-09-17)", () => {
+    const item = buildChecklist({ ...empty, simulationMode: true }).items.find((i) => i.key === "whatsapp")!;
+    expect(item.done).toBe(false);
+    expect(item.description).toMatch(/with you/);
+  });
+
+  it("a real WhatsappAccount is what completes going live", () => {
+    const checklist = buildChecklist({ ...empty, whatsappConnected: true });
+    expect(checklist.items.find((i) => i.key === "whatsapp")?.done).toBe(true);
   });
 
   it("the tester's conversation completes the try-it step", () => {
@@ -122,9 +149,11 @@ describe("buildChecklist", () => {
     expect(checklist.items.find((i) => i.key === "tryit")?.done).toBe(true);
   });
 
-  it("a real WhatsappAccount counts as connected in live mode", () => {
-    const checklist = buildChecklist({ ...empty, whatsappConnected: true });
-    expect(checklist.items.find((i) => i.key === "whatsapp")?.done).toBe(true);
+  it("says plainly that a switched-off AI stays silent", () => {
+    const item = buildChecklist(empty).items.find((i) => i.key === "agent_on")!;
+    expect(item.done).toBe(false);
+    expect(item.description).toMatch(/silent/);
+    expect(item.href).toBe("/agent/setup");
   });
 
   it("contacts step needs MORE than 5 contacts", () => {
@@ -136,15 +165,17 @@ describe("buildChecklist", () => {
 
   it("completes fully with real activity", () => {
     const checklist = buildChecklist({
+      ...empty,
       whatsappConnected: true,
-      simulationMode: false,
       contactCount: 40,
-      activeCampaignCount: 1,
-      enabledAutomationCount: 1,
       knowledgeFactCount: 8,
       conversationCount: 3,
+      agentEnabled: true,
+      calendarConnected: true,
+      followupsEnabled: true,
+      voiceCallCount: 1,
     });
-    expect(checklist.completed).toBe(5);
+    expect(checklist.completed).toBe(8);
     expect(checklist.allDone).toBe(true);
   });
 

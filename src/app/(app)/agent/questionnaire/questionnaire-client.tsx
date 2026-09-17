@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, ClipboardList, MessageCircle } from "lucide-react";
+import { ArrowRight, ClipboardList, MessageCircle, Sparkles } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -15,6 +16,40 @@ import {
 } from "./actions";
 
 type Mode = "form" | "interview";
+
+/**
+ * Where the owner lands after the biggest job in setup. It used to drop them
+ * on Training with no next step — the exact place the founder got stuck.
+ */
+function DoneCard({ learned }: { learned: number }) {
+  return (
+    <Card className="p-8 text-center">
+      <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-brand-50 text-brand-700">
+        <Sparkles className="h-5 w-5" aria-hidden />
+      </span>
+      <p className="mt-4 text-lg font-semibold text-neutral-900">
+        Your AI learned {learned} fact{learned === 1 ? "" : "s"}
+      </p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
+        It answers from these and nothing else. Skim them once for a wrong
+        price or policy, then message it the way a customer would.
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <Link href="/inbox/try" className={buttonVariants()}>
+          Try it in chat
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+        <Link href="/agent#library" className={buttonVariants({ variant: "secondary" })}>
+          Check what it learned
+        </Link>
+      </div>
+      <p className="mt-4 text-xs text-neutral-500">
+        Whenever it can&apos;t answer something, it asks you on the Training
+        page — every answer makes it smarter.
+      </p>
+    </Card>
+  );
+}
 
 const CATEGORY_TITLES: Record<string, string> = {
   menu_services: "What you offer",
@@ -30,8 +65,8 @@ const CATEGORY_TITLES: Record<string, string> = {
 function FormMode({ script }: { script: QItem[] }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [learned, setLearned] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   const sections = useMemo(() => {
     const order: string[] = [];
@@ -44,6 +79,8 @@ function FormMode({ script }: { script: QItem[] }) {
   }, [script]);
 
   const answeredCount = script.filter((q) => answers[q.id]?.trim()).length;
+
+  if (learned !== null) return <DoneCard learned={learned} />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,7 +123,7 @@ function FormMode({ script }: { script: QItem[] }) {
                   .map((q) => ({ id: q.id, answer: answers[q.id] }))
               );
               setMessage(r.message);
-              if (r.ok) router.push("/agent");
+              if (r.ok) setLearned(r.facts ?? 0);
             })
           }
         >
@@ -103,7 +140,6 @@ function InterviewMode({ script }: { script: QItem[] }) {
   const [answer, setAnswer] = useState("");
   const [learned, setLearned] = useState(0);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   const q = script[index];
   const done = index >= script.length;
@@ -113,23 +149,7 @@ function InterviewMode({ script }: { script: QItem[] }) {
     setIndex((i) => i + 1);
   };
 
-  if (done) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-lg font-semibold text-neutral-900">
-          That&apos;s the interview done 🎉
-        </p>
-        <p className="mt-2 text-sm text-neutral-500">
-          Your AI learned {learned} fact{learned === 1 ? "" : "s"}. It keeps
-          learning from every question you answer in the queue.
-        </p>
-        <Button className="mt-5" onClick={() => router.push("/agent")}>
-          See what it knows
-          <ArrowRight className="ml-1.5 h-4 w-4" />
-        </Button>
-      </Card>
-    );
-  }
+  if (done) return <DoneCard learned={learned} />;
 
   return (
     <Card className="p-6">

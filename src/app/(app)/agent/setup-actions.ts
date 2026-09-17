@@ -84,3 +84,28 @@ export async function saveAgentProfileAction(
     };
   }
 }
+
+/** The one-click on-switch behind the "Your AI is switched off" notice. */
+export async function enableAgentAction(): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    await prisma.agentProfile.upsert({
+      where: { orgId: ctx.org.id },
+      create: {
+        orgId: ctx.org.id,
+        enabled: true,
+        vertical: ctx.org.vertical ?? "other",
+        businessName: ctx.org.name,
+      },
+      update: { enabled: true },
+    });
+    revalidatePath("/", "layout");
+    return { ok: true, message: "Your AI is on. Try it in chat." };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Couldn't switch the AI on.",
+    };
+  }
+}

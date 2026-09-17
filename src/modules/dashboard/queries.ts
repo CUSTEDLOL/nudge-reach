@@ -5,6 +5,8 @@
  */
 import type { CampaignStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getPlan } from "@/modules/billing/plans";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { orgSendMode } from "@/modules/orgs/mode";
 import {
   buildChecklist,
@@ -56,6 +58,8 @@ export interface DashboardData {
   rates: MessageRates;
   checklist: Checklist;
   simulationMode: boolean;
+  /** AgentProfile.enabled; true when no profile exists yet (ensureAgentProfile creates an enabled one). */
+  agentEnabled: boolean;
   recovery: RecoveryMetrics;
   recentConversations: RecentConversation[];
   recentCampaigns: RecentCampaign[];
@@ -93,6 +97,10 @@ export async function getDashboardData(
     pendingBookingCount,
     pendingPaymentAggregate,
     recovery,
+    agentProfile,
+    calendarAccount,
+    voiceCallCount,
+    org,
   ] = await Promise.all([
     prisma.contact.count({ where: { orgId } }),
     prisma.contact.count({ where: { orgId, optedIn: true } }),
@@ -174,7 +182,13 @@ export async function getDashboardData(
       _sum: { amountMinor: true },
     }),
     getRecoveryMetrics(orgId, now),
+    prisma.agentProfile.findUnique({ where: { orgId }, select: { enabled: true } }),
+    prisma.calendarAccount.findUnique({ where: { orgId }, select: { id: true } }),
+    prisma.voiceCall.count({ where: { orgId } }),
+    prisma.org.findUnique({ where: { id: orgId }, select: { plan: true } }),
   ]);
+  const limits = getPlan(org?.plan ?? "free").limits;
+  const agentEnabled = agentProfile?.enabled ?? true;
 
   const countsByStatus: Record<string, number> = {};
   for (const group of messageGroups) {
@@ -207,8 +221,15 @@ export async function getDashboardData(
       enabledAutomationCount,
       knowledgeFactCount,
       conversationCount,
+      agentEnabled,
+      calendarConnected: Boolean(calendarAccount),
+      followupsEnabled: recovery.enabled,
+      voiceCallCount,
+      hasFrontDesk: planHasAiFrontDesk(org?.plan ?? "free"),
+      hasVoice: limits.voiceAgent,
     }),
     simulationMode,
+    agentEnabled,
     recovery,
     recentConversations: conversations.map((c) => ({
       id: c.id,

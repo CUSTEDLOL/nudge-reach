@@ -115,17 +115,19 @@ export async function saveBusinessProfileAction(
           : {}),
       },
     });
-    // Save the identity the AI will eventually use, but onboarding is
-    // discovery only: activation remains an explicit owner action in Setup.
+    // Finishing onboarding switches the AI on. Nothing reaches a customer
+    // until a number is connected, a workspace that skips onboarding already
+    // gets an enabled AI (ensureAgentProfile), and owners kept trying the AI
+    // and getting silence. Setup still has the off switch.
     await prisma.agentProfile.upsert({
       where: { orgId: ctx.org.id },
       create: {
         orgId: ctx.org.id,
-        enabled: false,
+        enabled: true,
         vertical,
         businessName: name,
       },
-      update: { vertical, businessName: name },
+      update: { vertical, businessName: name, enabled: true },
     });
   } catch {
     return { ok: false, message: "Couldn't save — please try again." };

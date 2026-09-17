@@ -47,6 +47,11 @@ vi.mock("@/lib/db", () => ({
     ownerQuestion: { count: db.ownerQuestionCount },
     bookingRequest: { count: db.bookingRequestCount },
     paymentRequest: { aggregate: db.paymentRequestAggregate },
+    // Checklist inputs added 2026-09-17: AI on/off, calendar, calls, plan.
+    agentProfile: { findUnique: vi.fn(async () => ({ enabled: true })) },
+    calendarAccount: { findUnique: vi.fn(async () => null) },
+    voiceCall: { count: vi.fn(async () => 0) },
+    org: { findUnique: vi.fn(async () => ({ plan: "pro" })) },
   },
 }));
 
