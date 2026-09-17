@@ -24,6 +24,22 @@ describe("founder login UI", () => {
     expect(loginSource).toContain("pending");
   });
 
+  it("lets the founder reveal and hide the typed password", () => {
+    expect(loginSource).toContain("useState(false)");
+    expect(loginSource).toContain(
+      'type={passwordVisible ? "text" : "password"}'
+    );
+    expect(loginSource).toContain('type="button"');
+    expect(loginSource).toContain(
+      'passwordVisible ? "Hide password" : "Show password"'
+    );
+    expect(loginSource).toContain(
+      "setPasswordVisible((visible) => !visible)"
+    );
+    expect(loginSource).toContain("EyeOff");
+    expect(loginSource).toContain("Eye");
+  });
+
   it("signs out through the isolated founder route", () => {
     expect(shellSource).toContain('action="/admin/signout"');
     expect(shellSource).not.toContain('action="/auth/signout"');

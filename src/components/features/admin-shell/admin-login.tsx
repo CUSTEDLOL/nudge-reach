@@ -1,8 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState } from "react";
-import { AlertCircle, ArrowRight, LockKeyhole, ShieldCheck } from "lucide-react";
+import { useActionState, useState } from "react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  ShieldCheck,
+} from "lucide-react";
 import {
   loginFounderAction,
   type FounderLoginState,
@@ -13,6 +20,7 @@ const LOGO_W = 1570;
 const LOGO_H = 334;
 
 export function AdminLogin() {
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [state, formAction, pending] = useActionState(
     loginFounderAction,
     INITIAL_STATE
@@ -83,17 +91,38 @@ export function AdminLogin() {
                   />
                 </label>
 
-                <label className="block text-sm font-semibold text-neutral-800">
-                  Password
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    autoComplete="current-password"
-                    disabled={pending}
-                    className="mt-2 h-12 w-full rounded-xl border border-neutral-300 bg-white px-4 text-base text-neutral-950 outline-none transition-[border-color,box-shadow] focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10 disabled:cursor-not-allowed disabled:bg-neutral-100"
-                  />
-                </label>
+                <div className="text-sm font-semibold text-neutral-800">
+                  <label htmlFor="founder-password">Password</label>
+                  <div className="relative mt-2">
+                    <input
+                      id="founder-password"
+                      type={passwordVisible ? "text" : "password"}
+                      name="password"
+                      required
+                      autoComplete="current-password"
+                      disabled={pending}
+                      className="h-12 w-full rounded-xl border border-neutral-300 bg-white px-4 pr-12 text-base font-normal text-neutral-950 outline-none transition-[border-color,box-shadow] focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPasswordVisible((visible) => !visible)
+                      }
+                      disabled={pending}
+                      aria-label={
+                        passwordVisible ? "Hide password" : "Show password"
+                      }
+                      aria-pressed={passwordVisible}
+                      className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-xl text-neutral-500 outline-none transition-colors hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {passwordVisible ? (
+                        <EyeOff className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
                 <div aria-live="polite" className="min-h-6">
                   {state.message ? (
