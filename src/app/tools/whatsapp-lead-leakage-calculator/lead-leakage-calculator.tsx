@@ -76,6 +76,14 @@ function validNumber(value: string, max?: number): number | null {
   return parsed;
 }
 
+function validationError(value: string, max?: number): string | null {
+  if (value.trim() === "") return null;
+  if (validNumber(value, max) !== null) return null;
+  return max === 100
+    ? "Enter a percentage from 0 to 100."
+    : "Enter a non-negative number.";
+}
+
 function parsedInputs(values: InputValues): LeadLeakageInputs | null {
   const monthlyLeads = validNumber(values.monthlyLeads);
   const missedReplyPercent = validNumber(values.missedReplyPercent, 100);
@@ -120,6 +128,21 @@ export function LeadLeakageCalculator({
   });
   const inputs = parsedInputs(values);
   const result = inputs ? calculateLeadLeakage(inputs) : null;
+  const hasEnteredValue = Object.values(values).some(
+    (value) => value.trim() !== "",
+  );
+  const hasValidationError = INPUTS.some(
+    (input) =>
+      validationError(
+        values[input.key],
+        "max" in input ? input.max : undefined,
+      ) !== null,
+  );
+  const liveSummary = result
+    ? `Estimate updated: ${formatCount(result.leadsAtRisk)} leads and ${inr.format(result.monthlyRevenueAtRisk)} monthly revenue at risk.`
+    : hasEnteredValue && hasValidationError
+      ? "Correct the highlighted values to calculate the estimate."
+      : "Enter all five values to calculate the estimate.";
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
@@ -128,118 +151,141 @@ export function LeadLeakageCalculator({
           Your lead flow
         </legend>
         <div className="mt-2 space-y-6">
-          {INPUTS.map((input) => (
-            <div key={input.key}>
-              <label
-                htmlFor={input.id}
-                className="block font-bold text-ink"
-              >
-                {input.label}
-              </label>
-              <p id={`${input.id}-hint`} className="mt-1 text-sm leading-6 text-ink/65">
-                {input.hint}
-              </p>
-              <div className="mt-2 flex items-center rounded-xl border border-ink/25 bg-white focus-within:border-brand-700 focus-within:ring-2 focus-within:ring-brand-700/25">
-                <input
-                  id={input.id}
-                  name={input.key}
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  max={"max" in input ? input.max : undefined}
-                  step="any"
-                  value={values[input.key]}
-                  aria-describedby={`${input.id}-hint`}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      [input.key]: event.target.value,
-                    }))
-                  }
-                  className="min-w-0 flex-1 rounded-xl bg-transparent px-4 py-3 text-base text-ink outline-none"
-                />
-                <span className="pr-4 text-sm font-bold text-ink/55" aria-hidden="true">
-                  {input.suffix}
-                </span>
+          {INPUTS.map((input) => {
+            const error = validationError(
+              values[input.key],
+              "max" in input ? input.max : undefined,
+            );
+            const hintId = `${input.id}-hint`;
+            const errorId = `${input.id}-error`;
+
+            return (
+              <div key={input.key}>
+                <label
+                  htmlFor={input.id}
+                  className="block font-bold text-ink"
+                >
+                  {input.label}
+                </label>
+                <p id={hintId} className="mt-1 text-sm leading-6 text-ink/65">
+                  {input.hint}
+                </p>
+                <div
+                  className={`mt-2 flex items-center rounded-xl border bg-white focus-within:ring-2 ${
+                    error
+                      ? "border-red-400 focus-within:border-red-600 focus-within:ring-red-600/20"
+                      : "border-ink/25 focus-within:border-brand-700 focus-within:ring-brand-700/25"
+                  }`}
+                >
+                  <input
+                    id={input.id}
+                    name={input.key}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max={"max" in input ? input.max : undefined}
+                    step="any"
+                    required
+                    value={values[input.key]}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={`${hintId}${error ? ` ${errorId}` : ""}`}
+                    onChange={(event) =>
+                      setValues((current) => ({
+                        ...current,
+                        [input.key]: event.target.value,
+                      }))
+                    }
+                    className="min-w-0 flex-1 rounded-xl bg-transparent px-4 py-3 text-base text-ink outline-none"
+                  />
+                  <span className="pr-4 text-sm font-bold text-ink/55" aria-hidden="true">
+                    {input.suffix}
+                  </span>
+                </div>
+                {error ? (
+                  <p id={errorId} className="mt-2 text-sm font-bold text-red-700">
+                    {error}
+                  </p>
+                ) : null}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <p className="mt-6 border-t border-ink/15 pt-5 text-sm font-bold text-ink/70">
           No information entered here is stored
         </p>
       </fieldset>
 
-      <section
-        aria-live="polite"
-        aria-atomic="true"
-        className="rounded-[1.75rem] bg-ink p-6 text-white shadow-[8px_8px_0_rgba(6,193,103,0.2)] sm:p-8"
-      >
-        {result ? (
-          <>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-[#9bf0bf]">
-              Planning estimate
-            </p>
-            <div className="mt-6 grid gap-6 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-white/65">Leads at risk each month</p>
-                <p className="mt-1 text-3xl font-black">
-                  {formatCount(result.leadsAtRisk)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-white/65">Potential customers at risk</p>
-                <p className="mt-1 text-3xl font-black">
-                  {formatCount(result.customersAtRisk)}
-                </p>
-              </div>
-              <div className="border-t border-white/20 pt-5 sm:col-span-2">
-                <p className="text-sm text-white/65">
-                  Estimated monthly revenue at risk
-                </p>
-                <p className="mt-1 break-words text-3xl font-black text-[#9bf0bf] sm:text-4xl">
-                  {inr.format(result.monthlyRevenueAtRisk)}
-                </p>
-              </div>
-              <div className="border-t border-white/20 pt-5 sm:col-span-2">
-                <p className="text-sm text-white/65">
-                  Estimated annual revenue at risk
-                </p>
-                <p className="mt-1 break-words text-2xl font-black">
-                  {inr.format(result.annualRevenueAtRisk)}
-                </p>
-              </div>
-            </div>
-            <div className="mt-7 border-t border-white/20 pt-6 text-sm leading-6 text-white/70">
-              <p>
-                Of the leads at risk, {formatCount(result.missedReplyLeads)} are
-                estimated to miss a timely reply and {formatCount(result.missingFollowupLeads)}
-                {" "}to miss follow-up after a reply.
+      <div>
+        <p className="sr-only" aria-live="polite">
+          {liveSummary}
+        </p>
+        <section className="rounded-[1.75rem] bg-ink p-6 text-white shadow-[8px_8px_0_rgba(6,193,103,0.2)] sm:p-8">
+          {result ? (
+            <>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-[#9bf0bf]">
+                Planning estimate
               </p>
-              {result.calculationCapped ? (
-                <p className="mt-4 rounded-xl border border-[#9bf0bf]/50 bg-white/10 p-4 font-bold text-white">
-                  One or more values reached JavaScript&apos;s numeric/precision
-                  limit. Treat this result as a limit rather than an exact
-                  estimate.
+              <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm text-white/65">Leads at risk each month</p>
+                  <p className="mt-1 text-3xl font-black">
+                    {formatCount(result.leadsAtRisk)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-white/65">Potential customers at risk</p>
+                  <p className="mt-1 text-3xl font-black">
+                    {formatCount(result.customersAtRisk)}
+                  </p>
+                </div>
+                <div className="border-t border-white/20 pt-5 sm:col-span-2">
+                  <p className="text-sm text-white/65">
+                    Estimated monthly revenue at risk
+                  </p>
+                  <p className="mt-1 break-words text-3xl font-black text-[#9bf0bf] sm:text-4xl">
+                    {inr.format(result.monthlyRevenueAtRisk)}
+                  </p>
+                </div>
+                <div className="border-t border-white/20 pt-5 sm:col-span-2">
+                  <p className="text-sm text-white/65">
+                    Estimated annual revenue at risk
+                  </p>
+                  <p className="mt-1 break-words text-2xl font-black">
+                    {inr.format(result.annualRevenueAtRisk)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-7 border-t border-white/20 pt-6 text-sm leading-6 text-white/70">
+                <p>
+                  Of the leads at risk, {formatCount(result.missedReplyLeads)} are
+                  estimated to miss a timely reply and {formatCount(result.missingFollowupLeads)}
+                  {" "}to miss follow-up after a reply.
                 </p>
-              ) : null}
+                {result.calculationCapped ? (
+                  <p className="mt-4 rounded-xl border border-[#9bf0bf]/50 bg-white/10 p-4 font-bold text-white">
+                    One or more values reached JavaScript&apos;s numeric/precision
+                    limit. Treat this result as a limit rather than an exact
+                    estimate.
+                  </p>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="flex min-h-72 flex-col justify-center">
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-[#9bf0bf]">
+                Your estimate will appear here
+              </p>
+              <h2 className="mt-4 text-2xl font-black sm:text-3xl">
+                Enter all five values to see where leads may be leaking.
+              </h2>
+              <p className="mt-4 max-w-md leading-7 text-white/70">
+                Use realistic monthly averages. The calculator waits until every
+                field contains a valid non-negative value.
+              </p>
             </div>
-          </>
-        ) : (
-          <div className="flex min-h-72 flex-col justify-center">
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-[#9bf0bf]">
-              Your estimate will appear here
-            </p>
-            <h2 className="mt-4 text-2xl font-black sm:text-3xl">
-              Enter all five values to see where leads may be leaking.
-            </h2>
-            <p className="mt-4 max-w-md leading-7 text-white/70">
-              Use realistic monthly averages. The calculator waits until every
-              field contains a valid non-negative value.
-            </p>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

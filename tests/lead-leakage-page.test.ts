@@ -64,6 +64,7 @@ describe("WhatsApp lead-leakage calculator page", () => {
       expect(input).toContain('type="number"');
       expect(input).toContain('inputMode="decimal"');
       expect(input).toContain('min="0"');
+      expect(input).toContain('required=""');
       if (max) expect(input).toContain(`max="${max}"`);
     }
   });
@@ -80,12 +81,13 @@ describe("WhatsApp lead-leakage calculator page", () => {
 
   it("starts with an instructional empty result region", () => {
     const resultRegion = html.match(
-      /<section[^>]*aria-live="polite"[^>]*>[\s\S]*?<\/section>/,
+      /<p[^>]*aria-live="polite"[^>]*>[\s\S]*?<\/p>/,
     )?.[0] ?? "";
 
     expect(resultRegion).not.toBe("");
     expect(plainText(resultRegion)).toMatch(/enter all five values/i);
     expect(plainText(resultRegion)).not.toContain("₹");
+    expect(resultRegion).not.toContain("aria-atomic");
   });
 });
 
@@ -132,6 +134,85 @@ describe("LeadLeakageCalculator deterministic renders", () => {
     expect(plainText(incomplete)).not.toContain(
       "Estimated monthly revenue at risk",
     );
+  });
+
+  it("explains an invalid percentage and connects the input to help and error text", () => {
+    const html = renderToStaticMarkup(
+      createElement(LeadLeakageCalculator, {
+        initialValues: {
+          monthlyLeads: "240",
+          missedReplyPercent: "101",
+          missingFollowupPercent: "20",
+          conversionPercent: "10",
+          averageSaleValue: "5000",
+        },
+      }),
+    );
+    const input = html.match(
+      /<input[^>]*id="missed-reply-percent"[^>]*>/,
+    )?.[0] ?? "";
+
+    expect(input).toContain('aria-invalid="true"');
+    expect(input).toContain(
+      'aria-describedby="missed-reply-percent-hint missed-reply-percent-error"',
+    );
+    expect(html).toContain('id="missed-reply-percent-hint"');
+    expect(html).toContain('id="missed-reply-percent-error"');
+    expect(plainText(html)).toContain("Enter a percentage from 0 to 100.");
+  });
+
+  it("explains invalid non-percent values with non-negative-number guidance", () => {
+    const html = renderToStaticMarkup(
+      createElement(LeadLeakageCalculator, {
+        initialValues: {
+          monthlyLeads: "not-a-number",
+          missedReplyPercent: "25",
+          missingFollowupPercent: "20",
+          conversionPercent: "10",
+          averageSaleValue: "-5000",
+        },
+      }),
+    );
+
+    for (const id of ["monthly-leads", "average-sale-value"]) {
+      const input = html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))?.[0] ?? "";
+      expect(input).toContain('aria-invalid="true"');
+      expect(input).toContain(`${id}-hint ${id}-error`);
+    }
+    expect(plainText(html).match(/Enter a non-negative number\./g)).toHaveLength(2);
+  });
+
+  it("clears field errors and updates the estimate after corrected values", () => {
+    const corrected = renderToStaticMarkup(
+      createElement(LeadLeakageCalculator, {
+        initialValues: {
+          monthlyLeads: "240",
+          missedReplyPercent: "25",
+          missingFollowupPercent: "20",
+          conversionPercent: "10",
+          averageSaleValue: "5000",
+        },
+      }),
+    );
+    const input = corrected.match(
+      /<input[^>]*id="missed-reply-percent"[^>]*>/,
+    )?.[0] ?? "";
+    const liveRegion = corrected.match(
+      /<p[^>]*aria-live="polite"[^>]*>[\s\S]*?<\/p>/,
+    )?.[0] ?? "";
+
+    expect(input).not.toContain("aria-invalid");
+    expect(input).toContain(
+      'aria-describedby="missed-reply-percent-hint"',
+    );
+    expect(corrected).not.toContain('id="missed-reply-percent-error"');
+    expect(plainText(liveRegion)).toContain(
+      "Estimate updated: 96 leads and ₹48,000 monthly revenue at risk.",
+    );
+    expect(liveRegion).not.toContain("Potential customers at risk");
+    expect(liveRegion).not.toContain("Estimated annual revenue at risk");
+    expect(liveRegion).not.toContain("aria-atomic");
+    expect(plainText(corrected)).toContain("Estimated annual revenue at risk");
   });
 
   it("visibly discloses calculations that reach the numeric precision limit", () => {
