@@ -53,8 +53,15 @@ export interface CalendarDriver {
 /** What booking an appointment resolved to — the booking tool turns this into
  *  a customer-facing message. */
 export type BookOutcome =
-  | { status: "booked"; scheduledFor: Date; eventId?: string; htmlLink?: string }
-  | { status: "unavailable"; alternatives: CalendarSlot[] }
+  | {
+      status: "booked";
+      scheduledFor: Date;
+      /** The business's IANA timezone — format `scheduledFor` with it, never in server time. */
+      timezone: string;
+      eventId?: string;
+      htmlLink?: string;
+    }
+  | { status: "unavailable"; alternatives: CalendarSlot[]; timezone: string }
   | { status: "no_calendar" }
   | { status: "unparsed_time" }
   | { status: "error"; error?: string };

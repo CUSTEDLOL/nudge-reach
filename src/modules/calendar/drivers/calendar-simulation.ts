@@ -1,3 +1,4 @@
+import { zonedParts } from "@/lib/timezone";
 import type {
   AvailabilityResult,
   CalendarDriver,
@@ -9,12 +10,14 @@ import type {
 /**
  * Deterministic fake calendar — the booking flow demos end-to-end with zero
  * Google setup (invariant 4). No network, no OAuth. A fixed lunch block
- * (13:00 local) is treated as taken so the "offer alternatives" path is
- * demoable; every other slot is free.
+ * (13:00 on the business's clock) is treated as taken so the "offer
+ * alternatives" path is demoable; every other slot is free.
  */
 export class CalendarSimulationDriver implements CalendarDriver {
+  constructor(private readonly timezone: string = "UTC") {}
+
   async checkAvailability(slot: CalendarSlot): Promise<AvailabilityResult> {
-    const busy = new Date(slot.start).getHours() === 13;
+    const busy = zonedParts(new Date(slot.start), this.timezone).hour === 13;
     if (!busy) return { ok: true, available: true };
     return {
       ok: true,

@@ -56,11 +56,13 @@ export async function bookAppointment(
   // booking even though the connected-calendar row persists.
   const org = await prisma.org.findUnique({
     where: { id: orgId },
-    select: { plan: true },
+    select: { plan: true, timezone: true },
   });
   if (!org || !planHasAiFrontDesk(org.plan)) return { status: "no_calendar" };
 
-  const parsed = parseWhen(input.requestedFor, input.now);
+  // "4 PM" means 4 PM where the business is, not on the server.
+  const timezone = org.timezone;
+  const parsed = parseWhen(input.requestedFor, input.now, timezone);
   if (!parsed) return { status: "unparsed_time" };
 
   const slot: CalendarSlot = {
@@ -71,7 +73,7 @@ export async function bookAppointment(
   const real = shouldUseGoogle(account.simulated);
   const driver: CalendarDriver = real
     ? new GoogleCalendarDriver()
-    : new CalendarSimulationDriver();
+    : new CalendarSimulationDriver(timezone);
   const credentials = real
     ? (await getCalendarCredentials(orgId)) ?? undefined
     : undefined;
@@ -79,7 +81,11 @@ export async function bookAppointment(
   const availability = await driver.checkAvailability(slot, credentials);
   if (!availability.ok) return { status: "error", error: availability.error };
   if (!availability.available) {
-    return { status: "unavailable", alternatives: availability.alternatives ?? [] };
+    return {
+      status: "unavailable",
+      alternatives: availability.alternatives ?? [],
+      timezone,
+    };
   }
 
   const created = await driver.createEvent(
@@ -91,6 +97,7 @@ export async function bookAppointment(
   return {
     status: "booked",
     scheduledFor: parsed.start,
+    timezone,
     eventId: created.eventId,
     htmlLink: created.htmlLink,
   };
