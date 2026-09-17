@@ -49,6 +49,14 @@ export const captureBookingTool = defineTool({
       description,
     });
 
+    // Shut then → record nothing; the agent explains and offers open times.
+    if (outcome.status === "closed") {
+      return `The business is closed at that time (that day's hours: ${outcome.hours}). Tell the customer, then offer these open times and ask them to pick one: ${formatAlternatives(
+        outcome.alternatives,
+        outcome.timezone
+      )}. Then call this tool again with the chosen time.`;
+    }
+
     // Slot was taken → record nothing; let the agent offer alternatives.
     if (outcome.status === "unavailable") {
       return `That time is taken. Offer these open slots and ask the customer to pick one: ${formatAlternatives(

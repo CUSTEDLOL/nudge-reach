@@ -1,8 +1,10 @@
-import { zonedParts } from "@/lib/timezone";
+import { addDays, zonedParts, zonedTimeToUtc } from "@/lib/timezone";
 import type {
   AvailabilityResult,
+  BusyResult,
   CalendarDriver,
   CalendarEventInput,
+  CalendarEventState,
   CalendarSlot,
   CreateEventResult,
 } from "@/modules/calendar/types";
@@ -24,6 +26,25 @@ export class CalendarSimulationDriver implements CalendarDriver {
       available: false,
       alternatives: [shiftSlot(slot, 60), shiftSlot(slot, 120)],
     };
+  }
+
+  /** The lunch block of every day in the range, on the business's clock. */
+  async busyBetween(range: CalendarSlot): Promise<BusyResult> {
+    const busy: CalendarSlot[] = [];
+    const end = new Date(range.end).getTime();
+    let date = zonedParts(new Date(range.start), this.timezone);
+    for (let i = 0; i < 14; i++) {
+      const start = zonedTimeToUtc({ ...date, hour: 13, minute: 0 }, this.timezone);
+      if (start.getTime() > end) break;
+      busy.push({ start: start.toISOString(), end: new Date(start.getTime() + 3_600_000).toISOString() });
+      date = { ...date, ...addDays(date, 1) };
+    }
+    return { ok: true, busy };
+  }
+
+  /** A mocked event is never moved or cancelled behind our back. */
+  async getEvent(): Promise<CalendarEventState> {
+    return { ok: true, status: "confirmed" };
   }
 
   async createEvent(event: CalendarEventInput): Promise<CreateEventResult> {

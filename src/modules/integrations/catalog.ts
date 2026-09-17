@@ -360,10 +360,14 @@ function decorate(app: AppDefinition, s: CatalogState): AppTile {
       if (!s.hasFrontDesk) return gated(app, "Books appointments on Growth and above.");
       return tile(app, {
         status: s.calendarConnected ? "connected" : "ready",
-        statusLabel: s.calendarConnected ? "Connected" : "Not connected",
+        statusLabel: s.calendarConnected
+          ? s.calendarSimulated
+            ? "Test calendar"
+            : "Connected"
+          : "Not connected",
         detail: s.calendarConnected
           ? s.calendarSimulated
-            ? "Test calendar — real bookings once Google is linked."
+            ? "Test calendar — practice bookings only, nothing reaches a real calendar."
             : (s.calendarEmail ?? "Google account linked")
           : null,
         action: {

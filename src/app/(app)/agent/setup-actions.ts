@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
+import { parseOpeningHours } from "@/modules/calendar/hours";
+import { settingsWithOpeningHours } from "@/modules/calendar/hours-store";
 
 export interface ActionResult {
   ok: boolean;
@@ -31,6 +33,27 @@ export async function saveAgentProfileAction(
       return { ok: false, message: "Please enter your business name." };
     }
 
+    // Opening hours: "" clears them; anything else must be a valid schedule.
+    const rawHours = String(formData.get("openingHours") ?? "").trim();
+    let openingHours: ReturnType<typeof parseOpeningHours> = null;
+    if (rawHours) {
+      let json: unknown;
+      try {
+        json = JSON.parse(rawHours);
+      } catch {
+        return { ok: false, message: "Opening hours look wrong — check each day closes after it opens." };
+      }
+      openingHours = parseOpeningHours(json);
+      if (!openingHours) {
+        return { ok: false, message: "Opening hours look wrong — check each day closes after it opens." };
+      }
+    }
+
+    await prisma.org.update({
+      where: { id: ctx.org.id },
+      data: { settings: settingsWithOpeningHours(ctx.org.settings, openingHours) },
+    });
+
     await prisma.agentProfile.upsert({
       where: { orgId: ctx.org.id },
       create: {
@@ -46,6 +69,7 @@ export async function saveAgentProfileAction(
     });
 
     revalidatePath("/agent");
+    revalidatePath("/agent/setup");
     return {
       ok: true,
       message: enabled

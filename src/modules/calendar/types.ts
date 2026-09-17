@@ -39,6 +39,22 @@ export interface CalendarEventInput {
   description?: string;
 }
 
+export interface BusyResult {
+  ok: boolean;
+  busy: CalendarSlot[];
+  error?: string;
+}
+
+/** What the calendar says an event we created has become. */
+export interface CalendarEventState {
+  ok: boolean;
+  /** "cancelled" when deleted in the calendar; "missing" when it no longer exists at all. */
+  status?: "confirmed" | "tentative" | "cancelled" | "missing";
+  /** ISO start, if the event still has one (it may have been moved). */
+  start?: string;
+  error?: string;
+}
+
 export interface CalendarDriver {
   checkAvailability(
     slot: CalendarSlot,
@@ -48,6 +64,16 @@ export interface CalendarDriver {
     event: CalendarEventInput,
     credentials?: CalendarCredentials
   ): Promise<CreateEventResult>;
+  /** Busy intervals between two instants, so free slots can be offered. */
+  busyBetween(
+    range: CalendarSlot,
+    credentials?: CalendarCredentials
+  ): Promise<BusyResult>;
+  /** Read back an event we created: moved, cancelled, or unchanged. */
+  getEvent(
+    eventId: string,
+    credentials?: CalendarCredentials
+  ): Promise<CalendarEventState>;
 }
 
 /** What booking an appointment resolved to — the booking tool turns this into
@@ -62,6 +88,8 @@ export type BookOutcome =
       htmlLink?: string;
     }
   | { status: "unavailable"; alternatives: CalendarSlot[]; timezone: string }
+  /** The business is shut then. `hours` describes that day; alternatives are inside opening hours. */
+  | { status: "closed"; hours: string; alternatives: CalendarSlot[]; timezone: string }
   | { status: "no_calendar" }
   | { status: "unparsed_time" }
   | { status: "error"; error?: string };

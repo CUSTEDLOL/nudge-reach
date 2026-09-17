@@ -47,7 +47,9 @@ export function CalendarCard({
               <h2 className="text-sm font-semibold text-neutral-900">
                 Google Calendar
               </h2>
-              {connected ? (
+              {connected && simulated ? (
+                <Badge tone="info">Test calendar</Badge>
+              ) : connected ? (
                 <Badge tone="success">Connected</Badge>
               ) : (
                 <Badge tone="neutral">Not connected</Badge>
@@ -55,13 +57,11 @@ export function CalendarCard({
               <Badge tone="brand">AI Front Desk</Badge>
             </div>
             <p className="mt-1 max-w-xl text-sm text-neutral-500">
-              {connected
-                ? `The AI agent books real appointments${
-                    email ? ` into ${email}` : ""
-                  }${
-                    simulated ? " (test calendar)" : ""
-                  }, checks availability, and offers open slots.`
-                : "Let the AI agent book straight into your calendar — check availability, create the event, send the confirmation. The moat Meta's free agent can't cross."}
+              {connected && simulated
+                ? "Practice bookings only. Every slot is free except 1 pm, so you can see how the AI offers other times. Your real Google Calendar connects when you go live."
+                : connected
+                  ? `The AI books straight into ${email ?? "your Google Calendar"}, checks availability first, and offers open slots when a time is taken.`
+                  : "Let the AI agent book straight into your calendar — check availability, create the event, send the confirmation. The moat Meta's free agent can't cross."}
             </p>
             {!hasFrontDesk && (
               <p className="mt-2 text-xs text-brand-700">
