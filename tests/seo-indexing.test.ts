@@ -27,13 +27,18 @@ describe("SEO indexing controls", () => {
       "/compare",
       "/resources",
       "/how-it-works",
+      "/whatsapp-ai-automation",
+      "/tools",
     ]) {
       expect(isPublicPath(path)).toBe(true);
       expect(isPublicPath(`${path}/example`)).toBe(true);
     }
+
+    expect(isPublicPath("/tools/whatsapp-lead-leakage-calculator")).toBe(true);
   });
 
   it("keeps lookalike protected paths private", () => {
     expect(isPublicPath("/resources-private")).toBe(false);
+    expect(isPublicPath("/tools-private")).toBe(false);
   });
 });

@@ -22,6 +22,16 @@ describe("SEO page registry", () => {
   it("uses reviewed dates instead of the current clock", () => {
     expect(seoPage("/").modifiedAt).toBe("2026-09-12");
     expect(seoPage("/industries/clinics").modifiedAt).toBe("2026-09-15");
+    expect(seoPage("/whatsapp-ai-automation")).toMatchObject({
+      title: "WhatsApp AI Automation: From Reply to Qualified Lead",
+      modifiedAt: "2026-09-17",
+      priority: 0.9,
+    });
+    expect(seoPage("/tools/whatsapp-lead-leakage-calculator")).toMatchObject({
+      title: "WhatsApp Lead Leakage Calculator",
+      modifiedAt: "2026-09-17",
+      priority: 0.8,
+    });
     expect(seoPage("/resources")).toMatchObject({
       modifiedAt: "2026-09-14",
       changeFrequency: "weekly",
