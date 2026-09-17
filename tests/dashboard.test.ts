@@ -311,7 +311,7 @@ describe("buildOperationsSummary", () => {
         value: 3,
         detailCount: 2,
         detailLabel: "requests to confirm",
-        href: "/inbox",
+        href: "/bookings",
       },
       {
         key: "conversations",

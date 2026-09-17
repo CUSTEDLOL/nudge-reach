@@ -4,6 +4,7 @@ import {
   Blocks,
   BookOpen,
   Bot,
+  CalendarCheck,
   House,
   Inbox,
   Megaphone,
@@ -20,6 +21,7 @@ export type AppRole = "OWNER" | "ADMIN" | "AGENT";
 export type NavKey =
   | "today"
   | "inbox"
+  | "bookings"
   | "leads"
   | "front-desk"
   | "followups"
@@ -88,6 +90,16 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/inbox",
         icon: Inbox,
         activePrefixes: ["/inbox"],
+      },
+      {
+        // Every appointment the AI took, on the business's clock. Until
+        // 2026-09-17 a booking was only a count on Home and a line in a chat.
+        key: "bookings",
+        label: "Bookings",
+        mobileLabel: "Bookings",
+        href: "/bookings",
+        icon: CalendarCheck,
+        activePrefixes: ["/bookings"],
       },
       {
         key: "leads",
