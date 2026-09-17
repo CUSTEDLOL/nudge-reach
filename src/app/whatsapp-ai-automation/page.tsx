@@ -116,8 +116,8 @@ export default function WhatsAppAiAutomationPage() {
               A reply without a status, owner or next action is still an inbox
               task waiting for somebody to notice it.
             </p>
-            <div className="mt-8 overflow-x-auto rounded-[1.75rem] border-2 border-ink/70 bg-ink px-7 py-8 text-white shadow-[8px_8px_0_rgba(6,193,103,0.2)] sm:px-9">
-              <p className="min-w-[48rem] font-mono text-sm font-bold leading-8 text-[#9bf0bf]">
+            <div className="mt-8 rounded-[1.75rem] border-2 border-ink/70 bg-ink px-7 py-8 text-white shadow-[8px_8px_0_rgba(6,193,103,0.2)] sm:px-9">
+              <p className="break-words font-mono text-sm font-bold leading-8 text-[#9bf0bf]">
                 {WORKFLOW}
               </p>
             </div>
@@ -161,7 +161,7 @@ export default function WhatsAppAiAutomationPage() {
             </h2>
             <div className="mt-8 grid gap-6 md:grid-cols-2">
               <article className="rounded-2xl border border-ink/15 bg-white p-6">
-                <p className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-ink/45">
+                <p className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-ink/65">
                   Reply only
                 </p>
                 <h3 className="mt-3 text-xl font-black text-ink">Acknowledge and answer</h3>

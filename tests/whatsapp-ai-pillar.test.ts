@@ -74,6 +74,25 @@ describe("WhatsApp AI automation pillar", () => {
     }
   });
 
+  it("uses a legible normal-text color for the reply label", () => {
+    const replyLabel = html.match(/<p[^>]*>Reply only<\/p>/)?.[0] ?? "";
+
+    expect(replyLabel).toContain("text-ink/65");
+    expect(replyLabel).not.toContain("text-ink/45");
+  });
+
+  it("keeps the complete workflow readable on mobile without forced horizontal scrolling", () => {
+    const workflowSection = html.match(
+      /<section aria-labelledby="complete-workflow">[\s\S]*?<\/section>/,
+    )?.[0] ?? "";
+
+    expect(workflowSection).not.toContain("overflow-x-auto");
+    expect(workflowSection).not.toContain("min-w-[48rem]");
+    expect(plainText(workflowSection)).toContain(
+      "Inbound message → consent/context check → grounded answer → qualification → business action → status/owner → compliant follow-up → human handoff",
+    );
+  });
+
   it("publishes one breadcrumb schema and no unsupported proof claims", () => {
     const scripts = [
       ...html.matchAll(
