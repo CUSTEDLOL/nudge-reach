@@ -114,6 +114,22 @@ describe("calculateLeadLeakage", () => {
     expect(result.calculationCapped).toBe(false);
   });
 
+  it("preserves a large fractional lead count and discloses limited cent precision", () => {
+    const monthlyLeads = 90_071_992_547_410.25;
+
+    const result = calculateLeadLeakage({
+      monthlyLeads,
+      missedReplyPercent: 100,
+      missingFollowupPercent: 0,
+      conversionPercent: 0,
+      averageSaleValue: 0,
+    });
+
+    expect(result.missedReplyLeads).toBe(monthlyLeads);
+    expect(result.leadsAtRisk).toBe(monthlyLeads);
+    expect(result.calculationCapped).toBe(true);
+  });
+
   it("uses normalized values before calculating and never returns non-finite results", () => {
     const result = calculateLeadLeakage({
       monthlyLeads: Number.POSITIVE_INFINITY,

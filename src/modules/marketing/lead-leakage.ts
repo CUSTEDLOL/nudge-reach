@@ -15,8 +15,8 @@ export interface LeadLeakageResult {
   monthlyRevenueAtRisk: number;
   annualRevenueAtRisk: number;
   /**
-   * True when JavaScript's numeric range forced one or more estimates to be
-   * capped. UIs must disclose that capped results are limits, not exact values.
+   * True when JavaScript's numeric range capped an estimate or cannot guarantee
+   * the requested two-decimal precision. UIs must disclose that limitation.
    */
   calculationCapped: boolean;
 }
@@ -56,11 +56,16 @@ function shiftDecimalExponent(value: number, places: number): number {
   return Number(`${coefficient}e${Number(exponent) + places}`);
 }
 
-function roundToTwoDecimals(value: number): number {
+function roundToTwoDecimals(value: number): FiniteArithmeticResult {
   const scale = 100;
-  if (value > Number.MAX_SAFE_INTEGER / scale) return Math.round(value);
+  if (value > Number.MAX_SAFE_INTEGER / scale) {
+    return { value, capped: true };
+  }
   const shifted = shiftDecimalExponent(value, 2);
-  return shiftDecimalExponent(Math.round(shifted), -2);
+  return {
+    value: shiftDecimalExponent(Math.round(shifted), -2),
+    capped: false,
+  };
 }
 
 export function normalizeLeadLeakageInputs(
@@ -99,18 +104,30 @@ export function calculateLeadLeakage(
     monthlyRevenueAtRiskResult.value,
     12,
   );
+  const roundedMissedReplyLeads = roundToTwoDecimals(missedReplyLeads);
+  const roundedRepliedLeads = roundToTwoDecimals(repliedLeads);
+  const roundedMissingFollowupLeads = roundToTwoDecimals(
+    missingFollowupLeads,
+  );
+  const roundedLeadsAtRisk = roundToTwoDecimals(leadsAtRisk);
+  const roundedCustomersAtRisk = roundToTwoDecimals(customersAtRisk);
 
   return {
-    missedReplyLeads: roundToTwoDecimals(missedReplyLeads),
-    repliedLeads: roundToTwoDecimals(repliedLeads),
-    missingFollowupLeads: roundToTwoDecimals(missingFollowupLeads),
-    leadsAtRisk: roundToTwoDecimals(leadsAtRisk),
-    customersAtRisk: roundToTwoDecimals(customersAtRisk),
+    missedReplyLeads: roundedMissedReplyLeads.value,
+    repliedLeads: roundedRepliedLeads.value,
+    missingFollowupLeads: roundedMissingFollowupLeads.value,
+    leadsAtRisk: roundedLeadsAtRisk.value,
+    customersAtRisk: roundedCustomersAtRisk.value,
     monthlyRevenueAtRisk: Math.round(monthlyRevenueAtRiskResult.value),
     annualRevenueAtRisk: Math.round(annualRevenueAtRiskResult.value),
     calculationCapped:
       leadsAtRiskResult.capped ||
       monthlyRevenueAtRiskResult.capped ||
-      annualRevenueAtRiskResult.capped,
+      annualRevenueAtRiskResult.capped ||
+      roundedMissedReplyLeads.capped ||
+      roundedRepliedLeads.capped ||
+      roundedMissingFollowupLeads.capped ||
+      roundedLeadsAtRisk.capped ||
+      roundedCustomersAtRisk.capped,
   };
 }
