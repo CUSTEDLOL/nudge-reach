@@ -230,6 +230,45 @@ describe("published resource loading", () => {
     }
   });
 
+  it("publishes the official Cloud API build guide in a safe implementation order", async () => {
+    const resource = resourceBySlug(BUILD_GUIDE_SLUG)!;
+    const resourceModule = await RESOURCE_LOADERS[BUILD_GUIDE_SLUG]();
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
+    const headings = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map(
+      (match) => plainText(match[1]),
+    );
+    const cloudApiLink = html.match(
+      /<a[^>]*href="https:\/\/developers\.facebook\.com\/docs\/whatsapp\/cloud-api\/"[^>]*>/,
+    )?.[0];
+
+    expect(html.match(/<article/g)).toHaveLength(1);
+    expect(html).not.toContain("<h1");
+    expect(headings).toEqual([
+      "Define the business outcome before the bot",
+      "Use the official WhatsApp Cloud API",
+      "Receive messages through a verified webhook",
+      "Ground replies in business knowledge",
+      "Give the AI narrow business actions",
+      "Track conversation and lead state",
+      "Enforce the 24-hour service window",
+      "Design human handoff before launch",
+      "Test the complete system safely",
+      "Decide whether to build or buy",
+    ]);
+    expect(cloudApiLink).toBeDefined();
+    expect(cloudApiLink!).toContain('target="_blank"');
+    expect(cloudApiLink!).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('href="/whatsapp-ai-automation"');
+    expect(html).toContain(
+      'href="/resources/how-to-stop-losing-leads-on-whatsapp"',
+    );
+    expect(plainText(html)).toContain(
+      "Unofficial browser automation is not recommended",
+    );
+  });
+
   it("supports policy claims with a safe official primary-source link", async () => {
     const resource = resourceBySlug(GUIDE_SLUG)!;
     const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
