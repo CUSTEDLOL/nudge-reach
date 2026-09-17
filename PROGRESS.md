@@ -1,5 +1,15 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Canonical hostname consolidation (2026-09-17) ✅
+
+- Added a permanent, host-scoped redirect from every `www.nudgeagent.app`
+  path to the matching `https://nudgeagent.app` path. The sitemap and canonical
+  metadata already use the apex hostname; this removes the remaining duplicate
+  live URLs and consolidates Google crawl and ranking signals.
+- Added a focused configuration regression test that also protects the existing
+  retired `/waitlist` redirect. Google Search Console may continue showing the
+  old `www` Terms and Privacy examples until Google recrawls them.
+
 ## AI credit ledger built, tasks 1–8 of 9 (2026-09-16) ✅ CODE — SCHEMA PUSH + DEPLOY PENDING
 
 - The credits promised on every plan are now metered in code. Plan and
