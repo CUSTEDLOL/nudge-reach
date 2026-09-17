@@ -292,6 +292,9 @@ describe("published resource loading", () => {
 describe("resource routes", () => {
   it("lists the published guides with canonical metadata and manifest labels", () => {
     const html = renderToStaticMarkup(createElement(ResourcesPage));
+    const resourceCards = [...html.matchAll(/<article[^>]*>[\s\S]*?<\/article>/g)].map(
+      (match) => match[0],
+    );
     const scripts = [
       ...html.matchAll(
         /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
@@ -305,9 +308,14 @@ describe("resource routes", () => {
     expect(plainText(html)).toContain(
       "WhatsApp Appointment Booking for Clinics: An Operational Guide",
     );
-    expect(plainText(html)).toContain("Build guide");
-    expect(plainText(html)).toContain("Lead operations");
-    expect(plainText(html)).toContain("For clinics");
+    for (const resource of publishedResources()) {
+      const card = resourceCards.find((candidate) =>
+        plainText(candidate).includes(resource.title),
+      );
+
+      expect(card, `missing resource card for ${resource.slug}`).toBeDefined();
+      expect(plainText(card!)).toContain(resource.audienceLabel);
+    }
     expect(html).toMatch(/datetime="2026-09-14"/i);
     expect(plainText(html)).toContain("14 September 2026");
     expect(scripts).toContainEqual({
@@ -345,18 +353,17 @@ describe("resource routes", () => {
     });
   });
 
-  it("passes each resource's manifest-owned eyebrow and CTA to the landing shell", async () => {
-    const resource = resourceBySlug(BUILD_GUIDE_SLUG)!;
-    const element = await ResourcePage({
-      params: Promise.resolve({ slug: BUILD_GUIDE_SLUG }),
-    });
-    const html = renderToStaticMarkup(element);
-    const text = plainText(html);
+  it("passes every resource's manifest-owned eyebrow and CTA to its landing shell", async () => {
+    for (const resource of publishedResources()) {
+      const element = await ResourcePage({
+        params: Promise.resolve({ slug: resource.slug }),
+      });
+      const text = plainText(renderToStaticMarkup(element));
 
-    expect(text).toContain(resource.eyebrow);
-    expect(text).toContain(resource.ctaTitle);
-    expect(text).toContain(resource.ctaBody);
-    expect(text).not.toContain("Clinic operations guide");
+      expect(text).toContain(resource.eyebrow);
+      expect(text).toContain(resource.ctaTitle);
+      expect(text).toContain(resource.ctaBody);
+    }
   });
 
   it("renders one route-owned H1, visible breadcrumbs and Article JSON-LD", async () => {
