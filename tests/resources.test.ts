@@ -319,6 +319,43 @@ describe("published resource loading", () => {
     );
   });
 
+  it("publishes the WhatsApp lead-loss guide as a complete operating workflow", async () => {
+    const resource = resourceBySlug(LEAD_GUIDE_SLUG)!;
+    const resourceModule = await RESOURCE_LOADERS[LEAD_GUIDE_SLUG]();
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
+    const text = plainText(html);
+    const headings = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map(
+      (match) => plainText(match[1]),
+    );
+
+    expect(html.match(/<article/g)).toHaveLength(1);
+    expect(html).not.toContain("<h1");
+    expect(headings).toEqual([
+      "A lead is lost when the next action disappears",
+      "Use five clear lead states",
+      "Acknowledge first, then answer accurately",
+      "Qualify only what the business needs",
+      "Give every conversation an owner and deadline",
+      "Follow up with consent and context",
+      "Stop automation when a person takes over",
+      "Review the leaks every week",
+      "Use the lead-loss checklist",
+    ]);
+    for (const state of ["New", "Active", "Waiting", "Follow-up due", "Closed"]) {
+      expect(text).toContain(state);
+    }
+    expect(html).toContain('href="/whatsapp-ai-automation"');
+    expect(html).toContain(
+      'href="/tools/whatsapp-lead-leakage-calculator"',
+    );
+    expect(text).toContain("STOP as a permanent opt-out");
+    expect(text).toContain("opted in");
+    expect(text).not.toMatch(/\b(?:our customers?|clients?) (?:achieved|increased|reduced|improved)\b/i);
+    expect(text).not.toMatch(/\b(?:results?|uplift|conversion rate) of \d/i);
+  });
+
   it("supports policy claims with a safe official primary-source link", async () => {
     const resource = resourceBySlug(GUIDE_SLUG)!;
     const resourceModule = await RESOURCE_LOADERS[GUIDE_SLUG]();
