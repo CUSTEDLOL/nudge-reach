@@ -49,6 +49,55 @@
 - Documentation only. It does not enable live sending, alter Meta assets, import
   client data, change billing, or add a product feature.
 
+## 2026-09-17 — Booking is real: timezone, opening hours, Bookings page, client workspaces
+
+The founder onboarded a fresh workspace as a client would and booked a demo.
+What it exposed, and what shipped in one pass (`a4fb1c9` → `8115092`; the
+full record with decisions is `docs/ONBOARDING_NOTES.md`):
+
+**Bug that would have hit every client outside UTC.** "Friday 4 PM" on an
+India workspace was stored as 16:00 UTC (9:30 PM IST): `parseWhen` used the
+server's clock, and the tool's own formatting made the same mistake in
+reverse so the confirmation read "4:00 pm". New `src/lib/timezone.ts`
+(`zonedParts`, `zonedTimeToUtc`, `formatInTimezone`), `parseWhen(text, now,
+timezone)`, and `BookOutcome` carries the timezone. Tests in IST and SGT,
+including "tomorrow" said after local midnight.
+
+**Calendar.** Test calendar only for test workspaces, labelled honestly. A
+live workspace gets real Google or an honest "not switched on yet" — never a
+mock behind a green badge. `calendarModeFor` is the one rule. Opening hours
+are structured (`Org.settings.openingHours`, no schema change), read
+deterministically from the questionnaire's weekly-hours answer
+(`hours-text.ts`), editable on Setup, and enforced: the AI refuses a time the
+business is shut and offers the next open slots. Alternatives come from a
+freeBusy sweep, not "+1h". Events are read back from Google before a
+reminder and on the Bookings page (moved → new time, deleted → cancelled).
+The Google driver has tests for the first time.
+
+**Bookings page** (`/bookings`): upcoming / needs confirming / past, on the
+business's clock, with confirm / cancel / no-show / done and a link to the
+chat. Home's booking counts open it.
+
+**Onboarding.** Finishing onboarding switches the AI on (it used to stay
+off, silently). A one-click "Your AI is switched off — Turn it on" notice on
+Home, Training and Try. The questionnaire ends on a finish screen with the
+facts count and next steps. Training leads with what the AI knows. Home
+checklist is plan-aware, never ticked by test mode, and has no campaign step.
+
+**Client workspaces are production from the first sign-in.** Admin New
+workspace has a required Client / Test choice. "Try your AI" works in a live
+workspace: the pretend customer gets a +999 sandbox number and `sendMessage`
+routes any sandbox address through the simulation driver, so nothing typed
+there can reach a real phone.
+
+**Still the founder's to do:** `SEND_MODE=live` in Vercel (the platform
+switch overrides every workspace until then), Google OAuth keys + redirect
+URI, one real Google booking on a live test workspace, delete the empty
+duplicate "Goldmine Infotech" workspace. `prisma db push` was not needed:
+hours live in the existing settings JSON.
+
+1316 tests green, lint clean, production build clean.
+
 ## 2026-09-16 — One place to set up the AI employee (nav restructure)
 
 Founder feedback: *"first i will go to AI agent and all to set that up then i

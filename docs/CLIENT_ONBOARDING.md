@@ -46,13 +46,20 @@ into the product on the setup call:
 
 Founder, on nudgeagent.app/admin:
 
-1. Create workspace: name, country, the plan they bought, the owner's email.
-   It starts in test mode on purpose. Nothing reaches a customer yet.
+1. Create workspace: choose **Client**, then name, country, the plan they
+   bought, the owner's email. A client workspace is production from the
+   first sign-in: no test mode, no mocked calendar, every app shows its real
+   state. (Choose **Test** only for your own sandbox.) Nothing reaches a
+   customer until a number is connected, and "Try your AI" is always safe:
+   the pretend customer gets a practice number that cannot belong to anyone.
 2. Send the owner the sign-up link the page shows
    (`https://nudgeagent.app/login?invited=1`). They sign up with that exact
    email and choose a password. They land in their workspace as owner.
 3. The client sees a two-step welcome (goal, then business identity), then
-   the dashboard with a six-item checklist that mirrors this document.
+   Home with a checklist that mirrors this document: Teach your AI → Switch
+   it on (done for them at the end of the welcome) → Try it → Connect your
+   calendar → Turn on follow-ups → Hear it on a call (Pro) → Bring in
+   customers → Go live on WhatsApp. Nothing is ticked by test mode.
 
 ## Day 0, the setup call (60 to 90 minutes, screen share)
 
@@ -90,10 +97,15 @@ saves anything, stores the token encrypted, and writes an audit row. Until
 go-live the workspace stays in test mode. Clients with their own Meta app
 can do the same from Settings → WhatsApp → Advanced: connect manually.
 
-**4. Connect the calendar (5 min).** Integrations → Connect calendar.
+**4. Connect the calendar (5 min).** Apps → Google Calendar → Connect.
 The client signs in to Google once. From then on the AI checks real
-availability and books into their real calendar. If the workspace still
-shows the test calendar, the Google keys are not set on the platform yet.
+availability, books into their real calendar, refuses times the business is
+shut, and offers the next open slots when a time is taken. If Connect says
+Google isn't switched on yet, the platform's Google keys are missing —
+finish that before promising bookings. A client workspace never gets the
+test calendar. Check **AI Front Desk → Setup → Opening hours**: it is filled
+from their questionnaire answer when we could read it; fix it if not.
+Every booking lands on **Bookings** in the sidebar, in their local time.
 
 **5. Bring in customers (10 min).** Leads → Import contacts.
 Only people who have agreed to hear from them on WhatsApp. Consent is
@@ -112,9 +124,10 @@ paused until go-live.
 ## Day 1 or 2, go live (5 minutes)
 
 Preconditions: number verified, display name approved, at least one template
-approved, facts approved. Founder flips the workspace to live from
-/admin → Controls. Client sends one message from their own phone to the
-business number and watches the AI reply in their inbox. Turn follow-ups on.
+approved, facts approved. A client workspace is already live, so there is no
+switch to flip: once the number is connected the AI answers real customers.
+Client sends one message from their own phone to the business number and
+watches the AI reply in their inbox. Turn follow-ups on.
 From this moment the AI answers customers, captures leads, books, sends
 payment links and chases quiet leads on its own.
 
@@ -166,6 +179,10 @@ Confirm the invoice. Ask for the referral.
 
 Once, not per client: run `scripts/prod-env-setup.sh` (admin panel, cron
 secret, optional Razorpay and Resend keys); a permanent Meta System User
-token; Google OAuth keys if calendar is promised; Zoho or Salesforce app keys
-if CRM sync is promised. Details in `docs/READINESS_2026-09-15.md` and
-`docs/CLIENT_GO_LIVE_VOICE_CRM.md`.
+token; **`SEND_MODE=live` in Vercel** — production still runs the
+platform-wide test switch, and it overrides every workspace until changed;
+Google OAuth keys (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_OAUTH_REDIRECT_URI` = the app's `/api/integrations/google/callback`)
+if calendar is promised; Zoho or Salesforce app keys if CRM sync is
+promised. Details in `docs/READINESS_2026-09-15.md`,
+`docs/CLIENT_GO_LIVE_VOICE_CRM.md` and `docs/ONBOARDING_NOTES.md`.
