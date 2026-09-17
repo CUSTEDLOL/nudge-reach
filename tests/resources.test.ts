@@ -240,7 +240,10 @@ describe("published resource loading", () => {
       (match) => plainText(match[1]),
     );
     const cloudApiLink = html.match(
-      /<a[^>]*href="https:\/\/developers\.facebook\.com\/docs\/whatsapp\/cloud-api\/"[^>]*>/,
+      /<a[^>]*href="https:\/\/developers\.facebook\.com\/documentation\/business-messaging\/whatsapp\/about-the-platform"[^>]*>/,
+    )?.[0];
+    const policyLink = html.match(
+      /<a[^>]*href="https:\/\/whatsappbusiness\.com\/policy\/"[^>]*>/,
     )?.[0];
 
     expect(html.match(/<article/g)).toHaveLength(1);
@@ -260,12 +263,59 @@ describe("published resource loading", () => {
     expect(cloudApiLink).toBeDefined();
     expect(cloudApiLink!).toContain('target="_blank"');
     expect(cloudApiLink!).toContain('rel="noopener noreferrer"');
+    expect(policyLink).toBeDefined();
+    expect(policyLink!).toContain('target="_blank"');
+    expect(policyLink!).toContain('rel="noopener noreferrer"');
     expect(html).toContain('href="/whatsapp-ai-automation"');
     expect(html).toContain(
       'href="/resources/how-to-stop-losing-leads-on-whatsapp"',
     );
     expect(plainText(html)).toContain(
       "Unofficial browser automation is not recommended",
+    );
+    expect(html).toMatch(
+      /class="mt-1 text-sm text-ink\/65">Technical and operational guide/,
+    );
+  });
+
+  it("protects the build guide's operational safety boundaries", async () => {
+    const resource = resourceBySlug(BUILD_GUIDE_SLUG)!;
+    const resourceModule = await RESOURCE_LOADERS[BUILD_GUIDE_SLUG]();
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
+    const groundingSection = html.match(
+      /<section aria-labelledby="business-knowledge"[\s\S]*?<\/section>/,
+    )?.[0];
+    const stateSection = html.match(
+      /<section aria-labelledby="conversation-state"[\s\S]*?<\/section>/,
+    )?.[0];
+    const serviceWindowSection = html.match(
+      /<section aria-labelledby="service-window"[\s\S]*?<\/section>/,
+    )?.[0];
+    const testingSection = html.match(
+      /<section aria-labelledby="safe-testing"[\s\S]*?<\/section>/,
+    )?.[0];
+
+    expect(plainText(groundingSection ?? "")).toContain(
+      "information the owner has approved",
+    );
+    expect(plainText(stateSection ?? "")).toContain(
+      "one business can never retrieve or change another business's data",
+    );
+    expect(plainText(serviceWindowSection ?? "")).toContain("valid consent");
+    expect(plainText(serviceWindowSection ?? "")).toContain(
+      "STOP as a permanent opt-out",
+    );
+    expect(plainText(serviceWindowSection ?? "")).toContain(
+      "Outside the 24-hour service window",
+    );
+    expect(plainText(serviceWindowSection ?? "")).toContain(
+      "approved message template",
+    );
+    expect(plainText(testingSection ?? "")).toContain("simulation mode");
+    expect(plainText(testingSection ?? "")).toContain(
+      "user acceptance testing",
     );
   });
 

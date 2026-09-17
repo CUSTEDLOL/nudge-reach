@@ -38,7 +38,7 @@ export default function HowToBuildWhatsappAiAutomationGuide({
       <header className="mb-12 border-y-2 border-ink py-5 sm:flex sm:items-center sm:justify-between sm:gap-8">
         <div>
           <p className="text-sm font-bold text-ink">By {resource.authorName}</p>
-          <p className="mt-1 text-sm text-ink/55">
+          <p className="mt-1 text-sm text-ink/65">
             Technical and operational guide
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function HowToBuildWhatsappAiAutomationGuide({
             <p>
               Use the current{` `}
               <a
-                href="https://developers.facebook.com/docs/whatsapp/cloud-api/"
+                href="https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 font-bold text-brand-700 underline decoration-brand-300 underline-offset-4 hover:text-brand-800"
@@ -235,9 +235,9 @@ export default function HowToBuildWhatsappAiAutomationGuide({
             <p>
               Derive the free-form reply path from the latest customer message.
               When the customer service window is open, the assistant can answer
-              within the business&apos;s approved scope. When it is closed, a
-              business-initiated follow-up must use an appropriate approved
-              message template rather than a free-form AI message.
+              within the business&apos;s approved scope. Outside the 24-hour service
+              window, a business-initiated follow-up must use an appropriate
+              approved message template rather than a free-form AI message.
             </p>
             <p>
               Enforce that choice in the sending code, not only in a prompt.
@@ -252,6 +252,19 @@ export default function HowToBuildWhatsappAiAutomationGuide({
                 WhatsApp lead follow-up guide
               </Link>{` `}
               for the operating workflow around those controls.
+            </p>
+            <p>
+              Check the current{` `}
+              <a
+                href="https://whatsappbusiness.com/policy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold text-brand-700 underline decoration-brand-300 underline-offset-4 hover:text-brand-800"
+              >
+                WhatsApp Business Messaging Policy
+                <ExternalLink className="h-4 w-4" aria-hidden />
+              </a>{` `}
+              before launching or changing a live messaging workflow.
             </p>
           </div>
         </section>
