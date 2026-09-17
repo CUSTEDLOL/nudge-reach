@@ -6,11 +6,9 @@ import {
   Database,
   Globe,
   Phone,
-  PhoneCall,
   ScrollText,
   Users,
   Wand2,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,8 +36,6 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     label: "Channels & AI",
     items: [
       { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone },
-      { href: "/settings/voice", label: "Voice", icon: PhoneCall },
-      { href: "/settings/custom-actions", label: "Agent actions", icon: Zap },
       { href: "/settings/ai", label: "AI model", icon: Cpu },
       { href: "/settings/widget", label: "Website widget", icon: Globe },
     ],

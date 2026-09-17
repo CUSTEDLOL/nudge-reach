@@ -37,6 +37,11 @@ export type NavChild = {
   key: string;
   label: string;
   href: string;
+  /**
+   * Extra routes this child owns, so a sub-page still highlights its parent
+   * row. Defaults to the href alone. Longest match wins across siblings.
+   */
+  activePrefixes?: readonly string[];
 };
 
 export type NavItem = {
@@ -104,10 +109,20 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/agent",
         icon: Bot,
         activePrefixes: ["/agent", "/knowledge"],
-        // Two real pages, not tabs: Setup was too easy to miss behind one.
+        // Everything about the AI employee lives here — what it knows, how it
+        // behaves, its phone line and its abilities. Voice and Actions used to
+        // sit in Settings, which meant setting up the AI meant visiting two
+        // unrelated sections (founder feedback, 2026-09-16).
         children: [
-          { key: "training", label: "Training", href: "/agent" },
+          {
+            key: "training",
+            label: "Training",
+            href: "/agent",
+            activePrefixes: ["/agent", "/knowledge"],
+          },
           { key: "setup", label: "Setup", href: "/agent/setup" },
+          { key: "voice", label: "Voice", href: "/agent/voice" },
+          { key: "actions", label: "Actions", href: "/agent/actions" },
         ],
       },
       {
@@ -148,8 +163,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       {
         key: "integrations",
-        label: "Integrations",
-        mobileLabel: "Integrations",
+        label: "Apps",
+        mobileLabel: "Apps",
         href: "/integrations",
         icon: Blocks,
         activePrefixes: ["/integrations"],
@@ -219,11 +234,11 @@ const QUICK_COMMANDS: readonly AppCommand[] = [
     keywords: ["contact", "customer", "new"],
   },
   {
-    label: "Connect an integration",
+    label: "Connect an app",
     href: "/integrations",
     group: "Quick actions",
     icon: Plug,
-    keywords: ["calendar", "crm", "connect"],
+    keywords: ["calendar", "crm", "connect", "zapier", "integration"],
     hideForAgent: true,
   },
 ];
@@ -264,7 +279,25 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
   return activeNavKey(pathname) === item.key;
 }
 
-/** Which child of an active nav item is the current page. */
-export function isNavChildActive(child: NavChild, pathname: string): boolean {
-  return cleanPathname(pathname) === child.href;
+/**
+ * Which child of an active nav item is the current page. Longest matching
+ * prefix wins, so /agent/voice lands on Voice rather than on Training's
+ * broader /agent — and a sub-page like /agent/questionnaire still highlights
+ * the row it belongs to instead of leaving the whole list looking inactive.
+ */
+export function activeNavChildKey(item: NavItem, pathname: string): string | null {
+  const clean = cleanPathname(pathname);
+  let bestKey: string | null = null;
+  let bestLength = -1;
+
+  for (const child of item.children ?? []) {
+    for (const prefix of child.activePrefixes ?? [child.href]) {
+      if (routeMatches(clean, prefix) && prefix.length > bestLength) {
+        bestKey = child.key;
+        bestLength = prefix.length;
+      }
+    }
+  }
+
+  return bestKey;
 }

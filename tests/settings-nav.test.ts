@@ -12,7 +12,7 @@ describe("settings navigation taxonomy", () => {
       ["Workspace", ["General", "Team", "Concierge"]],
       [
         "Channels & AI",
-        ["WhatsApp", "Voice", "Agent actions", "AI model", "Website widget"],
+        ["WhatsApp", "AI model", "Website widget"],
       ],
       ["Account", ["Notifications", "Billing", "Data", "Audit log"]],
     ]);
@@ -25,6 +25,17 @@ describe("settings navigation taxonomy", () => {
 
     expect(hrefs).not.toContain("/automations");
     expect(hrefs).not.toContain("/integrations");
+  });
+
+  it("leaves everything about the AI employee to the AI Front Desk", () => {
+    const hrefs = SETTINGS_GROUPS.flatMap((group) =>
+      group.items.map((item) => item.href)
+    );
+
+    // Owners set the AI up in one place. Settings keeps only account admin.
+    expect(hrefs).not.toContain("/settings/voice");
+    expect(hrefs).not.toContain("/settings/custom-actions");
+    expect(hrefs).not.toContain("/agent/voice");
   });
 
   it("keeps every destination unique", () => {

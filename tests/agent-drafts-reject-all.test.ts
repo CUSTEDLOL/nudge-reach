@@ -22,7 +22,7 @@ const { recordAudit } = vi.hoisted(() => ({ recordAudit: vi.fn() }));
 vi.mock("@/modules/orgs/audit", () => ({ recordAudit }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { discardAllDraftsAction } from "@/app/(app)/agent/actions";
+import { discardAllDraftsAction } from "@/app/(app)/agent/training-actions";
 
 const CTX = { org: { id: "org1" }, role: "ADMIN" };
 

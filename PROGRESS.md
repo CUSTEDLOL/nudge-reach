@@ -39,6 +39,70 @@
 - Documentation only. It does not enable live sending, alter Meta assets, import
   client data, change billing, or add a product feature.
 
+## 2026-09-16 — One place to set up the AI employee (nav restructure)
+
+Founder feedback: *"first i will go to AI agent and all to set that up then i
+will go in setting to set up voice, I want everything in front and very easy to
+follow up."* Right call — the employee was split across two sections.
+
+**Moved.** `/settings/voice` → `/agent/voice`, `/settings/custom-actions` →
+`/agent/actions`. Both old paths `permanentRedirect`, so bookmarks, client docs
+and the go-live runbooks keep working. Settings is now account admin only.
+
+**AI Front Desk now has four children** in the sidebar and a matching tab strip
+on every `/agent` page: Training · Setup · Voice · Actions. The tabs are read
+from `NAV_GROUPS` rather than restated, so the rail and the strip cannot drift
+apart (`src/app/(app)/agent/front-desk-tabs.tsx`, rendered by
+`src/app/(app)/agent/layout.tsx`).
+
+**Sub-nav highlighting** is longest-prefix-wins (`activeNavChildKey`), so
+`/agent/questionnaire` and `/knowledge` light up Training while `/agent/voice`
+beats Training's broader `/agent`. Before, any sub-page left the whole list
+looking unselected.
+
+**Renamed** `app/(app)/agent/actions.ts` → `training-actions.ts`. A route folder
+`agent/actions/` beside a module `agent/actions.ts` resolved ambiguously —
+`./actions` silently preferred the file. Nothing was broken yet; it was a trap.
+
+Sidebar "Integrations" is labelled **Apps**, matching the page it opens.
+
+1126 tests green, lint clean, `DEV_AUTH_BYPASS= npm run build` clean. `db730c0`.
+
+## Apps directory, Home quick actions, onboarding hand-off (2026-09-16) ✅
+
+- Founder feedback: the product felt "hiddenish", and integrations should be
+  "many things where the client just clicks add". Took the directory pattern
+  from Linear's integrations page (search, category list, one tile per app
+  with a single action) rather than inventing one.
+- **Apps** (renamed from Integrations): six stacked cards → one searchable
+  grid of 20 apps in 7 categories. Connected apps sort to the front; each
+  tile has exactly one button. The existing calendar / CRM / webhook / API-key
+  cards were not rewritten — they render on the server and open in a drawer
+  from their tile. WhatsApp got a panel so the connection test and the Meta
+  webhook URL survived the rewrite.
+- Honesty is enforced in `modules/integrations/catalog.ts`, not in JSX:
+  `native` = one click, `bridge` = genuinely works today through an outbound
+  webhook (the drawer carries that app's exact steps, `bridge-recipes.ts`),
+  `planned` = no button, always "Coming soon". Plan-gated apps show an
+  upgrade link instead of a dead button. 9 unit tests cover those rules.
+- **Home**: an unfinished workspace leads with its checklist instead of five
+  sections of zeros, and hides Business pulse while every figure in it would
+  be a zero. New "Jump back in" row surfaces the six jobs owners come for.
+  `dashboard-page-contract.test.ts` updated to the new order, with the reason.
+- **Onboarding**: glyph per priority; the final screen's steps are now
+  buttons that finish setup and land on that page ("Start here" on the first).
+  `completeOnboardingAction` gained a fixed route map so the new destinations
+  cannot become an open redirect.
+- Verified on a throwaway workspace at 1440px and 390px: 20 tiles, search,
+  filters, both drawer kinds, full onboarding walk, no console errors.
+  Suite 1115/1115, lint clean, tsc clean, production build clean.
+- **Database note:** production was reset before this work — one org remains
+  (`Goldmine Infotech`, Pro, 0 memberships = owner has not opened their setup
+  link yet). The demo org the voice tests used is gone; `VOICE_TEST_ORG_ID`
+  was already removed, so browser calls now work per workspace. Prod also
+  carries `CreditGrant`/`CreditDebit` tables that `schema.prisma` does not —
+  **do not run `prisma db push` against prod** until that is reconciled.
+
 ## SEO production release gate (2026-09-15) ✅
 
 - Merged the reviewed SEO foundation onto the current `origin/main` while

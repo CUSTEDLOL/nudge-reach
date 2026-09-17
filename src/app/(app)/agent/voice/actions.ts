@@ -37,7 +37,7 @@ export async function saveVoiceNumberAction(formData: FormData): Promise<ActionR
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't save the number." };
   }
-  revalidatePath("/settings/voice");
+  revalidatePath("/agent/voice");
   return { ok: true, message: "Voice number saved." };
 }
 
@@ -49,7 +49,7 @@ export async function removeVoiceNumberAction(id: string): Promise<ActionResult>
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't remove the number." };
   }
-  revalidatePath("/settings/voice");
+  revalidatePath("/agent/voice");
   return { ok: true, message: "Number removed." };
 }
 
@@ -69,7 +69,7 @@ export async function toggleReminderCallsAction(enabled: boolean): Promise<Actio
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't update reminder calls." };
   }
-  revalidatePath("/settings/voice");
+  revalidatePath("/agent/voice");
   return { ok: true, message: enabled ? "Reminder calls on." : "Reminder calls off." };
 }
 

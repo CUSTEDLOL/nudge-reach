@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
-  isNavChildActive,
+  activeNavChildKey,
   isNavItemActive,
   navGroupsForRole,
   type AppRole,
@@ -118,12 +118,14 @@ export function Sidebar({
                           {!collapsed && <span className="truncate">{item.label}</span>}
                         </Link>
 
-                        {/* Second level: only for the section you are in, so
-                            the rail stays calm everywhere else. */}
-                        {!collapsed && active && item.children && (
+                        {/* Second level, always open. Hiding it until you were
+                            already inside the section is what made setting the
+                            AI up feel like a hunt (founder, 2026-09-16). */}
+                        {!collapsed && item.children && (
                           <ul className="mt-0.5 ml-[1.45rem] flex flex-col gap-0.5 border-l border-neutral-200 pl-2.5">
                             {item.children.map((child) => {
-                              const here = isNavChildActive(child, pathname);
+                              const here =
+                                child.key === activeNavChildKey(item, pathname);
                               return (
                                 <li key={child.key}>
                                   <Link

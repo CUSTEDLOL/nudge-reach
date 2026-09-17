@@ -3,7 +3,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { PageHeader } from "@/components/ui/page-header";
-import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AgentForm, type AgentFormValues } from "../agent-form";
 
@@ -34,14 +33,6 @@ export default async function AgentSetupPage() {
       <PageHeader
         title="Setup"
         description="Who your AI Front Desk is and how it behaves on WhatsApp. Set this once."
-        actions={
-          <Link
-            href="/agent"
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            Back to training
-          </Link>
-        }
       />
 
       <Card className="p-6">

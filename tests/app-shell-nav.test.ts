@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  activeNavChildKey,
   activeNavKey,
   commandsForRole,
   mobilePrimaryItemsForRole,
@@ -21,7 +23,7 @@ describe("adaptive app navigation", () => {
         ["AI Front Desk", "Follow-ups", "Campaigns"],
       ],
       ["Insights", ["Analytics"]],
-      ["Manage", ["Integrations", "Settings"]],
+      ["Manage", ["Apps", "Settings"]],
     ]);
   });
 
@@ -55,9 +57,43 @@ describe("adaptive app navigation", () => {
     ["/automations", "followups"],
     ["/integrations", "integrations"],
     ["/analytics?range=30d", "analytics"],
-    ["/settings/voice", "settings"],
+    // Voice and Actions are part of the AI employee, not account admin — they
+    // must light up the Front Desk, not Settings.
+    ["/agent/voice", "front-desk"],
+    ["/agent/actions", "front-desk"],
+    ["/settings/billing", "settings"],
   ])("maps %s to the correct active item", (pathname, key) => {
     expect(activeNavKey(pathname)).toBe(key);
+  });
+
+  it("gives the AI Front Desk every page that configures the employee", () => {
+    const frontDesk = navGroupsForRole("OWNER")
+      .flatMap((group) => group.items)
+      .find((item) => item.key === "front-desk")!;
+
+    expect(frontDesk.children?.map((child) => [child.label, child.href])).toEqual([
+      ["Training", "/agent"],
+      ["Setup", "/agent/setup"],
+      ["Voice", "/agent/voice"],
+      ["Actions", "/agent/actions"],
+    ]);
+  });
+
+  it.each([
+    ["/agent", "training"],
+    ["/agent/questionnaire", "training"],
+    ["/knowledge", "training"],
+    ["/agent/setup", "setup"],
+    // The longest match has to win, or Training's /agent would swallow these.
+    ["/agent/voice", "voice"],
+    ["/agent/actions", "actions"],
+    ["/dashboard", null],
+  ])("highlights the right sub-page for %s", (pathname, key) => {
+    const frontDesk = navGroupsForRole("OWNER")
+      .flatMap((group) => group.items)
+      .find((item) => item.key === "front-desk")!;
+
+    expect(activeNavChildKey(frontDesk, pathname)).toBe(key);
   });
 
   it("returns null for routes outside the authenticated navigation", () => {
@@ -75,7 +111,7 @@ describe("adaptive app navigation", () => {
       ["Teach your Front Desk", "/agent/questionnaire"],
       ["Try your Front Desk", "/inbox/try"],
       ["Add a lead", "/contacts?new=1"],
-      ["Connect an integration", "/integrations"],
+      ["Connect an app", "/integrations"],
     ]);
   });
 
@@ -83,6 +119,18 @@ describe("adaptive app navigation", () => {
     expect(commandsForRole("AGENT").map((command) => command.href)).not.toContain(
       "/integrations"
     );
+  });
+
+  it("leaves the Front Desk sub-pages open in the rail at all times", () => {
+    // Gating them on `active` meant you could not see Voice until you were
+    // already inside the section — the hunt the founder complained about.
+    const source = readFileSync(
+      "src/components/features/app-shell/sidebar.tsx",
+      "utf8"
+    );
+
+    expect(source).toContain("{!collapsed && item.children && (");
+    expect(source).not.toContain("active && item.children");
   });
 
   it("keeps the mobile bar away from an open inbox thread", () => {

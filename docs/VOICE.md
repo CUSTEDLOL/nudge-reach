@@ -15,19 +15,19 @@ as a transcript. Design: `docs/superpowers/specs/2026-08-29-voice-and-crm-design
    as the WhatsApp agent: `capture_booking_request`, `capture_lead`, and
    `ask_owner`. A phone call does not open WhatsApp's 24-hour service window,
    so payment requests become team follow-ups instead of an unapproved message.
-   Hand-off is ElevenLabs' `transfer_to_number` to the number in Settings → Voice.
+   Hand-off is ElevenLabs' `transfer_to_number` to the number in AI Front Desk → Voice.
 4. After hang-up ElevenLabs posts the transcript to `POST /api/voice/post-call`
    (HMAC `elevenlabs-signature`). We file it: contact, a `voice` conversation,
    one message per turn, a `VoiceCall` row (duration, summary, outcome), the
    `call.completed` outbound webhook.
 5. Reminder calls: the cron tick (`tickReminderCalls`) calls confirmed bookings
    90–150 minutes before their time for orgs that opted in
-   (Settings → Voice → Reminder calls), 09:00–20:00 local, never to opted-out
+   (AI Front Desk → Voice → Reminder calls), 09:00–20:00 local, never to opted-out
    contacts.
 
 ## Test mode
 Without ElevenLabs keys, or for an org in test mode, the simulation driver is
-used: outbound calls return a fake id and Settings → Voice offers **Simulate a
+used: outbound calls return a fake id and AI Front Desk → Voice offers **Simulate a
 call**, which drops a scripted transcript into the inbox.
 
 ## Test it free, without a phone number
@@ -42,7 +42,7 @@ month, no card) with no carrier and no number:
    shared agent, the webhook tools and the post-call webhook, enables the
    permitted per-call overrides, and prints `ELEVENLABS_AGENT_ID` and
    `ELEVENLABS_WEBHOOK_SECRET` — add both to `.env.local`.
-4. Restart the app, open **Settings → Voice**, and press **Call your AI**. Allow
+4. Restart the app, open **AI Front Desk → Voice**, and press **Call your AI**. Allow
    the microphone. You are talking to your own front desk, with your knowledge
    base, tone and language, and its bookings land in your inbox.
 
@@ -72,7 +72,7 @@ short notice first and can only reach your own verified number).
   phone-number id.
 - **SG / MY / UAE — Twilio:** buy a number, connect it in ElevenLabs → Phone
   numbers (native Twilio integration) → assign the Nudge agent.
-- Nudge → Settings → Voice → *Add or update a number*: the number, carrier,
+- Nudge → AI Front Desk → Voice → *Add or update a number*: the number, carrier,
   language (English or Hindi/Hinglish), transfer number, the ElevenLabs
   phone-number id (needed for outbound reminder calls).
 
@@ -89,7 +89,7 @@ whole minute; the month resets on the 1st. WhatsApp is unaffected either way.
   (Enterprise, where the allowance is a bespoke term).
 - **Per client:** `npm run voice:minutes -- --org <id-or-owner-email> --minutes 300`
   overrides the plan for one org; `--minutes plan` clears the override.
-  The client sees the meter on Settings → Voice but cannot raise it.
+  The client sees the meter on AI Front Desk → Voice but cannot raise it.
 - **Per call:** the shared agent is created with `max_duration_seconds: 480`
   (8 minutes) and a 10-second silence timeout, so one forgotten open line
   can cost at most ~8 minutes.

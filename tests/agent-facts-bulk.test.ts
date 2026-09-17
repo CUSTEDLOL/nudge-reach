@@ -19,7 +19,7 @@ vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext, requireRole }));
 vi.mock("@/modules/orgs/audit", () => ({ recordAudit: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { archiveFactsAction } from "@/app/(app)/agent/actions";
+import { archiveFactsAction } from "@/app/(app)/agent/training-actions";
 import { buildFactSheetText } from "@/app/(app)/agent/library";
 
 const CTX = { org: { id: "org1" }, role: "ADMIN" };

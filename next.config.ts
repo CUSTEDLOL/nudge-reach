@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
           // Nothing here is meant to be framed by another site (clickjacking).
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // microphone=(self): the browser "Call your AI" test on Settings → Voice
+          // microphone=(self): the browser "Call your AI" test on AI Front Desk → Voice
           // needs getUserMedia on our own origin. `microphone=()` blocked it for
           // every visitor (Chrome: "Permissions policy violation"), found 2026-09-15.
           { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
