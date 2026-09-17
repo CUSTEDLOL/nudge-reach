@@ -60,11 +60,11 @@ export default async function ResourcePage({ params }: ResourcePageProps) {
       />
       <LandingShell
         breadcrumbs={breadcrumbs}
-        eyebrow="Clinic operations guide"
+        eyebrow={resource.eyebrow}
         title={resource.title}
         intro={resource.description}
-        ctaTitle="See the complete clinic workflow"
-        ctaBody="Walk through real availability, a confirmed booking, compliant follow-up and human handoff in one practical Nudge demo."
+        ctaTitle={resource.ctaTitle}
+        ctaBody={resource.ctaBody}
         surface="resource"
       >
         <ResourceContent resource={resource} />

@@ -48,7 +48,9 @@ export default function ResourcesPage() {
                 className="grid gap-5 border-b border-ink/15 py-8 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-start sm:gap-8 sm:py-10"
               >
                 <div className="text-sm text-ink/55">
-                  <p className="font-bold text-brand-700">For clinics</p>
+                  <p className="font-bold text-brand-700">
+                    {resource.audienceLabel}
+                  </p>
                   <p className="mt-2">{resource.authorName}</p>
                   <time dateTime={resource.publishedAt} className="mt-1 block">
                     {formatResourceDate(resource.publishedAt)}
