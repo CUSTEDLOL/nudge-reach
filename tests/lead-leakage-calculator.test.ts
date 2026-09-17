@@ -99,6 +99,21 @@ describe("calculateLeadLeakage", () => {
     ).toBe(10.08);
   });
 
+  it("does not change a large exactly integral lead count while rounding", () => {
+    const monthlyLeads = 45_035_996_273_704;
+
+    const result = calculateLeadLeakage({
+      monthlyLeads,
+      missedReplyPercent: 100,
+      missingFollowupPercent: 0,
+      conversionPercent: 0,
+      averageSaleValue: 0,
+    });
+
+    expect(result.missedReplyLeads).toBe(monthlyLeads);
+    expect(result.calculationCapped).toBe(false);
+  });
+
   it("uses normalized values before calculating and never returns non-finite results", () => {
     const result = calculateLeadLeakage({
       monthlyLeads: Number.POSITIVE_INFINITY,
@@ -133,11 +148,32 @@ describe("calculateLeadLeakage", () => {
       averageSaleValue: Number.MAX_VALUE,
     });
 
+    expect(result).toEqual({
+      missedReplyLeads: Number.MAX_VALUE,
+      repliedLeads: 0,
+      missingFollowupLeads: 0,
+      leadsAtRisk: Number.MAX_VALUE,
+      customersAtRisk: Number.MAX_VALUE,
+      monthlyRevenueAtRisk: Number.MAX_VALUE,
+      annualRevenueAtRisk: Number.MAX_VALUE,
+      calculationCapped: true,
+    });
+  });
+
+  it("discloses an annual-only cap while preserving the finite monthly result", () => {
+    const averageSaleValue = Number.MAX_VALUE / 10;
+
+    const result = calculateLeadLeakage({
+      monthlyLeads: 1,
+      missedReplyPercent: 100,
+      missingFollowupPercent: 0,
+      conversionPercent: 100,
+      averageSaleValue,
+    });
+
+    expect(result.monthlyRevenueAtRisk).toBe(Math.round(averageSaleValue));
+    expect(result.annualRevenueAtRisk).toBe(Number.MAX_VALUE);
     expect(result.calculationCapped).toBe(true);
-    const numericResults = Object.values(result).filter(
-      (value): value is number => typeof value === "number",
-    );
-    expect(numericResults.every(Number.isFinite)).toBe(true);
   });
 
   it("applies clamped percentages to the formulas", () => {

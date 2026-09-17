@@ -51,12 +51,16 @@ function addFinite(left: number, right: number): FiniteArithmeticResult {
     : { value: left + right, capped: false };
 }
 
+function shiftDecimalExponent(value: number, places: number): number {
+  const [coefficient, exponent = "0"] = value.toString().split("e");
+  return Number(`${coefficient}e${Number(exponent) + places}`);
+}
+
 function roundToTwoDecimals(value: number): number {
   const scale = 100;
   if (value > Number.MAX_SAFE_INTEGER / scale) return Math.round(value);
-  const scaled = value * scale;
-  const relativeTolerance = Number.EPSILON * Math.abs(scaled);
-  return Math.round(scaled + relativeTolerance) / scale;
+  const shifted = shiftDecimalExponent(value, 2);
+  return shiftDecimalExponent(Math.round(shifted), -2);
 }
 
 export function normalizeLeadLeakageInputs(
