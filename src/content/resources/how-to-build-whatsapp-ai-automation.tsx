@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Check, ExternalLink } from "lucide-react";
+import { LaunchDemoButton } from "@/components/marketing/launch-cta";
 import {
   formatResourceDate,
   type ResourceRecord,
@@ -381,13 +382,14 @@ export default function HowToBuildWhatsappAiAutomationGuide({
                 real actions, compliant follow-up and human handoff. We help set
                 up the workflow; your team remains in control of the business.
               </p>
-              <Link
-                href="/demo"
+              <LaunchDemoButton
+                surface="resource"
+                aria-label="See the Nudge AI Front Desk booking calendar"
                 className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-700 px-5 py-3 font-bold text-white transition-colors hover:bg-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 See the Nudge AI Front Desk
                 <ArrowUpRight className="h-4 w-4" aria-hidden />
-              </Link>
+              </LaunchDemoButton>
             </div>
           </div>
         </section>

@@ -19,8 +19,34 @@ describe("SEO page registry", () => {
     }
   });
 
+  it.each([
+    "/whatsapp-ai-automation",
+    "/tools/whatsapp-lead-leakage-calculator",
+    "/resources",
+    "/resources/how-to-build-whatsapp-ai-automation",
+    "/pricing",
+  ] as const)("uses page-specific social metadata for %s", (path) => {
+    const page = seoPage(path);
+
+    expect(metadataFor(path)).toMatchObject({
+      alternates: { canonical: path },
+      openGraph: {
+        title: page.title,
+        description: page.description,
+        siteName: "Nudge",
+        type: "website",
+        locale: "en_IN",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: page.title,
+        description: page.description,
+      },
+    });
+  });
+
   it("uses reviewed dates instead of the current clock", () => {
-    expect(seoPage("/").modifiedAt).toBe("2026-09-12");
+    expect(seoPage("/").modifiedAt).toBe("2026-09-17");
     expect(seoPage("/industries/clinics").modifiedAt).toBe("2026-09-15");
     expect(seoPage("/whatsapp-ai-automation")).toMatchObject({
       title: "WhatsApp AI Automation: From Reply to Qualified Lead",
@@ -37,7 +63,7 @@ describe("SEO page registry", () => {
       index: true,
     });
     expect(seoPage("/resources")).toMatchObject({
-      modifiedAt: "2026-09-14",
+      modifiedAt: "2026-09-17",
       changeFrequency: "weekly",
       priority: 0.7,
     });
@@ -70,6 +96,18 @@ describe("SEO page registry", () => {
     expect(urls).toContain(
       "https://nudgeagent.app/tools/whatsapp-lead-leakage-calculator",
     );
+    expect(
+      entries.find((entry) => entry.url === "https://nudgeagent.app"),
+    ).toMatchObject({
+      lastModified: new Date("2026-09-17T00:00:00.000Z"),
+    });
+    expect(
+      entries.find(
+        (entry) => entry.url === "https://nudgeagent.app/resources",
+      ),
+    ).toMatchObject({
+      lastModified: new Date("2026-09-17T00:00:00.000Z"),
+    });
     expect(entries.every((entry) => entry.lastModified instanceof Date)).toBe(true);
   });
 });

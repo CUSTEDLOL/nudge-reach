@@ -230,7 +230,16 @@ export default function WhatsAppAiAutomationPage() {
                 <p className="mt-3 leading-7 text-ink/65">
                   Free-form replies belong inside the 24-hour customer service
                   window. Re-engagement outside it uses an approved WhatsApp
-                  message template, not an improvised message.
+                  message template, not an improvised message. Check the current{" "}
+                  <a
+                    href="https://whatsappbusiness.com/policy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-brand-700 underline decoration-2 underline-offset-4 hover:text-brand-800"
+                  >
+                    WhatsApp Business Messaging Policy
+                  </a>
+                  .
                 </p>
               </article>
               <article className="border-t-2 border-ink pt-5">
@@ -242,9 +251,18 @@ export default function WhatsAppAiAutomationPage() {
               </article>
             </div>
             <p className="mt-7 max-w-3xl leading-7 text-ink/65">
-              The official Meta Cloud API is the foundation for this flow. Avoid
-              unofficial browser automation that bypasses the platform&apos;s
-              controls or makes consent and delivery difficult to audit.
+              The{" "}
+              <a
+                href="https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-brand-700 underline decoration-2 underline-offset-4 hover:text-brand-800"
+              >
+                official WhatsApp Cloud API
+              </a>{" "}
+              is the foundation for this flow. Avoid unofficial browser
+              automation that bypasses the platform&apos;s controls or makes
+              consent and delivery difficult to audit.
             </p>
           </section>
 

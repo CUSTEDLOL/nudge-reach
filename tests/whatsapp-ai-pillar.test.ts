@@ -74,6 +74,21 @@ describe("WhatsApp AI automation pillar", () => {
     }
   });
 
+  it("attributes platform and messaging-policy claims to official sources", () => {
+    for (const href of [
+      "https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform",
+      "https://whatsappbusiness.com/policy/",
+    ]) {
+      const link = [...html.matchAll(/<a[^>]*>/g)]
+        .map((match) => match[0])
+        .find((anchor) => anchor.includes(`href="${href}"`));
+
+      expect(link).toBeDefined();
+      expect(link!).toContain('target="_blank"');
+      expect(link!).toContain('rel="noopener noreferrer"');
+    }
+  });
+
   it("uses a legible normal-text color for the reply label", () => {
     const replyLabel = html.match(/<p[^>]*>Reply only<\/p>/)?.[0] ?? "";
 

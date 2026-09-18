@@ -40,7 +40,7 @@ export const SEO_PAGES = [
     path: "/",
     title: "Nudge: the AI Front Desk that runs your WhatsApp",
     description: "Meta's free AI answers your WhatsApp. Nudge's AI Front Desk books into your real calendar, follows up with quiet leads, collects payments, and is set up with you.",
-    modifiedAt: "2026-09-12",
+    modifiedAt: "2026-09-17",
     changeFrequency: "weekly",
     priority: 1,
     index: true,
@@ -76,7 +76,7 @@ export const SEO_PAGES = [
     path: "/resources",
     title: "AI Front Desk Resources and Operational Guides",
     description: "Practical guides for connecting WhatsApp enquiries to real availability, confirmed bookings, compliant follow-ups, payments and human handoff.",
-    modifiedAt: "2026-09-14",
+    modifiedAt: "2026-09-17",
     changeFrequency: "weekly",
     priority: 0.7,
     index: true,
@@ -134,6 +134,18 @@ export function metadataFor(path: SeoPagePath): Metadata {
     title: page.title,
     description: page.description,
     alternates: { canonical: page.path },
+    openGraph: {
+      title: page.title,
+      description: page.description,
+      siteName: "Nudge",
+      type: "website",
+      locale: "en_IN",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page.title,
+      description: page.description,
+    },
     robots: page.index ? undefined : { index: false, follow: false },
   };
 }

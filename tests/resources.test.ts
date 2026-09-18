@@ -278,6 +278,19 @@ describe("published resource loading", () => {
     );
   });
 
+  it("uses the real Cal booking action for the build guide CTA", async () => {
+    const resource = resourceBySlug(BUILD_GUIDE_SLUG)!;
+    const resourceModule = await RESOURCE_LOADERS[BUILD_GUIDE_SLUG]();
+    const html = renderToStaticMarkup(
+      createElement(resourceModule.default, { resource }),
+    );
+
+    expect(html).not.toContain('href="/demo"');
+    expect(html).toContain('href="https://cal.com/hqnudge/30min"');
+    expect(html).toContain('data-cal-link="hqnudge/30min"');
+    expect(plainText(html)).toContain("See the Nudge AI Front Desk");
+  });
+
   it("protects the build guide's operational safety boundaries", async () => {
     const resource = resourceBySlug(BUILD_GUIDE_SLUG)!;
     const resourceModule = await RESOURCE_LOADERS[BUILD_GUIDE_SLUG]();
