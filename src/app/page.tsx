@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { metadataFor } from "@/modules/marketing/seo-pages";
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
@@ -12,6 +13,7 @@ import { HeroV2 } from "@/components/marketing/v2/hero-v2";
 import { FinalCtaV2 } from "@/components/marketing/v2/final-cta-v2";
 import { NightShift } from "@/components/marketing/v2/chapters/night-shift";
 import { DaySection } from "@/components/marketing/v2/day-section";
+import { Container } from "@/components/marketing/section";
 import { getPlan, PLAN_PRICES, type PlanId } from "@/modules/billing/plans";
 
 export const metadata: Metadata = {
@@ -115,6 +117,36 @@ export default function Home() {
           </DaySection>
           <DaySection>
             <EasySetup />
+          </DaySection>
+          <DaySection>
+            <section
+              aria-labelledby="home-learning-title"
+              className="border-y border-ink/10 bg-[#f8fbf1] py-14 sm:py-16"
+            >
+              <Container>
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end lg:gap-16">
+                  <h2
+                    id="home-learning-title"
+                    className="max-w-xl font-display text-[2rem] font-black leading-[1.05] tracking-[-0.03em] text-ink sm:text-[2.7rem]"
+                  >
+                    Learn the system behind an AI Front Desk
+                  </h2>
+                  <div className="border-t-2 border-ink pt-5">
+                    <p className="max-w-2xl text-[15.5px] leading-7 text-ink/65">
+                      See how official WhatsApp AI automation connects grounded
+                      replies to lead context, business actions, compliant
+                      follow-up and human handoff.
+                    </p>
+                    <Link
+                      href="/whatsapp-ai-automation"
+                      className="mt-5 inline-flex font-black text-brand-700 underline decoration-2 underline-offset-4 hover:text-brand-800 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                    >
+                      Learn how WhatsApp AI automation works
+                    </Link>
+                  </div>
+                </div>
+              </Container>
+            </section>
           </DaySection>
           <DaySection>
             <PlansStrip />
