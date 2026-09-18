@@ -36,11 +36,13 @@ describe("SEO page registry", () => {
         siteName: "Nudge",
         type: "website",
         locale: "en_IN",
+        images: ["/opengraph-image"],
       },
       twitter: {
         card: "summary_large_image",
         title: page.title,
         description: page.description,
+        images: ["/opengraph-image"],
       },
     });
   });
