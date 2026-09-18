@@ -1,6 +1,7 @@
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import { isSimulated } from "@/modules/orgs/mode";
 import { CalendarSimulationDriver } from "@/modules/calendar/drivers/calendar-simulation";
 import { GoogleCalendarDriver } from "@/modules/calendar/drivers/calendar-google";
 import { isGoogleCalendarConfigured } from "@/modules/calendar/google";
@@ -81,9 +82,13 @@ export async function bookAppointment(
   // booking even though the connected-calendar row persists.
   const org = await prisma.org.findUnique({
     where: { id: orgId },
-    select: { plan: true, timezone: true, settings: true },
+    select: { plan: true, timezone: true, settings: true, simulated: true },
   });
   if (!org || !planHasAiFrontDesk(org.plan)) return { status: "no_calendar" };
+  // A real customer must never be "booked" into the test calendar. Going live
+  // removes it (orgs/go-live); if one is ever left behind, fall back to
+  // recording the request for staff to confirm.
+  if (account.simulated && !isSimulated(org)) return { status: "no_calendar" };
 
   const mode = calendarModeFor(account);
   if (mode === "unavailable") {

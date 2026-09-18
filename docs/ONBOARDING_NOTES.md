@@ -199,6 +199,45 @@ Each note: what happens, why it hurts, the fix, and where the code is.
 
 ---
 
+## F. Go-live path (found 2026-09-18, before the first number was connected)
+
+### F1. Test-mode templates would have failed at Meta — fixed
+- **Found:** the workspace's six follow-up templates were "APPROVED" with mock
+  ids (`sim-tpl-…`). Meta had never seen them, and nothing resubmitted them on
+  go-live, so every reminder and lead nudge would have failed.
+  A live workspace with no number yet had the opposite problem: turning on
+  Follow-ups marked all six REJECTED ("Connect your WhatsApp…") for good.
+- **Fix:** `src/modules/orgs/go-live.ts` `prepareWorkspaceForLive`, called when
+  an owner connects a number and when a founder flips a workspace live:
+  submits every library template Meta has never seen. Follow-ups turned on
+  before a number exists now wait as PENDING instead of REJECTED.
+  Campaign templates (they carry product images) are resubmitted from the
+  campaign itself.
+
+### F2. A real customer could have been booked into the test calendar — fixed
+- **Found:** connecting a number makes a workspace live, but its test calendar
+  stayed connected, and the test calendar says yes to everything except 1 pm.
+- **Fix:** going live removes the test calendar. `bookAppointment` also refuses
+  a test calendar in a live workspace and records the request for staff
+  instead. The owner connects real Google in Apps.
+
+### F3. Order matters when connecting the first number — founder action
+- The connect form checks with Meta that the number belongs to the WABA, but
+  only when the platform is live (`validateWhatsappConnection` skips the check
+  under `SEND_MODE=simulation`). **Set `SEND_MODE=live` and redeploy first,
+  then connect the number.** Production already has the three secrets live
+  mode requires (`META_APP_SECRET`, `TOKEN_ENCRYPTION_KEY`,
+  `WHATSAPP_WEBHOOK_VERIFY_TOKEN`).
+
+### F4. `CRON_SECRET` is not set in production — founder action
+- Checked 2026-09-18: the variable is absent from Vercel production, so the
+  cron endpoint that sends follow-ups and campaigns accepts unauthenticated
+  calls. It is idempotent and consent-gated, but set it before going live,
+  and set the same value as the `CRON_SECRET` secret in the GitHub repo (the
+  10-minute tick workflow sends it).
+
+---
+
 ## B. Onboarding flow: where people get stuck
 
 ### B1. Dead end after the questionnaire (founder reported)
