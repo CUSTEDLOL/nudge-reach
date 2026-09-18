@@ -1,5 +1,29 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## WhatsApp AI search-content release (2026-09-18) ✅ LOCAL — PRODUCTION DEPLOY PENDING
+
+- Built the first broad WhatsApp AI content cluster: the pillar at
+  `/whatsapp-ai-automation`, build guide at
+  `/resources/how-to-build-whatsapp-ai-automation`, lead-operations guide at
+  `/resources/how-to-stop-losing-leads-on-whatsapp`, and transparent tool at
+  `/tools/whatsapp-lead-leakage-calculator`. Homepage, pillar, guides, tool and
+  Resources index now link the cluster together so visitors and crawlers can
+  move between the relevant pages.
+- The pages explain Nudge's AI Front Desk and the official Meta Cloud API; they
+  do not invent customer results, case studies or testimonials. They are
+  verified locally in this branch but are not yet production-deployed.
+- The calculator shows its formulas and boundary assumptions. Its inputs stay
+  in the visitor's browser and are never submitted, stored or tracked.
+- Added a 16-week follow-on content and Reddit operating calendar. Later topics
+  remain planned, not published. Reddit work is founder-led and manual only:
+  check each community's rules before participating, make the useful answer
+  native to Reddit, disclose affiliation, and never automate posts, send
+  unsolicited DMs, manipulate votes, amplify with alternate accounts or mass
+  cross-post.
+- Search Console metrics are the available baseline. Calculator/page
+  engagement, attribution and Reddit referral quality remain `UNKNOWN` until
+  the documented privacy and analytics activation gates are approved.
+
 ## Canonical hostname consolidation (2026-09-17) ✅
 
 - Added a permanent, host-scoped redirect from every `www.nudgeagent.app`
