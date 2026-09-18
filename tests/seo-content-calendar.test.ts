@@ -20,12 +20,18 @@ const laterQueue = [
 ];
 
 function weekSections(text: string) {
-  return [...text.matchAll(/^### Week (\d+):[^\n]*\n([\s\S]*?)(?=^### Week \d+:|^## |\Z)/gm)].map(
+  return [...text.matchAll(/^### Week (\d+):[^\n]*\n([\s\S]*?)(?=^### Week \d+:|^## |(?![\s\S]))/gm)].map(
     ([, number, body]) => ({ number: Number(number), body }),
   );
 }
 
 describe("four-month SEO and Reddit operating calendar", () => {
+  it("parses a final week at the real end of the string", () => {
+    expect(weekSections("### Week 1: Final\n- **Website action:** Review it.")).toEqual([
+      { number: 1, body: "- **Website action:** Review it." },
+    ]);
+  });
+
   it("exists and contains exactly 16 sequential numbered weeks", () => {
     expect(existsSync(calendarPath)).toBe(true);
 
@@ -46,7 +52,7 @@ describe("four-month SEO and Reddit operating calendar", () => {
     }
   });
 
-  it("uses a distinct native Reddit angle in each week", () => {
+  it("does not duplicate a weekly Reddit action string", () => {
     const actions = weekSections(calendar).map((week) =>
       week.body.match(/^- \*\*Manual Reddit action:\*\* (.+)$/m)?.[1],
     );
@@ -56,7 +62,7 @@ describe("four-month SEO and Reddit operating calendar", () => {
     expect(new Set(actions).size).toBe(16);
   });
 
-  it("keeps every later-queue topic planned, not published", () => {
+  it("labels every later-queue topic Planned", () => {
     for (const topic of laterQueue) {
       expect(calendar).toContain(`Planned: ${topic}`);
     }
@@ -86,6 +92,43 @@ describe("four-month SEO and Reddit operating calendar", () => {
     expect(weeks.get(15)).toMatch(/planned future publication.*Official API vs unofficial WhatsApp automation/i);
   });
 
+  it("uses distinct-intent and Search Console checks before publishing guides near the lead-loss guide", () => {
+    const weeks = new Map(
+      weekSections(calendar).map(({ number, body }) => [number, body]),
+    );
+
+    for (const weekNumber of [6, 7]) {
+      expect(weeks.get(weekNumber)).toMatch(/distinct-intent brief/i);
+      expect(weeks.get(weekNumber)).toMatch(/Search Console.*lead-loss guide/i);
+      expect(weeks.get(weekNumber)).toMatch(/update or consolidate the existing lead-loss guide/i);
+    }
+  });
+
+  it("measures the service-window checker against its own intent", () => {
+    const week9 = weekSections(calendar).find(({ number }) => number === 9)?.body;
+
+    expect(week9).toMatch(/Search Console.*24-hour service window.*template/i);
+    expect(week9).toMatch(/aggregate.*service-window.*template.*questions/i);
+    expect(week9).toMatch(/checker interactions.*UNKNOWN/i);
+    expect(week9).toMatch(/attributable demos.*UNKNOWN/i);
+  });
+
+  it("keeps draft-only Week 13 focused on editorial readiness, not public engagement", () => {
+    const week13 = weekSections(calendar).find(({ number }) => number === 13)?.body;
+
+    expect(week13).toMatch(/editorial differentiation and readiness/i);
+    expect(week13).toMatch(/defer engagement measurement until publication/i);
+  });
+
+  it("marks privacy-gated engagement and attribution metrics UNKNOWN until the SEO operations gates are active", () => {
+    expect(calendar).toContain("docs/SEO_OPERATIONS.md");
+    expect(calendar).toMatch(/calculator starts.*UNKNOWN/i);
+    expect(calendar).toMatch(/page engagement.*UNKNOWN/i);
+    expect(calendar).toMatch(/attribution.*UNKNOWN/i);
+    expect(calendar).toMatch(/referral quality.*UNKNOWN/i);
+    expect(calendar).toMatch(/privacy-approved aggregate event.*inactive/i);
+  });
+
   it("sets a manual, transparent, community-specific Reddit safety boundary", () => {
     expect(calendar).toMatch(/check (?:the )?current rules for (?:that|each) community/i);
     expect(calendar).toMatch(/founder of Nudge/i);
@@ -93,6 +136,8 @@ describe("four-month SEO and Reddit operating calendar", () => {
     expect(calendar).toMatch(/no unsolicited DMs/i);
     expect(calendar).toMatch(/no vote manipulation/i);
     expect(calendar).toMatch(/no copy-pasted cross-posts/i);
+    expect(calendar).toMatch(/idea queue.*not a posting quota/i);
+    expect(calendar).toMatch(/skip Reddit that week if there is no genuinely relevant discussion or permitted community fit/i);
   });
 
   it("includes a reusable preflight, privacy-safe UTM convention, and official policy sources", () => {
