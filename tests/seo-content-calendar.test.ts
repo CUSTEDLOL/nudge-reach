@@ -46,6 +46,16 @@ describe("four-month SEO and Reddit operating calendar", () => {
     }
   });
 
+  it("uses a distinct native Reddit angle in each week", () => {
+    const actions = weekSections(calendar).map((week) =>
+      week.body.match(/^- \*\*Manual Reddit action:\*\* (.+)$/m)?.[1],
+    );
+
+    expect(actions).toHaveLength(16);
+    expect(actions.every(Boolean)).toBe(true);
+    expect(new Set(actions).size).toBe(16);
+  });
+
   it("keeps every later-queue topic planned, not published", () => {
     for (const topic of laterQueue) {
       expect(calendar).toContain(`Planned: ${topic}`);

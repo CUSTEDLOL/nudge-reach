@@ -80,7 +80,7 @@ This is a founder-operable, four-month plan for Nudge's AI Front Desk content cl
 ### Week 9: Build the service-window checker
 
 - **Website action:** Build the Planned: WhatsApp 24-hour window and template checker only after current primary-source verification; keep its guidance scoped to the official Meta Cloud API and approved templates.
-- **Manual Reddit action:** Explain natively that a WhatsApp workflow cannot create customers from nowhere; discuss legitimate sources such as organic enquiries and consented campaigns.
+- **Manual Reddit action:** Give a native, practical checklist for deciding whether a business may reply freely inside the 24-hour service window or needs an approved template later; explain consent and STOP, with an optional link only where permitted.
 - **Measurement:** Check demand-source query impressions and the relevance of inbound demo enquiries.
 - **Owner:** Nudge founder — current, usable service-window guidance.
 
