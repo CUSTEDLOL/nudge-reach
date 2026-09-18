@@ -1,6 +1,6 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
-## WhatsApp AI search-content release (2026-09-18) ✅ LOCAL — PRODUCTION DEPLOY PENDING
+## WhatsApp AI search-content release (2026-09-18) ✅ PRODUCTION
 
 - Built the first broad WhatsApp AI content cluster: the pillar at
   `/whatsapp-ai-automation`, build guide at
@@ -10,8 +10,10 @@
   Resources index now link the cluster together so visitors and crawlers can
   move between the relevant pages.
 - The pages explain Nudge's AI Front Desk and the official Meta Cloud API; they
-  do not invent customer results, case studies or testimonials. They are
-  verified locally in this branch but are not yet production-deployed.
+  do not invent customer results, case studies or testimonials. The combined
+  release passed the full local verification gates and was verified live in
+  production with HTTP 200 responses, apex canonicals, one H1 per page, social
+  preview metadata, sitemap membership and permanent `www` redirects.
 - The calculator shows its formulas and boundary assumptions. Its inputs stay
   in the visitor's browser and are never submitted, stored or tracked.
 - Added a 16-week follow-on content and Reddit operating calendar. Later topics
