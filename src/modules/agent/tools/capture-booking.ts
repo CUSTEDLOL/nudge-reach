@@ -5,6 +5,7 @@ import { recordContactEvent } from "@/modules/contacts/events";
 import { defineTool } from "@/modules/agent/tools/types";
 import { bookAppointment, type CalendarSlot } from "@/modules/calendar";
 import { fireBookingCreated } from "@/modules/automation/triggers";
+import { formatInTimezone } from "@/lib/timezone";
 
 export const captureBookingTool = defineTool({
   name: "capture_booking_request",
@@ -48,10 +49,19 @@ export const captureBookingTool = defineTool({
       description,
     });
 
+    // Shut then → record nothing; the agent explains and offers open times.
+    if (outcome.status === "closed") {
+      return `The business is closed at that time (that day's hours: ${outcome.hours}). Tell the customer, then offer these open times and ask them to pick one: ${formatAlternatives(
+        outcome.alternatives,
+        outcome.timezone
+      )}. Then call this tool again with the chosen time.`;
+    }
+
     // Slot was taken → record nothing; let the agent offer alternatives.
     if (outcome.status === "unavailable") {
       return `That time is taken. Offer these open slots and ask the customer to pick one: ${formatAlternatives(
-        outcome.alternatives
+        outcome.alternatives,
+        outcome.timezone
       )}. Then call this tool again with the chosen time.`;
     }
 
@@ -95,7 +105,8 @@ export const captureBookingTool = defineTool({
         authorName: "AI Assistant",
         body: booked
           ? `Booking CONFIRMED in calendar: ${input.name}, ${formatWhen(
-              outcome.scheduledFor
+              outcome.scheduledFor,
+              outcome.timezone
             )}${partyLabel}${input.notes ? ` (${input.notes})` : ""}`
           : `Booking request: ${input.name}, ${input.requested_for}${partyLabel}${
               input.notes ? ` (${input.notes})` : ""
@@ -107,9 +118,15 @@ export const captureBookingTool = defineTool({
       // A confirmed booking with a real time drives the reminder / no-show
       // follow-ups (5.2). Fire-and-forget; never re-enters inbound.
       await fireBookingCreated(ctx.orgId, ctx.contactId, booking.id);
+      // Only promise a reminder that will actually be sent: reminders go out
+      // solely when the workspace has Follow-ups switched on.
+      const reminders = await remindersOn(ctx.orgId);
       return `Booked and confirmed for ${formatWhen(
-        outcome.scheduledFor
-      )}. Tell the customer it's confirmed and that they'll get a reminder.`;
+        outcome.scheduledFor,
+        outcome.timezone
+      )}. Tell the customer it's confirmed${
+        reminders ? " and that they'll get a reminder" : ""
+      }. Do not mention a reminder${reminders ? " beyond that" : ""}.`;
     }
 
     // No calendar connected, or the time couldn't be parsed → staff confirm.
@@ -121,18 +138,19 @@ export const captureBookingTool = defineTool({
   },
 });
 
-function formatWhen(date: Date): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+async function remindersOn(orgId: string): Promise<boolean> {
+  const cfg = await prisma.followUpConfig.findUnique({
+    where: { orgId },
+    select: { enabled: true, bookingReminders: true },
+  });
+  return Boolean(cfg?.enabled && cfg.bookingReminders);
 }
 
-function formatAlternatives(slots: CalendarSlot[]): string {
+function formatWhen(date: Date, timezone: string): string {
+  return formatInTimezone(date, timezone);
+}
+
+function formatAlternatives(slots: CalendarSlot[], timezone: string): string {
   if (!slots.length) return "another time";
-  return slots.map((s) => formatWhen(new Date(s.start))).join(" or ");
+  return slots.map((s) => formatWhen(new Date(s.start), timezone)).join(" or ");
 }

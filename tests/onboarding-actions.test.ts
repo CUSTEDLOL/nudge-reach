@@ -198,7 +198,9 @@ describe("personalized onboarding actions", () => {
     });
   });
 
-  it("saves business identity without activating the AI front desk", async () => {
+  // Changed 2026-09-17: onboarding used to leave the AI off, and owners who
+  // then tried it got silence with nothing on screen saying why.
+  it("saves business identity and switches the AI front desk on", async () => {
     requireOrgContext.mockResolvedValue(context("OWNER"));
     const formData = new FormData();
     formData.set("businessName", "Aster Clinic");
@@ -212,11 +214,11 @@ describe("personalized onboarding actions", () => {
       where: { orgId: "org-1" },
       create: {
         orgId: "org-1",
-        enabled: false,
+        enabled: true,
         vertical: "clinic",
         businessName: "Aster Clinic",
       },
-      update: { vertical: "clinic", businessName: "Aster Clinic" },
+      update: { vertical: "clinic", businessName: "Aster Clinic", enabled: true },
     });
   });
 

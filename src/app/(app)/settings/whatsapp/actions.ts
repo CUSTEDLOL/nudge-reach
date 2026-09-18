@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prepareWorkspaceForLive } from "@/modules/orgs/go-live";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { recordAudit } from "@/modules/orgs/audit";
 import {
@@ -84,6 +85,18 @@ export async function connectWhatsappAction(
     };
   }
   recordAudit(ctx, "whatsapp.connected", displayName, `phone ${phoneNumberId}`);
-  revalidatePath("/settings/whatsapp");
-  return { ok: true, message: "WhatsApp connected. Token stored encrypted." };
+  // The workspace can now send for real: drop the test calendar and put the
+  // follow-up templates in front of Meta (test mode only mock-approved them).
+  const live = await prepareWorkspaceForLive(ctx.org.id);
+  revalidatePath("/", "layout");
+  const extras = [
+    live.templatesSubmitted
+      ? `${live.templatesSubmitted} message template${live.templatesSubmitted === 1 ? "" : "s"} sent to Meta for approval`
+      : "",
+    live.testCalendarRemoved ? "test calendar removed — connect your Google Calendar in Apps" : "",
+  ].filter(Boolean);
+  return {
+    ok: true,
+    message: `WhatsApp connected. Token stored encrypted.${extras.length ? ` Also: ${extras.join("; ")}.` : ""}`,
+  };
 }

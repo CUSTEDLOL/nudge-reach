@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { prepareWorkspaceForLive } from "@/modules/orgs/go-live";
 import { topUpIncludedGrant, trialGrant } from "@/modules/billing/credits";
 import { MAX_FOUNDER_CREDITS, founderGrantError, grantFounderCredits } from "@/modules/billing/credit-admin";
 import { sanitizeFeatureOverrides, type FeatureOverrides } from "@/modules/billing/limits";
@@ -172,7 +173,14 @@ export async function setLiveMode(
       tx
     );
   });
-  return { ok: true, message: live ? "Workspace is live." : "Workspace back in test mode." };
+  if (!live) return { ok: true, message: "Workspace back in test mode." };
+  // Same clean-up an owner's own connect does: no test calendar, and the
+  // follow-up templates go to Meta for real.
+  const prepared = await prepareWorkspaceForLive(org.id);
+  return {
+    ok: true,
+    message: `Workspace is live.${prepared.templatesSubmitted ? ` ${prepared.templatesSubmitted} templates sent to Meta for approval.` : ""}${prepared.testCalendarRemoved ? " Test calendar removed." : ""}`,
+  };
 }
 
 /** Bespoke monthly call minutes; null clears the override (plan applies). */

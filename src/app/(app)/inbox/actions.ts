@@ -12,6 +12,7 @@ import { fireTagAdded } from "@/modules/automation/triggers";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import { firstName, toPreview } from "@/modules/inbox/format";
 import { normalizePhoneE164 } from "@/lib/phone";
+import { sandboxAddress } from "@/modules/messaging/sandbox";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 import { recordContactEvent } from "@/modules/contacts/events";
@@ -451,20 +452,17 @@ export async function addNoteAction(formData: FormData): Promise<ActionResult> {
 }
 
 /**
- * Simulation-only tester: pretend the customer sent a message, routed through
- * the exact handler the live webhook uses (lib/agent/inbound.ts).
+ * "Try your AI": pretend the customer sent a message, routed through the
+ * exact handler the live webhook uses (lib/agent/inbound.ts). Works in every
+ * workspace. In a LIVE workspace the pretend customer gets a sandbox number
+ * (+999…, unassignable), so the AI's reply is mocked and can never reach a
+ * real phone — a client can try the AI before their number is connected.
  */
 export async function simulateInboundAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
-    if (!isSimulated(org)) {
-      return {
-        ok: false,
-        message: "Your number is live — message it from your phone instead.",
-      };
-    }
     const rawPhone = String(formData.get("phone") ?? "").trim();
     const text = String(formData.get("text") ?? "").trim();
     if (!rawPhone || !text) {
@@ -472,7 +470,9 @@ export async function simulateInboundAction(
     }
     // Users type local numbers; the inbound handler expects webhook-shaped
     // (country-code-included) input — normalize with the org's dial code.
-    const phone = normalizePhoneE164(rawPhone, org.dialCode);
+    const phone = isSimulated(org)
+      ? normalizePhoneE164(rawPhone, org.dialCode)
+      : sandboxAddress(rawPhone);
     if (!phone) {
       return { ok: false, message: "That phone number doesn't look right." };
     }

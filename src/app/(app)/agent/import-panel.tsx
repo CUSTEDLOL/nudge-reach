@@ -85,7 +85,11 @@ export function ImportPanel({
           className="mt-3 flex flex-wrap gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (gbpQuery.trim()) run(() => importGbpAction(gbpQuery));
+            if (!gbpQuery.trim()) {
+              setMessage("Type your business name and city first.");
+              return;
+            }
+            run(() => importGbpAction(gbpQuery));
           }}
         >
           <Input
@@ -95,11 +99,7 @@ export function ImportPanel({
             className="min-w-0 flex-1"
             disabled={!canEdit || pending}
           />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!canEdit || pending || !gbpQuery.trim()}
-          >
+          <Button type="submit" size="sm" disabled={!canEdit || pending}>
             {pending ? "Searching…" : "Find my listing"}
           </Button>
         </form>
@@ -107,7 +107,11 @@ export function ImportPanel({
           className="mt-2 flex flex-wrap gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (url.trim()) run(() => importWebsiteAction(url));
+            if (!url.trim()) {
+              setMessage("Paste your website address first.");
+              return;
+            }
+            run(() => importWebsiteAction(url));
           }}
         >
           <Input
@@ -117,7 +121,7 @@ export function ImportPanel({
             className="min-w-0 flex-1"
             disabled={!canEdit || pending}
           />
-          <Button type="submit" size="sm" disabled={!canEdit || pending || !url.trim()}>
+          <Button type="submit" size="sm" disabled={!canEdit || pending}>
             {pending ? "Reading…" : "Import"}
           </Button>
           <Button

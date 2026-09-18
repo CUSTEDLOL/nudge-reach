@@ -8,6 +8,7 @@ import { Queue, type QueueItem } from "./queue";
 import { Library, type LibraryFact } from "./library";
 import { ImportPanel } from "./import-panel";
 import { parseWaiting } from "@/modules/knowledge/questions";
+import { AiOffNotice } from "@/components/features/front-desk/ai-off-notice";
 
 export const metadata: Metadata = { title: "AI Front Desk" };
 
@@ -59,6 +60,46 @@ export default async function AgentPage() {
   const hasImported = facts.some((f) => f.source === "import");
   const showStructureButton =
     Boolean(profile?.businessInfo.trim()) && !hasImported;
+  // Once it knows something, lead with that — the proof of the questionnaire
+  // was sitting below an import box and an empty queue.
+  const taught = facts.length > 0;
+
+  const importPanel = (
+    <ImportPanel
+      canEdit={canEdit}
+      drafts={drafts.map((d) => ({
+        id: d.id,
+        category: d.category,
+        fact: d.fact,
+        condition: d.condition,
+      }))}
+    />
+  );
+  const queue = (
+    <div>
+      <h2 className="mb-3 text-sm font-semibold text-neutral-900">
+        Needs your answer
+        {queueItems.length > 0 && (
+          <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700">
+            {queueItems.length}
+          </span>
+        )}
+      </h2>
+      <Queue items={queueItems} canEdit={canEdit} />
+    </div>
+  );
+  const library = (
+    <div id="library">
+      <h2 className="mb-3 text-sm font-semibold text-neutral-900">
+        {taught ? `Your AI knows ${facts.length} fact${facts.length === 1 ? "" : "s"}` : "Fact library"}
+      </h2>
+      <Library
+        facts={libraryFacts}
+        canEdit={canEdit}
+        showStructureButton={showStructureButton}
+      />
+    </div>
+  );
 
   return (
     <section>
@@ -81,38 +122,20 @@ export default async function AgentPage() {
       />
 
       <div className="flex flex-col gap-8">
-        <ImportPanel
-          canEdit={canEdit}
-          drafts={drafts.map((d) => ({
-            id: d.id,
-            category: d.category,
-            fact: d.fact,
-            condition: d.condition,
-          }))}
-        />
-
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-            Needs your answer
-            {queueItems.length > 0 && (
-              <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700">
-                {queueItems.length}
-              </span>
-            )}
-          </h2>
-          <Queue items={queueItems} canEdit={canEdit} />
-        </div>
-
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-            Fact library
-          </h2>
-          <Library
-            facts={libraryFacts}
-            canEdit={canEdit}
-            showStructureButton={showStructureButton}
-          />
-        </div>
+        {profile && !profile.enabled && <AiOffNotice canEdit={canEdit} />}
+        {taught ? (
+          <>
+            {queue}
+            {library}
+            {importPanel}
+          </>
+        ) : (
+          <>
+            {importPanel}
+            {queue}
+            {library}
+          </>
+        )}
       </div>
     </section>
   );

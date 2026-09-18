@@ -122,7 +122,7 @@ function attentionCandidates(input: AttentionQueueInput): AttentionItem[] {
           kind: "booking",
           title: "Booking requests to confirm",
           description: `${bookings} request${bookings === 1 ? " is" : "s are"} still pending.`,
-          href: "/inbox",
+          href: "/bookings?view=pending",
           count: bookings,
           urgent: false,
         }
@@ -235,7 +235,7 @@ export function buildOperationsSummary(
       value: nonNegativeInteger(input.bookingsToday),
       detailCount: nonNegativeInteger(input.pendingBookings),
       detailLabel: "requests to confirm",
-      href: "/inbox",
+      href: "/bookings",
     },
     {
       key: "conversations",
@@ -399,7 +399,7 @@ export function estimateRevenueInfluencedInr(
 export interface ChecklistInput {
   /** A real WhatsappAccount row exists for the org. */
   whatsappConnected: boolean;
-  /** SEND_MODE=simulation counts as connected (AGENTS.md rule 5). */
+  /** Test workspaces get different wording — never a tick (see buildChecklist). */
   simulationMode: boolean;
   contactCount: number;
   /** Campaigns that are SENT or SENDING. */
@@ -409,16 +409,29 @@ export interface ChecklistInput {
   knowledgeFactCount: number;
   /** Any conversation at all — the "try your AI" tester creates one too. */
   conversationCount: number;
+  /** AgentProfile.enabled — the AI answers only when this is on. */
+  agentEnabled: boolean;
+  /** A calendar (real or test) is connected. */
+  calendarConnected: boolean;
+  /** FollowUpConfig.enabled. */
+  followupsEnabled: boolean;
+  /** Calls the AI has taken, including browser test calls. */
+  voiceCallCount: number;
+  /** Plan entitlements decide which steps exist at all. */
+  hasFrontDesk: boolean;
+  hasVoice: boolean;
 }
 
 export interface ChecklistItem {
   key:
     | "knowledge"
+    | "agent_on"
     | "tryit"
-    | "whatsapp"
+    | "calendar"
+    | "followups"
+    | "voice"
     | "contacts"
-    | "campaign"
-    | "automation";
+    | "whatsapp";
   title: string;
   description: string;
   href: string;
@@ -432,8 +445,14 @@ export interface Checklist {
   allDone: boolean;
 }
 
-/** Onboarding checklist, computed from real org data — AI employee first,
- * broadcasting last (it is a feature inside the Front Desk, not the headline). */
+/**
+ * Setup checklist, computed from real org data and the plan. The AI employee
+ * first, going live last. Two rules the founder set on 2026-09-17:
+ *  - test mode never ticks a step ("Connect WhatsApp" used to show done for
+ *    every test workspace);
+ *  - steps only exist for what the plan includes, and campaigns are not a
+ *    step at all (AGENTS.md: never the headline).
+ */
 export function buildChecklist(input: ChecklistInput): Checklist {
   const items: ChecklistItem[] = [
     {
@@ -447,6 +466,15 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       done: input.knowledgeFactCount > 0,
     },
     {
+      key: "agent_on",
+      title: "Switch your AI on",
+      description: input.agentEnabled
+        ? "It replies to new messages instantly."
+        : "It stays silent until this is on — including in Try your AI.",
+      href: "/agent/setup",
+      done: input.agentEnabled,
+    },
+    {
       key: "tryit",
       title: "Try your AI",
       description:
@@ -456,17 +484,44 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       href: "/inbox/try",
       done: input.conversationCount > 0,
     },
-    {
-      key: "whatsapp",
-      title: "Connect WhatsApp",
-      description: input.whatsappConnected
-        ? "Your business number is linked."
-        : input.simulationMode
-          ? "Test mode until your number is live — we set it up with you."
-          : "Link your WhatsApp Business number.",
-      href: "/settings/whatsapp",
-      done: input.whatsappConnected || input.simulationMode,
-    },
+  ];
+
+  if (input.hasFrontDesk) {
+    items.push({
+      key: "calendar",
+      title: "Connect your calendar",
+      description: input.calendarConnected
+        ? "The AI books straight into it."
+        : "So the AI can book real appointments around your availability.",
+      href: "/integrations",
+      done: input.calendarConnected,
+    });
+  }
+
+  items.push({
+    key: "followups",
+    title: "Turn on follow-ups",
+    description: input.followupsEnabled
+      ? "Quiet leads get chased and bookings get reminders."
+      : "Chase leads that go quiet and remind people about bookings.",
+    href: "/automations",
+    done: input.followupsEnabled,
+  });
+
+  if (input.hasVoice) {
+    items.push({
+      key: "voice",
+      title: "Hear it answer a call",
+      description:
+        input.voiceCallCount > 0
+          ? "It picks up the phone too."
+          : "Call your AI from the browser — no phone number needed yet.",
+      href: "/agent/voice",
+      done: input.voiceCallCount > 0,
+    });
+  }
+
+  items.push(
     {
       key: "contacts",
       title: "Bring in opted-in customers",
@@ -478,16 +533,17 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       done: input.contactCount > CHECKLIST_CONTACT_TARGET,
     },
     {
-      key: "campaign",
-      title: "Send your first campaign",
-      description:
-        input.activeCampaignCount > 0
-          ? "Your first broadcast is out."
-          : "Offers and reminders, only to your opted-in list.",
-      href: "/campaigns/new",
-      done: input.activeCampaignCount > 0,
-    },
-  ];
+      key: "whatsapp",
+      title: "Go live on WhatsApp",
+      description: input.whatsappConnected
+        ? "Your business number is linked."
+        : input.simulationMode
+          ? "We connect your number with you — nothing here reaches a real customer yet."
+          : "We connect your WhatsApp Business number with you.",
+      href: "/settings/whatsapp",
+      done: input.whatsappConnected,
+    }
+  );
 
   const completed = items.filter((item) => item.done).length;
   return {
