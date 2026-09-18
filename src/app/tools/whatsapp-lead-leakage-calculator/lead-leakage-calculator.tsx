@@ -13,14 +13,6 @@ interface LeadLeakageCalculatorProps {
   initialValues?: Partial<InputValues>;
 }
 
-const EMPTY_VALUES: InputValues = {
-  monthlyLeads: "",
-  missedReplyPercent: "",
-  missingFollowupPercent: "",
-  conversionPercent: "",
-  averageSaleValue: "",
-};
-
 const INPUTS = [
   {
     key: "monthlyLeads",
@@ -123,8 +115,11 @@ export function LeadLeakageCalculator({
   initialValues,
 }: LeadLeakageCalculatorProps) {
   const [values, setValues] = useState<InputValues>({
-    ...EMPTY_VALUES,
-    ...initialValues,
+    monthlyLeads: initialValues?.monthlyLeads ?? "",
+    missedReplyPercent: initialValues?.missedReplyPercent ?? "",
+    missingFollowupPercent: initialValues?.missingFollowupPercent ?? "",
+    conversionPercent: initialValues?.conversionPercent ?? "",
+    averageSaleValue: initialValues?.averageSaleValue ?? "",
   });
   const inputs = parsedInputs(values);
   const result = inputs ? calculateLeadLeakage(inputs) : null;

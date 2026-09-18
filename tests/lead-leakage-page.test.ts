@@ -92,6 +92,18 @@ describe("WhatsApp lead-leakage calculator page", () => {
 });
 
 describe("LeadLeakageCalculator deterministic renders", () => {
+  it("treats an explicitly undefined optional initial value as empty", () => {
+    const render = () =>
+      renderToStaticMarkup(
+        createElement(LeadLeakageCalculator, {
+          initialValues: { monthlyLeads: undefined },
+        }),
+      );
+
+    expect(render).not.toThrow();
+    expect(plainText(render())).toMatch(/enter all five values/i);
+  });
+
   it("shows the calculated example labels when all initial values are valid", () => {
     const html = renderToStaticMarkup(
       createElement(LeadLeakageCalculator, {
