@@ -35,8 +35,6 @@ export const situationSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("new_lead") }),
 ]);
 
-export const SITUATION_KINDS = ["went_quiet", "booked", "campaign_reply", "keyword", "new_lead"] as const;
-
 export const specMessageSchema = z.object({
   /** Days after the previous message (or after the situation, for the first). */
   afterDays: z.number().int().min(0).max(MAX_GAP_DAYS),
@@ -63,8 +61,11 @@ export type SpecParseResult =
   | { ok: false; error: string };
 
 /**
- * Validate + repair a raw spec (from the model or the edit form). Repairs are
- * the campaign guardrails: `{{1}}` exactly once, STOP footer on MARKETING.
+ * Validate + repair a raw spec (from the model or the edit form). Repairs:
+ * `{{1}}` exactly once in each body, a STOP footer on MARKETING messages,
+ * headers cut to 60 chars, unknown `stopOn` entries dropped. Bodies are never
+ * truncated — a cut after the `{{1}}` repair could strip the variable — so an
+ * over-long body is rejected with a clear error instead.
  * A went_quiet spec's first message always sends the moment the trigger
  * fires — the delay already lives in `afterDays` on the situation.
  */
@@ -76,13 +77,16 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   if (Array.isArray(candidate.messages)) {
     candidate.messages = candidate.messages.map((m) => {
       const msg = m && typeof m === "object" ? { ...(m as Record<string, unknown>) } : {};
-      if (typeof msg.body === "string") msg.body = repairPersonalization(msg.body).slice(0, 600);
+      if (typeof msg.body === "string") msg.body = repairPersonalization(msg.body);
       if (msg.category === "MARKETING") {
         msg.footer = repairOptOutFooter(typeof msg.footer === "string" ? msg.footer : "");
       }
       if (typeof msg.header === "string") msg.header = msg.header.slice(0, 60);
       return msg;
     });
+  }
+  if (Array.isArray(candidate.stopOn)) {
+    candidate.stopOn = candidate.stopOn.filter((s) => (STOP_SIGNALS as readonly unknown[]).includes(s));
   }
   const parsed = followUpSpecSchema.safeParse(candidate);
   if (!parsed.success) {
@@ -99,14 +103,6 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   return { ok: true, spec };
 }
 
-const STAGE_WORD: Record<string, string> = {
-  NEW: "new",
-  CONTACTED: "contacted",
-  QUALIFIED: "qualified",
-  WON: "won",
-  LOST: "lost",
-};
-
 function days(n: number): string {
   return `${n} day${n === 1 ? "" : "s"}`;
 }
@@ -116,7 +112,7 @@ export function describeSituation(s: FollowUpSituation): string {
   switch (s.kind) {
     case "went_quiet":
       return s.stage
-        ? `When a ${STAGE_WORD[s.stage] ?? s.stage.toLowerCase()} lead goes quiet for ${days(s.afterDays)}`
+        ? `When a ${s.stage.toLowerCase()} lead goes quiet for ${days(s.afterDays)}`
         : `When someone shows interest, then goes quiet for ${days(s.afterDays)}`;
     case "booked":
       return "When someone books an appointment";
@@ -135,6 +131,9 @@ export function describeMessageTiming(index: number, afterDays: number): string 
   return afterDays === 0 ? "Then right away" : `Then ${days(afterDays)} later`;
 }
 
+/** Built once: the engine checks this per waiting run on every inbound. */
+const stopOnSchema = followUpSpecSchema.pick({ stopOn: true });
+
 /**
  * Does this signal end a pending chase? A reply or an opt-out always does —
  * the customer is talking to us, or told us to stop. Booking and payment are
@@ -143,7 +142,7 @@ export function describeMessageTiming(index: number, afterDays: number): string 
  */
 export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): boolean {
   if (signal === "reply" || signal === "opt_out") return true;
-  const parsed = followUpSpecSchema.pick({ stopOn: true }).safeParse(rawSpec);
+  const parsed = stopOnSchema.safeParse(rawSpec);
   if (!parsed.success) return true;
   return parsed.data.stopOn.includes(signal);
 }
