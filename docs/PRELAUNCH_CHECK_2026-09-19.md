@@ -10,8 +10,8 @@ the production database, in live mode. It was deleted afterwards.
 
 | # | Action | Why |
 |---|---|---|
-| 1 | **Set `SEND_MODE=live` in Vercel and redeploy.** | As of 17 Sep production was still in platform-wide test mode (the last AI calls were recorded `simulated: true`). While it is, **every** workspace, Client or not, shows "Test workspace" and nothing is real. After you create the client, Home must say **Live workspace**. If it says Test workspace, this step was missed. |
-| 2 | **Mark your own test workspace "active"** in Admin → Controls (Goldmine Infotech and Systems). | Once the platform is live, a workspace with no paid period has no AI credits and its AI pauses. New workspaces now start paid automatically; this old one did not. |
+| 1 | ~~Set `SEND_MODE=live` in Vercel and redeploy.~~ **DONE 19 Sep, at the founder's request.** | Set with the Vercel CLI on the custedlol project, redeployed, and production re-probed on the new deployment: every route answers correctly, which also proves the three secrets live mode requires are present (the app refuses to boot without them). Vercel values are write-only, so the one remaining proof is visual: after you create the client, Home must say **Live workspace**. |
+| 2 | ~~Mark your own test workspace "active".~~ **DONE.** | "Goldmine Infotech and Systems" is active, paid to 19 Oct, 5,000 credits, still in test mode. Done through the real admin function, so it is in the audit log. The older empty "Goldmine Infotech" was left inactive: delete it. |
 | 3 | **Set `CRON_SECRET`** in Vercel AND as the GitHub repo secret of the same name. | The cron endpoint is open today. Setting only one side breaks the tick. |
 | 4 | **Add a 5–10 minute pinger** (cron-job.org or similar) on `/api/cron/process-queue` with the secret. | The GitHub "every 10 minutes" schedule really runs every 2–4 hours (run log, 18–19 Sep). Scheduled campaigns and follow-ups are late by that much. |
 | 5 | Permanent Meta system-user token, then connect the number **after** step 1. | The connect form only checks the number with Meta when the platform is live. |
@@ -26,6 +26,7 @@ the production database, in live mode. It was deleted afterwards.
 | Live workspace + no payment keys → practice pay page | The AI would send a **real customer a pretend checkout** that marks itself paid. | `9b1734d` Refuses; the AI says the team will share payment details. Tile and panel say "Not switched on yet". |
 | Live workspace + no CRM keys → simulated CRM | Green "Connected" over a CRM that receives nothing. | `9b1734d` Start route refuses; card shows "Not switched on yet", no Connect link. |
 | Confirmed booking with no parsed time read "Time to confirm" | Confusing next to a "Confirmed" badge. | `9b1734d` Shows the customer's own words. |
+| The workspace's own "Connect a number" form never asked Meta | In live mode it accepted **made-up IDs and a fake token**, showed a green "Connected" and flipped the workspace live. Inbound messages route by Phone Number ID, so one typo means the AI never hears a customer. Only the admin-assisted path checked. | This commit. The form now asks Meta first and saves nothing on a refusal. Verified against the real Graph API: "Meta rejected the access token. Check it and try again." The answer now stays on screen instead of fading with the toast. |
 
 ## 2. Results by area
 
@@ -49,6 +50,12 @@ the production database, in live mode. It was deleted afterwards.
 | Follow-ups | PASS | Switched on in a live workspace with no number: six templates wait as PENDING (not REJECTED); they are submitted to Meta when the number connects. |
 | Team | PASS | Invite created, pending, audited. |
 | Voice | PASS | ElevenLabs agent healthy: Haiku model, 5 tools, initiation webhook set, post-call webhook attached, enabled, no failures. Page shows 100 minutes, no "Simulate a call". **No phone number imported yet** (0 in ElevenLabs): browser call only until a carrier number is added. |
+| WhatsApp connect form | PASS after fix | See section 1. Refusal verified against Meta itself. |
+| API keys (Apps drawer) | PASS | Key created and shown once: `nk_live_…`. |
+| Outbound webhooks (Apps drawer) | PASS | Endpoint created with six event choices; signing secret shown once. HubSpot bridge recipe opens and links to it. |
+| Website widget | PASS | Page renders with the embed snippet; `/widget.js` is public (200). |
+| Leads | PASS | Lead added by hand lands as **No consent**, as invariant 2 requires. |
+| Creation pages | PASS | New campaign, new template, new automation, Actions, AI model, Data export: all render, zero errors. |
 | Every other page | PASS | Inbox, Leads, Campaigns, Templates, Analytics, Apps, Actions, all 9 Settings pages: rendered, zero console errors, zero 5xx. |
 | Cron | PASS with caveat | Endpoint healthy, heartbeat ok. Real cadence 2–4 hours (see 0.4). Open without a secret (see 0.3). |
 | Credits ledger | PASS | Grant issued at creation; none leaked after cleanup. |
@@ -57,5 +64,7 @@ the production database, in live mode. It was deleted afterwards.
 | Supabase password creation on the invite page | NOT EXERCISED | Would create a real auth user in production. The page renders correctly; you will exercise it with the client. |
 
 ## 3. Left in production by this check
-Nothing. The throwaway workspace and all its data were deleted (verified: two
-workspaces remain, both yours; no stray credit grants).
+Two throwaway workspaces were created and both were deleted with all their data
+(verified after each: two workspaces remain, both yours; no WhatsApp numbers, no
+stray credit grants). Two deliberate changes remain, both listed in section 0:
+`SEND_MODE=live`, and your test workspace marked active.

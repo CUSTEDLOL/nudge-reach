@@ -9,6 +9,7 @@ import {
   setDefaultWhatsappAccount,
   disconnectWhatsappAccount,
 } from "@/modules/whatsapp/accounts";
+import { validateWhatsappConnection } from "@/modules/whatsapp/connection-validator";
 
 /** E4: make one of the org's numbers the default sender. */
 export async function setDefaultNumberAction(
@@ -69,13 +70,19 @@ export async function connectWhatsappAction(
 
   try {
     requireRole(ctx, "ADMIN");
-    const saved = await saveWhatsappAccount({
-      orgId: ctx.org.id,
+    // Ask Meta before saving anything. Connecting a number makes the workspace
+    // live, so a mistyped Phone Number ID or an expired token must never earn
+    // a green "Connected": inbound messages route by that id, and with a wrong
+    // one the AI would simply never hear a customer. (The founder-assisted
+    // path in admin always checked; this form did not until 2026-09-19.)
+    const checked = await validateWhatsappConnection({
+      displayName,
       wabaId,
       phoneNumberId,
-      displayName,
       accessToken,
     });
+    if (!checked.ok) return { ok: false, message: checked.message };
+    const saved = await saveWhatsappAccount({ orgId: ctx.org.id, ...checked.value });
     if (!saved.ok) return { ok: false, message: saved.message };
   } catch (err) {
     return {
