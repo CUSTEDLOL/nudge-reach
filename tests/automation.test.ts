@@ -4,7 +4,9 @@ import {
   matchesKeyword,
   normalizeLogEntries,
   parseKeywordConfig,
+  parseQuietConfig,
   readWaitMinutes,
+  AUTOMATION_TRIGGERS,
   MAX_WAIT_MINUTES,
 } from "@/modules/automation/definitions";
 import { parseAutomationDraft, validateStepConfig } from "@/modules/automation/draft";
@@ -247,5 +249,20 @@ describe("parseAutomationDraft", () => {
     expect(
       parseAutomationDraft({ ...base, steps: [{ kind: "explode", config: {} }] }).ok
     ).toBe(false);
+  });
+});
+
+describe("conversation_quiet trigger", () => {
+  it("is part of the vocabulary", () => {
+    expect(AUTOMATION_TRIGGERS).toContain("conversation_quiet");
+  });
+
+  it("parses hours + optional stage, defaulting to 72h and clamping to a fortnight", () => {
+    expect(parseQuietConfig({ hours: 48, stage: "QUALIFIED" })).toEqual({ hours: 48, stage: "QUALIFIED" });
+    expect(parseQuietConfig({})).toEqual({ hours: 72, stage: undefined });
+    expect(parseQuietConfig({ hours: 0 })).toEqual({ hours: 72, stage: undefined });
+    expect(parseQuietConfig({ hours: 1.4 })).toEqual({ hours: 1, stage: undefined });
+    expect(parseQuietConfig({ hours: 9999, stage: "nonsense" })).toEqual({ hours: 14 * 24, stage: undefined });
+    expect(parseQuietConfig(null)).toEqual({ hours: 72, stage: undefined });
   });
 });

@@ -4,6 +4,7 @@ import {
   Clock,
   FileText,
   Hand,
+  Hourglass,
   MessageCircle,
   MessageSquare,
   Megaphone,
@@ -71,6 +72,11 @@ const TRIGGER_DETAILS: Record<
     description: "The agent books an appointment into your calendar.",
     icon: CalendarCheck,
     tone: "success",
+  },
+  conversation_quiet: {
+    description: "A customer who messaged you has gone quiet for a while.",
+    icon: Hourglass,
+    tone: "warning",
   },
 };
 
