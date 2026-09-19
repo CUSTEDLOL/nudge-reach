@@ -124,9 +124,14 @@ lists `gemini-3-pro` and `gemini-3-flash`; neither appears on Google's
 published price sheet (which carries `gemini-3.1-pro-preview`,
 `gemini-3.7-flash`, `gemini-3.8-flash`). They were deliberately **left off**
 the rate card rather than mapped to a guess, so they price at the conservative
-fallback. If an org has actually saved one of these, its BYOK calls are
-probably failing at the provider already. Decide which Gemini ids we support,
-then add their rates and fix the allow-list.
+fallback. Decide which Gemini ids we support, then add their rates and fix
+the allow-list.
+
+Note the failure mode, which is worse than a silent fallback: these ids are
+**on the allow-list**, so they pass every local check and resolve as `active`
+— then Google rejects the id at call time. `byokStatus` reports `active` and
+cannot detect this; only fixing the allow-list can. See "webhook resilience"
+below for what that thrown error currently does.
 
 **2. `gemini-3.8-flash` pricing is promotional** — $0.75 / $3.75 through
 2026-12-31, then $1.50 / $7.50 on 2027-01-01. Whatever we adopt needs a diary
@@ -140,14 +145,44 @@ replies" line in the enterprise proposal are both optimistic. Left untouched
 rather than swapped for another guess — one day of real `AiUsage` rows after
 this ships gives the true number.
 
+## Follow-up shipped alongside: the silent BYOK fallback
+
+`getByokRuntime` returned `null` on every failure — no account, plan
+downgraded, model unlisted, key undecryptable — so the caller could not tell
+"no BYO configured" (normal) from "BYO configured but broken" (the org
+believes it pays its own provider while every call runs on the platform key
+and burns platform credits). The founder panel showed provider, model and
+"key present", which all still looked healthy.
+
+Resolution now happens once in a shared `resolve()`, and `byokStatus(orgId)`
+exposes the outcome — `none` / `simulated` / `active` / `fallback` with a
+reason — so the two cannot drift. `getByokRuntime` keeps its exact contract
+(returns `null`, never throws, never takes the agent down); the org's
+Integrations tab in the founder panel now shows the fallback and its reason
+in red.
+
+## Found, NOT fixed: webhook resilience
+
+`src/app/api/webhooks/whatsapp/route.ts` has no try/catch around
+`handleInboundMessage`, and `modules/agent/reply.ts` only catches
+`CreditsExhaustedError` — everything else rethrows. So any provider error
+(a bad BYOK model id, a revoked key, a provider outage) propagates out of
+`POST`, the route 500s, `webhookEvent.processedAt` is never set, Meta retries,
+and the customer gets no reply at all.
+
+That wants a deliberate decision — swallow and reply with a fallback line,
+dead-letter the event, or 200-and-queue — so it was left alone rather than
+patched in passing.
+
 ## Verification
 
-`npx tsc --noEmit` clean · `npx vitest run` 1294 passed / 3 skipped (the
+`npx tsc --noEmit` clean · `npx vitest run` 1301 passed / 3 skipped (the
 skipped three are `credit-concurrency`, which needs real Postgres) ·
 `npm run lint` clean · `npm run build` clean.
 
 New: `tests/model-router-caching.test.ts` (6). Extended:
-`tests/credit-rates.test.ts` (14) and `tests/llm-drivers.test.ts` (11 — four
+`tests/credit-rates.test.ts` (14), `tests/byok.test.ts` (14) and
+`tests/llm-drivers.test.ts` (11 — four
 existing `toEqual` usage assertions relaxed to `toMatchObject`; their token
 values are unchanged, the object simply carries `cacheReadTokens` now). `tests/ai-usage.test.ts` lost its
 `computeCostMicroUsd` block — those assertions encoded the stale $3/$15 Sonnet

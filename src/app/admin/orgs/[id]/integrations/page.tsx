@@ -210,6 +210,17 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                   {d.llm.provider} · <span className="font-mono text-xs">{d.llm.model}</span>
                 </p>
                 <p className="text-xs text-neutral-500">Customer-paid (BYOK). Key stored encrypted, {d.llm.hasKey ? "present" : "missing"}.</p>
+                {/* A key can be saved and still not resolve — in which case the
+                    org's calls quietly run on the platform key and OUR credits. */}
+                {d.byok.state === "fallback" && (
+                  <p className="text-xs font-medium text-red-600">
+                    Not in use — {d.byok.reason}. Their replies are running on Nudge&rsquo;s
+                    model and burning platform credits.
+                  </p>
+                )}
+                {d.byok.state === "simulated" && (
+                  <p className="text-xs text-neutral-500">Simulated key — no real provider calls.</p>
+                )}
               </div>
               <ActionForm
                 action={disconnectLlmAction}

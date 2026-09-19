@@ -2770,9 +2770,26 @@ loop, so a two-tool reply paid for that prefix three times.
   cached tokens at the full input rate — overstating, where Anthropic was
   understating.
 
+Also: `getByokRuntime` returned `null` for every failure, so "no BYO key"
+and "BYO key configured but broken" were indistinguishable — an org could
+believe it was paying its own provider while every call ran on the platform
+key and our credits, with the founder panel showing a healthy "key present".
+New `byokStatus(orgId)` reports `none` / `simulated` / `active` / `fallback`
+with a reason, shared with `getByokRuntime` through one `resolve()` so they
+cannot drift, and the org's Integrations tab now shows the fallback in red.
+
+**Found, not fixed — webhook resilience.** The WhatsApp webhook has no
+try/catch around `handleInboundMessage`, and `reply.ts` only catches
+`CreditsExhaustedError`. Any provider error (bad BYOK model id, revoked key,
+provider outage) 500s the route, leaves `webhookEvent.processedAt` unset,
+makes Meta retry, and the customer gets no reply. Needs a deliberate call on
+swallow-and-fallback vs dead-letter vs 200-and-queue.
+
 **Open for the founder:** `BYOK_ALLOWED_MODELS.google` lists `gemini-3-pro`
 and `gemini-3-flash`, neither of which is on Google's published price sheet —
-left off the card rather than mapped to a guess. Also unresolved: the
+left off the card rather than mapped to a guess. They are still ON the
+allow-list, so they resolve as `active` and fail at Google instead of falling
+back; `byokStatus` cannot catch that, only fixing the allow-list can. Also unresolved: the
 cold-start "≈ n more AI replies" estimate still assumes a 2,000-token reply
 when reality looks closer to 12,000. Detail and evidence in
 `docs/plans/2026-09-20-ai-cost-accuracy.md`.
