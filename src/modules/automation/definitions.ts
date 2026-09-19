@@ -200,16 +200,21 @@ export interface QuietConfig {
   stage?: (typeof LEAD_STAGES)[number];
 }
 
-/** Coerce a triggerConfig blob into a safe QuietConfig. */
+/**
+ * Coerce a triggerConfig blob into a safe QuietConfig. An unrecognised stage
+ * is ignored (chases every stage); sub-1 or non-numeric hours fall back to the
+ * 72h default rather than a 1h floor.
+ */
 export function parseQuietConfig(raw: unknown): QuietConfig {
   const obj =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
       : {};
   const hours = Number(obj.hours);
-  const stage = (LEAD_STAGES as readonly string[]).includes(String(obj.stage))
-    ? (obj.stage as QuietConfig["stage"])
-    : undefined;
+  const stage =
+    typeof obj.stage === "string" && (LEAD_STAGES as readonly string[]).includes(obj.stage)
+      ? (obj.stage as QuietConfig["stage"])
+      : undefined;
   return {
     hours: Number.isFinite(hours) && hours >= 1 ? Math.min(Math.round(hours), MAX_QUIET_HOURS) : DEFAULT_QUIET_HOURS,
     stage,

@@ -7,9 +7,11 @@ import {
   parseQuietConfig,
   readWaitMinutes,
   AUTOMATION_TRIGGERS,
+  MAX_QUIET_HOURS,
   MAX_WAIT_MINUTES,
 } from "@/modules/automation/definitions";
 import { parseAutomationDraft, validateStepConfig } from "@/modules/automation/draft";
+import { MAX_GAP_DAYS } from "@/modules/followup/spec";
 
 describe("matchesKeyword (spec §M6: keyword trigger matching)", () => {
   const contains = { keywords: ["hours", "kab khulta"], match: "contains" };
@@ -264,5 +266,21 @@ describe("conversation_quiet trigger", () => {
     expect(parseQuietConfig({ hours: 1.4 })).toEqual({ hours: 1, stage: undefined });
     expect(parseQuietConfig({ hours: 9999, stage: "nonsense" })).toEqual({ hours: 14 * 24, stage: undefined });
     expect(parseQuietConfig(null)).toEqual({ hours: 72, stage: undefined });
+  });
+
+  it("holds the 1h floor and the fortnight cap at the boundaries", () => {
+    expect(parseQuietConfig({ hours: 1 }).hours).toBe(1);
+    expect(parseQuietConfig({ hours: 336 }).hours).toBe(336);
+    expect(parseQuietConfig({ hours: 337 }).hours).toBe(336);
+    expect(parseQuietConfig({ hours: "abc" }).hours).toBe(72);
+    expect(parseQuietConfig({ hours: -5 }).hours).toBe(72);
+  });
+
+  it("only accepts a stage that is a string from LEAD_STAGES", () => {
+    expect(parseQuietConfig({ stage: ["QUALIFIED"] }).stage).toBeUndefined();
+  });
+
+  it("keeps the follow-up spec's day cap equal to the trigger's hour cap", () => {
+    expect(MAX_GAP_DAYS * 24).toBe(MAX_QUIET_HOURS);
   });
 });

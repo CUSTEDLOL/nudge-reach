@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LEAD_STAGES } from "@/modules/automation/definitions";
+import { LEAD_STAGES, MAX_QUIET_HOURS } from "@/modules/automation/definitions";
 import { campaignButtonSchema } from "@/modules/campaign/schema";
 import { repairOptOutFooter, repairPersonalization } from "@/modules/campaign/guardrails";
 
@@ -12,8 +12,9 @@ import { repairOptOutFooter, repairPersonalization } from "@/modules/campaign/gu
 
 export const MAX_MESSAGES = 3;
 /** Longest gap between two messages; longer schedules belong to the booking
- *  reminder tick, not chained waits. */
-export const MAX_GAP_DAYS = 14;
+ *  reminder tick, not chained waits. Derived from the quiet trigger's cap so
+ *  the two can never drift apart. */
+export const MAX_GAP_DAYS = MAX_QUIET_HOURS / 24;
 
 export const STOP_SIGNALS = ["reply", "booking", "payment"] as const;
 export type StopSignal = (typeof STOP_SIGNALS)[number];

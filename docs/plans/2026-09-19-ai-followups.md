@@ -396,7 +396,8 @@ git commit -m "feat(followups): owner-facing FollowUpSpec with repairs and plain
 **Step 1: Write the failing test** — append to `tests/automation.test.ts`:
 
 ```ts
-import { AUTOMATION_TRIGGERS, parseQuietConfig } from "@/modules/automation/definitions";
+import { AUTOMATION_TRIGGERS, MAX_QUIET_HOURS, parseQuietConfig } from "@/modules/automation/definitions";
+import { MAX_GAP_DAYS } from "@/modules/followup/spec";
 
 describe("conversation_quiet trigger", () => {
   it("is part of the vocabulary", () => {
@@ -410,6 +411,22 @@ describe("conversation_quiet trigger", () => {
     expect(parseQuietConfig({ hours: 1.4 })).toEqual({ hours: 1, stage: undefined });
     expect(parseQuietConfig({ hours: 9999, stage: "nonsense" })).toEqual({ hours: 14 * 24, stage: undefined });
     expect(parseQuietConfig(null)).toEqual({ hours: 72, stage: undefined });
+  });
+
+  it("holds the 1h floor and the fortnight cap at the boundaries", () => {
+    expect(parseQuietConfig({ hours: 1 }).hours).toBe(1);
+    expect(parseQuietConfig({ hours: 336 }).hours).toBe(336);
+    expect(parseQuietConfig({ hours: 337 }).hours).toBe(336);
+    expect(parseQuietConfig({ hours: "abc" }).hours).toBe(72);
+    expect(parseQuietConfig({ hours: -5 }).hours).toBe(72);
+  });
+
+  it("only accepts a stage that is a string from LEAD_STAGES", () => {
+    expect(parseQuietConfig({ stage: ["QUALIFIED"] }).stage).toBeUndefined();
+  });
+
+  it("keeps the follow-up spec's day cap equal to the trigger's hour cap", () => {
+    expect(MAX_GAP_DAYS * 24).toBe(MAX_QUIET_HOURS);
   });
 });
 ```
@@ -446,16 +463,21 @@ export interface QuietConfig {
   stage?: (typeof LEAD_STAGES)[number];
 }
 
-/** Coerce a triggerConfig blob into a safe QuietConfig. */
+/**
+ * Coerce a triggerConfig blob into a safe QuietConfig. An unrecognised stage
+ * is ignored (chases every stage); sub-1 or non-numeric hours fall back to the
+ * 72h default rather than a 1h floor.
+ */
 export function parseQuietConfig(raw: unknown): QuietConfig {
   const obj =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
       : {};
   const hours = Number(obj.hours);
-  const stage = (LEAD_STAGES as readonly string[]).includes(String(obj.stage))
-    ? (obj.stage as QuietConfig["stage"])
-    : undefined;
+  const stage =
+    typeof obj.stage === "string" && (LEAD_STAGES as readonly string[]).includes(obj.stage)
+      ? (obj.stage as QuietConfig["stage"])
+      : undefined;
   return {
     hours: Number.isFinite(hours) && hours >= 1 ? Math.min(Math.round(hours), MAX_QUIET_HOURS) : DEFAULT_QUIET_HOURS,
     stage,
@@ -484,6 +506,8 @@ Expected: PASS; tsc silent. (`TRIGGER_DETAILS` is a `Record<AutomationTrigger, �
 git add src/modules/automation/definitions.ts "src/app/(app)/automations/meta.ts" tests/automation.test.ts
 git commit -m "feat(automations): conversation_quiet trigger vocabulary"
 ```
+
+**Follow-up (review of the vocabulary commit).** Three things ride in a second commit on this task. (1) `parseQuietConfig` type-checks `stage` (`typeof obj.stage === "string"`) before the `LEAD_STAGES` lookup — the first cut compared `String(obj.stage)` but returned the raw value, so an array like `["QUALIFIED"]` came back typed as a stage literal and would have rejected the whole cron step once it reached a Prisma `where`. (2) The edit page `src/app/(app)/automations/[id]/page.tsx` resolved the stored trigger against a hard-coded five-item list that pre-dated `booking_created`; any newer trigger fell back to `message_received` and a save persisted that — a quiet-lead chase silently became an every-inbound-message send. It now resolves against `AUTOMATION_TRIGGERS` and passes `preservedQuiet` (the parsed `{ hours, stage }`) into the builder, which shows it as a read-only hint next to the trigger picker, mirroring `preservedTagName`; the timing itself is edited from the follow-up card (Task 8), not here. (3) `MAX_GAP_DAYS` in `spec.ts` is derived as `MAX_QUIET_HOURS / 24` (still 14) so the spec's day cap and the trigger's hour cap cannot drift; a test pins the identity.
 
 ---
 
