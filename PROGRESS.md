@@ -2736,3 +2736,43 @@ Two commits (`aea838c` foundation, `0635833` modules), built per
 - **Phase 1 — Platform modules**: model-router, channel-agnostic messaging
   interface, contacts/opt-in with consent gate (unit-tested), billing stub.
 - Needs from founder: `ANTHROPIC_API_KEY` for the live model-router check.
+
+## 2026-09-20 — AI cost accuracy: prompt caching + one rate card
+
+Anthropic prompt caching was priced in the rate card and read back off every
+response, but no call ever set `cache_control` — so the cache columns had
+recorded `0` since launch and every prompt token was billed at full input
+price. The system prompt (vertical template + up to 6,000 chars of knowledge
+digest) and the tool schemas are re-sent unchanged on every step of the agent
+loop, so a two-tool reply paid for that prefix three times.
+
+- One `cache_control: {type: "ephemeral"}` breakpoint on the system block in
+  all four Anthropic call sites (`generate`, `chat`, the `runAgent` loop, the
+  cap-out closing call). Tools render before system, so one breakpoint covers
+  both. ≈60% off a tool-using reply; no-op below the model's 1,024-token
+  minimum prefix.
+- Deleted the second, substring-matched price table in
+  `lib/model-router/usage.ts`. Everything now prices off `MODEL_RATES`
+  (`RATE_CARD_VERSION` → `2026-09-20`). It had Sonnet at a stale $3/$15 and
+  matched `gpt-5.2` onto `gpt-5`'s cheaper rate, and it ignored cache tokens
+  entirely — which would have made the dashboard under-report once caching
+  was on.
+- `priceCall` still throws on an unknown model (the ledger never moves money
+  at a guessed rate); new `estimateCostMicroUsd` is the never-throw display
+  path, counts cache tokens, and falls back to the dearest row on the card.
+- BYO-key models are on the same card now, at rates verified against the
+  providers' own pricing pages.
+- Their `cacheRead` rates turned out to be dead code: neither BYO driver
+  reported cached tokens, and OpenAI/Google *include* them in the prompt
+  count while Anthropic excludes them. `DriverUsage.inputTokens` now means
+  uncached input on every provider, and the OpenAI/Gemini drivers subtract
+  their cached portion. Before this, a BYO-OpenAI org's dashboard billed
+  cached tokens at the full input rate — overstating, where Anthropic was
+  understating.
+
+**Open for the founder:** `BYOK_ALLOWED_MODELS.google` lists `gemini-3-pro`
+and `gemini-3-flash`, neither of which is on Google's published price sheet —
+left off the card rather than mapped to a guess. Also unresolved: the
+cold-start "≈ n more AI replies" estimate still assumes a 2,000-token reply
+when reality looks closer to 12,000. Detail and evidence in
+`docs/plans/2026-09-20-ai-cost-accuracy.md`.
