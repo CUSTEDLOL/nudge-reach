@@ -498,6 +498,14 @@ export async function simulateInboundAction(
         skipped: result.skipped,
       };
     }
+    if (result.aiFailed) {
+      return {
+        ok: true,
+        message:
+          "The AI couldn't answer just now, so the chat was handed to a person — exactly what a customer would get. Try again in a minute.",
+        conversationId,
+      };
+    }
     if (result.handoff) {
       return { ok: true, message: "Message received — the agent handed off to a human.", conversationId };
     }

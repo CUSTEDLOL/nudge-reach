@@ -60,11 +60,15 @@ export function BookingsList({ rows }: { rows: BookingRow[] }) {
         return (
           <li key={b.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
             <div className="min-w-0 sm:w-44 sm:shrink-0">
+              {/* No parsed time: a pending request still needs one agreed; once a
+                  person has confirmed it, the customer's own words are the time. */}
               <p className="text-sm font-semibold text-neutral-950">
-                {b.when ?? "Time to confirm"}
+                {b.when ?? (status === "pending" ? "Time to confirm" : b.requestedFor)}
               </p>
               <p className="mt-0.5 truncate text-xs text-neutral-500" title={b.requestedFor}>
-                asked for “{b.requestedFor}”
+                {b.when || status === "pending"
+                  ? `asked for “${b.requestedFor}”`
+                  : "time as the customer wrote it"}
               </p>
             </div>
             <div className="min-w-0 flex-1">

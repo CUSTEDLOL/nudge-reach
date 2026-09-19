@@ -393,10 +393,12 @@ function decorate(app: AppDefinition, s: CatalogState): AppTile {
       if (!s.hasFrontDesk) return gated(app, "Payment links are on Growth and above.");
       return tile(app, {
         status: s.paymentsLive ? "connected" : "ready",
-        statusLabel: s.paymentsLive ? "Active" : "Test links",
+        statusLabel: s.paymentsLive ? "Active" : s.simulation ? "Test links" : "Not switched on yet",
         detail: s.paymentsLive
           ? "The AI can collect deposits in chat."
-          : "Links are simulated until we switch on live payments.",
+          : s.simulation
+            ? "Links are simulated until we switch on live payments."
+            : "No links are sent until we enable live payments; the AI says your team will share payment details.",
         action: { label: "How it works", panel: "payments" },
       });
 

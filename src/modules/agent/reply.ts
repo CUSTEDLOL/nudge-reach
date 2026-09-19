@@ -57,6 +57,8 @@ export interface AgentActionReply extends AgentReply {
   actions: string[];
   /** The org's AI credits are used up: handed off without calling the model. */
   pausedForCredits?: true;
+  /** The model call failed (provider outage, timeout, bad key): handed off so the customer still hears back. */
+  aiFailed?: true;
 }
 
 /**
@@ -99,8 +101,21 @@ export async function generateAgentActionReply(
       },
     }));
   } catch (err) {
-    if (!(err instanceof CreditsExhaustedError)) throw err;
-    return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+    if (err instanceof CreditsExhaustedError) {
+      return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+    }
+    // Any other failure (provider outage, timeout, a revoked key) used to be
+    // re-thrown. For a real customer that meant silence, permanently: the
+    // inbound message is stored before the model runs, so when Meta redelivers
+    // the webhook the dedupe check skips it and nobody ever answers. Degrade
+    // the same way as an empty reply instead — the customer hears back and the
+    // thread is flagged "Needs human" for the owner.
+    console.error("[agent] reply failed; handing off", {
+      orgId: ctx.orgId,
+      conversationId: ctx.conversationId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { text: HANDOFF_MESSAGE, handoff: true, actions: [], aiFailed: true };
   }
 
   const handoff = calledHandoff(toolCalls);

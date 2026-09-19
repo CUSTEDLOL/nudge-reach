@@ -81,13 +81,18 @@ export function CrmCard({ model, canManage }: { model: CrmCardModel; canManage: 
                 >
                   Disconnect
                 </Button>
-              ) : (
+              ) : p.available ? (
                 <a
                   href={`/api/integrations/crm/${p.key}/start${p.key === "zoho" ? "?dc=in" : ""}`}
                   className={buttonVariants({ variant: "secondary" })}
                 >
                   Connect {p.label}
                 </a>
+              ) : (
+                <p className="max-w-[16rem] text-right text-xs leading-relaxed text-neutral-500">
+                  Not switched on yet. We&apos;re finishing the {p.label} setup
+                  on our side and will let you know.
+                </p>
               ))}
           </li>
         ))}

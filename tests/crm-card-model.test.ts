@@ -16,4 +16,12 @@ describe("crmCardModel", () => {
     expect(m.recent[0].event).toBe("contact.created");
     expect(m.providers[0].lastSyncAt).toBe("2026-09-01T00:00:00.000Z");
   });
+
+  it("offers no Connect button to a live workspace while the platform keys are missing", () => {
+    const live = crmCardModel([], [], false, ["zoho"]);
+    expect(live.providers.map((p) => [p.key, p.available])).toEqual([["zoho", true], ["salesforce", false]]);
+    // A test workspace can always practise: its connections are simulated.
+    const test = crmCardModel([], [], true, []);
+    expect(test.providers.every((p) => p.available)).toBe(true);
+  });
 });

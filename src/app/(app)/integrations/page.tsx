@@ -11,6 +11,7 @@ import { isRazorpayConfigured } from "@/modules/billing/razorpay";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { getPlan } from "@/modules/billing/plans";
 import { listConnections } from "@/modules/crm/connections";
+import { realProvider } from "@/modules/crm/providers";
 import { buildAppCatalog } from "@/modules/integrations/catalog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -159,7 +160,12 @@ export default async function IntegrationsPage() {
           ),
           crm: (
             <CrmCard
-              model={crmCardModel(crmConnections, crmJobs, simulation)}
+              model={crmCardModel(
+                crmConnections,
+                crmJobs,
+                simulation,
+                (["zoho", "salesforce"] as const).filter((key) => realProvider(key))
+              )}
               canManage={canManage}
             />
           ),
@@ -180,6 +186,7 @@ export default async function IntegrationsPage() {
           payments: (
             <PaymentsPanel
               live={isRazorpayConfigured() && !simulation}
+              testWorkspace={simulation}
               currency={ctx.org.currency}
             />
           ),
