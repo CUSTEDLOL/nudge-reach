@@ -50,6 +50,14 @@ const { createOwnerSetupToken } = vi.hoisted(() => ({
 }));
 vi.mock("@/modules/orgs/owner-setup", () => ({ createOwnerSetupToken }));
 
+const { ensureIncludedGrantFor } = vi.hoisted(() => ({
+  ensureIncludedGrantFor: vi.fn(async (orgId: string) => {
+    void orgId;
+    return true;
+  }),
+}));
+vi.mock("@/modules/billing/credits", () => ({ ensureIncludedGrantFor }));
+
 import { createWorkspace } from "@/modules/admin/create-workspace";
 import { PENDING_OWNER_PREFIX } from "@/modules/orgs/pending-owner";
 
@@ -87,6 +95,23 @@ describe("createWorkspace", () => {
     expect(data.timezone).toBe("Asia/Kolkata");
     // No owner exists yet, so the required owner column holds a sentinel.
     expect(String(data.ownerUserId).startsWith(PENDING_OWNER_PREFIX)).toBe(true);
+  });
+
+  // Found 2026-09-19, hours before the first production client: the workspace
+  // was created "inactive" with no paid period, so in live mode the credit
+  // ledger issued nothing and the AI refused its very first reply.
+  it("starts the first paid month and issues the plan's AI credits", async () => {
+    await createWorkspace(INPUT);
+    const data = tx.org.create.mock.calls[0][0].data;
+    expect(data.subscriptionStatus).toBe("active");
+    expect(data.currentPeriodEnd.getTime()).toBeGreaterThan(Date.now() + 27 * 86_400_000);
+    expect(ensureIncludedGrantFor).toHaveBeenCalledWith("org-1");
+  });
+
+  it("still creates the workspace when issuing credits fails", async () => {
+    ensureIncludedGrantFor.mockRejectedValueOnce(new Error("ledger down"));
+    const res = await createWorkspace(INPUT);
+    expect(res.ok).toBe(true);
   });
 
   it("creates a TEST workspace simulated, and refuses when no mode is chosen", async () => {

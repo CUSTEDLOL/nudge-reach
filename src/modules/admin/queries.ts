@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getPlan } from "@/modules/billing/plans";
 
 /**
  * Cross-org platform aggregates for the founder panel. This module (and its
@@ -251,6 +252,29 @@ export function paginate<T>(rows: T[], requestedPage: number, pageSize: number) 
   return { rows: rows.slice(start, start + safePageSize), page, pageCount, total };
 }
 
+/**
+ * In live mode the AI answers only while the workspace has credits, and
+ * included credits are issued only inside an active paid period (or a trial).
+ * An offline-paid client has no checkout to renew it, so a lapsed month means
+ * a silently paused AI — the one thing a founder must see in the directory.
+ * Plans without metered credits (legacy) are never flagged.
+ */
+function creditsIssue(
+  o: {
+    plan: string;
+    subscriptionStatus: string;
+    currentPeriodEnd: Date | null;
+    trialEndsAt: Date | null;
+  },
+  now: Date
+): string | null {
+  if (getPlan(o.plan).includedCredits === null) return null;
+  if (o.trialEndsAt && o.trialEndsAt > now) return null;
+  if (o.subscriptionStatus !== "active") return "Subscription not active: no AI credits";
+  if (!o.currentPeriodEnd || o.currentPeriodEnd <= now) return "Paid month ended: AI paused until renewed";
+  return null;
+}
+
 export async function orgsList(opts: OrgsFilter): Promise<OrgsPage> {
   const readiness = validOption(opts.readiness, ORG_READINESS, "all");
   const sort = validOption(opts.sort, ORG_SORTS, "newest");
@@ -266,6 +290,7 @@ export async function orgsList(opts: OrgsFilter): Promise<OrgsPage> {
       suspendedAt: true,
       trialEndsAt: true,
       subscriptionStatus: true,
+      currentPeriodEnd: true,
       vertical: true,
       createdAt: true,
       memberships: {
@@ -317,8 +342,10 @@ export async function orgsList(opts: OrgsFilter): Promise<OrgsPage> {
     inboundGroups.map((g) => [g.orgId, g._max.lastInboundAt ?? null])
   );
 
+  const now = new Date();
   const rows: OrgRow[] = orgs.map((o) => {
     const readinessIssues = [
+      creditsIssue(o, now),
       o.whatsappAccounts.length === 0 ? "WhatsApp not connected" : null,
       !o.agentProfile?.businessInfo.trim() && o.knowledgeEntries.length === 0
         ? "Knowledge not configured"

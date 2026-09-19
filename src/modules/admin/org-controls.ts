@@ -110,13 +110,20 @@ export async function setSubscriptionStatus(
   if (!isSubscriptionStatus(status)) return { ok: false, error: `Unknown status "${status}".` };
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
-  if (org.subscriptionStatus === status) return { ok: false, error: `Already ${status}.` };
+  const now = new Date();
+  // An offline-paid client has no checkout to renew it: when its month runs
+  // out the AI pauses for want of credits. Re-marking it "active" is how the
+  // founder starts the next paid month, so that is not a no-op.
+  const lapsed = !org.currentPeriodEnd || org.currentPeriodEnd <= now;
+  const renewing = status === "active" && org.subscriptionStatus === "active" && lapsed;
+  if (org.subscriptionStatus === status && !renewing) {
+    return { ok: false, error: `Already ${status}.` };
+  }
   const data: { subscriptionStatus: string; currentPeriodEnd?: Date } = { subscriptionStatus: status };
   // A comped org never went through checkout, so nothing set its period; the
   // included credit grant is keyed on currentPeriodEnd (billing/credits.ts)
   // and can't be issued without one. Marking it active starts a month now.
-  const now = new Date();
-  if (status === "active" && (!org.currentPeriodEnd || org.currentPeriodEnd <= now)) {
+  if (status === "active" && lapsed) {
     const periodEnd = new Date(now);
     periodEnd.setMonth(periodEnd.getMonth() + 1);
     data.currentPeriodEnd = periodEnd;
@@ -136,7 +143,12 @@ export async function setSubscriptionStatus(
       tx
     );
   });
-  return { ok: true, message: `Subscription marked ${status.replace("_", " ")}.` };
+  return {
+    ok: true,
+    message: renewing
+      ? `Renewed. The paid month now runs to ${fmt(data.currentPeriodEnd ?? null)}.`
+      : `Subscription marked ${status.replace("_", " ")}.`,
+  };
 }
 
 /**

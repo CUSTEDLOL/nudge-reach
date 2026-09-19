@@ -9,6 +9,7 @@ import {
   type OwnerSetupLink,
 } from "@/modules/orgs/owner-setup";
 import { PENDING_OWNER_PREFIX, pendingOwnerId } from "@/modules/orgs/pending-owner";
+import { ensureIncludedGrantFor } from "@/modules/billing/credits";
 
 /**
  * Founder-created workspaces. The sales motion is demo-first: a client pays on
@@ -101,6 +102,14 @@ export async function createWorkspace(input: {
 
   const issued = createOwnerSetupToken();
 
+  // They paid on the demo call, outside checkout, so nothing else will ever
+  // mark this workspace paid. Without an active subscription and a period, the
+  // credit ledger issues no included credits and — in live mode — the AI
+  // refuses its very first reply ("Your AI credits are used up") on a brand
+  // new client. Start the first paid month now; renew it from Admin → Controls.
+  const periodEnd = new Date();
+  periodEnd.setMonth(periodEnd.getMonth() + 1);
+
   const org = await prisma.$transaction(async (tx) => {
     const created = await tx.org.create({
       data: {
@@ -112,6 +121,8 @@ export async function createWorkspace(input: {
         timezone: preset.timezone,
         // A client is live from day one; only a test workspace is simulated.
         simulated: mode === "test",
+        subscriptionStatus: "active",
+        currentPeriodEnd: periodEnd,
       },
       select: { id: true, name: true },
     });
@@ -129,10 +140,16 @@ export async function createWorkspace(input: {
       input.founderEmail,
       "admin.workspace_created",
       created.name,
-      `${plan.name} · ${mode === "client" ? "client (live)" : "test (simulated)"} · owner ${email}`,
+      `${plan.name} · ${mode === "client" ? "client (live)" : "test (simulated)"} · owner ${email} · paid period to ${periodEnd.toISOString().slice(0, 10)}`,
       tx
     );
     return created;
+  });
+  // The plan's AI credits for this first month. The preflight and the cron
+  // would issue them lazily too; doing it now means Billing shows them from
+  // the first sign-in. Never fatal.
+  await ensureIncludedGrantFor(org.id).catch((error) => {
+    console.error("[create-workspace] issuing included credits failed", error);
   });
   const setupLink: OwnerSetupLink = {
     url: `${appOrigin().replace(/\/$/, "")}/invite/${issued.token}`,

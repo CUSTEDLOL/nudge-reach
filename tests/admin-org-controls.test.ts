@@ -117,6 +117,23 @@ describe("setSubscriptionStatus", () => {
     expect(lastAudit().detail).toContain("inactive → active (period ends ");
   });
 
+  it("renews an offline-paid client whose month ran out, instead of calling it a no-op", async () => {
+    const ended = new Date(Date.now() - 2 * 86400000);
+    prisma.org.findUnique.mockResolvedValue({ ...baseOrg, subscriptionStatus: "active", currentPeriodEnd: ended });
+    const res = await setSubscriptionStatus("o1", "active", "f@x.com", "paid October invoice");
+    expect(res.ok).toBe(true);
+    expect(res.ok && res.message).toMatch(/Renewed/);
+    const data = tx.org.update.mock.calls[0][0].data;
+    expect(data.currentPeriodEnd.getTime()).toBeGreaterThan(Date.now() + 27 * 86400000);
+  });
+
+  it("still refuses active → active while the month is running", async () => {
+    const live = new Date(Date.now() + 10 * 86400000);
+    prisma.org.findUnique.mockResolvedValue({ ...baseOrg, subscriptionStatus: "active", currentPeriodEnd: live });
+    expect((await setSubscriptionStatus("o1", "active", "f@x.com")).ok).toBe(false);
+    expect(tx.org.update).not.toHaveBeenCalled();
+  });
+
   it("leaves a live period alone when re-activating", async () => {
     const live = new Date(Date.now() + 10 * 86400000);
     prisma.org.findUnique.mockResolvedValue({ ...baseOrg, subscriptionStatus: "past_due", currentPeriodEnd: live });

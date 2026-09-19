@@ -66,6 +66,7 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
       suspendedAt: true,
       trialEndsAt: true,
       subscriptionStatus: true,
+      currentPeriodEnd: true,
       voiceMinutesOverride: true,
       includedCreditsOverride: true,
       featureOverrides: true,
@@ -150,7 +151,12 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
         <CardHeader>
           <CardTitle>Subscription status</CardTitle>
           <CardDescription>
-            Currently <span className="font-medium text-neutral-900">{org.subscriptionStatus.replace("_", " ")}</span>.
+            Currently <span className="font-medium text-neutral-900">{org.subscriptionStatus.replace("_", " ")}</span>
+            {org.currentPeriodEnd
+              ? org.currentPeriodEnd > new Date()
+                ? `, paid to ${org.currentPeriodEnd.toISOString().slice(0, 10)}.`
+                : `. The paid month ended ${org.currentPeriodEnd.toISOString().slice(0, 10)}, so the AI has no credits: choose "active" again to start the next month.`
+              : ". No paid period yet, so the AI has no credits: choose \"active\" to start a month."}{" "}
             Razorpay/Stripe webhooks set this automatically; override for comped, offline-paid or cancelled deals.
           </CardDescription>
         </CardHeader>
