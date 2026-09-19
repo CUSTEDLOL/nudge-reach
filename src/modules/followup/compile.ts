@@ -1,4 +1,5 @@
 import { MAX_WAIT_MINUTES, type AutomationTrigger } from "@/modules/automation/definitions";
+import { repairOptOutFooter } from "@/modules/campaign/guardrails";
 import type { CampaignContent } from "@/modules/campaign/schema";
 import type { FollowUpSpec } from "@/modules/followup/spec";
 
@@ -14,10 +15,9 @@ const MINUTES_PER_DAY = 24 * 60;
  *  chained rather than silently truncated. */
 const MAX_WAIT_DAYS = MAX_WAIT_MINUTES / MINUTES_PER_DAY;
 
-export interface CompiledStep {
-  kind: "wait" | "send_template";
-  config: Record<string, unknown>;
-}
+export type CompiledStep =
+  | { kind: "wait"; config: { minutes: number } }
+  | { kind: "send_template"; config: { templateName: string } };
 
 export interface CompiledTemplate {
   name: string;
@@ -33,6 +33,8 @@ export interface CompiledFollowUp {
   steps: CompiledStep[];
 }
 
+/** Like `slugifyTemplateName` (whatsapp/template.ts) but capped at 40 so a
+ *  key and index still fit after it; the empty-slug fallback is the caller's. */
 export function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -70,26 +72,35 @@ function triggerFor(situation: FollowUpSpec["situation"]): Pick<CompiledFollowUp
   }
 }
 
+/**
+ * Template names are deterministic for a spec, and per-automation when `key`
+ * is given (`fu_<slug>_<key>_<n>`; the installer passes the automation id's
+ * last 8 chars) so two follow-ups with the same name never share templates.
+ * `templateNames` pins a name per index and wins over the derived one; an
+ * empty pin falls through.
+ */
 export function compileFollowUp(
   spec: FollowUpSpec,
-  opts: { templateNames?: string[] } = {}
+  opts: { templateNames?: string[]; key?: string } = {}
 ): CompiledFollowUp {
   const slug = slugify(spec.name) || "follow_up";
+  const keySlug = opts.key ? slugify(opts.key) : "";
   const templates: CompiledTemplate[] = [];
   const steps: CompiledStep[] = [];
 
   spec.messages.forEach((m, i) => {
-    const name = opts.templateNames?.[i] ?? `fu_${slug}_${i + 1}`;
+    const derived = keySlug ? `fu_${slug}_${keySlug}_${i + 1}` : `fu_${slug}_${i + 1}`;
+    const name = opts.templateNames?.[i] || derived;
     templates.push({
       name,
       category: m.category,
       content: {
-        productName: spec.name.slice(0, 120),
+        productName: spec.messages.length > 1 ? `${spec.name} — message ${i + 1}` : spec.name,
         campaignAngle: "Follow-up.",
         header: m.header,
         body: m.body,
-        // campaignContentSchema requires a non-empty footer.
-        footer: m.footer || (m.category === "MARKETING" ? "Reply STOP to unsubscribe" : "See you soon"),
+        // buildTemplatePayload always emits a FOOTER component, so it must be non-empty.
+        footer: m.category === "MARKETING" ? repairOptOutFooter(m.footer) : m.footer || "See you soon",
         buttons: m.buttons,
         sampleName: "Priya",
         imageTreatment: "",
