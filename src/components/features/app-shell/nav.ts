@@ -4,6 +4,7 @@ import {
   Blocks,
   BookOpen,
   Bot,
+  FileText,
   House,
   Inbox,
   Megaphone,
@@ -24,6 +25,7 @@ export type NavKey =
   | "front-desk"
   | "followups"
   | "campaigns"
+  | "templates"
   | "analytics"
   | "integrations"
   | "settings";
@@ -140,7 +142,18 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         mobileLabel: "Campaigns",
         href: "/campaigns",
         icon: Megaphone,
-        activePrefixes: ["/campaigns", "/templates"],
+        activePrefixes: ["/campaigns"],
+      },
+      {
+        // Templates are shared by campaigns, follow-ups and inbox replies, so
+        // they get their own home — filed under Campaigns, editing a follow-up's
+        // wording lit up the wrong section (founder feedback, 2026-09-18).
+        key: "templates",
+        label: "Templates",
+        mobileLabel: "Templates",
+        href: "/templates",
+        icon: FileText,
+        activePrefixes: ["/templates"],
       },
     ],
   },

@@ -90,6 +90,123 @@ export const PACK_TEMPLATES: PackTemplate[] = [
 ];
 
 /**
+ * The pack's follow-ups as the owner sees them: each row is one FollowUpConfig
+ * switch plus the templates whose copy it sends, so the UI can list what runs
+ * and link straight to the editable template. Pure data — no server imports.
+ */
+export const FOLLOW_UP_FLAGS = [
+  "bookingReminders",
+  "noShowRebook",
+  "postServiceReview",
+  "leadNudge",
+] as const;
+
+export type FollowUpFlag = (typeof FOLLOW_UP_FLAGS)[number];
+
+export const TIMING_FIELDS = [
+  "reminder1Hours",
+  "reminder2Hours",
+  "reviewDelayHours",
+] as const;
+
+export type TimingField = (typeof TIMING_FIELDS)[number];
+
+export interface FollowUpTiming {
+  reminder1Hours: number;
+  reminder2Hours: number;
+  reviewDelayHours: number;
+}
+
+export const TIMING_DEFAULTS: FollowUpTiming = {
+  reminder1Hours: 24,
+  reminder2Hours: 2,
+  reviewDelayHours: 2,
+};
+
+/** An hour figure a small business would plausibly want: at least one, at most
+ *  a week out (past that the reminder is noise and the tick window is silly). */
+export const MIN_TIMING_HOURS = 1;
+export const MAX_TIMING_HOURS = 7 * 24;
+
+export interface FollowUpKind {
+  flag: FollowUpFlag;
+  label: string;
+  /** Shown when the schedule isn't a number the owner can set here. */
+  timing: string;
+  description: string;
+  templateNames: string[];
+  timingFields: Array<{ field: TimingField; label: string }>;
+  /** True when the steps live in the automation builder rather than the tick. */
+  editableInBuilder?: boolean;
+}
+
+export const FOLLOW_UP_KINDS: FollowUpKind[] = [
+  {
+    flag: "bookingReminders",
+    label: "Appointment reminders",
+    timing: "Before every confirmed booking",
+    description:
+      "Two nudges before every confirmed booking, so fewer people forget they're coming.",
+    templateNames: ["appt_reminder_24h", "appt_reminder_2h"],
+    timingFields: [
+      { field: "reminder1Hours", label: "First reminder" },
+      { field: "reminder2Hours", label: "Second reminder" },
+    ],
+  },
+  {
+    flag: "noShowRebook",
+    label: "No-show rebooking",
+    timing: "As soon as staff mark a no-show",
+    description:
+      "Chases once to win the slot back. Marketing, so consent still gates it.",
+    templateNames: ["no_show_rebook"],
+    timingFields: [],
+  },
+  {
+    flag: "postServiceReview",
+    label: "Review ask",
+    timing: "After the appointment",
+    description: "Asks how it went while the visit is still fresh.",
+    templateNames: ["review_ask"],
+    timingFields: [{ field: "reviewDelayHours", label: "Ask this long after" }],
+  },
+  {
+    flag: "leadNudge",
+    label: "Quiet-lead nudge",
+    timing: "3 and 6 days after a campaign reply",
+    description:
+      "A lead who showed interest then went quiet gets two gentle nudges, then we stop.",
+    templateNames: ["lead_nudge_1", "lead_nudge_2"],
+    timingFields: [],
+    editableInBuilder: true,
+  },
+];
+
+/**
+ * Coerce owner input into a schedule the tick can actually run. The early
+ * reminder has to stay further out than the late one: the tick reads the gap
+ * between them as the first reminder's window, so an inverted pair would mean
+ * that reminder silently never sends.
+ */
+export function normalizeTiming(raw: Partial<FollowUpTiming>): FollowUpTiming {
+  const clamp = (value: unknown, fallback: number) => {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(Math.max(n, MIN_TIMING_HOURS), MAX_TIMING_HOURS);
+  };
+  const reminder2Hours = clamp(raw.reminder2Hours, TIMING_DEFAULTS.reminder2Hours);
+  const reminder1Hours = clamp(raw.reminder1Hours, TIMING_DEFAULTS.reminder1Hours);
+  return {
+    reminder1Hours: Math.max(reminder1Hours, reminder2Hours + 1),
+    reminder2Hours,
+    reviewDelayHours: clamp(
+      raw.reviewDelayHours,
+      TIMING_DEFAULTS.reviewDelayHours
+    ),
+  };
+}
+
+/**
  * The lead-quiet nudge, composed from automation primitives: someone who
  * replied to a campaign (showed intent) then went quiet gets exactly two
  * template nudges, three days apart, then stops (encoded structurally — the

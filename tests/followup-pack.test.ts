@@ -2,7 +2,16 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ prisma: {} }));
 
-import { PACK_TEMPLATES, leadNudgeAutomation } from "@/modules/followup/pack";
+import {
+  PACK_TEMPLATES,
+  FOLLOW_UP_FLAGS,
+  FOLLOW_UP_KINDS,
+  MAX_TIMING_HOURS,
+  MIN_TIMING_HOURS,
+  TIMING_DEFAULTS,
+  leadNudgeAutomation,
+  normalizeTiming,
+} from "@/modules/followup/pack";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 
@@ -41,6 +50,54 @@ describe("Revenue-Recovery pack templates", () => {
     }
     const reminders = PACK_TEMPLATES.filter((t) => t.name.startsWith("appt_reminder"));
     expect(reminders.every((t) => t.category === "UTILITY")).toBe(true);
+  });
+});
+
+describe("owner-facing follow-up rows", () => {
+  it("surfaces every pack template, so none is left uneditable", () => {
+    const listed = FOLLOW_UP_KINDS.flatMap((k) => k.templateNames).sort();
+    expect(listed).toEqual(PACK_TEMPLATES.map((t) => t.name).sort());
+  });
+
+  it("every row maps to a real FollowUpConfig switch", () => {
+    const flags = FOLLOW_UP_KINDS.map((k) => k.flag);
+    expect(flags).toEqual([...FOLLOW_UP_FLAGS]);
+    expect(new Set(flags).size).toBe(flags.length);
+  });
+});
+
+describe("follow-up timing", () => {
+  it("keeps the owner's hours when they're sane", () => {
+    expect(
+      normalizeTiming({
+        reminder1Hours: 48,
+        reminder2Hours: 3,
+        reviewDelayHours: 6,
+      })
+    ).toEqual({ reminder1Hours: 48, reminder2Hours: 3, reviewDelayHours: 6 });
+  });
+
+  it("falls back to the defaults for missing or unparseable values", () => {
+    expect(normalizeTiming({})).toEqual(TIMING_DEFAULTS);
+    expect(
+      normalizeTiming({ reviewDelayHours: Number.NaN }).reviewDelayHours
+    ).toBe(TIMING_DEFAULTS.reviewDelayHours);
+  });
+
+  it("clamps to the supported range instead of rejecting", () => {
+    const t = normalizeTiming({
+      reminder2Hours: 0,
+      reviewDelayHours: 10_000,
+    });
+    expect(t.reminder2Hours).toBe(MIN_TIMING_HOURS);
+    expect(t.reviewDelayHours).toBe(MAX_TIMING_HOURS);
+  });
+
+  it("never lets the early reminder land at or after the late one", () => {
+    // Inverted input would otherwise give the first reminder an empty window,
+    // so it would silently never send.
+    const t = normalizeTiming({ reminder1Hours: 2, reminder2Hours: 12 });
+    expect(t.reminder1Hours).toBeGreaterThan(t.reminder2Hours);
   });
 });
 

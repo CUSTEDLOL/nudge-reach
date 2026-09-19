@@ -28,7 +28,7 @@ export function RevenueRecoveryCard({
     start(async () => {
       const r = await toggleRevenueRecoveryAction();
       toast({
-        title: "Revenue Recovery",
+        title: "Ready-made follow-ups",
         description: r.message,
         tone: r.ok ? "success" : "error",
       });
@@ -45,7 +45,7 @@ export function RevenueRecoveryCard({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-semibold text-neutral-900">
-                Revenue Recovery
+                Ready-made follow-ups
               </h2>
               {enabled ? (
                 <Badge tone="success">On</Badge>
@@ -55,9 +55,9 @@ export function RevenueRecoveryCard({
               <Badge tone="brand">AI Front Desk</Badge>
             </div>
             <p className="mt-1 max-w-xl text-sm text-neutral-500">
-              The outbound engine that chases revenue: reminds before every
-              appointment, rebooks no-shows, asks for a review after, and nudges
-              quiet leads — every message consent- and template-compliant.
+              Turning this on installs six written-for-you message templates and
+              switches on the four follow-ups below. Every word is yours to edit,
+              and each template goes to Meta for approval before it sends.
             </p>
             {enabled && (
               <p className="mt-2 text-xs text-neutral-500">

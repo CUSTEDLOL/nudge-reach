@@ -3,9 +3,17 @@ import { prisma } from "@/lib/db";
 import { orgSendMode } from "@/modules/orgs/mode";
 import { submitRowToMeta } from "@/modules/whatsapp/library";
 import { buildTemplatePayload } from "@/modules/whatsapp/template";
-import { PACK_TEMPLATES, leadNudgeAutomation } from "@/modules/followup/pack";
+import {
+  PACK_TEMPLATES,
+  leadNudgeAutomation,
+  normalizeTiming,
+  type FollowUpFlag,
+  type FollowUpTiming,
+} from "@/modules/followup/pack";
 
-const LEAD_NUDGE_NAME = "Revenue Recovery — quiet-lead nudge";
+/** The installed automation's name is its identity — matching on it keeps the
+ *  install idempotent, so renaming it would orphan every existing install. */
+export const LEAD_NUDGE_NAME = "Revenue Recovery — quiet-lead nudge";
 
 /** Create/refresh the pack's library templates. Test mode approves them
  *  immediately (so the demo works); live submits each to Meta for review and
@@ -123,6 +131,63 @@ export async function setFollowUpEnabled(
   }
 }
 
+/**
+ * Flip ONE follow-up on/off, leaving the rest of the pack running. The quiet-
+ * lead nudge lives on the automation engine rather than the reminder tick, so
+ * its switch has to reach the installed automation to mean anything.
+ */
+export async function setFollowUpFlag(
+  orgId: string,
+  flag: FollowUpFlag,
+  enabled: boolean
+): Promise<void> {
+  const patch = { [flag]: enabled } as Prisma.FollowUpConfigUncheckedUpdateInput;
+  await prisma.followUpConfig.upsert({
+    where: { orgId },
+    create: { orgId, enabled: true, [flag]: enabled },
+    update: patch,
+  });
+  if (flag === "leadNudge") {
+    const auto = await prisma.automation.findFirst({
+      where: { orgId, name: LEAD_NUDGE_NAME },
+    });
+    if (auto) {
+      await prisma.automation.update({ where: { id: auto.id }, data: { enabled } });
+    }
+  }
+}
+
+/** Save when the time-absolute follow-ups fire, normalized so the tick's
+ *  windows stay valid. */
+export async function setFollowUpTiming(
+  orgId: string,
+  raw: Partial<FollowUpTiming>
+): Promise<FollowUpTiming> {
+  const timing = normalizeTiming(raw);
+  await prisma.followUpConfig.upsert({
+    where: { orgId },
+    create: { orgId, enabled: true, ...timing },
+    update: timing,
+  });
+  return timing;
+}
+
 export async function getFollowUpConfig(orgId: string) {
   return prisma.followUpConfig.findUnique({ where: { orgId } });
+}
+
+/** The pack's templates for this org, by template name — for the "edit the
+ *  wording" links on the follow-ups page. */
+export async function getPackTemplateIds(
+  orgId: string
+): Promise<Map<string, { id: string; metaStatus: string }>> {
+  const rows = await prisma.template.findMany({
+    where: {
+      orgId,
+      campaignId: null,
+      name: { in: PACK_TEMPLATES.map((t) => t.name) },
+    },
+    select: { id: true, name: true, metaStatus: true },
+  });
+  return new Map(rows.map((r) => [r.name, { id: r.id, metaStatus: r.metaStatus }]));
 }

@@ -1,5 +1,58 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Follow-up timing, nav and section fixes (2026-09-18) ✅ (schema pushed 2026-09-18)
+
+- Founder feedback after testing the page below: the two sections were
+  confusing, template timing wasn't settable, and editing a follow-up's wording
+  highlighted Campaigns in the sidebar.
+- **Timing is now the owner's.** `FollowUpConfig` gains `reminder1Hours` (24),
+  `reminder2Hours` (2) and `reviewDelayHours` (2); the tick reads them instead
+  of its hardcoded constants. `normalizeTiming` clamps to 1–168h and forces the
+  early reminder to stay further out than the late one — an inverted pair would
+  give the first reminder an empty window and it would silently never send.
+  The rows warn that the pack's wording ("tomorrow") needs editing to match a
+  changed schedule; the copy can't take a second variable without Meta
+  re-approval, so keeping them in sync stays manual.
+- **The quiet-lead nudge was listed twice** — as a pack row and as an automation,
+  with two switches for one follow-up. The pack's automation is now filtered out
+  of the builder list and its row links into the builder instead.
+- Sections renamed to say what actually separates them: "Follow-ups around
+  appointments" (fire off bookings, via the tick) vs "Follow-ups you build
+  yourself" (fire off customer events, via the engine).
+- **Templates got their own nav item.** `/templates` was an `activePrefix` of
+  Campaigns, so editing a follow-up template lit the wrong section; templates
+  are shared by campaigns, follow-ups and inbox replies. The editor's back link
+  now honours `?from=followups`.
+- 1,279 tests green; tsc, lint, build clean.
+- **Founder step before this works:** `npm run db:push` then `npm run db:rls`.
+  Until then the follow-ups page and the reminder tick throw — both read the
+  whole `FollowUpConfig` row, including the three new columns.
+
+## Follow-ups page: owner-editable, builder relinked (2026-09-17) ✅ CODE — BROWSER-UNVERIFIED
+
+- Regression fix. Commit `a737ad7` ("landing apge", 2026-07-18) deleted the
+  automations list and its "New automation" button from `/automations`, leaving
+  only the Revenue-Recovery toggle. The builder (`/automations/new`,
+  `/automations/[id]`) and the template editor (`/templates`) were never
+  removed — they were simply unreachable, so owners could neither create a
+  follow-up nor edit the six the pack installs.
+- The page now shows what actually runs: the four time-absolute follow-ups as
+  rows, each with its own switch wired to the existing `FollowUpConfig` columns
+  (previously only the founder admin panel could set them) and a link to the
+  template whose wording it sends. Below that, the org's own automations with
+  "New follow-up" into the builder.
+- `FollowUpConfig.leadNudge` was a dead flag — nothing read it at runtime.
+  Toggling it now also flips the installed `lead_quiet_nudge` automation, which
+  is where that follow-up actually lives.
+- Card renamed "Revenue Recovery" → "Ready-made follow-ups" in the UI (the
+  internal automation name is unchanged; `installRevenueRecoveryPack` matches on
+  it for idempotency) and the copy now says what the toggle installs.
+- No engine changes: the reminder tick, consent gate and template-approval path
+  are untouched, so invariants 2 and 6 hold as before.
+- 1,273 tests green (+6); tsc, lint, build clean. **Not verified in a browser** —
+  the credentials in `scripts/fetch-as-user.js` no longer authenticate and the
+  only two orgs in the dev database belong to real accounts.
+
 ## Canonical hostname consolidation (2026-09-17) ✅
 
 - Added a permanent, host-scoped redirect from every `www.nudgeagent.app`

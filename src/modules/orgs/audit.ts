@@ -25,6 +25,7 @@ export type AuditAction =
   | "calendar.disconnected"
   | "followup.enabled"
   | "followup.disabled"
+  | "followup.timing"
   | "concierge.client_setup"
   | "demo.reset"
   | "knowledge.answered"
@@ -86,8 +87,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "billing.credits_purchased": "AI credits purchased",
   "calendar.connected": "Calendar connected",
   "calendar.disconnected": "Calendar disconnected",
-  "followup.enabled": "Revenue Recovery enabled",
-  "followup.disabled": "Revenue Recovery paused",
+  "followup.enabled": "Follow-up enabled",
+  "followup.disabled": "Follow-up paused",
+  "followup.timing": "Follow-up timing changed",
   "concierge.client_setup": "Concierge client setup",
   "demo.reset": "Demo data reset",
   "knowledge.answered": "Owner answered agent question",

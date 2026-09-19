@@ -666,6 +666,12 @@ model FollowUpConfig {
   leadNudge         Boolean  @default(true)
   // Outbound reminder / no-show calls via the voice front desk (opt-in per client).
   reminderCalls     Boolean  @default(false)
+  // When each time-absolute follow-up fires, in hours. The early reminder must
+  // stay further out than the late one or its window inverts and it never
+  // sends — enforced in normalizeTiming, not by the database.
+  reminder1Hours    Int      @default(24)
+  reminder2Hours    Int      @default(2)
+  reviewDelayHours  Int      @default(2)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { sendApprovedTemplate } from "@/modules/followup/send";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { recordContactEvent } from "@/modules/contacts/events";
+import { normalizeTiming } from "@/modules/followup/pack";
 
 const HOUR = 3_600_000;
 
@@ -38,9 +39,10 @@ export async function tickBookingReminders(
 
   for (const cfg of configs) {
     if (!flagship.has(cfg.orgId)) continue;
-    // 1) T-24h reminder — confirmed booking due in the 2h–24h window (the >2h
-    //    lower bound stops a same-day booking from getting BOTH reminders on one
-    //    tick, and keeps the "tomorrow" copy honest).
+    const timing = normalizeTiming(cfg);
+    // 1) Early reminder — confirmed booking due between the late reminder's
+    //    hour and this one (the lower bound stops a same-day booking from
+    //    getting BOTH reminders on one tick).
     if (cfg.bookingReminders) {
       const due24 = await prisma.bookingRequest.findMany({
         where: {
@@ -48,8 +50,8 @@ export async function tickBookingReminders(
           status: "confirmed",
           reminder24SentAt: null,
           scheduledFor: {
-            gt: new Date(now.getTime() + 2 * HOUR),
-            lte: new Date(now.getTime() + 24 * HOUR),
+            gt: new Date(now.getTime() + timing.reminder2Hours * HOUR),
+            lte: new Date(now.getTime() + timing.reminder1Hours * HOUR),
           },
         },
         include: { contact: true },
@@ -61,13 +63,16 @@ export async function tickBookingReminders(
         if (r.ok) result.reminders++;
       }
 
-      // 2) T-2h reminder — due within the next 2h.
+      // 2) Late reminder — due within its configured window.
       const due2 = await prisma.bookingRequest.findMany({
         where: {
           orgId: cfg.orgId,
           status: "confirmed",
           reminder2SentAt: null,
-          scheduledFor: { gt: now, lte: new Date(now.getTime() + 2 * HOUR) },
+          scheduledFor: {
+            gt: now,
+            lte: new Date(now.getTime() + timing.reminder2Hours * HOUR),
+          },
         },
         include: { contact: true },
         take: 200,
@@ -79,14 +84,16 @@ export async function tickBookingReminders(
       }
     }
 
-    // 3) Post-service review — appointment finished 2h+ ago, still confirmed.
+    // 3) Post-service review — appointment finished long enough ago.
     if (cfg.postServiceReview) {
       const done = await prisma.bookingRequest.findMany({
         where: {
           orgId: cfg.orgId,
           status: "confirmed",
           reviewAskedAt: null,
-          scheduledFor: { lt: new Date(now.getTime() - 2 * HOUR) },
+          scheduledFor: {
+            lt: new Date(now.getTime() - timing.reviewDelayHours * HOUR),
+          },
         },
         include: { contact: true },
         take: 200,

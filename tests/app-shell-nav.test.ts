@@ -20,7 +20,7 @@ describe("adaptive app navigation", () => {
       ["Workspace", ["Home", "Inbox", "Leads"]],
       [
         "Automation",
-        ["AI Front Desk", "Follow-ups", "Campaigns"],
+        ["AI Front Desk", "Follow-ups", "Campaigns", "Templates"],
       ],
       ["Insights", ["Analytics"]],
       ["Manage", ["Apps", "Settings"]],
@@ -38,6 +38,9 @@ describe("adaptive app navigation", () => {
       "leads",
       "front-desk",
       "campaigns",
+      // Agents compose from approved templates in the inbox, so they can read
+      // the library even though they can't build automations.
+      "templates",
     ]);
   });
 
@@ -53,7 +56,9 @@ describe("adaptive app navigation", () => {
     ["/inbox/thread-1", "inbox"],
     ["/contacts?new=1", "leads"],
     ["/agent/questionnaire", "front-desk"],
-    ["/templates", "campaigns"],
+    // Templates are shared by campaigns, follow-ups and inbox replies, so they
+    // light up their own item rather than whichever section linked in.
+    ["/templates", "templates"],
     ["/automations", "followups"],
     ["/integrations", "integrations"],
     ["/analytics?range=30d", "analytics"],

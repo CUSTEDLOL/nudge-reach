@@ -16,12 +16,21 @@ export const metadata: Metadata = { title: "Edit template" };
 
 export default async function TemplateDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
   const ctx = await requireOrgContext();
   const canManage = hasRole(ctx.role, "ADMIN");
+  // Templates are reached from several places; send the reader back where they
+  // came from rather than always to the templates list.
+  const back =
+    from === "followups"
+      ? { href: "/automations", label: "Follow-ups" }
+      : { href: "/templates", label: "Templates" };
 
   const template = await prisma.template.findFirst({
     where: { id, orgId: ctx.org.id, campaignId: null },
@@ -45,11 +54,11 @@ export default async function TemplateDetailPage({
         description={
           <span className="flex items-center gap-2">
             <Link
-              href="/templates"
+              href={back.href}
               className="inline-flex items-center gap-1 text-brand-700 hover:underline"
             >
               <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-              Templates
+              {back.label}
             </Link>
             <span aria-hidden>·</span>
             <span className="font-mono text-xs">{template.name}</span>
