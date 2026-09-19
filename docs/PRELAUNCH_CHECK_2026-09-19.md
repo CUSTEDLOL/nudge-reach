@@ -12,8 +12,8 @@ the production database, in live mode. It was deleted afterwards.
 |---|---|---|
 | 1 | ~~Set `SEND_MODE=live` in Vercel and redeploy.~~ **DONE 19 Sep, at the founder's request.** | Set with the Vercel CLI on the custedlol project, redeployed, and production re-probed on the new deployment: every route answers correctly, which also proves the three secrets live mode requires are present (the app refuses to boot without them). Vercel values are write-only, so the one remaining proof is visual: after you create the client, Home must say **Live workspace**. |
 | 2 | ~~Mark your own test workspace "active".~~ **DONE.** | "Goldmine Infotech and Systems" is active, paid to 19 Oct, 5,000 credits, still in test mode. Done through the real admin function, so it is in the audit log. The older empty "Goldmine Infotech" was left inactive: delete it. |
-| 3 | **Set `CRON_SECRET`** in Vercel AND as the GitHub repo secret of the same name. | The cron endpoint is open today. Setting only one side breaks the tick. |
-| 4 | **Add a 5–10 minute pinger** (cron-job.org or similar) on `/api/cron/process-queue` with the secret. | The GitHub "every 10 minutes" schedule really runs every 2–4 hours (run log, 18–19 Sep). Scheduled campaigns and follow-ups are late by that much. |
+| 3 | ~~Set `CRON_SECRET` in Vercel and GitHub.~~ **DONE 19 Sep.** | A random 64-character secret, set in Vercel production and as the GitHub Actions secret, redeployed. Verified on production: no secret → 401, wrong secret → 401, right secret → 200, and a manually triggered GitHub tick → HTTP 200. A copy is in the git-ignored `.env.local` for the external pinger in step 4. It is one-time; rotate only if it leaks, by setting a new value in both places at once. |
+| 4 | **Add a 5–10 minute pinger** (cron-job.org or similar) on `https://nudgeagent.app/api/cron/process-queue`, with the header `Authorization: Bearer <CRON_SECRET from .env.local>`. | The GitHub "every 10 minutes" schedule really runs every 2–4 hours (run log, 18–19 Sep). Scheduled campaigns and follow-ups are late by that much. |
 | 5 | Permanent Meta system-user token, then connect the number **after** step 1. | The connect form only checks the number with Meta when the platform is live. |
 | 6 | Optional today: Google keys (calendar), Razorpay keys (payment links), Zoho/Salesforce keys, Resend key (emails). | Each missing one now shows the client an honest "Not switched on yet". Nothing is faked. Without Resend you copy the owner's setup link by hand; the admin screen gives it to you. |
 
@@ -57,7 +57,7 @@ the production database, in live mode. It was deleted afterwards.
 | Leads | PASS | Lead added by hand lands as **No consent**, as invariant 2 requires. |
 | Creation pages | PASS | New campaign, new template, new automation, Actions, AI model, Data export: all render, zero errors. |
 | Every other page | PASS | Inbox, Leads, Campaigns, Templates, Analytics, Apps, Actions, all 9 Settings pages: rendered, zero console errors, zero 5xx. |
-| Cron | PASS with caveat | Endpoint healthy, heartbeat ok. Real cadence 2–4 hours (see 0.4). Open without a secret (see 0.3). |
+| Cron | PASS with caveat | Endpoint healthy, heartbeat ok, now requires the secret (see 0.3). Real cadence 2–4 hours (see 0.4). |
 | Credits ledger | PASS | Grant issued at creation; none leaked after cleanup. |
 | Tenant isolation, consent, 24h window, official API, cheap-model guard | PASS | Covered by the invariant tests in the suite. |
 | WhatsApp webhook, positive path | NOT RE-VERIFIED | This machine no longer has production's verify token or app secret, so a signed test could not be made. Proven end to end on 25 Jul and 29 Aug; those two secrets have not changed since. First real message after connecting the number is the check. |
