@@ -27,12 +27,21 @@ function client(apiKey: string): GoogleGenAI {
 interface GeminiUsage {
   promptTokenCount?: number;
   candidatesTokenCount?: number;
+  cachedContentTokenCount?: number;
 }
 
+/**
+ * Like OpenAI (and unlike Anthropic), `promptTokenCount` INCLUDES the cached
+ * portion. `DriverUsage.inputTokens` means uncached input on every provider,
+ * so subtract it out here.
+ */
 function usageOf(u: GeminiUsage | undefined): DriverUsage {
+  const prompt = u?.promptTokenCount ?? 0;
+  const cached = u?.cachedContentTokenCount ?? 0;
   return {
-    inputTokens: u?.promptTokenCount ?? 0,
+    inputTokens: Math.max(0, prompt - cached),
     outputTokens: u?.candidatesTokenCount ?? 0,
+    cacheReadTokens: cached,
   };
 }
 
@@ -94,9 +103,13 @@ export const geminiDriver: LlmDriver = {
     const toolCalls: ToolInvocation[] = [];
     let inputTokens = 0;
     let outputTokens = 0;
+    let cacheReadTokens = 0;
+    // Reuse usageOf so the cached-token split is defined in exactly one place.
     const tally = (u: GeminiUsage | undefined) => {
-      inputTokens += u?.promptTokenCount ?? 0;
-      outputTokens += u?.candidatesTokenCount ?? 0;
+      const one = usageOf(u);
+      inputTokens += one.inputTokens;
+      outputTokens += one.outputTokens;
+      cacheReadTokens += one.cacheReadTokens ?? 0;
     };
 
     for (let step = 0; step < args.maxSteps; step++) {
@@ -117,7 +130,7 @@ export const geminiDriver: LlmDriver = {
           text: (response.text ?? "").trim(),
           toolCalls,
           cappedOut: false,
-          usage: { inputTokens, outputTokens },
+          usage: { inputTokens, outputTokens, cacheReadTokens },
         };
       }
 
@@ -158,7 +171,7 @@ export const geminiDriver: LlmDriver = {
       text: (closing.text ?? "").trim(),
       toolCalls,
       cappedOut: true,
-      usage: { inputTokens, outputTokens },
+      usage: { inputTokens, outputTokens, cacheReadTokens },
     };
   },
 };

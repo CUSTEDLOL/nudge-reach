@@ -38,10 +38,16 @@ export interface DriverRuntime {
 }
 
 export interface DriverUsage {
+  /**
+   * UNCACHED input tokens, on every provider. Anthropic reports this shape
+   * natively; the OpenAI and Google drivers subtract their cached portion out
+   * of the provider's prompt-token count so the rate card prices one meaning.
+   */
   inputTokens: number;
   outputTokens: number;
-  /** Prompt-cache tokens, priced separately from inputTokens. Anthropic only; omitted = 0. */
+  /** Prompt-cache tokens, priced separately from inputTokens. Omitted = 0. */
   cacheReadTokens?: number;
+  /** Anthropic only — OpenAI and Google cache automatically, with no write charge. */
   cacheWriteTokens?: number;
 }
 

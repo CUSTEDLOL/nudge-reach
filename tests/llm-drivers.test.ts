@@ -154,7 +154,7 @@ describe("openaiDriver", () => {
       maxTokens: 100,
     });
     expect(r.text).toBe("hello");
-    expect(r.usage).toEqual({ inputTokens: 11, outputTokens: 7 });
+    expect(r.usage).toMatchObject({ inputTokens: 11, outputTokens: 7 });
     const call = openaiCreate.mock.calls[0][0];
     expect(call.messages[0]).toEqual({ role: "system", content: "sys" });
     expect(call.model).toBe("test-model");
@@ -200,7 +200,7 @@ describe("openaiDriver", () => {
     expect(r.text).toBe("Order 9 has shipped!");
     expect(r.toolCalls).toHaveLength(1);
     expect(r.cappedOut).toBe(false);
-    expect(r.usage).toEqual({ inputTokens: 30, outputTokens: 13 });
+    expect(r.usage).toMatchObject({ inputTokens: 30, outputTokens: 13 });
     // The tool result went back as a role:"tool" message.
     const second = openaiCreate.mock.calls[1][0];
     expect(second.messages.some((m: { role: string }) => m.role === "tool")).toBe(true);
@@ -223,7 +223,7 @@ describe("geminiDriver", () => {
       maxTokens: 100,
     });
     expect(r.text).toBe("namaste");
-    expect(r.usage).toEqual({ inputTokens: 9, outputTokens: 4 });
+    expect(r.usage).toMatchObject({ inputTokens: 9, outputTokens: 4 });
     const call = geminiGenerate.mock.calls[0][0];
     expect(call.contents[1].role).toBe("model");
     expect(call.config.systemInstruction).toBe("sys");
@@ -256,11 +256,102 @@ describe("geminiDriver", () => {
     });
     expect(r.text).toBe("Order 9 has shipped!");
     expect(r.cappedOut).toBe(false);
-    expect(r.usage).toEqual({ inputTokens: 25, outputTokens: 11 });
+    expect(r.usage).toMatchObject({ inputTokens: 25, outputTokens: 11 });
     // The function response went back as a user-role functionResponse part.
     const second = geminiGenerate.mock.calls[1][0];
     const last = second.contents[second.contents.length - 1];
     expect(last.role).toBe("user");
     expect(last.parts[0].functionResponse.name).toBe("check_order_status");
+  });
+});
+
+/**
+ * Cross-provider cache accounting. `DriverUsage.inputTokens` means UNCACHED
+ * input on every provider, so the rate card can price it uniformly.
+ *
+ * Anthropic already reports it that way (`input_tokens` excludes cached
+ * tokens). OpenAI and Google do the opposite — their prompt-token count
+ * INCLUDES the cached portion — so the driver has to subtract it. Without
+ * that subtraction a BYO-key org's dashboard bills cached tokens at the full
+ * input rate, when the provider charged a tenth of it.
+ */
+describe("BYO-provider cache tokens", () => {
+  it("openai: splits cached tokens out of prompt_tokens", async () => {
+    openaiCreate.mockResolvedValue({
+      choices: [{ message: { content: "hi" }, finish_reason: "stop" }],
+      usage: {
+        prompt_tokens: 5_000,
+        completion_tokens: 40,
+        prompt_tokens_details: { cached_tokens: 4_000 },
+      },
+    });
+
+    const { usage } = await openaiDriver.chat(rt, {
+      system: "s",
+      messages: [{ role: "user", text: "hello" }],
+      maxTokens: 100,
+    });
+
+    // 5,000 prompt tokens, 4,000 of them cached → 1,000 billed at full rate.
+    expect(usage.inputTokens).toBe(1_000);
+    expect(usage.cacheReadTokens).toBe(4_000);
+    expect(usage.outputTokens).toBe(40);
+    // OpenAI caching is automatic — there is no write to bill.
+    expect(usage.cacheWriteTokens ?? 0).toBe(0);
+  });
+
+  it("openai: no cache details means everything is uncached", async () => {
+    openaiCreate.mockResolvedValue({
+      choices: [{ message: { content: "hi" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 300, completion_tokens: 20 },
+    });
+
+    const { usage } = await openaiDriver.chat(rt, {
+      system: "s",
+      messages: [{ role: "user", text: "hello" }],
+      maxTokens: 100,
+    });
+
+    expect(usage.inputTokens).toBe(300);
+    expect(usage.cacheReadTokens ?? 0).toBe(0);
+  });
+
+  it("gemini: splits cachedContentTokenCount out of promptTokenCount", async () => {
+    geminiGenerate.mockResolvedValue({
+      text: "hi",
+      usageMetadata: {
+        promptTokenCount: 2_000,
+        candidatesTokenCount: 30,
+        cachedContentTokenCount: 1_500,
+      },
+    });
+
+    const { usage } = await geminiDriver.chat(rt, {
+      system: "s",
+      messages: [{ role: "user", text: "hello" }],
+      maxTokens: 100,
+    });
+
+    expect(usage.inputTokens).toBe(500);
+    expect(usage.cacheReadTokens).toBe(1_500);
+  });
+
+  it("never reports negative uncached input if a provider's counts disagree", async () => {
+    openaiCreate.mockResolvedValue({
+      choices: [{ message: { content: "hi" }, finish_reason: "stop" }],
+      usage: {
+        prompt_tokens: 100,
+        completion_tokens: 5,
+        prompt_tokens_details: { cached_tokens: 900 },
+      },
+    });
+
+    const { usage } = await openaiDriver.chat(rt, {
+      system: "s",
+      messages: [{ role: "user", text: "hello" }],
+      maxTokens: 100,
+    });
+
+    expect(usage.inputTokens).toBe(0);
   });
 });
