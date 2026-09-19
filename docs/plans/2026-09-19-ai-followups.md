@@ -135,6 +135,40 @@ describe("parseFollowUpSpec", () => {
     const r = parseFollowUpSpec({ ...quiet, messages: [{ ...quiet.messages[0], afterDays: 3 }] });
     expect(r.ok && r.spec.messages[0].afterDays).toBe(0);
   });
+
+  it("rejects an over-long body instead of truncating it after the {{1}} repair", () => {
+    const r = parseFollowUpSpec({
+      ...quiet,
+      messages: [{ ...quiet.messages[0], body: `Hi {{1}}, ${"x".repeat(600)}` }],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.startsWith("messages.0.body")).toBe(true);
+  });
+
+  it("drops unknown stopOn entries instead of rejecting the spec", () => {
+    const r = parseFollowUpSpec({ ...quiet, stopOn: ["reply", "opt_out", "nonsense"] });
+    expect(r.ok && r.spec.stopOn).toEqual(["reply"]);
+  });
+
+  it("cuts a 70-character header to 60", () => {
+    const r = parseFollowUpSpec({
+      ...quiet,
+      messages: [{ ...quiet.messages[0], header: "h".repeat(70) }],
+    });
+    expect(r.ok && r.spec.messages[0].header).toHaveLength(60);
+  });
+
+  it("never strands a surrogate when cutting a header on an emoji", () => {
+    const r = parseFollowUpSpec({
+      ...quiet,
+      messages: [{ ...quiet.messages[0], header: `${"A".repeat(59)}😀 tail` }],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.spec.messages[0].header.isWellFormed()).toBe(true);
+    expect(r.spec.messages[0].header.length).toBeLessThanOrEqual(60);
+  });
 });
 
 describe("plain-English descriptions", () => {
@@ -157,6 +191,7 @@ describe("plain-English descriptions", () => {
     expect(describeMessageTiming(0, 0)).toBe("Right away");
     expect(describeMessageTiming(0, 2)).toBe("2 days later");
     expect(describeMessageTiming(1, 1)).toBe("Then 1 day later");
+    expect(describeMessageTiming(1, 0)).toBe("Then right away");
   });
 });
 
@@ -266,7 +301,11 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
       if (msg.category === "MARKETING") {
         msg.footer = repairOptOutFooter(typeof msg.footer === "string" ? msg.footer : "");
       }
-      if (typeof msg.header === "string") msg.header = msg.header.slice(0, 60);
+      if (typeof msg.header === "string") {
+        // Never strand a high surrogate: an emoji split at 59/60 serialises
+        // as a lone \uD83D, which Postgres jsonb refuses to store.
+        msg.header = msg.header.slice(0, 60).replace(/[\uD800-\uDBFF]$/, "");
+      }
       return msg;
     });
   }
@@ -336,7 +375,7 @@ export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): bo
 **Step 4: Run to verify it passes**
 
 Run: `npx vitest run tests/followup-spec.test.ts`
-Expected: PASS, 9 tests.
+Expected: PASS, 13 tests.
 
 **Step 5: Commit**
 

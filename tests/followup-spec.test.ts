@@ -78,6 +78,17 @@ describe("parseFollowUpSpec", () => {
     });
     expect(r.ok && r.spec.messages[0].header).toHaveLength(60);
   });
+
+  it("never strands a surrogate when cutting a header on an emoji", () => {
+    const r = parseFollowUpSpec({
+      ...quiet,
+      messages: [{ ...quiet.messages[0], header: `${"A".repeat(59)}😀 tail` }],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.spec.messages[0].header.isWellFormed()).toBe(true);
+    expect(r.spec.messages[0].header.length).toBeLessThanOrEqual(60);
+  });
 });
 
 describe("plain-English descriptions", () => {

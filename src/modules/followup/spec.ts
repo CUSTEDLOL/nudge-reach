@@ -81,7 +81,11 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
       if (msg.category === "MARKETING") {
         msg.footer = repairOptOutFooter(typeof msg.footer === "string" ? msg.footer : "");
       }
-      if (typeof msg.header === "string") msg.header = msg.header.slice(0, 60);
+      if (typeof msg.header === "string") {
+        // Never strand a high surrogate: an emoji split at 59/60 serialises
+        // as a lone \uD83D, which Postgres jsonb refuses to store.
+        msg.header = msg.header.slice(0, 60).replace(/[\uD800-\uDBFF]$/, "");
+      }
       return msg;
     });
   }
