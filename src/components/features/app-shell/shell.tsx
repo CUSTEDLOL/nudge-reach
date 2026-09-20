@@ -21,6 +21,7 @@ import type {
 } from "@/components/features/app-shell/nav";
 import { saveSidebarCollapsedAction } from "@/app/(app)/shell-actions";
 import { TrialStatusStrip } from "@/components/features/trial/trial-status-strip";
+import { TrialTour } from "@/components/features/trial/trial-tour";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 /**
@@ -142,6 +143,7 @@ export function AppShell({
         </main>
       </div>
       <BottomNav role={role} mode={mode} user={user} simulation={simulation} />
+      {mode === "trial" && trial ? <TrialTour trial={trial} /> : null}
     </div>
   );
 }

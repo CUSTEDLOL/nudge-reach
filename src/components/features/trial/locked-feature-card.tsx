@@ -125,7 +125,11 @@ export function LockedFeatureCard({
 
   return (
     <>
-      <Card className="relative flex min-h-64 flex-col overflow-hidden p-5" aria-describedby={descriptionId}>
+      <Card
+        className="relative flex min-h-64 flex-col overflow-hidden p-5"
+        aria-describedby={descriptionId}
+        data-tour={feature.key === "whatsapp" ? "locked-whatsapp" : undefined}
+      >
         <div className="flex items-start justify-between gap-4">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700">
             <Icon className="h-5 w-5" aria-hidden />

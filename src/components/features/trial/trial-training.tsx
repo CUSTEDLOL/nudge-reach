@@ -33,7 +33,7 @@ export function TrialTraining({
           </Link>
         }
       />
-      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
+      <div data-tour="training-source" className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
         <CheckCircle2 className="h-4 w-4 text-brand-700" aria-hidden />
         <span className="font-medium">Setup source</span>
         <Badge tone="success">{source ? SOURCE_LABELS[source] : "Manual facts"}</Badge>

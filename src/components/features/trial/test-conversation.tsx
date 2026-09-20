@@ -29,7 +29,7 @@ export function TestConversation({
   const stopped = state.status === "expired" || state.status === "exhausted";
 
   return (
-    <Card className="overflow-hidden" data-tour="trial-inbox">
+    <Card className="overflow-hidden" data-tour="test-thread">
       <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-4 py-4 sm:px-6">
         <div>
           <h2 className="text-sm font-semibold text-neutral-950">

@@ -8,6 +8,7 @@ import { buildTrialChecklist } from "@/modules/trial/checklist";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 import { TrialChecklist } from "./trial-checklist";
 import { trialStatusText } from "./trial-status-strip";
+import { RestartTrialTourButton } from "./trial-tour";
 
 export function TrialHome({
   businessName,
@@ -24,16 +25,19 @@ export function TrialHome({
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Badge tone="success">Guided free trial</Badge>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl">
+          <h1 data-tour="trial-home" className="mt-3 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl">
             Welcome to {businessName}{"'s AI Front Desk"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
             Follow the short checklist, test a real patient question, then preview what Nudge can run when you go live.
           </p>
         </div>
-        <Link href="/inbox/try" className={buttonVariants({ size: "lg" })}>
-          Test your AI <ArrowRight className="h-4 w-4" aria-hidden />
-        </Link>
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          <Link href="/inbox/try" className={buttonVariants({ size: "lg" })}>
+            Test your AI <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+          <RestartTrialTourButton />
+        </div>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
@@ -77,7 +81,7 @@ export function TrialHome({
         </div>
       </div>
 
-      <section id="trial-conversion" className="scroll-mt-28 rounded-2xl border border-neutral-200 bg-neutral-950 p-6 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-8">
+      <section id="trial-conversion" data-tour="trial-conversion" className="scroll-mt-28 rounded-2xl border border-neutral-200 bg-neutral-950 p-6 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-8">
         <div>
           <p className="text-sm font-semibold text-brand-300">Ready for the real front desk?</p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Connect WhatsApp and your clinic systems with us.</h2>

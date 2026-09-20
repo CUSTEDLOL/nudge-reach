@@ -143,7 +143,7 @@ export function TryYourAi({
           replyFocusRef={replyFocusRef}
         />
       )}
-      <Card className="p-4 sm:p-6" data-tour="trial-composer">
+      <Card className="p-4 sm:p-6" data-tour="test-composer">
         {!simulation && (
           <p className="mb-4 flex items-start gap-2 rounded-xl bg-neutral-50 p-3 text-xs leading-relaxed text-neutral-600">
             <ShieldCheck
