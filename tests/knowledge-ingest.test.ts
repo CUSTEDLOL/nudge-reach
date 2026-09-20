@@ -66,6 +66,13 @@ describe("discoverLinks", () => {
     // The keyword-less pages lose to the informative ones.
     expect(links).not.toContain("https://glow.example.com/blog/post-1");
   });
+
+  it("accepts a smaller subpage cap for acquisition trials", () => {
+    const html = '<a href="/menu">Menu</a><a href="/pricing">Pricing</a>';
+    expect(discoverLinks("https://glow.example.com/", html, 1)).toEqual([
+      "https://glow.example.com/menu",
+    ]);
+  });
 });
 
 describe("heuristicFacts (keyless path)", () => {
@@ -128,6 +135,25 @@ describe("ingestWebsite", () => {
     );
     const result = await ingestWebsite("org1", "https://glow.example.com");
     expect(result.drafts).toBe(2); // the haircut line is already known
+    vi.unstubAllGlobals();
+  });
+
+  it("honours a smaller draft budget without changing the paid default", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(PAGE, { headers: { "content-type": "text/html" } })
+      )
+    );
+
+    const result = await ingestWebsite("org1", "https://glow.example.com", {
+      maxSubpages: 0,
+      maxChunksPerPage: 1,
+      maxDrafts: 1,
+    });
+
+    expect(result.drafts).toBe(1);
+    expect(prisma.knowledgeEntry.create).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
   });
 

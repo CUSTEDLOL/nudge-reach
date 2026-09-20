@@ -18,12 +18,22 @@ import { factSchema, type DistilledFact } from "./distill";
  * SSRF-guarded via the same helper as outbound webhooks.
  */
 
-const MAX_SUBPAGES = 4;
 const MAX_PAGE_BYTES = 600_000;
-const MAX_CHUNKS_PER_PAGE = 4;
 const CHUNK_CHARS = 3_000;
 const MAX_DRAFTS_PER_RUN = 60;
 const FETCH_TIMEOUT_MS = 10_000;
+
+export interface IngestBudget {
+  maxSubpages: number;
+  maxChunksPerPage: number;
+  maxDrafts: number;
+}
+
+const DEFAULT_INGEST_BUDGET: IngestBudget = {
+  maxSubpages: 4,
+  maxChunksPerPage: 4,
+  maxDrafts: MAX_DRAFTS_PER_RUN,
+};
 
 /* ------------------------------------------------------------------ */
 /* HTML → text                                                         */
@@ -50,7 +60,11 @@ export function stripHtml(html: string): string {
 }
 
 /** Same-origin links from the page, ranked by how informative the path looks. */
-export function discoverLinks(baseUrl: string, html: string): string[] {
+export function discoverLinks(
+  baseUrl: string,
+  html: string,
+  maxSubpages = DEFAULT_INGEST_BUDGET.maxSubpages
+): string[] {
   const base = new URL(baseUrl);
   const KEYWORDS = [
     "menu", "price", "pricing", "rate", "package", "fee", "service",
@@ -77,7 +91,7 @@ export function discoverLinks(baseUrl: string, html: string): string[] {
   }
   return scored
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_SUBPAGES)
+    .slice(0, maxSubpages)
     .map((s) => s.href);
 }
 
@@ -138,12 +152,16 @@ function parseFactsArray(raw: string): DistilledFact[] {
   }
 }
 
-async function modelFacts(pageText: string, orgId: string): Promise<DistilledFact[]> {
+async function modelFacts(
+  pageText: string,
+  orgId: string,
+  maxChunks = DEFAULT_INGEST_BUDGET.maxChunksPerPage
+): Promise<DistilledFact[]> {
   const facts: DistilledFact[] = [];
   const chunks: string[] = [];
   for (
     let i = 0;
-    i < pageText.length && chunks.length < MAX_CHUNKS_PER_PAGE;
+    i < pageText.length && chunks.length < maxChunks;
     i += CHUNK_CHARS
   ) {
     chunks.push(pageText.slice(i, i + CHUNK_CHARS));
@@ -233,7 +251,8 @@ export interface IngestResult {
  */
 export async function ingestWebsite(
   orgId: string,
-  rawUrl: string
+  rawUrl: string,
+  budget: IngestBudget = DEFAULT_INGEST_BUDGET
 ): Promise<IngestResult> {
   const startUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
   const mainHtml = await fetchPage(startUrl);
@@ -243,7 +262,10 @@ export async function ingestWebsite(
     );
   }
 
-  const urls = [startUrl, ...discoverLinks(startUrl, mainHtml)];
+  const urls = [
+    startUrl,
+    ...discoverLinks(startUrl, mainHtml, budget.maxSubpages),
+  ];
   const htmls = new Map<string, string>([[startUrl, mainHtml]]);
   await Promise.all(
     urls.slice(1).map(async (u) => {
@@ -257,10 +279,12 @@ export async function ingestWebsite(
     const text = stripHtml(html);
     if (text.length < 40) continue;
     collected.push(
-      ...(env.ANTHROPIC_API_KEY ? await modelFacts(text, orgId) : heuristicFacts(text))
+      ...(env.ANTHROPIC_API_KEY
+        ? await modelFacts(text, orgId, budget.maxChunksPerPage)
+        : heuristicFacts(text))
     );
   }
-  const drafts = await storeDraftFacts(orgId, collected);
+  const drafts = await storeDraftFacts(orgId, collected, budget.maxDrafts);
 
   return { pages: htmls.size, drafts };
 }
@@ -372,7 +396,8 @@ export interface GbpImportResult {
 
 export async function ingestGbp(
   orgId: string,
-  query: string
+  query: string,
+  budget: IngestBudget = DEFAULT_INGEST_BUDGET
 ): Promise<GbpImportResult> {
   const place = env.GOOGLE_MAPS_API_KEY
     ? await searchGbp(query)
@@ -383,13 +408,13 @@ export async function ingestGbp(
     );
   }
 
-  let drafts = await storeDraftFacts(orgId, gbpFacts(place));
+  let drafts = await storeDraftFacts(orgId, gbpFacts(place), budget.maxDrafts);
 
   // Bonus: the listing knows the website — crawl it in the same run.
   let websiteCrawled = false;
   if (place.websiteUri) {
     try {
-      const site = await ingestWebsite(orgId, place.websiteUri);
+      const site = await ingestWebsite(orgId, place.websiteUri, budget);
       drafts += site.drafts;
       websiteCrawled = true;
     } catch {
@@ -426,7 +451,8 @@ const FILE_PROMPT =
 
 export async function ingestFile(
   orgId: string,
-  input: { base64: string; mediaType: FileMediaType }
+  input: { base64: string; mediaType: FileMediaType },
+  maxDrafts = MAX_DRAFTS_PER_RUN
 ): Promise<{ drafts: number }> {
   if (!env.ANTHROPIC_API_KEY) {
     throw new Error(
@@ -446,6 +472,6 @@ export async function ingestFile(
     attribution: { orgId, purpose: "ingest" },
   });
 
-  const drafts = await storeDraftFacts(orgId, parseFactsArray(raw));
+  const drafts = await storeDraftFacts(orgId, parseFactsArray(raw), maxDrafts);
   return { drafts };
 }
