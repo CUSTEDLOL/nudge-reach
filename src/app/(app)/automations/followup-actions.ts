@@ -171,6 +171,10 @@ export async function draftFollowUpAction(request: string): Promise<DraftResult>
 
 export interface CreateResult extends ActionResult {
   id?: string;
+  /** What was actually stored — parse repairs the draft ({{1}}, the STOP
+   *  footer, a quiet chase's first message), so the card renders this, not
+   *  the version the owner submitted. */
+  spec?: FollowUpSpec;
 }
 
 /** Save a reviewed spec as a new follow-up. Lands OFF. */
@@ -194,7 +198,12 @@ export async function createFollowUpAction(raw: unknown): Promise<CreateResult> 
     });
     recordAudit(ctx, "followup.created", parsed.spec.name);
     revalidatePath("/automations");
-    return { ok: true, message: "Created — it's off until you switch it on.", id };
+    return {
+      ok: true,
+      message: "Created — it's off until you switch it on.",
+      id,
+      spec: parsed.spec,
+    };
   } catch (err) {
     return {
       ok: false,
@@ -204,11 +213,16 @@ export async function createFollowUpAction(raw: unknown): Promise<CreateResult> 
   }
 }
 
+export interface UpdateResult extends ActionResult {
+  /** The stored spec after parse's repairs — the card re-renders from this. */
+  spec?: FollowUpSpec;
+}
+
 /** Re-save an edited spec over an existing follow-up (org-scoped). */
 export async function updateFollowUpAction(
   id: string,
   raw: unknown
-): Promise<ActionResult> {
+): Promise<UpdateResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
@@ -231,7 +245,12 @@ export async function updateFollowUpAction(
     });
     recordAudit(ctx, "followup.updated", parsed.spec.name);
     revalidatePath("/automations");
-    return { ok: true, message: "Saved. Changed wording goes back to Meta for approval." };
+    revalidatePath(`/automations/${id}`);
+    return {
+      ok: true,
+      message: "Saved. Changed wording goes back to Meta for approval.",
+      spec: parsed.spec,
+    };
   } catch (err) {
     return {
       ok: false,
@@ -251,7 +270,13 @@ export async function deleteFollowUpAction(id: string): Promise<ActionResult> {
     });
     if (!existing) return { ok: false, message: "Follow-up not found." };
 
-    await prisma.automation.delete({ where: { id } });
+    // deleteMany keeps the org scope on the write, and a row that vanished
+    // between the read and the write is a message, not a raw Prisma P2025.
+    const { count } = await prisma.automation.deleteMany({
+      where: { id, orgId: ctx.org.id },
+    });
+    if (!count) return { ok: false, message: "Follow-up not found." };
+
     recordAudit(ctx, "followup.deleted", existing.name);
     revalidatePath("/automations");
     return { ok: true, message: "Deleted. Its templates stay in your library." };
@@ -285,7 +310,8 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
     let specs: FollowUpSpec[];
     try {
       specs = await draftStarterSet({ orgId: ctx.org.id });
-    } catch {
+    } catch (err) {
+      console.warn("[followup-starter-set] drafting failed", { orgId: ctx.org.id, err });
       revalidatePath("/automations");
       return {
         ok: true,
@@ -307,23 +333,40 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
     const limit = await checkAutomationLimit(ctx.org.id);
     const room = limit.limit === null ? Infinity : Math.max(0, limit.limit - limit.used);
 
+    // A save that fails midway must not lose the ones already written: the
+    // boundary is inside the loop, and what was created is always reported.
     let created = 0;
     let stopped = false;
+    let failed = false;
     for (const spec of specs) {
       if (existing.has(spec.name.toLowerCase())) continue;
       if (created >= room) {
         stopped = true;
         break;
       }
-      await saveFollowUpFromSpec({ orgId: ctx.org.id, spec, source: "ai" });
-      created++;
+      // Defence in depth: the keyless helpers can hand back an unparsed spec.
+      const parsed = parseFollowUpSpec(spec);
+      if (!parsed.ok) continue;
+      try {
+        await saveFollowUpFromSpec({ orgId: ctx.org.id, spec: parsed.spec, source: "ai" });
+        created++;
+        existing.add(spec.name.toLowerCase()); // the model repeats itself
+      } catch (err) {
+        console.warn("[followup-starter-set] save failed", {
+          orgId: ctx.org.id,
+          name: spec.name,
+          err,
+        });
+        failed = true;
+        break;
+      }
     }
 
     recordAudit(ctx, "followup.drafted", `${created} drafted`);
     revalidatePath("/automations");
     const message = created
       ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} for you — read them, then switch on the ones you want.`
-      : stopped
+      : stopped || failed
         ? "Installed the ready-made follow-ups."
         : "Your starter set is already here.";
     return {
@@ -331,7 +374,9 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
       created,
       message: stopped
         ? `${message} We stopped there — that's as many automations as your plan allows.`
-        : message,
+        : failed
+          ? `${message} Something went wrong after that, so we couldn't finish the rest.`
+          : message,
     };
   } catch (err) {
     return {

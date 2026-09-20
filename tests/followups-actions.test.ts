@@ -19,7 +19,7 @@ const {
   draftStarterSet,
   automationFindFirst,
   automationFindMany,
-  automationDelete,
+  automationDeleteMany,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   revalidatePath: vi.fn(),
@@ -32,7 +32,7 @@ const {
   draftStarterSet: vi.fn(),
   automationFindFirst: vi.fn(),
   automationFindMany: vi.fn(),
-  automationDelete: vi.fn(),
+  automationDeleteMany: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
@@ -41,7 +41,7 @@ vi.mock("@/lib/db", () => ({
     automation: {
       findFirst: automationFindFirst,
       findMany: automationFindMany,
-      delete: automationDelete,
+      deleteMany: automationDeleteMany,
     },
   },
 }));
@@ -100,6 +100,7 @@ beforeEach(() => {
   checkAutomationLimit.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
   saveFollowUpFromSpec.mockResolvedValue({ id: "auto1" });
   automationFindMany.mockResolvedValue([]);
+  automationDeleteMany.mockResolvedValue({ count: 1 });
 });
 
 describe("draftFollowUpAction", () => {
@@ -153,6 +154,17 @@ describe("createFollowUpAction", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/automations");
   });
 
+  it("echoes the spec it actually saved, repairs and all", async () => {
+    // What is stored is not what the owner typed: parse adds the STOP footer
+    // and a quiet chase's first message always fires immediately. The card has
+    // to render the stored version, so the action hands it back.
+    const r = await createFollowUpAction(spec({ messages: [{ ...spec().messages[0], afterDays: 2 }] }));
+    expect(r.ok).toBe(true);
+    expect(r.spec).toEqual(saveFollowUpFromSpec.mock.calls[0][0].spec);
+    expect(r.spec?.messages[0].footer).toContain("STOP");
+    expect(r.spec?.messages[0].afterDays).toBe(0);
+  });
+
   it("shows an owner-facing sentence, not a zod string, for an invalid spec", async () => {
     const long = spec({
       messages: [
@@ -161,7 +173,8 @@ describe("createFollowUpAction", () => {
     });
     const r = await createFollowUpAction(long);
     expect(r.ok).toBe(false);
-    expect(r.message).toBe("That message is too long — keep it under 600 characters.");
+    expect(r.message).toBe("Each message needs a body of 1–600 characters.");
+    expect(r.spec).toBeUndefined();
     expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
   });
 
@@ -195,6 +208,16 @@ describe("updateFollowUpAction", () => {
       expect.objectContaining({ orgId: "org1", automationId: "a1", source: "pack" })
     );
     expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.updated", "Quiet-lead chase");
+    expect(revalidatePath).toHaveBeenCalledWith("/automations");
+    expect(revalidatePath).toHaveBeenCalledWith("/automations/a1");
+  });
+
+  it("echoes the spec it actually saved", async () => {
+    automationFindFirst.mockResolvedValue({ id: "a1", source: "ai" });
+    const r = await updateFollowUpAction("a1", spec({ messages: [{ ...spec().messages[0], afterDays: 2 }] }));
+    expect(r.spec).toEqual(saveFollowUpFromSpec.mock.calls[0][0].spec);
+    expect(r.spec?.messages[0].footer).toContain("STOP");
+    expect(r.spec?.messages[0].afterDays).toBe(0);
   });
 
   it("a hand-built follow-up edited here becomes an AI-spec one", async () => {
@@ -216,6 +239,13 @@ describe("updateFollowUpAction", () => {
     expect(r.message).toBe("We couldn't tell what should start that follow-up — try rewording it.");
     expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
   });
+
+  it("refuses an agent", async () => {
+    requireOrgContext.mockResolvedValue(ctx("AGENT"));
+    expect((await updateFollowUpAction("a1", spec())).ok).toBe(false);
+    expect(automationFindFirst).not.toHaveBeenCalled();
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
 });
 
 describe("deleteFollowUpAction", () => {
@@ -225,14 +255,45 @@ describe("deleteFollowUpAction", () => {
     expect(r.ok).toBe(true);
     expect(r.message).toMatch(/templates/i);
     expect(automationFindFirst.mock.calls[0][0].where).toEqual({ id: "a1", orgId: "org1" });
-    expect(automationDelete).toHaveBeenCalledWith({ where: { id: "a1" } });
+    // deleteMany, not delete: the org scope stays on the write, and a row that
+    // vanished between the read and the write is a message, not a P2025.
+    expect(automationDeleteMany).toHaveBeenCalledWith({ where: { id: "a1", orgId: "org1" } });
     expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.deleted", "Quiet-lead chase");
   });
 
   it("refuses another org's id", async () => {
     automationFindFirst.mockResolvedValue(null);
     expect(await deleteFollowUpAction("other")).toEqual({ ok: false, message: "Follow-up not found." });
-    expect(automationDelete).not.toHaveBeenCalled();
+    expect(automationDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("says not found — never a Prisma error — when the row goes first", async () => {
+    automationFindFirst.mockResolvedValue({ name: "Quiet-lead chase" });
+    automationDeleteMany.mockResolvedValue({ count: 0 });
+    expect(await deleteFollowUpAction("a1")).toEqual({ ok: false, message: "Follow-up not found." });
+    expect(recordAudit).not.toHaveBeenCalled();
+  });
+
+  it("refuses an agent", async () => {
+    requireOrgContext.mockResolvedValue(ctx("AGENT"));
+    expect((await deleteFollowUpAction("a1")).ok).toBe(false);
+    expect(automationDeleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("the flagship boundary", () => {
+  // Deliberate: drafting and creating cost AI and are flagship-only, but an org
+  // that drops off the plan must still be able to edit or remove what exists.
+  beforeEach(() => {
+    checkAiFrontDesk.mockResolvedValue({ allowed: false, message: "Upgrade first.", used: 0, limit: 0 });
+    automationFindFirst.mockResolvedValue({ id: "a1", source: "ai", name: "Quiet-lead chase" });
+  });
+
+  it("still lets an org without the flagship edit and delete, but not create", async () => {
+    expect((await updateFollowUpAction("a1", spec())).ok).toBe(true);
+    expect((await deleteFollowUpAction("a1")).ok).toBe(true);
+    const created = await createFollowUpAction(spec());
+    expect(created).toEqual({ ok: false, message: "Upgrade first." });
   });
 });
 
@@ -258,15 +319,61 @@ describe("writeStarterSetAction", () => {
     expect(saveFollowUpFromSpec.mock.calls[0][0].spec.name).toBe("Welcome");
   });
 
-  it("keeps the installed pack when drafting fails", async () => {
-    draftStarterSet.mockRejectedValue(new Error("credits exhausted"));
+  it("keeps the installed pack when drafting fails, and logs the reason", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      draftStarterSet.mockRejectedValue(new Error("credits exhausted"));
+      const r = await writeStarterSetAction();
+      expect(r.ok).toBe(true);
+      expect(r.message).toBe(
+        "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above."
+      );
+      expect(installRevenueRecoveryPack).toHaveBeenCalledWith("org1");
+      expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        "[followup-starter-set] drafting failed",
+        expect.objectContaining({ orgId: "org1" })
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("keeps what it saved when a save fails partway, and says so", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" }), spec({ name: "Rebook" })]);
+      saveFollowUpFromSpec
+        .mockResolvedValueOnce({ id: "a1" })
+        .mockRejectedValueOnce(new Error("db went away"));
+      const r = await writeStarterSetAction();
+      expect(r).toMatchObject({ ok: true, created: 1 });
+      expect(r.message).toContain("1 follow-up");
+      expect(r.message).toContain("couldn't finish the rest");
+      expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.drafted", "1 drafted");
+      expect(revalidatePath).toHaveBeenCalledWith("/automations");
+      expect(warn).toHaveBeenCalledWith(
+        "[followup-starter-set] save failed",
+        expect.objectContaining({ orgId: "org1", name: "Welcome" })
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("saves one follow-up when the model returns the same name twice", async () => {
+    draftStarterSet.mockResolvedValue([spec(), spec({ name: "QUIET-LEAD CHASE" })]);
     const r = await writeStarterSetAction();
-    expect(r.ok).toBe(true);
-    expect(r.message).toBe(
-      "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above."
-    );
-    expect(installRevenueRecoveryPack).toHaveBeenCalledWith("org1");
-    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+    expect(r.created).toBe(1);
+    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips a spec that doesn't validate instead of saving it", async () => {
+    draftStarterSet.mockResolvedValue([spec({ situation: { kind: "nonsense" } }), spec({ name: "Welcome" })]);
+    const r = await writeStarterSetAction();
+    expect(r.created).toBe(1);
+    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
+    expect(saveFollowUpFromSpec.mock.calls[0][0].spec.name).toBe("Welcome");
   });
 
   it("stops at the plan's automation limit and reports what it created", async () => {
@@ -307,7 +414,11 @@ describe("the builder writes over a spec", () => {
   const source = readFileSync("src/app/(app)/automations/actions.ts", "utf8");
 
   it("clears the spec and marks the automation hand-built on a builder save", () => {
-    const update = source.slice(source.indexOf("prisma.automation.update"));
+    const from = source.indexOf("prisma.automation.update");
+    const to = source.indexOf("prisma.automation.create", from);
+    expect(from).toBeGreaterThan(-1);
+    expect(to).toBeGreaterThan(from);
+    const update = source.slice(from, to);
     expect(update).toContain("spec: Prisma.DbNull");
     expect(update).toContain('source: "builder"');
     expect(source).toContain('import { Prisma } from "@prisma/client"');

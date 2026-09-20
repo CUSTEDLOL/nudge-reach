@@ -114,16 +114,22 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   return { ok: true, spec };
 }
 
-/** Owner-facing sentence for a spec that failed validation. The raw zod
- *  message is precise but unreadable; the field is what the owner can fix. */
+/**
+ * Owner-facing sentence for a spec that failed validation. The raw zod message
+ * is precise but unreadable; the field is what the owner can fix. Matched on
+ * the leaf segment of the path, not a substring of it, and worded as what the
+ * field needs — a cleared field and an over-long one fail the same rule.
+ */
 export function specErrorMessage(error: string): string {
-  const field = error.split(":")[0] ?? "";
-  if (field.includes("body")) return "That message is too long — keep it under 600 characters.";
-  if (field.includes("header")) return "That headline is too long — keep it under 60 characters.";
-  if (field.includes("afterDays")) return "The timing has to be a whole number of days, at most 14.";
-  if (field.includes("situation")) return "We couldn't tell what should start that follow-up — try rewording it.";
-  if (field.includes("messages")) return "A follow-up needs between one and three messages.";
-  if (field.includes("name")) return "Give the follow-up a short name (under 80 characters).";
+  const path = error.split(":")[0] ?? "";
+  const leaf = path.split(".").pop() ?? "";
+  if (leaf === "body") return "Each message needs a body of 1–600 characters.";
+  if (leaf === "header") return "Each message needs a headline of 1–60 characters.";
+  if (leaf === "footer") return "Keep the footer under 60 characters.";
+  if (leaf === "afterDays") return `The timing has to be a whole number of days, up to ${MAX_GAP_DAYS}.`;
+  if (path === "messages") return `A follow-up needs between one and ${MAX_MESSAGES} messages.`;
+  if (path.startsWith("situation")) return "We couldn't tell what should start that follow-up — try rewording it.";
+  if (leaf === "name") return "Give the follow-up a short name (1–80 characters).";
   return "That follow-up isn't valid — try rewording it.";
 }
 

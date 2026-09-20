@@ -107,27 +107,44 @@ describe("parseFollowUpSpec", () => {
 describe("specErrorMessage", () => {
   it("turns each field's zod complaint into a sentence the owner can act on", () => {
     expect(specErrorMessage("messages.0.body: Too big: expected string to have <=600 characters")).toBe(
-      "That message is too long — keep it under 600 characters."
+      "Each message needs a body of 1–600 characters."
     );
     expect(specErrorMessage("messages.1.header: Too small: expected string to have >=1 characters")).toBe(
-      "That headline is too long — keep it under 60 characters."
+      "Each message needs a headline of 1–60 characters."
+    );
+    expect(specErrorMessage("messages.0.footer: Too big: expected string to have <=60 characters")).toBe(
+      "Keep the footer under 60 characters."
     );
     expect(specErrorMessage("situation.afterDays: Expected int, received number")).toBe(
-      "The timing has to be a whole number of days, at most 14."
+      "The timing has to be a whole number of days, up to 14."
     );
     expect(specErrorMessage("situation: Invalid discriminator value")).toBe(
       "We couldn't tell what should start that follow-up — try rewording it."
     );
     expect(specErrorMessage("messages: Too small: expected array to have >=1 items")).toBe(
-      "A follow-up needs between one and three messages."
+      "A follow-up needs between one and 3 messages."
     );
     expect(specErrorMessage("name: Too big: expected string to have <=80 characters")).toBe(
-      "Give the follow-up a short name (under 80 characters)."
+      "Give the follow-up a short name (1–80 characters)."
+    );
+  });
+
+  it("reads the leaf of the path, not a substring of it", () => {
+    // "keywords" contains "word", "headerless" would contain "header": only the
+    // last segment decides, and a nested situation field keeps its own sentence.
+    expect(specErrorMessage("situation.keywords.0: Too small")).toBe(
+      "We couldn't tell what should start that follow-up — try rewording it."
+    );
+    expect(specErrorMessage("messages.0.buttons.1.text: Too big")).toBe(
+      "That follow-up isn't valid — try rewording it."
     );
   });
 
   it("falls back to a plain sentence for anything else", () => {
     expect(specErrorMessage("spec: That follow-up isn't valid.")).toBe(
+      "That follow-up isn't valid — try rewording it."
+    );
+    expect(specErrorMessage("stopOn.0: Invalid option")).toBe(
       "That follow-up isn't valid — try rewording it."
     );
     expect(specErrorMessage("")).toBe("That follow-up isn't valid — try rewording it.");
@@ -141,8 +158,15 @@ describe("specErrorMessage", () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     const owner = specErrorMessage(r.error);
-    expect(owner).toBe("That message is too long — keep it under 600 characters.");
+    expect(owner).toBe("Each message needs a body of 1–600 characters.");
     expect(owner).not.toContain("expected");
+  });
+
+  it("says what the field needs, not which way it is wrong — a cleared headline reads right too", () => {
+    const r = parseFollowUpSpec({ ...quiet, messages: [{ ...quiet.messages[0], header: "   " }] });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(specErrorMessage(r.error)).toBe("Each message needs a headline of 1–60 characters.");
   });
 });
 
