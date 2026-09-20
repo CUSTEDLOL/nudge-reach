@@ -1804,8 +1804,9 @@ git commit -m "fix(automations): claim runs atomically when cancelling; cancel o
 // tests/followup-quiet.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { findAutomations, findRuns, findConversations, runAutomation } = vi.hoisted(() => ({
+const { findAutomations, findTemplates, findRuns, findConversations, runAutomation } = vi.hoisted(() => ({
   findAutomations: vi.fn(),
+  findTemplates: vi.fn(),
   findRuns: vi.fn().mockResolvedValue([]),
   findConversations: vi.fn().mockResolvedValue([]),
   runAutomation: vi.fn().mockResolvedValue({ status: "WAITING" }),
@@ -1814,6 +1815,7 @@ const { findAutomations, findRuns, findConversations, runAutomation } = vi.hoist
 vi.mock("@/lib/db", () => ({
   prisma: {
     automation: { findMany: findAutomations },
+    template: { findMany: findTemplates },
     automationRun: { findMany: findRuns },
     conversation: { findMany: findConversations },
   },
@@ -1839,6 +1841,7 @@ const automation = {
 beforeEach(() => {
   runAutomation.mockClear();
   findConversations.mockClear();
+  findTemplates.mockReset().mockResolvedValue([{ id: "t1", metaStatus: "APPROVED" }]);
   findRuns.mockResolvedValue([{ contactId: "c-done" }]);
   findAutomations.mockResolvedValue([automation]);
 });
@@ -1856,6 +1859,21 @@ describe("fireQuietConversations", () => {
     expect(where.lastInboundAt.not).toBeNull();
     expect(where.contact).toMatchObject({ optedOutAt: null, leadStage: "QUALIFIED" });
     expect(where.contactId).toEqual({ notIn: ["c-done"] });
+    expect(findTemplates.mock.calls[0][0].where).toMatchObject({ orgId: "o1", id: { in: ["t1"] } });
+  });
+
+  it("starts nothing while a send template is still pending at Meta", async () => {
+    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "PENDING" }]);
+    await expect(fireQuietConversations(now)).resolves.toBe(0);
+    expect(findConversations).not.toHaveBeenCalled();
+    expect(runAutomation).not.toHaveBeenCalled();
+  });
+
+  it("starts nothing when a send template is missing from the org's library", async () => {
+    findTemplates.mockResolvedValue([]);
+    await expect(fireQuietConversations(now)).resolves.toBe(0);
+    expect(findConversations).not.toHaveBeenCalled();
+    expect(runAutomation).not.toHaveBeenCalled();
   });
 
   it("omits the stage filter when the config has none", async () => {
@@ -1900,7 +1918,7 @@ describe("fireQuietConversations", () => {
 Run: `npx vitest run tests/followup-quiet.test.ts`
 Expected: FAIL — `fireQuietConversations` is not exported.
 
-**Step 3: Implement** — append to `triggers.ts` (add `prisma`, `parseQuietConfig` and `planHasAiFrontDesk` imports). An org's automations stay enabled when it downgrades, so the tick gates on the AI Front Desk plan at runtime — the same `planHasAiFrontDesk(org.plan)` check `tickBookingReminders` makes in `src/modules/followup/reminders.ts` — instead of trusting the `enabled` flag alone:
+**Step 3: Implement** — append to `triggers.ts` (add `prisma`, `parseQuietConfig` and `planHasAiFrontDesk` imports). An org's automations stay enabled when it downgrades, so the tick gates on the AI Front Desk plan at runtime — the same `planHasAiFrontDesk(org.plan)` check `tickBookingReminders` makes in `src/modules/followup/reminders.ts` — instead of trusting the `enabled` flag alone. It also starts no chases for an automation whose `send_template` steps reference a template that is missing from the org's library or not yet `APPROVED` at Meta: a chase against a pending template would produce a FAILED run, and the one-run-per-contact cap (kept on all run statuses — retrying FAILED runs would re-send message 1 of a multi-message chase that failed on message 2) would then exclude that contact forever, whereas holding off keeps every contact eligible until approval:
 
 ```ts
 import { prisma } from "@/lib/db";
@@ -1926,6 +1944,21 @@ export async function fireQuietConversations(now: Date = new Date()): Promise<nu
   let started = 0;
   for (const automation of automations) {
     if (!automation.steps.length || !planHasAiFrontDesk(automation.org.plan)) continue;
+    // A chase started while a template is still pending at Meta would FAIL and
+    // the one-run cap would then exclude that contact forever — so start nothing
+    // until every send template is approved; the contacts stay eligible.
+    const templateIds = automation.steps
+      .filter((s) => s.kind === "send_template")
+      .map((s) => String((s.config as { templateId?: unknown })?.templateId ?? ""))
+      .filter(Boolean);
+    if (templateIds.length) {
+      const templates = await prisma.template.findMany({
+        where: { orgId: automation.orgId, id: { in: templateIds } },
+        select: { id: true, metaStatus: true },
+      });
+      const approved = new Set(templates.filter((t) => t.metaStatus === "APPROVED").map((t) => t.id));
+      if (!templateIds.every((id) => approved.has(id))) continue;
+    }
     const { hours, stage } = parseQuietConfig(automation.triggerConfig);
     const chased = await prisma.automationRun.findMany({
       where: { automationId: automation.id, contactId: { not: null } },

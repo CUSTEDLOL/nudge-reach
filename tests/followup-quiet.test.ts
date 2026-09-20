@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { findAutomations, findRuns, findConversations, runAutomation } = vi.hoisted(() => ({
+const { findAutomations, findTemplates, findRuns, findConversations, runAutomation } = vi.hoisted(() => ({
   findAutomations: vi.fn(),
+  findTemplates: vi.fn(),
   findRuns: vi.fn().mockResolvedValue([]),
   findConversations: vi.fn().mockResolvedValue([]),
   runAutomation: vi.fn().mockResolvedValue({ status: "WAITING" }),
@@ -10,6 +11,7 @@ const { findAutomations, findRuns, findConversations, runAutomation } = vi.hoist
 vi.mock("@/lib/db", () => ({
   prisma: {
     automation: { findMany: findAutomations },
+    template: { findMany: findTemplates },
     automationRun: { findMany: findRuns },
     conversation: { findMany: findConversations },
   },
@@ -35,6 +37,7 @@ const automation = {
 beforeEach(() => {
   runAutomation.mockClear();
   findConversations.mockClear();
+  findTemplates.mockReset().mockResolvedValue([{ id: "t1", metaStatus: "APPROVED" }]);
   findRuns.mockResolvedValue([{ contactId: "c-done" }]);
   findAutomations.mockResolvedValue([automation]);
 });
@@ -52,6 +55,21 @@ describe("fireQuietConversations", () => {
     expect(where.lastInboundAt.not).toBeNull();
     expect(where.contact).toMatchObject({ optedOutAt: null, leadStage: "QUALIFIED" });
     expect(where.contactId).toEqual({ notIn: ["c-done"] });
+    expect(findTemplates.mock.calls[0][0].where).toMatchObject({ orgId: "o1", id: { in: ["t1"] } });
+  });
+
+  it("starts nothing while a send template is still pending at Meta", async () => {
+    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "PENDING" }]);
+    await expect(fireQuietConversations(now)).resolves.toBe(0);
+    expect(findConversations).not.toHaveBeenCalled();
+    expect(runAutomation).not.toHaveBeenCalled();
+  });
+
+  it("starts nothing when a send template is missing from the org's library", async () => {
+    findTemplates.mockResolvedValue([]);
+    await expect(fireQuietConversations(now)).resolves.toBe(0);
+    expect(findConversations).not.toHaveBeenCalled();
+    expect(runAutomation).not.toHaveBeenCalled();
   });
 
   it("omits the stage filter when the config has none", async () => {

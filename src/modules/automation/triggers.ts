@@ -115,6 +115,21 @@ export async function fireQuietConversations(now: Date = new Date()): Promise<nu
   let started = 0;
   for (const automation of automations) {
     if (!automation.steps.length || !planHasAiFrontDesk(automation.org.plan)) continue;
+    // A chase started while a template is still pending at Meta would FAIL and
+    // the one-run cap would then exclude that contact forever — so start nothing
+    // until every send template is approved; the contacts stay eligible.
+    const templateIds = automation.steps
+      .filter((s) => s.kind === "send_template")
+      .map((s) => String((s.config as { templateId?: unknown })?.templateId ?? ""))
+      .filter(Boolean);
+    if (templateIds.length) {
+      const templates = await prisma.template.findMany({
+        where: { orgId: automation.orgId, id: { in: templateIds } },
+        select: { id: true, metaStatus: true },
+      });
+      const approved = new Set(templates.filter((t) => t.metaStatus === "APPROVED").map((t) => t.id));
+      if (!templateIds.every((id) => approved.has(id))) continue;
+    }
     const { hours, stage } = parseQuietConfig(automation.triggerConfig);
     const chased = await prisma.automationRun.findMany({
       where: { automationId: automation.id, contactId: { not: null } },
