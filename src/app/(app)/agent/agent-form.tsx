@@ -71,6 +71,7 @@ export function AgentForm({ initial }: { initial: AgentFormValues }) {
           <option value="retail">Shop / Retail</option>
           <option value="clinic">Clinic / Salon</option>
           <option value="real_estate">Real estate</option>
+          <option value="software">Software / B2B services</option>
         </Select>
       </Field>
 

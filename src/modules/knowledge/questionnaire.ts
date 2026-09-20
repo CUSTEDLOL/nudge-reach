@@ -21,6 +21,7 @@ const OFFERING_WORDS: Record<string, string> = {
   salon: "services and treatments",
   retail: "products",
   real_estate: "property types and localities",
+  software: "plans and what the product does",
 };
 
 export function questionnaireScript(vertical: string): QItem[] {

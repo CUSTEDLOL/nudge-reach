@@ -43,6 +43,13 @@ const VERTICAL_TEMPLATES: Record<
     scope:
       "available properties and prices, locations, and booking a site visit",
   },
+  // B2B/software sellers qualify and book a call rather than take an order,
+  // so the scope is the sales conversation itself.
+  software: {
+    noun: "software company",
+    scope:
+      "what the product does, pricing and plans, whether it is a good fit for the enquirer's own business, and booking a call or demo with the team",
+  },
 };
 
 export const HANDOFF_SENTINEL = "[[HANDOFF]]";

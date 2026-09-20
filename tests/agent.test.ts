@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { isWithinServiceWindow } from "@/modules/agent/window";
 import {
+  agentIdentity,
   buildAgentSystemPrompt,
   formatNowLine,
   GENERIC_SCOPE,
   HANDOFF_SENTINEL,
 } from "@/modules/agent/prompt";
+import { questionnaireScript } from "@/modules/knowledge/questionnaire";
 import { buildHistory } from "@/modules/agent/reply";
 
 describe("isWithinServiceWindow (24h customer-service window)", () => {
@@ -167,5 +170,44 @@ describe("buildHistory (transcript shaping)", () => {
       { direction: "inbound", body: "Hi" },
     ]);
     expect(turns[0]).toEqual({ role: "user", text: "Hi" });
+  });
+});
+
+/**
+ * B2B/software sellers (Nudge's own workspace included) had no vertical that
+ * fit: the identity line is hard-written from the vertical, so picking
+ * "Clinic" made the agent introduce itself as a clinic. The generic fallback
+ * would say "software business" but the dropdown never offered the value.
+ */
+describe("software / B2B vertical", () => {
+  it("introduces itself as a software company, not a clinic or a shop", () => {
+    const p = buildAgentSystemPrompt({
+      vertical: "software",
+      businessName: "Nudge",
+      businessInfo: "We sell an AI front desk.",
+      tone: "Direct",
+      doNots: "",
+    });
+    expect(p).toContain('You are the WhatsApp assistant for "Nudge", a software company.');
+    expect(p).not.toMatch(/a clinic|a shop|a restaurant/);
+  });
+
+  it("scopes itself to selling: fit, pricing and booking a call", () => {
+    const { scope } = agentIdentity("software");
+    expect(scope).toMatch(/pricing/i);
+    expect(scope).toMatch(/fit/i);
+    expect(scope).toMatch(/call|demo/i);
+    // Not the generic fallback — this one is curated.
+    expect(scope).not.toBe(GENERIC_SCOPE);
+  });
+
+  it("is selectable in the agent setup form", () => {
+    const form = readFileSync("src/app/(app)/agent/agent-form.tsx", "utf8");
+    expect(form).toContain('<option value="software">');
+  });
+
+  it("asks the questionnaire about the right sellable thing", () => {
+    const q = questionnaireScript("software");
+    expect(JSON.stringify(q)).toMatch(/plans|product/i);
   });
 });
