@@ -11,9 +11,12 @@ describe("trial workspace routes", () => {
     ["/trial/setup", true],
     ["/agent", true],
     ["/inbox/try", true],
+    ["/inbox/conversation_1", true],
     ["/explore", true],
     ["/settings/billing", true],
     ["/campaigns", false],
+    ["/inbox", false],
+    ["/inbox/conversation_1/edit", false],
     ["/settings/whatsapp", false],
     ["/agent/voice", false],
   ])("classifies %s", (pathname, allowed) => {

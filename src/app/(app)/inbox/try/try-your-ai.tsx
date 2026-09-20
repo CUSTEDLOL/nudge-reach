@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import type { ThreadSnapshot } from "@/modules/inbox/queries";
+import type { TrialReplySummary } from "@/modules/trial/replies";
 import {
   createTrialTestInboxState,
   reduceTrialTestInbox,
@@ -33,6 +34,7 @@ export function TryYourAi({
   trial,
   testIdentity,
   initialMessages = [],
+  initialConversationId = null,
 }: {
   simulation: boolean;
   dialCode: string;
@@ -40,12 +42,14 @@ export function TryYourAi({
   trial: TrialWorkspace | null;
   testIdentity: { label: string } | null;
   initialMessages?: ThreadSnapshot["messages"];
+  initialConversationId?: string | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [phone, setPhone] = useState("9876500001");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [conversationId, setConversationId] = useState(initialConversationId);
   const initialTrial = trial ?? {
       status: "active" as const,
       repliesUsed: 0,
@@ -86,13 +90,16 @@ export function TryYourAi({
     if (trial) dispatchTrial({ type: "sent", body });
     setSending(true);
     let actionSucceeded = false;
+    let authoritativeTrial: TrialReplySummary | undefined;
     try {
       const fd = new FormData();
       if (!trial) fd.set("phone", phone);
       fd.set("text", body);
       const result = await simulateInboundAction(fd);
+      authoritativeTrial = result.trial;
       if (!result.ok) {
         if (trial) dispatchTrial({ type: "failed", trial: result.trial });
+        if (result.trial) router.refresh();
         toast({ tone: "error", description: result.message });
         return;
       }
@@ -100,6 +107,7 @@ export function TryYourAi({
       router.refresh();
       if (result.skipped) toast({ tone: "error", description: result.message });
       if (result.conversationId) {
+        setConversationId(result.conversationId);
         const destination = trialConversationDestination(
           Boolean(trial),
           result.conversationId,
@@ -130,6 +138,7 @@ export function TryYourAi({
       if (trial) {
         dispatchTrial({
           type: actionSucceeded ? "snapshot_failed" : "failed",
+          trial: authoritativeTrial,
         });
       }
       toast({
@@ -153,6 +162,7 @@ export function TryYourAi({
           state={trialState}
           identityLabel={testIdentity.label}
           replyFocusRef={replyFocusRef}
+          conversationId={conversationId}
         />
       )}
       <Card className="p-4 sm:p-6" data-tour="test-composer">

@@ -2918,8 +2918,10 @@ id can be withdrawn, which would recreate this bug.
 
 ## 2026-09-21 — Guided free-trial review hardening
 
-- Made interrupted signup recoverable without exposing the stored claim hash: the browser receives an HTTP-only resume secret, retries reuse the same pending trial, and expired unclaimed rows can be replaced safely.
+- Made interrupted signup recoverable without exposing the stored claim hash: the browser receives an HTTP-only resume secret, retries reuse and renew the same pending trial, and delayed verified-email callbacks receive a bounded recovery window without replacing an identity-linked claim.
 - Restricted acquisition-trial replies to grounded, tool-free AI. Trial messages no longer run booking/payment/custom tools, automations, CRM sync, scoring, or outbound webhooks; direct paid inbox mutations and the hidden contact tester are server-blocked.
 - Made the Test Inbox tenant-stable and non-routable with a server-derived `+999` identity, added abuse damping, restored persisted chat history after refresh/expiry, and kept successful messages visible through milestone/snapshot failures.
 - Added a manual-fact recovery path when all imported drafts are discarded and fixed guided-tour keyboard focus across route changes, including the highlighted control.
-- Full verification passed: 223 test files passed (1 skipped), 1,602 tests passed (3 skipped), lint passed, and the production build passed. The responsive visual walkthrough remains pending because no browser is attached. Demo correlation and paid conversion stamping remain in the separate free-trial conversion plan.
+- Delayed the guided tour until setup is complete, suppressed integration webhooks for the private simulation, and made quota state authoritative across failed snapshot refreshes and replies that cross expiry.
+- Added an “Open in shared inbox” step backed by an org-scoped, deterministic-sandbox query and a read-only thread view. Trial users cannot open a normal org conversation or reach its composer, assignments, notes, or status mutations.
+- Full verification passed: 224 test files passed (1 skipped), 1,613 tests passed (3 skipped), lint passed, and the production build passed. The responsive visual walkthrough remains pending because no browser is attached. Demo correlation and paid conversion stamping remain in the separate free-trial conversion plan.

@@ -11,6 +11,7 @@ import {
 } from "@/modules/marketing/analytics";
 import {
   trialAuthCredentials,
+  trialClaimNeedsRefresh,
   trialIntakePayload,
   trialSignupDestination,
   validateTrialPassword,
@@ -73,6 +74,10 @@ export function TrialSignupForm() {
 
     setBusy(true);
     let claim = pendingClaim;
+    if (claim && trialClaimNeedsRefresh(claim)) {
+      claim = null;
+      setPendingClaim(null);
+    }
     try {
       if (!claim) {
         const attribution = captureAttribution(

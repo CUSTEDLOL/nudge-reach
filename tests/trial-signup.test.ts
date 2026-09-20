@@ -170,36 +170,46 @@ describe("trial signup", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       ok: true,
-      claim: { trialId: "trial_1", claimToken: resumeToken },
+      claim: {
+        trialId: "trial_1",
+        claimToken: resumeToken,
+        expiresAt: expect.any(String),
+      },
     });
     expect(create).not.toHaveBeenCalled();
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
   });
 
-  it("cleans up an expired unclaimed trial so signup can start again", async () => {
+  it("extends an expired unclaimed trial only for its matching resume secret", async () => {
+    const resumeToken = "r".repeat(43);
     findFirst.mockResolvedValue({
       id: "trial_expired",
       emailNormalized: validSignup.email,
       phoneE164: validSignup.phone,
-      claimTokenHash: hashClaimToken("old-token"),
+      claimTokenHash: hashClaimToken(resumeToken),
       claimExpiresAt: new Date("2020-01-01T00:00:00Z"),
       claimedAt: null,
     });
-    deleteMany.mockResolvedValue({ count: 1 });
-    create.mockResolvedValue({ id: "trial_fresh" });
+    updateMany.mockResolvedValue({ count: 1 });
 
-    const result = await createPendingTrial(validSignup);
+    const result = await createPendingTrial(validSignup, new Date(), resumeToken);
 
-    expect(deleteMany).toHaveBeenCalledWith({
+    expect(updateMany).toHaveBeenCalledWith({
       where: {
         id: "trial_expired",
         claimedAt: null,
-        claimExpiresAt: { lte: expect.any(Date) },
+        claimTokenHash: hashClaimToken(resumeToken),
       },
+      data: { claimExpiresAt: expect.any(Date) },
     });
-    expect(result.trialId).toBe("trial_fresh");
+    expect(result).toMatchObject({
+      trialId: "trial_expired",
+      claimToken: resumeToken,
+    });
+    expect(create).not.toHaveBeenCalled();
+    expect(deleteMany).not.toHaveBeenCalled();
   });
 
   it("returns the one-time claim token without exposing its stored hash", async () => {

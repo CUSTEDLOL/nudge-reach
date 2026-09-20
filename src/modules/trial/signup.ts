@@ -44,6 +44,8 @@ export function hashClaimToken(token: string): string {
 }
 
 export const TRIAL_RESUME_COOKIE = "nudge_trial_resume";
+export const TRIAL_RESUME_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+const TRIAL_CLAIM_TTL_MS = 24 * 60 * 60 * 1000;
 
 export class TrialSignupConflictError extends Error {}
 
@@ -88,24 +90,39 @@ export async function createPendingTrial(
       && tokenMatches(existing.claimTokenHash, resumeToken);
 
     if (canResume && existing.claimExpiresAt > now) {
-      return { trialId: existing.id, claimToken: resumeToken! };
+      return {
+        trialId: existing.id,
+        claimToken: resumeToken!,
+        expiresAt: existing.claimExpiresAt.toISOString(),
+      };
     }
 
-    if (!existing.claimedAt && existing.claimExpiresAt <= now) {
-      const removed = await prisma.acquisitionTrial.deleteMany({
+    if (canResume) {
+      const claimExpiresAt = new Date(now.getTime() + TRIAL_CLAIM_TTL_MS);
+      const extended = await prisma.acquisitionTrial.updateMany({
         where: {
           id: existing.id,
           claimedAt: null,
-          claimExpiresAt: { lte: now },
+          claimTokenHash: existing.claimTokenHash,
         },
+        data: { claimExpiresAt },
       });
-      if (removed.count !== 1) throw new TrialSignupConflictError();
-    } else {
-      throw new TrialSignupConflictError();
+      if (extended.count !== 1) throw new TrialSignupConflictError();
+      return {
+        trialId: existing.id,
+        claimToken: resumeToken!,
+        expiresAt: claimExpiresAt.toISOString(),
+      };
     }
+
+    // Never replace the row here: a Supabase user may already hold this
+    // trial id/token in verified auth metadata. Replacing it would strand
+    // that account. Exact-cookie recovery above safely extends the same row.
+    throw new TrialSignupConflictError();
   }
 
   const claimToken = randomBytes(32).toString("base64url");
+  const claimExpiresAt = new Date(now.getTime() + TRIAL_CLAIM_TTL_MS);
   const row = await prisma.acquisitionTrial.create({
     data: {
       ownerName: input.ownerName,
@@ -115,7 +132,7 @@ export async function createPendingTrial(
       phoneE164,
       contactConsentAt: now,
       claimTokenHash: hashClaimToken(claimToken),
-      claimExpiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+      claimExpiresAt,
       landingPath: input.attribution.landingPath,
       referrer: input.attribution.referrer,
       utmSource: input.attribution.utmSource,
@@ -125,5 +142,5 @@ export async function createPendingTrial(
     },
   });
 
-  return { trialId: row.id, claimToken };
+  return { trialId: row.id, claimToken, expiresAt: claimExpiresAt.toISOString() };
 }

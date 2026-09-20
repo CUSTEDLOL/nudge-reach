@@ -5,6 +5,7 @@ import { hashClaimToken } from "./signup";
 import { trialEndsAt } from "./state";
 
 export type TrialClaim = { trialId: string; claimToken: string };
+const AUTHENTICATED_RECOVERY_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function parseTrialClaimMetadata(raw: unknown): TrialClaim | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -36,6 +37,7 @@ export async function claimAcquisitionTrial(input: {
 }): Promise<{ org: Org; membership: Membership } | null> {
   const now = input.now ?? new Date();
   const emailNormalized = input.email.trim().toLowerCase();
+  const recoveryCutoff = new Date(now.getTime() - AUTHENTICATED_RECOVERY_MS);
 
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const trial = await tx.acquisitionTrial.findFirst({
@@ -44,7 +46,10 @@ export async function claimAcquisitionTrial(input: {
         claimTokenHash: hashClaimToken(input.claim.claimToken),
         emailNormalized,
         claimedAt: null,
-        claimExpiresAt: { gt: now },
+        // Anonymous resume still expires after 24h. Once Supabase has verified
+        // the matching email, keep a short grace so delayed confirmation does
+        // not strand a user whose auth metadata already contains this token.
+        claimExpiresAt: { gt: recoveryCutoff },
       },
     });
     if (!trial) return null;

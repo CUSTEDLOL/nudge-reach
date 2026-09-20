@@ -13,6 +13,7 @@ export type TrialSignupValues = {
 export type TrialClaimResponse = {
   trialId: string;
   claimToken: string;
+  expiresAt?: string;
 };
 
 export type TrialIntakeResponse =
@@ -58,4 +59,13 @@ export function validateTrialPassword(password: string) {
 
 export function trialSignupDestination(hasSession: boolean) {
   return hasSession ? "/trial/setup" : null;
+}
+
+export function trialClaimNeedsRefresh(
+  claim: TrialClaimResponse,
+  now = Date.now(),
+) {
+  if (!claim.expiresAt) return false;
+  const expiresAt = Date.parse(claim.expiresAt);
+  return Number.isFinite(expiresAt) && expiresAt <= now;
 }

@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AiOffNotice } from "@/components/features/front-desk/ai-off-notice";
 import { getTrialWorkspace } from "@/modules/trial/workspace";
 import { trialTestIdentity } from "@/modules/trial/test-inbox";
-import { getTrialTestMessages } from "@/modules/trial/test-inbox-query";
+import { getTrialTestConversation } from "@/modules/trial/test-inbox-query";
 import { TryYourAi } from "./try-your-ai";
 
 export const metadata: Metadata = { title: "Try your AI" };
@@ -25,7 +25,9 @@ export default async function TryYourAiPage() {
     ? trialWorkspace
     : null;
   const testIdentity = trial ? trialTestIdentity() : null;
-  const initialMessages = trial ? await getTrialTestMessages(org.id) : [];
+  const initialConversation = trial
+    ? await getTrialTestConversation(org.id)
+    : { conversationId: null, messages: [] };
 
   return (
     <>
@@ -46,7 +48,8 @@ export default async function TryYourAiPage() {
         connectedName={account?.displayName ?? null}
         trial={trial}
         testIdentity={testIdentity}
-        initialMessages={initialMessages}
+        initialMessages={initialConversation.messages}
+        initialConversationId={initialConversation.conversationId}
       />
     </>
   );

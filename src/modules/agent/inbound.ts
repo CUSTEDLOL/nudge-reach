@@ -246,7 +246,11 @@ export async function handleInboundMessage(
       optedOutAt: contact.optedOutAt,
     },
     { kind: "text", text: replyText },
-    { orgId, whatsappAccountId: conversation.whatsappAccountId }
+    {
+      orgId,
+      whatsappAccountId: conversation.whatsappAccountId,
+      suppressWebhook: restrictedTrial,
+    }
   );
 
   await prisma.conversationMessage.create({

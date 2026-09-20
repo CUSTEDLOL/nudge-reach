@@ -68,6 +68,7 @@ export async function reserveTrialReply(orgId: string, now = new Date()) {
   return {
     kind: "reserved" as const,
     trialId: trial.id,
+    expiresAt: trial.expiresAt,
     repliesUsed,
     replyLimit: trial.replyLimit,
     repliesRemaining: Math.max(0, trial.replyLimit - repliesUsed),
@@ -157,13 +158,19 @@ export async function withTrialReplyReservation<T extends TrialMeterableResult>(
   }
 
   const reservedSummary: TrialReplySummary = {
-    status: reservation.repliesRemaining === 0 ? "exhausted" : "active",
+    status:
+      reservation.expiresAt
+      && new Date().getTime() >= reservation.expiresAt.getTime()
+        ? "expired"
+        : reservation.repliesRemaining === 0
+          ? "exhausted"
+          : "active",
     repliesUsed: reservation.repliesUsed,
     replyLimit: reservation.replyLimit,
     repliesRemaining: reservation.repliesRemaining,
   };
   try {
-    const trial = await trialReplySummary(orgId, now);
+    const trial = await trialReplySummary(orgId);
     return { kind: "handled", result, trial: trial ?? reservedSummary };
   } catch (error) {
     // The reply is already persisted and its slot was atomically reserved.

@@ -6,6 +6,7 @@ const TRIAL_WORKSPACE_PATHS = new Set([
   "/explore",
   "/settings/billing",
 ]);
+const TRIAL_INBOX_THREAD_PATH = /^\/inbox\/[A-Za-z0-9_-]{1,191}$/;
 
 function cleanPath(pathname: string) {
   const clean = pathname.split(/[?#]/, 1)[0] || "/";
@@ -13,7 +14,8 @@ function cleanPath(pathname: string) {
 }
 
 export function isTrialWorkspacePath(pathname: string) {
-  return TRIAL_WORKSPACE_PATHS.has(cleanPath(pathname));
+  const path = cleanPath(pathname);
+  return TRIAL_WORKSPACE_PATHS.has(path) || TRIAL_INBOX_THREAD_PATH.test(path);
 }
 
 export function trialExploreRedirect(pathname: string) {

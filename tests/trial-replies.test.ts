@@ -206,4 +206,25 @@ describe("trial reply allowance", () => {
     expect(log).toHaveBeenCalled();
     log.mockRestore();
   });
+
+  it("uses the completion time when a reply crosses the trial expiry", async () => {
+    vi.useFakeTimers();
+    prisma.acquisitionTrial.findUnique
+      .mockResolvedValueOnce(ACTIVE_TRIAL)
+      .mockResolvedValueOnce({ ...ACTIVE_TRIAL, repliesUsed: 15 });
+    vi.setSystemTime(new Date("2026-09-28T00:00:00Z"));
+
+    await expect(
+      withTrialReplyReservation(
+        "org_1",
+        vi.fn().mockResolvedValue({ generatedByAi: true as const }),
+        NOW,
+      ),
+    ).resolves.toMatchObject({
+      kind: "handled",
+      trial: { status: "expired" },
+    });
+
+    vi.useRealTimers();
+  });
 });

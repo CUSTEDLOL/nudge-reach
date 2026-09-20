@@ -14,6 +14,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ListPane } from "../list-pane";
 import { ThreadPane } from "./thread";
 import { ContextPanel, type ContextPanelProps } from "./context-panel";
+import { getTrialWorkspace } from "@/modules/trial/workspace";
+import { getTrialReadOnlyConversation } from "@/modules/trial/test-inbox-query";
+import { trialTestIdentity } from "@/modules/trial/test-inbox";
+import { TrialReadOnlyThread } from "@/components/features/trial/trial-read-only-thread";
 
 export const metadata: Metadata = { title: "Inbox" };
 
@@ -31,6 +35,18 @@ export default async function InboxThreadPage({
   ]);
   const filter = parseInboxFilter(sp.filter);
   const q = sp.q ?? "";
+
+  const trial = await getTrialWorkspace(org.id);
+  if (trial && !trial.converted) {
+    const conversation = await getTrialReadOnlyConversation(org.id, id);
+    if (!conversation) notFound();
+    return (
+      <TrialReadOnlyThread
+        identityLabel={trialTestIdentity().label}
+        messages={conversation.messages}
+      />
+    );
+  }
 
   // E4: show which number a thread is on, but only when the org has several.
   const orgNumbers = await prisma.whatsappAccount.findMany({

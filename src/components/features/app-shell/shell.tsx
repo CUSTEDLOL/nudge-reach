@@ -143,9 +143,16 @@ export function AppShell({
         </main>
       </div>
       <BottomNav role={role} mode={mode} user={user} simulation={simulation} />
-      {mode === "trial" && trial ? <TrialTour trial={trial} /> : null}
+      {shouldShowTrialTour(mode, trial) ? <TrialTour trial={trial!} /> : null}
     </div>
   );
+}
+
+export function shouldShowTrialTour(
+  mode: AppShellMode,
+  trial: TrialWorkspace | null | undefined,
+) {
+  return mode === "trial" && Boolean(trial?.setupComplete);
 }
 
 function SkipLink() {

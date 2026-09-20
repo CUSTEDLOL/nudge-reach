@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({
 import FreeTrialPage, { metadata } from "@/app/free-trial/page";
 import {
   trialAuthCredentials,
+  trialClaimNeedsRefresh,
   trialIntakePayload,
   trialSignupDestination,
   validateTrialPassword,
@@ -115,5 +116,16 @@ describe("free trial browser handoff", () => {
   it("routes an immediate authenticated session into trial setup", () => {
     expect(trialSignupDestination(true)).toBe("/trial/setup");
     expect(trialSignupDestination(false)).toBeNull();
+  });
+
+  it("revalidates an in-memory claim before retrying after its expiry", () => {
+    expect(trialClaimNeedsRefresh(
+      { trialId: "trial_1", claimToken: "token", expiresAt: "2026-09-21T00:00:00Z" },
+      new Date("2026-09-21T00:00:01Z").getTime(),
+    )).toBe(true);
+    expect(trialClaimNeedsRefresh(
+      { trialId: "trial_1", claimToken: "token", expiresAt: "2026-09-21T00:00:00Z" },
+      new Date("2026-09-20T23:59:59Z").getTime(),
+    )).toBe(false);
   });
 });

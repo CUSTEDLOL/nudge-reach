@@ -4,6 +4,7 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   createPendingTrial,
   TRIAL_RESUME_COOKIE,
+  TRIAL_RESUME_COOKIE_MAX_AGE_SECONDS,
   TrialSignupConflictError,
   trialSignupSchema,
 } from "@/modules/trial/signup";
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/api/trials",
-      maxAge: 24 * 60 * 60,
+      maxAge: TRIAL_RESUME_COOKIE_MAX_AGE_SECONDS,
     });
     return response;
   } catch (error) {

@@ -106,6 +106,12 @@ describe("restricted trial agent boundary", () => {
     expect(crmContactCreated).not.toHaveBeenCalled();
     expect(scoreContactSoon).not.toHaveBeenCalled();
     expect(dispatchWebhook).not.toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledWith(
+      "whatsapp",
+      expect.objectContaining({ address: "+999123" }),
+      expect.any(Object),
+      expect.objectContaining({ suppressWebhook: true }),
+    );
   });
 
   it("does not persist a trial handoff as paid inbox state", async () => {

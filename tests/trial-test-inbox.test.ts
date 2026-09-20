@@ -102,6 +102,26 @@ describe("trial test inbox state", () => {
     expect(refreshFailed.composerEnabled).toBe(true);
   });
 
+  it("uses the action's authoritative stopped state when snapshot refresh fails", () => {
+    const sent = reduceTrialTestInbox(createTrialTestInboxState(activeTrial), {
+      type: "sent",
+      body: "Question fifteen",
+    });
+    const refreshFailed = reduceTrialTestInbox(sent, {
+      type: "snapshot_failed",
+      trial: {
+        ...activeTrial,
+        status: "exhausted",
+        repliesUsed: 15,
+        repliesRemaining: 0,
+      },
+    });
+
+    expect(refreshFailed.repliesRemaining).toBe(0);
+    expect(refreshFailed.composerEnabled).toBe(false);
+    expect(refreshFailed.messages.at(-1)?.body).toBe("Question fifteen");
+  });
+
   it("redirects standard workspaces but keeps acquisition trials inline", () => {
     expect(trialConversationDestination(false, "conversation_1")).toBe(
       "/inbox/conversation_1",
@@ -122,6 +142,7 @@ describe("trial test conversation", () => {
       createElement(TestConversation, {
         state,
         identityLabel: "Test customer · private simulation",
+        conversationId: "conversation_1",
       }),
     );
 
@@ -130,6 +151,8 @@ describe("trial test conversation", () => {
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain("Book a free demo");
     expect(html).toContain('href="/pricing"');
+    expect(html).toContain('href="/inbox/conversation_1"');
+    expect(html).toContain("Open in shared inbox");
     expect(html.indexOf("Book a free demo")).toBeLessThan(
       html.indexOf("See paid plans"),
     );
