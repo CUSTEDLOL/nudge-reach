@@ -2793,3 +2793,34 @@ back; `byokStatus` cannot catch that, only fixing the allow-list can. Also unres
 cold-start "≈ n more AI replies" estimate still assumes a 2,000-token reply
 when reality looks closer to 12,000. Detail and evidence in
 `docs/plans/2026-09-20-ai-cost-accuracy.md`.
+
+## 2026-09-20 — never leave a customer in silence; real Gemini ids
+
+Founder-approved follow-ups to the AI cost work above.
+
+**Silence on provider failure.** `reply.ts` caught only
+`CreditsExhaustedError`, and the WhatsApp webhook had no guard around
+`handleInboundMessage` — so a revoked key, a provider outage or a BYOK model
+id the provider rejects propagated out of `POST`, 500'd the route, left
+`webhookEvent.processedAt` unset, made Meta retry, and left the customer with
+**no reply at all**. Silent, on exactly the leads we are paid to catch.
+
+- Any non-credits error now returns the existing handoff line with a new
+  `degraded: true` flag and a loud log, so the lead stays warm and a human
+  picks it up. Distinct from `pausedForCredits` (a billing state, not a fault).
+- `handleInboundMessage` is wrapped per message, so one customer's failure no
+  longer drops the rest of Meta's batch or forces a redelivery.
+- Still 200 in both cases: a non-200 just makes Meta repeat the failure.
+
+**Google BYOK never worked.** `gemini-3-pro` / `gemini-3-flash` are not
+Google API ids (checked against ai.google.dev) — real ones are versioned.
+Root cause was duplication: the model list lived in `guard.ts` AND in the
+customer's picker, with nothing tying either to the rate card. The picker now
+renders from a single `BYOK_CATALOGUE`, `BYOK_ALLOWED_MODELS` derives from it,
+and a test holds the last seam (every offered model must be priced; no bare
+Google version alias). Now offering `gemini-3.8-flash` and `gemini-3.7-flash`,
+both priced. Gemini 3 Pro is deliberately absent — preview-only, and a preview
+id can be withdrawn, which would recreate this bug.
+
+**Note:** both Flash rates are promotional through 2026-12-31 and double on
+2027-01-01.

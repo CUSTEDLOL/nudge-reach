@@ -119,23 +119,13 @@ Sonnet 5 — so an org with a thin knowledge base neither saves nor pays extra.
 
 ## Open — needs a founder decision
 
-**1. The Google BYOK model ids are not real.** `BYOK_ALLOWED_MODELS.google`
-lists `gemini-3-pro` and `gemini-3-flash`; neither appears on Google's
-published price sheet (which carries `gemini-3.1-pro-preview`,
-`gemini-3.7-flash`, `gemini-3.8-flash`). They were deliberately **left off**
-the rate card rather than mapped to a guess, so they price at the conservative
-fallback. Decide which Gemini ids we support, then add their rates and fix
-the allow-list.
+**1. Gemini 3 Pro is not offered.** The only Gemini 3 Pro id is
+`gemini-3.1-pro-preview`; preview ids can be withdrawn. Say the word to add
+it and accept that risk.
 
-Note the failure mode, which is worse than a silent fallback: these ids are
-**on the allow-list**, so they pass every local check and resolve as `active`
-— then Google rejects the id at call time. `byokStatus` reports `active` and
-cannot detect this; only fixing the allow-list can. See "webhook resilience"
-below for what that thrown error currently does.
-
-**2. `gemini-3.8-flash` pricing is promotional** — $0.75 / $3.75 through
-2026-12-31, then $1.50 / $7.50 on 2027-01-01. Whatever we adopt needs a diary
-note.
+**2. `gemini-3.8-flash` / `gemini-3.7-flash` pricing is promotional** — $0.75 / $3.75 through
+2026-12-31, then $1.50 / $7.50 on 2027-01-01 — both are on the card at the
+promotional rate and need a re-check before then.
 
 **3. The cold-start reply estimate is still a guess.** `estimateRemainingReplies`
 falls back to a 2,000-in / 300-out reply when an org has no history
@@ -161,30 +151,69 @@ reason — so the two cannot drift. `getByokRuntime` keeps its exact contract
 Integrations tab in the founder panel now shows the fallback and its reason
 in red.
 
-## Found, NOT fixed: webhook resilience
+## Fixed: silence on provider failure (founder chose the fallback)
 
-`src/app/api/webhooks/whatsapp/route.ts` has no try/catch around
-`handleInboundMessage`, and `modules/agent/reply.ts` only catches
-`CreditsExhaustedError` — everything else rethrows. So any provider error
-(a bad BYOK model id, a revoked key, a provider outage) propagates out of
-`POST`, the route 500s, `webhookEvent.processedAt` is never set, Meta retries,
-and the customer gets no reply at all.
+`reply.ts` caught only `CreditsExhaustedError` and the webhook had no guard
+around `handleInboundMessage`, so any provider error (revoked key, outage, a
+BYOK model id the provider rejects) propagated out of `POST`: the route 500'd,
+`webhookEvent.processedAt` was never set, Meta retried, and **the customer got
+nothing at all**. The worst possible failure for a front desk — silent, on
+exactly the leads we are paid to catch, and invisible to the owner.
 
-That wants a deliberate decision — swallow and reply with a fallback line,
-dead-letter the event, or 200-and-queue — so it was left alone rather than
-patched in passing.
+Two layers, both chosen by the founder over queue-and-retry:
+
+1. **The agent answers anyway.** Any non-credits error now returns the
+   existing `HANDOFF_MESSAGE` with `handoff: true` and a new `degraded: true`
+   flag, plus a loud log. The lead stays warm and a human picks the thread up.
+   `degraded` keeps it distinguishable from a handoff the agent chose and from
+   `pausedForCredits`, which is a billing state rather than a fault.
+2. **One bad message cannot break the batch.** Meta batches several customers
+   into one delivery; `handleInboundMessage` is now wrapped per message, so a
+   failure for one customer no longer drops everyone else in the same request
+   or triggers a redelivery of the lot.
+
+The webhook still returns 200 in both cases — a non-200 makes Meta redeliver,
+which would just repeat the same failure forever.
+
+## Fixed: the Google BYOK ids, and the duplication that hid them
+
+`gemini-3-pro` / `gemini-3-flash` are not Google API ids (verified against
+ai.google.dev/gemini-api/docs/models). Real ids are versioned:
+`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.1-pro-preview`.
+
+The root cause was duplication: the model list existed in the allow-list
+(`guard.ts`) **and** in the customer's picker (`settings/ai/ai-form.tsx`), and
+nothing tied them to the rate card. The picker now renders from a single
+`BYOK_CATALOGUE` in `guard.ts`, `BYOK_ALLOWED_MODELS` is derived from it, and
+`tests/byok-model-catalogue.test.ts` holds the remaining seam — every offered
+model must have a rate, and no Google id may be a bare major-version alias.
+
+Offered now: `gemini-3.8-flash` and `gemini-3.7-flash`, both stable, both
+priced ($0.75 / $3.75 / $0.075 cached). **Gemini 3 Pro is deliberately not
+offered** — the only Gemini 3 Pro today is `gemini-3.1-pro-preview`, and a
+preview id can be withdrawn, which would recreate this exact bug. Founder call
+if they want it anyway.
+
+An org still saved on `gemini-3-pro` now fails the allow-list and shows as a
+named fallback in the founder panel, instead of resolving as active and being
+rejected by Google with nothing in our UI to explain it.
 
 ## Verification
 
-`npx tsc --noEmit` clean · `npx vitest run` 1301 passed / 3 skipped (the
+`npx tsc --noEmit` clean · `npx vitest run` 1313 passed / 3 skipped (the
 skipped three are `credit-concurrency`, which needs real Postgres) ·
 `npm run lint` clean · `npm run build` clean.
 
-New: `tests/model-router-caching.test.ts` (6). Extended:
+New: `tests/model-router-caching.test.ts` (6),
+`tests/agent-provider-failure.test.ts` (4), `tests/webhook-resilience.test.ts`
+(4), `tests/byok-model-catalogue.test.ts` (4). Extended:
 `tests/credit-rates.test.ts` (14), `tests/byok.test.ts` (14) and
 `tests/llm-drivers.test.ts` (11 — four
 existing `toEqual` usage assertions relaxed to `toMatchObject`; their token
-values are unchanged, the object simply carries `cacheReadTokens` now). `tests/ai-usage.test.ts` lost its
+values are unchanged, the object simply carries `cacheReadTokens` now).
+`tests/credit-gating.test.ts` had a test asserting that non-credits errors
+propagate — that was the behaviour the founder chose to change, so it now
+asserts the degraded fallback instead. `tests/ai-usage.test.ts` lost its
 `computeCostMicroUsd` block — those assertions encoded the stale $3/$15 Sonnet
 price and the substring fallback, and now live in `credit-rates.test.ts`.
 
