@@ -11,6 +11,7 @@ import {
 } from "@/components/features/dashboard/quick-actions";
 import { RecentActivity } from "@/components/features/dashboard/recent-activity";
 import { SetupProgress } from "@/components/features/dashboard/setup-progress";
+import { AiOffNotice } from "@/components/features/front-desk/ai-off-notice";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { getPlan } from "@/modules/billing/plans";
@@ -130,6 +131,8 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </header>
+
+      {!data.agentEnabled && <AiOffNotice canEdit={!isAgent} />}
 
       {!isAgent && settingUp && (
         <SetupProgress checklist={data.checklist} orgName={org.name} />

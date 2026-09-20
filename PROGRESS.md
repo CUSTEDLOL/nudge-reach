@@ -52,6 +52,31 @@
 - 1,273 tests green (+6); tsc, lint, build clean. **Not verified in a browser** —
   the credentials in `scripts/fetch-as-user.js` no longer authenticate and the
   only two orgs in the dev database belong to real accounts.
+## WhatsApp AI search-content release (2026-09-18) ✅ PRODUCTION
+
+- Built the first broad WhatsApp AI content cluster: the pillar at
+  `/whatsapp-ai-automation`, build guide at
+  `/resources/how-to-build-whatsapp-ai-automation`, lead-operations guide at
+  `/resources/how-to-stop-losing-leads-on-whatsapp`, and transparent tool at
+  `/tools/whatsapp-lead-leakage-calculator`. Homepage, pillar, guides, tool and
+  Resources index now link the cluster together so visitors and crawlers can
+  move between the relevant pages.
+- The pages explain Nudge's AI Front Desk and the official Meta Cloud API; they
+  do not invent customer results, case studies or testimonials. The combined
+  release passed the full local verification gates and was verified live in
+  production with HTTP 200 responses, apex canonicals, one H1 per page, social
+  preview metadata, sitemap membership and permanent `www` redirects.
+- The calculator shows its formulas and boundary assumptions. Its inputs stay
+  in the visitor's browser and are never submitted, stored or tracked.
+- Added a 16-week follow-on content and Reddit operating calendar. Later topics
+  remain planned, not published. Reddit work is founder-led and manual only:
+  check each community's rules before participating, make the useful answer
+  native to Reddit, disclose affiliation, and never automate posts, send
+  unsolicited DMs, manipulate votes, amplify with alternate accounts or mass
+  cross-post.
+- Search Console metrics are the available baseline. Calculator/page
+  engagement, attribution and Reddit referral quality remain `UNKNOWN` until
+  the documented privacy and analytics activation gates are approved.
 
 ## Canonical hostname consolidation (2026-09-17) ✅
 
@@ -101,6 +126,55 @@
   ramping, old-vendor removal and a 30-day outcome review.
 - Documentation only. It does not enable live sending, alter Meta assets, import
   client data, change billing, or add a product feature.
+
+## 2026-09-17 — Booking is real: timezone, opening hours, Bookings page, client workspaces
+
+The founder onboarded a fresh workspace as a client would and booked a demo.
+What it exposed, and what shipped in one pass (`a4fb1c9` → `8115092`; the
+full record with decisions is `docs/ONBOARDING_NOTES.md`):
+
+**Bug that would have hit every client outside UTC.** "Friday 4 PM" on an
+India workspace was stored as 16:00 UTC (9:30 PM IST): `parseWhen` used the
+server's clock, and the tool's own formatting made the same mistake in
+reverse so the confirmation read "4:00 pm". New `src/lib/timezone.ts`
+(`zonedParts`, `zonedTimeToUtc`, `formatInTimezone`), `parseWhen(text, now,
+timezone)`, and `BookOutcome` carries the timezone. Tests in IST and SGT,
+including "tomorrow" said after local midnight.
+
+**Calendar.** Test calendar only for test workspaces, labelled honestly. A
+live workspace gets real Google or an honest "not switched on yet" — never a
+mock behind a green badge. `calendarModeFor` is the one rule. Opening hours
+are structured (`Org.settings.openingHours`, no schema change), read
+deterministically from the questionnaire's weekly-hours answer
+(`hours-text.ts`), editable on Setup, and enforced: the AI refuses a time the
+business is shut and offers the next open slots. Alternatives come from a
+freeBusy sweep, not "+1h". Events are read back from Google before a
+reminder and on the Bookings page (moved → new time, deleted → cancelled).
+The Google driver has tests for the first time.
+
+**Bookings page** (`/bookings`): upcoming / needs confirming / past, on the
+business's clock, with confirm / cancel / no-show / done and a link to the
+chat. Home's booking counts open it.
+
+**Onboarding.** Finishing onboarding switches the AI on (it used to stay
+off, silently). A one-click "Your AI is switched off — Turn it on" notice on
+Home, Training and Try. The questionnaire ends on a finish screen with the
+facts count and next steps. Training leads with what the AI knows. Home
+checklist is plan-aware, never ticked by test mode, and has no campaign step.
+
+**Client workspaces are production from the first sign-in.** Admin New
+workspace has a required Client / Test choice. "Try your AI" works in a live
+workspace: the pretend customer gets a +999 sandbox number and `sendMessage`
+routes any sandbox address through the simulation driver, so nothing typed
+there can reach a real phone.
+
+**Still the founder's to do:** `SEND_MODE=live` in Vercel (the platform
+switch overrides every workspace until then), Google OAuth keys + redirect
+URI, one real Google booking on a live test workspace, delete the empty
+duplicate "Goldmine Infotech" workspace. `prisma db push` was not needed:
+hours live in the existing settings JSON.
+
+1316 tests green, lint clean, production build clean.
 
 ## 2026-09-16 — One place to set up the AI employee (nav restructure)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { FlaskConical, Plus, Rocket, X } from "lucide-react";
 import { ActionForm, type ActionFn } from "./action-form";
 import { SetupLinkPanel } from "./setup-link-panel";
 import type { OwnerSetupLink } from "@/modules/orgs/owner-setup";
@@ -89,12 +89,43 @@ export function NewWorkspace({
         confirm={{
           title: "Create this workspace?",
           description:
-            "A private 7-day setup link will be created. Check the plan and owner email first.",
+            "A private 7-day setup link will be created. Check the mode (Client is live from day one), the plan and the owner email first.",
         }}
         onSuccess={(result) => {
           if (result.setupLink) setSetupLink(result.setupLink);
         }}
       >
+        <fieldset className="mb-3">
+          <legend className={label}>What is this workspace?</legend>
+          <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-300 bg-white p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50/40">
+              <input type="radio" name="mode" value="client" required className="mt-1 accent-brand-600" />
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+                  <Rocket className="h-4 w-4 text-brand-700" aria-hidden />
+                  Client
+                </span>
+                <span className="mt-0.5 block text-xs text-neutral-600">
+                  Production from the first sign-in. No test mode, ever. Apps
+                  show their real state; a connected number sends for real.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-300 bg-white p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50/40">
+              <input type="radio" name="mode" value="test" required className="mt-1 accent-brand-600" />
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+                  <FlaskConical className="h-4 w-4 text-sky-700" aria-hidden />
+                  Test
+                </span>
+                <span className="mt-0.5 block text-xs text-neutral-600">
+                  Your own sandbox. Everything simulated: test calendar,
+                  practice bookings, nothing reaches a customer.
+                </span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="sm:col-span-2">
             <span className={label}>Business name</span>

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireOrgContext } from "@/modules/orgs/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
+import { readOpeningHours } from "@/modules/calendar/hours-store";
 import { AgentForm, type AgentFormValues } from "../agent-form";
 
 export const metadata: Metadata = { title: "Front Desk setup" };
@@ -26,6 +27,7 @@ export default async function AgentSetupPage() {
     businessInfo: profile?.businessInfo ?? "",
     tone: profile?.tone ?? "Warm, friendly, and concise",
     doNots: profile?.doNots ?? "",
+    openingHours: readOpeningHours(ctx.org.settings),
   };
 
   return (

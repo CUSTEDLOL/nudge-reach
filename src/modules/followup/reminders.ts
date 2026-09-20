@@ -3,6 +3,7 @@ import { sendApprovedTemplate } from "@/modules/followup/send";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { normalizeTiming } from "@/modules/followup/pack";
+import { syncBookingWithCalendar } from "@/modules/calendar/sync";
 
 const HOUR = 3_600_000;
 
@@ -58,6 +59,8 @@ export async function tickBookingReminders(
         take: 200,
       });
       for (const b of due24) {
+        // The owner may have moved or cancelled it in Google since we booked.
+        if (!(await stillDue(cfg.orgId, b))) continue;
         const r = await sendApprovedTemplate(b.contact, "appt_reminder_24h", b.conversationId);
         await stamp(b.id, { reminder24SentAt: now });
         if (r.ok) result.reminders++;
@@ -78,6 +81,7 @@ export async function tickBookingReminders(
         take: 200,
       });
       for (const b of due2) {
+        if (!(await stillDue(cfg.orgId, b))) continue;
         const r = await sendApprovedTemplate(b.contact, "appt_reminder_2h", b.conversationId);
         await stamp(b.id, { reminder2SentAt: now });
         if (r.ok) result.reminders++;
@@ -133,4 +137,21 @@ export async function tickBookingReminders(
 
 function stamp(id: string, data: Record<string, Date>) {
   return prisma.bookingRequest.update({ where: { id }, data });
+}
+
+/**
+ * Re-read the calendar event before a reminder goes out. A booking that was
+ * cancelled in Google gets no reminder; one that was moved keeps its stamps
+ * clear and is picked up again when its new time comes round.
+ */
+async function stillDue(
+  orgId: string,
+  b: { id: string; status: string; scheduledFor: Date | null; calendarEventId: string | null }
+): Promise<boolean> {
+  try {
+    const { change } = await syncBookingWithCalendar(orgId, b);
+    return change === "unchanged" || change === "skipped";
+  } catch {
+    return true;
+  }
 }

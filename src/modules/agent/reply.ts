@@ -19,27 +19,36 @@ export interface AgentReply {
   text: string;
   handoff: boolean;
   /**
-   * The model call failed (revoked key, provider outage, a BYOK model id the
-   * provider rejects) and the customer got the handoff line instead of a real
-   * answer. Distinct from a handoff the agent chose to make, and from
-   * `pausedForCredits` — this one means something is broken and the owner
-   * should be told.
+   * The model call failed (provider outage, timeout, bad key, a BYOK model id
+   * the provider rejects): handed off so the customer still hears back.
+   * Distinct from a handoff the agent chose to make, and from
+   * `pausedForCredits`, which is a billing state rather than a fault.
    */
-  degraded?: boolean;
+  aiFailed?: true;
 }
 
 const HANDOFF_MESSAGE =
   "Thanks for your message! One of our team will get back to you shortly. 🙏";
 
 /**
- * A provider failure must never leave a customer in silence. Anything that is
- * not a credits problem becomes the handoff line plus a loud log: the lead
- * stays warm, a human picks the thread up, and the webhook still returns 200
- * so Meta does not retry a message we already answered.
+ * A provider failure must never leave a customer in silence. On the live
+ * webhook the inbound message is stored before the model runs, so Meta's
+ * redelivery is skipped as a duplicate and nobody ever answers. Degrade to
+ * the hand-off line instead: the customer hears back, the thread is flagged
+ * "Needs human", and the error is logged.
  */
-function degradedReply(where: string, err: unknown): AgentReply & { actions: string[] } {
-  console.error(`[agent] ${where} failed — replying with the handoff line`, err);
-  return { text: HANDOFF_MESSAGE, handoff: true, degraded: true, actions: [] };
+function aiFailedReply(
+  where: string,
+  ctx: Pick<ToolContext, "orgId" | "conversationId">,
+  err: unknown
+): AgentReply & { actions: string[] } {
+  console.error("[agent] reply failed; handing off", {
+    where,
+    orgId: ctx.orgId,
+    conversationId: ctx.conversationId,
+    error: err instanceof Error ? err.message : String(err),
+  });
+  return { text: HANDOFF_MESSAGE, handoff: true, aiFailed: true, actions: [] };
 }
 
 /**
@@ -67,7 +76,7 @@ export async function generateAgentReply(
       },
     });
   } catch (err) {
-    return degradedReply("generateAgentReply", err);
+    return aiFailedReply("generateAgentReply", ctx, err);
   }
 
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
@@ -126,7 +135,7 @@ export async function generateAgentActionReply(
     if (err instanceof CreditsExhaustedError) {
       return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
     }
-    return degradedReply("generateAgentActionReply", err);
+    return aiFailedReply("generateAgentActionReply", ctx, err);
   }
 
   const handoff = calledHandoff(toolCalls);

@@ -17,7 +17,7 @@ describe("adaptive app navigation", () => {
         group.items.map((item) => item.label),
       ])
     ).toEqual([
-      ["Workspace", ["Home", "Inbox", "Leads"]],
+      ["Workspace", ["Home", "Inbox", "Bookings", "Leads"]],
       [
         "Automation",
         ["AI Front Desk", "Follow-ups", "Campaigns", "Templates"],
@@ -35,6 +35,7 @@ describe("adaptive app navigation", () => {
     expect(keys).toEqual([
       "today",
       "inbox",
+      "bookings",
       "leads",
       "front-desk",
       "campaigns",
@@ -54,6 +55,7 @@ describe("adaptive app navigation", () => {
   it.each([
     ["/dashboard", "today"],
     ["/inbox/thread-1", "inbox"],
+    ["/bookings?view=past", "bookings"],
     ["/contacts?new=1", "leads"],
     ["/agent/questionnaire", "front-desk"],
     // Templates are shared by campaigns, follow-ups and inbox replies, so they

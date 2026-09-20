@@ -410,6 +410,39 @@ describe("demo booking funnel", () => {
     ]);
   });
 
+  it.each([
+    "whatsapp-ai-automation",
+    "whatsapp-lead-leakage-calculator",
+  ])("preserves the %s content surface", (surface) => {
+    const dataLayer: object[] = [];
+    vi.stubGlobal("window", { dataLayer });
+
+    trackDemoCta(surface, { pathname: "/content-page" });
+
+    expect(dataLayer).toEqual([
+      {
+        event: "demo_cta_click",
+        surface,
+        landing_path: "/content-page",
+      },
+    ]);
+  });
+
+  it("sanitizes an unknown CTA surface", () => {
+    const dataLayer: object[] = [];
+    vi.stubGlobal("window", { dataLayer });
+
+    trackDemoCta("untrusted-surface", { pathname: "/content-page" });
+
+    expect(dataLayer).toEqual([
+      {
+        event: "demo_cta_click",
+        surface: "unknown",
+        landing_path: "/content-page",
+      },
+    ]);
+  });
+
   it("subscribes both Cal success events to one aggregate-only deduplicating callback", () => {
     const dataLayer: object[] = [];
     const script = { src: "", onerror: null as null | (() => void) };

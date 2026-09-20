@@ -5,6 +5,25 @@ import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { distillAnswer } from "@/modules/knowledge/distill";
 import { scriptItemById } from "@/modules/knowledge/questionnaire";
+import { parseHoursText } from "@/modules/calendar/hours-text";
+import { settingsWithOpeningHours } from "@/modules/calendar/hours-store";
+
+/**
+ * The weekly-hours answer is the one answer that has to be more than a fact:
+ * it is what stops the AI booking a 3 am Sunday slot. Read it deterministically;
+ * when the phrasing can't be read, leave hours unset (the owner can fill the
+ * editor on Setup) rather than store a guess.
+ */
+async function rememberOpeningHours(orgId: string, id: string, answer: string) {
+  if (id !== "hours_weekly") return;
+  const hours = parseHoursText(answer);
+  if (!hours) return;
+  const org = await prisma.org.findUnique({ where: { id: orgId }, select: { settings: true } });
+  await prisma.org.update({
+    where: { id: orgId },
+    data: { settings: settingsWithOpeningHours(org?.settings, hours) },
+  });
+}
 
 export interface QuestionnaireResult {
   ok: boolean;
@@ -35,6 +54,7 @@ async function distillOne(
   const item = scriptItemById(v, id);
   const trimmed = answer.trim();
   if (!item || !trimmed) return 0;
+  await rememberOpeningHours(orgId, id, trimmed);
   const facts = await distillAnswer(item.prompt, trimmed, orgId);
   // The script knows the section; prefer it when the model punted to "other".
   await prisma.knowledgeEntry.createMany({

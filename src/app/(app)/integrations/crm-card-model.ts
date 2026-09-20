@@ -11,6 +11,8 @@ export interface CrmCardModel {
     key: (typeof CRM_PROVIDERS)[number]["key"];
     label: string;
     connected: boolean;
+    /** False in a live workspace while the platform's keys for this CRM are missing: no Connect button. */
+    available: boolean;
     accountLabel: string;
     lastSyncAt: string | null;
     lastError: string | null;
@@ -28,7 +30,9 @@ export function crmCardModel(
     lastError: string | null;
   }>,
   jobs: Array<{ event: string; status: string; updatedAt: Date; error: string | null }>,
-  simulated: boolean
+  simulated: boolean,
+  /** Providers whose platform keys exist. A test workspace can always "connect" (simulated). */
+  configured: ReadonlyArray<string> = CRM_PROVIDERS.map((p) => p.key)
 ): CrmCardModel {
   return {
     simulated,
@@ -38,6 +42,7 @@ export function crmCardModel(
         key: p.key,
         label: p.label,
         connected: !!c,
+        available: simulated || configured.includes(p.key),
         accountLabel: c?.accountLabel ?? "",
         lastSyncAt: c?.lastSyncAt?.toISOString() ?? null,
         lastError: c?.lastError ?? null,

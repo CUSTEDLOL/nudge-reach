@@ -7,9 +7,12 @@ import { Check, Info } from "lucide-react";
  */
 export function PaymentsPanel({
   live,
+  testWorkspace,
   currency,
 }: {
   live: boolean;
+  /** Practice links only exist in a test workspace; a live one without a provider sends no link at all. */
+  testWorkspace: boolean;
   currency: string;
 }) {
   const rail = currency === "INR" ? "Razorpay (UPI and cards)" : "Stripe (cards)";
@@ -36,7 +39,9 @@ export function PaymentsPanel({
         >
           {live
             ? `Live. Deposits are collected through ${rail} and land in your account.`
-            : `Payment links work end to end in this test workspace. Real money starts flowing through ${rail} once we switch your workspace live — nothing for you to install.`}
+            : testWorkspace
+              ? `Payment links work end to end in this test workspace. Real money starts flowing through ${rail} once we switch your workspace live — nothing for you to install.`
+              : `Not switched on yet. Until we enable ${rail} for you, the AI never sends a payment link: it tells the customer your team will share payment details. Nothing for you to install.`}
         </p>
       </div>
 

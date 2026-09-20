@@ -86,7 +86,20 @@ export async function createPaymentLink(
   }
 
   const currency = org.currency === "USD" ? "USD" : "INR";
-  const useRazorpay = shouldUseRazorpay(sendModeFor(org));
+  const mode = sendModeFor(org);
+  // A LIVE workspace without a payment provider gets NO link at all. The
+  // fallback below is the hosted practice page that "settles" on click and is
+  // marked paid by the cron — fine for a test workspace, but to a real customer
+  // it is a fake checkout, and the owner would see a deposit that never came.
+  // The booking tool turns this refusal into "the team will share payment
+  // details shortly".
+  if (mode === "live" && !isRazorpayConfigured()) {
+    return {
+      status: "not_allowed",
+      reason: "Online payments aren't switched on for this business yet.",
+    };
+  }
+  const useRazorpay = shouldUseRazorpay(mode);
   const request = await prisma.paymentRequest.create({
     data: {
       orgId,

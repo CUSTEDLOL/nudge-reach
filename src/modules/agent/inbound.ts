@@ -22,6 +22,8 @@ export interface InboundResult {
   automated?: true;
   /** Tools the agent invoked this turn (capture_lead, capture_booking_request, …). */
   actions?: string[];
+  /** The model call failed; the customer got the hand-off line and the thread needs a person. */
+  aiFailed?: true;
 }
 
 const HISTORY_LIMIT = 12;
@@ -172,7 +174,7 @@ export async function handleInboundMessage(
   const history = buildHistory(recent);
   if (history.length === 0) history.push({ role: "user", text });
 
-  const { text: replyText, handoff, actions } = await generateAgentActionReply(
+  const { text: replyText, handoff, actions, aiFailed } = await generateAgentActionReply(
     {
       vertical: profile.vertical,
       businessName: profile.businessName,
@@ -234,5 +236,6 @@ export async function handleInboundMessage(
     reply: replyText,
     handoff,
     ...(actions.length ? { actions } : {}),
+    ...(aiFailed ? { aiFailed } : {}),
   };
 }

@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
-import { env } from "@/lib/env";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
+import { isSimulated } from "@/modules/orgs/mode";
 import { checkAiFrontDesk } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { saveCalendarAccount, disconnectCalendar } from "@/modules/calendar";
@@ -20,9 +20,12 @@ export interface ActionResult {
 }
 
 /**
- * Connect the org's Google Calendar. Flagship-gated (AI Front Desk). In
- * simulation it writes a mocked "connected" account so the whole booking +
- * follow-up flow demos with zero Google setup; in live it starts real OAuth.
+ * Connect the org's Google Calendar. Flagship-gated (AI Front Desk).
+ *
+ * A TEST workspace gets the deterministic test calendar, so the whole booking
+ * flow demos with zero Google setup (invariant 4). A LIVE workspace only ever
+ * gets real Google: if the platform can't offer it yet, say so — never hand a
+ * paying client a fake calendar with a green "Connected" badge.
  */
 export async function connectCalendarAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
@@ -32,19 +35,27 @@ export async function connectCalendarAction(): Promise<ActionResult> {
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
 
-    if (env.SEND_MODE === "simulation" || !isGoogleCalendarConfigured()) {
+    if (isSimulated(ctx.org)) {
       await saveCalendarAccount({
         orgId: ctx.org.id,
         accountEmail: "demo-calendar@nudge.local",
         refreshToken: "sim",
         simulated: true,
       });
-      recordAudit(ctx, "calendar.connected", "Google Calendar (simulation)");
+      recordAudit(ctx, "calendar.connected", "Test calendar");
       revalidatePath("/integrations");
       return {
         ok: true,
         message:
-          "Test calendar connected — bookings, reminders and follow-ups flow end to end. Real Google Calendar sync switches on the moment it's enabled for your workspace.",
+          "Test calendar connected. Practice bookings only — every slot is free except 1 pm, so you can see how the AI offers other times. Nothing is written to a real calendar.",
+      };
+    }
+
+    if (!isGoogleCalendarConfigured()) {
+      return {
+        ok: false,
+        message:
+          "Google Calendar isn't switched on for this workspace yet — we're finishing the Google setup on our side and will let you know. Nothing was connected.",
       };
     }
 

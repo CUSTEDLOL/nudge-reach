@@ -21,6 +21,12 @@ export const LEAD_NUDGE_NAME = "Revenue Recovery — quiet-lead nudge";
 async function ensurePackTemplates(orgId: string): Promise<Map<string, string>> {
   const byName = new Map<string, string>();
   const approve = (await orgSendMode(orgId)) !== "live";
+  // A live workspace with no number yet cannot reach Meta. Leave the rows
+  // PENDING; prepareWorkspaceForLive submits them the moment a number connects.
+  // (They used to be marked REJECTED with "Connect your WhatsApp…", and then
+  // nothing ever resubmitted them.)
+  const canSubmit =
+    approve || (await prisma.whatsappAccount.count({ where: { orgId } })) > 0;
   for (const t of PACK_TEMPLATES) {
     const componentsJson = buildTemplatePayload(t.content, {
       name: t.name,
@@ -41,7 +47,7 @@ async function ensurePackTemplates(orgId: string): Promise<Map<string, string>> 
       : await prisma.template.create({
           data: { orgId, campaignId: null, name: t.name, ...data },
         });
-    if (!approve && row.metaStatus !== "APPROVED") {
+    if (!approve && canSubmit && row.metaStatus !== "APPROVED") {
       await submitRowToMeta(orgId, row).catch((err: unknown) =>
         prisma.template.update({
           where: { id: row.id },

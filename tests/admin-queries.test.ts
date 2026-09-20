@@ -96,7 +96,9 @@ describe("orgsList", () => {
     simulated: true,
     suspendedAt: null,
     trialEndsAt: null,
-    subscriptionStatus: "inactive",
+    // A ready workspace is inside a paid month; without one the AI has no credits.
+    subscriptionStatus: "active",
+    currentPeriodEnd: new Date(Date.now() + 20 * 86_400_000),
     vertical: "clinic",
     createdAt: new Date(Date.UTC(2026, 8, 1, 0, 0, Number(id.slice(1)) || 1)),
     memberships: [{ email: `${id}@x.com` }],
@@ -170,6 +172,24 @@ describe("orgsList", () => {
     expect((await orgsList({ readiness: "ready" })).rows.map((row) => row.id)).toEqual(["o1"]);
     expect((await orgsList({ readiness: "blocked" })).rows.map((row) => row.id)).toEqual(["o2"]);
     expect((await orgsList({ readiness: "degraded" })).rows.map((row) => row.id)).toEqual(["o3"]);
+  });
+
+  it("flags a paid workspace whose AI has no credits coming", async () => {
+    const inactive = { ...makeOrg("o1"), subscriptionStatus: "inactive", currentPeriodEnd: null };
+    const lapsed = { ...makeOrg("o2"), currentPeriodEnd: new Date(Date.now() - 86_400_000) };
+    const onTrial = {
+      ...makeOrg("o3"),
+      subscriptionStatus: "inactive",
+      currentPeriodEnd: null,
+      trialEndsAt: new Date(Date.now() + 5 * 86_400_000),
+    };
+    prisma.org.findMany.mockResolvedValue([inactive, lapsed, onTrial]);
+
+    const rows = (await orgsList({ readiness: "all" })).rows;
+    const issues = Object.fromEntries(rows.map((row) => [row.id, row.readinessIssues]));
+    expect(issues.o1).toContain("Subscription not active: no AI credits");
+    expect(issues.o2).toContain("Paid month ended: AI paused until renewed");
+    expect(issues.o3).toEqual([]);
   });
 });
 

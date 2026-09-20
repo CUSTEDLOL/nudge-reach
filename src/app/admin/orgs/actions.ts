@@ -21,6 +21,7 @@ export async function createWorkspaceAction(
       plan: str(formData, "plan"),
       ownerEmail: str(formData, "ownerEmail"),
       founderEmail: founder.email,
+      mode: str(formData, "mode"),
     });
     if (res.ok) {
       revalidatePath("/admin/orgs");

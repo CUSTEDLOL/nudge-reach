@@ -9,6 +9,7 @@ import {
   type OwnerSetupLink,
 } from "@/modules/orgs/owner-setup";
 import { PENDING_OWNER_PREFIX, pendingOwnerId } from "@/modules/orgs/pending-owner";
+import { ensureIncludedGrantFor } from "@/modules/billing/credits";
 
 /**
  * Founder-created workspaces. The sales motion is demo-first: a client pays on
@@ -20,6 +21,15 @@ import { PENDING_OWNER_PREFIX, pendingOwnerId } from "@/modules/orgs/pending-own
  * pending sentinel until they accept. `modules/orgs/org.ts` claims it on the
  * first sign-in (see `pending-owner.ts`).
  */
+
+/**
+ * Client = production from the first sign-in: nothing is mocked, every app
+ * shows its real state, and a connected number sends for real. Test = the
+ * founder's own sandbox, fully simulated. Founder rule, 2026-09-17: a client
+ * never sees test mode.
+ */
+export const WORKSPACE_MODES = ["client", "test"] as const;
+export type WorkspaceMode = (typeof WORKSPACE_MODES)[number];
 
 export interface CreateWorkspaceResult {
   ok: boolean;
@@ -44,9 +54,14 @@ export async function createWorkspace(input: {
   plan: string;
   ownerEmail: string;
   founderEmail: string;
+  mode: string;
 }): Promise<CreateWorkspaceResult> {
   const name = input.name.trim();
   const email = input.ownerEmail.trim().toLowerCase();
+  if (!(WORKSPACE_MODES as readonly string[]).includes(input.mode)) {
+    return { ok: false, message: "Choose whether this is a client workspace or a test one." };
+  }
+  const mode = input.mode as WorkspaceMode;
 
   if (name.length < 2) {
     return { ok: false, message: "Enter the business name (at least 2 characters)." };
@@ -87,6 +102,14 @@ export async function createWorkspace(input: {
 
   const issued = createOwnerSetupToken();
 
+  // They paid on the demo call, outside checkout, so nothing else will ever
+  // mark this workspace paid. Without an active subscription and a period, the
+  // credit ledger issues no included credits and — in live mode — the AI
+  // refuses its very first reply ("Your AI credits are used up") on a brand
+  // new client. Start the first paid month now; renew it from Admin → Controls.
+  const periodEnd = new Date();
+  periodEnd.setMonth(periodEnd.getMonth() + 1);
+
   const org = await prisma.$transaction(async (tx) => {
     const created = await tx.org.create({
       data: {
@@ -96,8 +119,10 @@ export async function createWorkspace(input: {
         currency: preset.currency,
         dialCode: preset.dialCode,
         timezone: preset.timezone,
-        // Test mode until they connect a real number — same rule as signup.
-        simulated: true,
+        // A client is live from day one; only a test workspace is simulated.
+        simulated: mode === "test",
+        subscriptionStatus: "active",
+        currentPeriodEnd: periodEnd,
       },
       select: { id: true, name: true },
     });
@@ -115,10 +140,16 @@ export async function createWorkspace(input: {
       input.founderEmail,
       "admin.workspace_created",
       created.name,
-      `${plan.name} · owner ${email}`,
+      `${plan.name} · ${mode === "client" ? "client (live)" : "test (simulated)"} · owner ${email} · paid period to ${periodEnd.toISOString().slice(0, 10)}`,
       tx
     );
     return created;
+  });
+  // The plan's AI credits for this first month. The preflight and the cron
+  // would issue them lazily too; doing it now means Billing shows them from
+  // the first sign-in. Never fatal.
+  await ensureIncludedGrantFor(org.id).catch((error) => {
+    console.error("[create-workspace] issuing included credits failed", error);
   });
   const setupLink: OwnerSetupLink = {
     url: `${appOrigin().replace(/\/$/, "")}/invite/${issued.token}`,

@@ -50,8 +50,9 @@ describe("the agent never leaves a customer unanswered", () => {
     expect(reply.text).toBe(FALLBACK);
     expect(reply.handoff).toBe(true);
     // Flagged so the owner can be told, and so it is distinguishable from a
-    // normal handoff the agent chose to make.
-    expect(reply.degraded).toBe(true);
+    // normal handoff the agent chose to make. Shares upstream's `aiFailed`
+    // name (9b1734d) rather than inventing a second flag for the same thing.
+    expect(reply.aiFailed).toBe(true);
     expect(reply.pausedForCredits).toBeFalsy();
   });
 
@@ -62,7 +63,7 @@ describe("the agent never leaves a customer unanswered", () => {
 
     expect(reply.text).toBe(FALLBACK);
     expect(reply.handoff).toBe(true);
-    expect(reply.degraded).toBe(true);
+    expect(reply.aiFailed).toBe(true);
   });
 
   it("still reports a zero credit balance as its own distinct case", async () => {
@@ -73,16 +74,16 @@ describe("the agent never leaves a customer unanswered", () => {
     expect(reply.text).toBe(FALLBACK);
     expect(reply.pausedForCredits).toBe(true);
     // Out of credits is a billing state, not a provider outage.
-    expect(reply.degraded).toBeFalsy();
+    expect(reply.aiFailed).toBeFalsy();
   });
 
-  it("a healthy reply is not marked degraded", async () => {
+  it("a healthy reply is not marked as a failure", async () => {
     runAgent.mockResolvedValue({ text: "Yes, we do.", toolCalls: [], cappedOut: false });
 
     const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never);
 
     expect(reply.text).toBe("Yes, we do.");
-    expect(reply.degraded).toBeFalsy();
+    expect(reply.aiFailed).toBeFalsy();
     expect(reply.handoff).toBe(false);
   });
 });
