@@ -3512,8 +3512,10 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
 }
 ```
 
-`toggleRevenueRecoveryAction` stays — the page still uses pause/resume — but
-note `writeStarterSetAction` calls `installRevenueRecoveryPack` directly.
+`toggleRevenueRecoveryAction` stays for now, but note `writeStarterSetAction`
+calls `installRevenueRecoveryPack` directly — and Task 10 removes the pack's
+pause/resume card, which leaves the toggle action with no caller (see Task 10,
+Step 6).
 
 Why the starter set is shaped this way: the pack is what we promise, the
 drafting is the bonus, so a drafting failure (credits gone, provider down)
@@ -3563,6 +3565,7 @@ import { describe, expect, it } from "vitest";
 const page = readFileSync("src/app/(app)/automations/page.tsx", "utf8");
 const bar = readFileSync("src/app/(app)/automations/follow-up-bar.tsx", "utf8");
 const card = readFileSync("src/app/(app)/automations/follow-up-card.tsx", "utf8");
+const rows = readFileSync("src/app/(app)/automations/follow-up-rows.tsx", "utf8");
 
 describe("follow-ups page", () => {
   it("leads with the natural-language bar and the starter-set CTA", () => {
@@ -3587,6 +3590,37 @@ describe("follow-ups page", () => {
   it("keeps the builder reachable and is honest about the nightly run", () => {
     expect(page).toContain('href="/automations/new"');
     expect(page).toMatch(/nightly run/i);
+    expect(page).toContain("handed to a teammate");
+  });
+
+  it("keeps the tick-driven appointment rows, with their hour fields", () => {
+    expect(page).toContain("<FollowUpRows");
+    expect(page).toContain("FOLLOW_UP_KINDS");
+    expect(page).toContain("paused={!config?.enabled}");
+    expect(rows).toContain("setFollowUpTimingAction");
+    expect(rows).toContain("setFollowUpFlagAction");
+  });
+
+  it("renders a hand-built follow-up as itself: trigger label, step count, no inline edit", () => {
+    expect(card).toContain("When: ${model.triggerLabel}");
+    expect(card).toContain("built in the editor");
+    expect(card).toContain("model.spec && !editing");
+    expect(card).toContain("Open in builder");
+  });
+
+  it("never shows a paused follow-up as waiting on Meta", () => {
+    expect(card).toMatch(/REJECTED[\s\S]{0,300}!m\.enabled[\s\S]{0,300}APPROVED/);
+  });
+
+  it("re-renders from the spec the server stored, not the one submitted", () => {
+    expect(card).toContain("r.ok && r.spec");
+  });
+
+  it("offers the starter set until there is an AI-written follow-up, and once per session", () => {
+    expect(bar).toContain("Write my starter set (about 3–5 AI credits)");
+    expect(bar).toContain("hasSpecFollowUps");
+    expect(bar).toContain("setDone(true)");
+    expect(page).toMatch(/hasSpecFollowUps=\{cards\.some/);
   });
 });
 ```
@@ -3666,7 +3700,7 @@ export function SpecEditor({
             maxLength={60}
             onChange={(e) => setMessage(i, { header: e.target.value })}
             className="mt-2"
-            aria-label="Header"
+            aria-label="Headline"
           />
           <Textarea
             value={m.body}
@@ -3714,27 +3748,33 @@ const EXAMPLES: Record<string, string[]> = {
     "Ask for a review the day after an appointment",
     "Remind everyone who booked that we're open on Sundays",
   ],
-  default: [
-    "Chase anyone who went quiet after showing interest, after 2 days, then once more 5 days later",
-    "Thank people the day after their appointment and ask how it went",
-    "Welcome every new lead with what we do and how to book",
-  ],
 };
+
+const DEFAULT_EXAMPLES = [
+  "Chase anyone who went quiet after showing interest, after 2 days, then once more 5 days later",
+  "Thank people the day after their appointment and ask how it went",
+  "Welcome every new lead with what we do and how to book",
+];
 
 export function FollowUpBar({
   vertical,
   canManage,
-  hasAny,
+  hasSpecFollowUps,
 }: {
   vertical: string;
   canManage: boolean;
-  hasAny: boolean;
+  /** Has the org any AI-written follow-up yet? A builder-only org is still
+   *  offered the starter set. */
+  hasSpecFollowUps: boolean;
 }) {
   const { toast } = useToast();
   const [request, setRequest] = useState("");
   const [draft, setDraft] = useState<FollowUpSpec | null>(null);
+  // The starter set costs two model calls, so it is offered once per session —
+  // the action's own "already here" reply covers a second tab.
+  const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
-  const examples = EXAMPLES[vertical] ?? EXAMPLES.default;
+  const examples = EXAMPLES[vertical] ?? DEFAULT_EXAMPLES;
 
   function draftIt() {
     start(async () => {
@@ -3760,6 +3800,7 @@ export function FollowUpBar({
     start(async () => {
       const r = await writeStarterSetAction();
       toast({ description: r.message, tone: r.ok ? "success" : "error" });
+      if (r.ok) setDone(true);
     });
   }
 
@@ -3781,6 +3822,7 @@ export function FollowUpBar({
             disabled={pending}
             maxLength={500}
             placeholder={examples[0]}
+            aria-label="Describe a follow-up"
             onChange={(e) => setRequest(e.target.value)}
             className="mt-3"
           />
@@ -3802,8 +3844,8 @@ export function FollowUpBar({
               <Wand2 className="h-4 w-4" aria-hidden />
               Draft it
             </Button>
-            {!hasAny && (
-              <Button variant="secondary" onClick={starter} loading={pending}>
+            {!hasSpecFollowUps && (
+              <Button variant="secondary" onClick={starter} loading={pending} disabled={done}>
                 Write my starter set (about 3–5 AI credits)
               </Button>
             )}
@@ -3840,7 +3882,7 @@ A single draft is about 1 AI credit; the starter set about 3–5 (one model call
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Pencil, Trash2, Workflow } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -3853,6 +3895,8 @@ import { SpecEditor } from "./spec-editor";
 export interface FollowUpCardModel {
   id: string;
   name: string;
+  /** Null for a hand-built follow-up — the builder clears the spec when it
+   *  saves, so there is no plain-English version to show or edit here. */
   spec: FollowUpSpec | null;
   source: string;
   enabled: boolean;
@@ -3860,13 +3904,20 @@ export interface FollowUpCardModel {
   stepsCount: number;
   /** Meta status of every template this follow-up sends. */
   templateStatuses: string[];
-  lastRunAt: string | null;
 }
 
-function statusOf(m: FollowUpCardModel): { label: string; tone: "success" | "warning" | "neutral" | "danger" } {
+/**
+ * The chip has to agree with the switch beside it. A rejection is surfaced
+ * whatever the switch says — it is the owner's to fix — but an off follow-up
+ * reads "Off" rather than "Waiting for Meta", which would imply it is armed.
+ * (Every freshly created follow-up lands off with pending templates, so the
+ * naive order labelled the whole starter set "Waiting for Meta".)
+ */
+function statusOf(m: FollowUpCardModel): { label: string; tone: BadgeTone } {
   if (m.templateStatuses.includes("REJECTED")) return { label: "Rejected by Meta", tone: "danger" };
+  if (!m.enabled) return { label: "Off", tone: "neutral" };
   if (m.templateStatuses.some((s) => s !== "APPROVED")) return { label: "Waiting for Meta", tone: "warning" };
-  return m.enabled ? { label: "On", tone: "success" } : { label: "Off", tone: "neutral" };
+  return { label: "On", tone: "success" };
 }
 
 export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; canManage: boolean }) {
@@ -3891,7 +3942,12 @@ export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; c
     start(async () => {
       const r = await updateFollowUpAction(model.id, draft);
       toast({ description: r.message, tone: r.ok ? "success" : "error" });
-      if (r.ok) setEditing(false);
+      // Show what was stored, not what was submitted: the server repairs the
+      // {{1}}, the STOP footer and a quiet chase's first message.
+      if (r.ok && r.spec) {
+        setDraft(r.spec);
+        setEditing(false);
+      }
     });
   }
 
@@ -3925,9 +3981,13 @@ export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; c
               ))}
             </ol>
           )}
+          {/* Hand-built: no spec to read back, so say what it is and send the
+              owner to the editor that owns it — no inline Edit, no message
+              list, just the step count, the switch, the builder link, delete. */}
           {!model.spec && (
             <p className="mt-1 text-xs text-neutral-500">
-              {model.stepsCount} step{model.stepsCount === 1 ? "" : "s"} · built in the editor
+              {model.stepsCount} step{model.stepsCount === 1 ? "" : "s"}
+              {" · built in the editor"}
             </p>
           )}
           {editing && draft && (
@@ -3995,7 +4055,13 @@ export const metadata: Metadata = { title: "Follow-ups" };
 
 export default async function FollowUpsPage() {
   const { org, role } = await requireOrgContext();
-  const canManage = hasRole(role, "ADMIN") && planHasAiFrontDesk(org.plan);
+  // Managing an automation (switch, edit, delete, builder) is ADMIN, as it has
+  // always been — `saveAutomation`/`toggleAutomation`/`deleteFollowUpAction`
+  // are role-gated, not plan-gated, and Free/Entry/Starter orgs do get
+  // automations. The AI bar is the flagship part, so only it takes the plan
+  // gate; every action behind it refuses server-side anyway.
+  const canManage = hasRole(role, "ADMIN");
+  const hasFrontDesk = planHasAiFrontDesk(org.plan);
 
   const [config, packTemplates, automations, profile] = await Promise.all([
     getFollowUpConfig(org.id),
@@ -4003,17 +4069,19 @@ export default async function FollowUpsPage() {
     prisma.automation.findMany({
       where: { orgId: org.id },
       orderBy: [{ enabled: "desc" }, { createdAt: "asc" }],
-      include: {
-        steps: { orderBy: { order: "asc" } },
-        runs: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
-      },
+      include: { steps: { orderBy: { order: "asc" } } },
     }),
     prisma.agentProfile.findUnique({ where: { orgId: org.id }, select: { vertical: true } }),
   ]);
 
-  const templateIds = automations.flatMap((a) =>
-    a.steps.filter((s) => s.kind === "send_template").map((s) => String((s.config as { templateId?: string }).templateId ?? ""))
-  );
+  const templateIdOf = (stepConfig: unknown) =>
+    String((stepConfig as { templateId?: string })?.templateId ?? "");
+
+  const templateIds = automations
+    .flatMap((a) =>
+      a.steps.filter((s) => s.kind === "send_template").map((s) => templateIdOf(s.config))
+    )
+    .filter(Boolean);
   const templates = templateIds.length
     ? await prisma.template.findMany({ where: { orgId: org.id, id: { in: templateIds } }, select: { id: true, metaStatus: true } })
     : [];
@@ -4031,8 +4099,7 @@ export default async function FollowUpsPage() {
       stepsCount: a.steps.length,
       templateStatuses: a.steps
         .filter((s) => s.kind === "send_template")
-        .map((s) => statusById.get(String((s.config as { templateId?: string }).templateId ?? "")) ?? "PENDING"),
-      lastRunAt: a.runs[0]?.createdAt.toISOString() ?? null,
+        .map((s) => statusById.get(templateIdOf(s.config)) ?? "PENDING"),
     };
   });
 
@@ -4067,10 +4134,16 @@ export default async function FollowUpsPage() {
         }
       />
 
-      <FollowUpBar vertical={profile?.vertical ?? org.vertical ?? "default"} canManage={canManage} hasAny={cards.length > 0} />
+      <FollowUpBar
+        vertical={profile?.vertical || org.vertical || "default"}
+        canManage={canManage && hasFrontDesk}
+        hasSpecFollowUps={cards.some((c) => c.spec !== null)}
+      />
 
       <p className="mt-3 text-xs text-neutral-500">
-        Follow-ups go out during the nightly run, so a &ldquo;2 days later&rdquo; message lands the next night after that.
+        Follow-ups go out during the nightly run, so a &ldquo;2 days later&rdquo;
+        message lands the next night after that. A conversation you&rsquo;ve
+        handed to a teammate is left alone until it&rsquo;s back to open.
       </p>
 
       <section className="mt-6 space-y-3">
@@ -4091,21 +4164,40 @@ export default async function FollowUpsPage() {
 }
 ```
 
-If `org.vertical` does not exist on the org context, drop that fallback and use `profile?.vertical ?? "default"`.
+`org.vertical` does exist (`Org.vertical String?`), and `draft.ts` already
+prefers the agent profile's, so the page uses the same order: `profile?.vertical
+|| org.vertical || "default"`.
 
-Delete `revenue-recovery-card.tsx` and remove `toggleRevenueRecoveryAction` from `followup-actions.ts` only if nothing else imports it (`grep -rn toggleRevenueRecoveryAction src/`). In `follow-up-rows.tsx`, remove the `builderHref` prop/link if Task 5 did not already.
+`revenue-recovery-card.tsx` is deleted (the page was its only importer).
+`toggleRevenueRecoveryAction` in `followup-actions.ts` is now **caller-less** —
+the pack's master pause/resume lost its only UI. Left in place deliberately;
+Task 12 decides whether to remove it or give `config.enabled` a home. Note
+`FollowUpRows` still reads it as `paused={!config?.enabled}`, and
+`writeStarterSetAction` → `installRevenueRecoveryPack` is now the only thing
+that sets it true.
+
+`automations-list.tsx` also loses its last importer. Left in place for Task 12
+for the same reason.
 
 **Step 7: Verify**
 
-Run: `npx vitest run tests/followups-page.test.ts && npx tsc --noEmit && npm run lint && npm test`
+Run: `npx vitest run tests/followups-page.test.ts && npx tsc --noEmit && npm run lint && npm test && npm run build`
 Expected: all green.
 
-**Step 8: Check it in the browser** — the dev server is usually running on `:3000`; the founder is signed in there. Ask them to reload `/automations`, click **Write my starter set** (in test mode this is instant and keyless), confirm three AI cards (offline starter set) + the pack nudge + three reminder rows appear, all Off except the pack nudge; type a sentence, **Draft it**, edit a word, **Create follow-up**; switch one on; open one in the builder and back. Fix anything they report before committing.
+**Step 8: Check it in the browser** — use the worktree's own dev server on
+`:3010` (`:3000` serves the founder's other branch). `curl -s -o /dev/null -w
+"%{http_code}" http://localhost:3010/automations` must be a 307 to `/login` —
+the route is wired and middleware compiled. Signed-in behaviour can only be
+checked by the founder: reload `/automations`, click **Write my starter set**
+(in test mode this is instant and keyless), confirm the AI cards + the pack
+nudge + three reminder rows appear, all Off except the pack nudge; type a
+sentence, **Draft it**, edit a word, **Create follow-up**; switch one on; open
+one in the builder and back.
 
 **Step 9: Commit**
 
 ```bash
-git add "src/app/(app)/automations/" tests/followups-page.test.ts
+git add "src/app/(app)/automations/" tests/followups-page.test.ts docs/plans/2026-09-19-ai-followups.md
 git commit -m "feat(followups): one list of follow-up cards with a natural-language bar and AI starter set"
 ```
 
