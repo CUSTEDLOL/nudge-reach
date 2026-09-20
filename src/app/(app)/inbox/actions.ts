@@ -19,6 +19,12 @@ import { recordContactEvent } from "@/modules/contacts/events";
 import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
+import {
+  refundTrialReply,
+  reserveTrialReply,
+  trialReplySummary,
+  type TrialReplySummary,
+} from "@/modules/trial/replies";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -31,7 +37,9 @@ export interface ActionResult {
   /** Set by the simulation tester so the caller can open the thread. */
   conversationId?: string;
   /** The tester's message landed but no AI reply was sent, and why. */
-  skipped?: "no_profile" | "disabled";
+  skipped?: "no_profile" | "disabled" | "trial_limit";
+  /** Present only for a restricted acquisition trial. */
+  trial?: TrialReplySummary;
 }
 
 export interface SuggestActionResult extends ActionResult {
@@ -465,6 +473,7 @@ export async function addNoteAction(formData: FormData): Promise<ActionResult> {
 export async function simulateInboundAction(
   formData: FormData
 ): Promise<ActionResult> {
+  let reservedTrialId: string | null = null;
   try {
     const { org } = await requireOrgContext();
     const rawPhone = String(formData.get("phone") ?? "").trim();
@@ -481,13 +490,38 @@ export async function simulateInboundAction(
       return { ok: false, message: "That phone number doesn't look right." };
     }
 
+    const reservation = await reserveTrialReply(org.id);
+    if (reservation.kind === "blocked") {
+      const trial = await trialReplySummary(org.id);
+      return {
+        ok: false,
+        message: reservation.status === "expired"
+          ? "Your seven-day trial has ended. Book your free setup demo to continue."
+          : "You've used all 15 test replies. Book your free setup demo to continue.",
+        skipped: "trial_limit",
+        ...(trial ? { trial } : {}),
+      };
+    }
+    if (reservation.kind === "reserved") {
+      reservedTrialId = reservation.trialId;
+    }
+
     // handleInboundMessage maintains the denormalized inbox-list fields
     // (lastMessageAt / preview / unread) itself — same path as the webhook.
     const result = await handleInboundMessage(org.id, phone, text);
 
+    if (reservedTrialId && !result.reply) {
+      await refundTrialReply(reservedTrialId);
+      reservedTrialId = null;
+    }
+    if (result.reply) reservedTrialId = null;
+
     revalidateInbox(result.conversationId);
 
     const conversationId = result.conversationId;
+    const trial = result.reply && reservation.kind === "reserved"
+      ? await trialReplySummary(org.id)
+      : undefined;
     if (result.optedOut) {
       return { ok: true, message: "Customer opted out (STOP) — no reply sent.", conversationId };
     }
@@ -508,13 +542,25 @@ export async function simulateInboundAction(
         message:
           "The AI couldn't answer just now, so the chat was handed to a person — exactly what a customer would get. Try again in a minute.",
         conversationId,
+        ...(trial ? { trial } : {}),
       };
     }
     if (result.handoff) {
-      return { ok: true, message: "Message received — the agent handed off to a human.", conversationId };
+      return {
+        ok: true,
+        message: "Message received — the agent handed off to a human.",
+        conversationId,
+        ...(trial ? { trial } : {}),
+      };
     }
-    return { ok: true, message: "Message received — the agent replied.", conversationId };
+    return {
+      ok: true,
+      message: "Message received — the agent replied.",
+      conversationId,
+      ...(trial ? { trial } : {}),
+    };
   } catch {
+    if (reservedTrialId) await refundTrialReply(reservedTrialId).catch(() => {});
     return { ok: false, message: "The simulated message failed — try again." };
   }
 }

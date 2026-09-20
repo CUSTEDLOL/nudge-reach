@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
-import { simulateInboundAction } from "../actions";
+import { simulateInboundAction, type ActionResult } from "../actions";
 
 const STARTERS = [
   "What are your timings?",
@@ -32,6 +32,7 @@ export function TryYourAi({
   const [phone, setPhone] = useState("9876500001");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [trialSummary, setTrialSummary] = useState<ActionResult["trial"]>();
 
   async function send() {
     if (sending || !text.trim()) return;
@@ -41,6 +42,7 @@ export function TryYourAi({
       fd.set("phone", phone);
       fd.set("text", text);
       const result = await simulateInboundAction(fd);
+      if (result.trial) setTrialSummary(result.trial);
       if (!result.ok) {
         toast({ tone: "error", description: result.message });
         return;
@@ -122,10 +124,17 @@ export function TryYourAi({
             Replies use only the facts on your AI Front Desk page — teach it more
             and try again.
           </p>
-          <Button type="submit" loading={sending} disabled={!text.trim()}>
-            <MessageSquare className="h-4 w-4" aria-hidden />
-            Send as customer
-          </Button>
+          <div className="flex shrink-0 items-center gap-3">
+            {trialSummary && (
+              <span className="text-xs font-medium text-neutral-500">
+                {trialSummary.repliesRemaining} test repl{trialSummary.repliesRemaining === 1 ? "y" : "ies"} left
+              </span>
+            )}
+            <Button type="submit" loading={sending} disabled={!text.trim()}>
+              <MessageSquare className="h-4 w-4" aria-hidden />
+              Send as customer
+            </Button>
+          </div>
         </div>
       </form>
     </Card>

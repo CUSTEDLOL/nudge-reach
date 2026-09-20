@@ -5,11 +5,19 @@ const {
   isRestrictedAcquisitionTrial,
   suggestReply,
   summarizeConversation,
+  handleInboundMessage,
+  reserveTrialReply,
+  refundTrialReply,
+  trialReplySummary,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
   suggestReply: vi.fn(),
   summarizeConversation: vi.fn(),
+  handleInboundMessage: vi.fn(),
+  reserveTrialReply: vi.fn(),
+  refundTrialReply: vi.fn(),
+  trialReplySummary: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -21,6 +29,12 @@ vi.mock("@/modules/ai/suggest-reply", () => ({
   suggestReply,
 }));
 vi.mock("@/modules/ai/summarize", () => ({ summarizeConversation }));
+vi.mock("@/modules/agent/inbound", () => ({ handleInboundMessage }));
+vi.mock("@/modules/trial/replies", () => ({
+  reserveTrialReply,
+  refundTrialReply,
+  trialReplySummary,
+}));
 import {
   buildConversationWhere,
   parseInboxFilter,
@@ -34,6 +48,7 @@ import {
 } from "@/modules/inbox/format";
 import {
   suggestReplyAction,
+  simulateInboundAction,
   summarizeConversationAction,
 } from "@/app/(app)/inbox/actions";
 
@@ -222,5 +237,93 @@ describe("restricted acquisition-trial inbox actions", () => {
       message: "This AI tool is available on paid plans.",
     });
     expect(summarizeConversation).not.toHaveBeenCalled();
+  });
+});
+
+describe("trial-metered simulated inbound action", () => {
+  const summary = {
+    status: "active",
+    repliesUsed: 4,
+    replyLimit: 15,
+    repliesRemaining: 11,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireOrgContext.mockResolvedValue({
+      org: { id: ORG, simulated: true, dialCode: "+91" },
+    });
+    reserveTrialReply.mockResolvedValue({
+      kind: "reserved",
+      trialId: "trial_1",
+      repliesUsed: 4,
+      replyLimit: 15,
+      repliesRemaining: 11,
+    });
+    refundTrialReply.mockResolvedValue(undefined);
+    trialReplySummary.mockResolvedValue(summary);
+  });
+
+  function formData() {
+    const value = new FormData();
+    value.set("phone", "9876500001");
+    value.set("text", "Are you open tomorrow?");
+    return value;
+  }
+
+  it("refunds the reserved slot when the inbound path throws", async () => {
+    handleInboundMessage.mockRejectedValue(new Error("provider down"));
+
+    await expect(simulateInboundAction(formData())).resolves.toEqual({
+      ok: false,
+      message: "The simulated message failed — try again.",
+    });
+    expect(refundTrialReply).toHaveBeenCalledWith("trial_1");
+  });
+
+  it.each([
+    ["STOP", { optedOut: true }],
+    ["no profile", { conversationId: "conversation_1", skipped: "no_profile" }],
+    ["no reply", { conversationId: "conversation_1" }],
+  ])("refunds the slot for %s results", async (_case, result) => {
+    handleInboundMessage.mockResolvedValue(result);
+
+    await simulateInboundAction(formData());
+
+    expect(refundTrialReply).toHaveBeenCalledWith("trial_1");
+  });
+
+  it("keeps the slot for an AI reply and returns the authoritative remainder", async () => {
+    handleInboundMessage.mockResolvedValue({
+      conversationId: "conversation_1",
+      reply: "Yes, we are open.",
+    });
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: true,
+      conversationId: "conversation_1",
+      trial: summary,
+    });
+    expect(refundTrialReply).not.toHaveBeenCalled();
+  });
+
+  it("blocks before the inbound path when the trial is exhausted", async () => {
+    reserveTrialReply.mockResolvedValue({
+      kind: "blocked",
+      status: "exhausted",
+    });
+    trialReplySummary.mockResolvedValue({
+      ...summary,
+      status: "exhausted",
+      repliesUsed: 15,
+      repliesRemaining: 0,
+    });
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: false,
+      skipped: "trial_limit",
+      trial: { status: "exhausted", repliesRemaining: 0 },
+    });
+    expect(handleInboundMessage).not.toHaveBeenCalled();
   });
 });
