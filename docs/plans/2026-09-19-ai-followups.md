@@ -4894,28 +4894,8 @@ git commit -m "docs: record AI follow-ups shipped"
 - The nightly cron starts chases for quiet conversations and never starts a second one for the same contact.
 - tsc, lint, 1,300-ish tests and the build are green; the seven invariant tests are unchanged.
 
-### Deferred (recorded 2026-09-20)
-
-- Live wording edits do not reach Meta: `submitRowToMeta` always creates; for an existing name it re-syncs the old template's status. Needs edit-in-place via Meta's template edit endpoint using `metaTemplateId` (`library.ts`).
-- Shrinking a spec's message count leaves the extra template rows in the library.
-- `fireQuietConversations` loads every prior contactId per automation into a `notIn` — needs a `Contact`↔`AutomationRun` relation (or a NOT EXISTS) before any single follow-up accumulates ~10k runs.
-- The cron route wraps every step in one try; a `chase-quiet` DB error skips the remaining steps that night — per-step try is a separate change.
-
-### Deferred (recorded 2026-09-21, from the Task 9 review)
-
-- No concurrency guard on `writeStarterSetAction`: a double-click runs the pack
-  install and the drafting twice. The name check is read-then-write, so the
-  second run can create duplicates. Wanted: `@@unique([orgId, name])` on
-  `Automation` plus a pending-state button in Task 10 — wire the button first,
-  then decide whether the constraint is still needed.
-- ~~The starter-set orchestration (install → draft → filter → save) lives in the
-  action. Task 11 needs the same sequence per org from the founder panel; lift
-  it into `src/modules/followup/install.ts` at that point, not before.~~ **Done
-  in Task 11**: `writeStarterSet(orgId) → StarterSetOutcome` in
-  `modules/followup/install.ts`; both `writeStarterSetAction` and
-  `founderDraftFollowUps` call it and write their own sentence from the
-  outcome. No import cycle (`draft.ts` imports spec/pack/compile, never
-  `install.ts`).
+(The deferred items recorded during Tasks 1–11 are consolidated into one list at
+the end of this document — see **Deferred**.)
 
 ### Task 11 as built (deviations from the block above)
 
@@ -4933,3 +4913,62 @@ git commit -m "docs: record AI follow-ups shipped"
   `leadNudge` field from `frontDeskOverview`'s `followUpConfig` select (Task 5
   made the quiet-lead nudge an automation; it now shows in the Follow-ups
   card). The DB column stays — Task 12 decides on a migration.
+
+---
+
+## Deferred
+
+Everything the tasks and their reviews knowingly left undone, consolidated here
+on 2026-09-21 (Task 12) from the per-task notes. Nothing below blocks the merge;
+each is a separate, named change.
+
+**Meta template lifecycle**
+
+- **Live wording edits never reach Meta.** `submitRowToMeta` only *creates*; for
+  a name Meta already knows it re-syncs the OLD template's status, so edited copy
+  sits PENDING locally and the approved-but-stale wording keeps sending. Needs
+  edit-in-place against Meta's template edit endpoint using the row's
+  `metaTemplateId` (`src/modules/whatsapp/library.ts`; the caller is
+  `ensureLibraryTemplates` in `src/modules/followup/install.ts`, whose docstring
+  points here). Invisible in simulation, which auto-approves.
+- **Shrinking a spec's message count orphans template rows.** Going from three
+  messages to two leaves `..._3` in the library, approved and unreferenced.
+  Harmless but untidy, and it will confuse a founder reading `/templates`.
+
+**Scale / operations**
+
+- **`fireQuietConversations` uses an unbounded `notIn`.** It loads every prior
+  `contactId` for the automation into memory to enforce one-chase-per-contact.
+  Needs a `Contact`↔`AutomationRun` relation (or a `NOT EXISTS` subquery) before
+  any single follow-up accumulates ~10k runs.
+- **The cron route wraps every step in one `try`.** A DB error inside
+  `chase-quiet` skips the remaining steps for that night. Per-step `try` is a
+  separate change (`src/app/api/cron/process-queue/route.ts`).
+- **The cron is nightly (`0 3 * * *`).** A "2 days later" message goes out on the
+  next 03:00 run after it comes due, not to the minute. The page says so.
+  Restore `*/5 * * * *` once the Vercel plan allows it.
+
+**Concurrency**
+
+- **No server-side guard on the starter set.** Both entry points disable their
+  button while the action is in flight — `follow-up-bar.tsx` via `useTransition`,
+  the founder's `ActionForm` via its own pending state — but that guard is
+  session-local: two tabs, or a replayed request, can still run install → draft →
+  save twice, and the duplicate-name check is read-then-write. Wanted:
+  `@@unique([orgId, name])` on `Automation`.
+
+**Schema**
+
+- **`FollowUpConfig.leadNudge` has no reader left in `src/`.** Task 5 turned the
+  quiet-lead nudge into a real automation; the only remaining mentions are the
+  column itself and the comment in `src/modules/admin/concierge.ts` explaining
+  why the select omits it. Deliberately NOT dropped in this branch — a
+  destructive `db:push` is its own change, with its own deploy step.
+
+**Resolved while the branch was in flight** (kept for the record)
+
+- ~~Lift the starter-set orchestration (install → draft → filter → save) out of
+  `writeStarterSetAction`.~~ Done in Task 11: `writeStarterSet(orgId) →
+  StarterSetOutcome` in `modules/followup/install.ts`; both the client action and
+  `founderDraftFollowUps` call it. No import cycle (`draft.ts` imports
+  spec/pack/compile, never `install.ts`).

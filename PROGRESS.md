@@ -1,5 +1,94 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## AI follow-ups on the automation engine (2026-09-21) ✅ CODE — BROWSER-UNVERIFIED, PROD SCHEMA PUSH PENDING
+
+- A follow-up is now one plain thing an owner can say out loud — a
+  `FollowUpSpec`: **situation → messages → stop rule**. The AI drafts it, a pure
+  compiler turns it into the automation the existing engine already runs plus the
+  Meta templates it sends. Nothing new executes messages. Plan:
+  `docs/plans/2026-09-19-ai-followups.md`; design:
+  `docs/plans/2026-09-19-ai-followups-design.md`.
+- **Spec** (`modules/followup/spec.ts`): zod-parsed, self-repairing (it fixes a
+  missing `{{1}}`, rejects over-long bodies instead of silently truncating,
+  never strands a surrogate when cutting a header) and it describes itself in
+  plain English for the card. **Compiler** (`compile.ts`): spec → trigger +
+  wait/send steps + named library templates, deterministic, no DB.
+- **Engine**: `cancelWaitingRuns` ends a contact's pending chases the moment they
+  reply, book, pay or opt out — the pack's nudge used to fire days after the lead
+  had already answered. The cancel claims each run with an `updateMany` guarded
+  on `status: "WAITING"`, so cancel and the tick can never both win the same run.
+  New `AutomationRunStatus.CANCELLED` shows in the run log.
+- **New `conversation_quiet` trigger**: the nightly cron starts a chase for leads
+  who have gone silent (hours + optional stage, 1h floor, fortnight cap), one
+  chase per contact per follow-up. The pack's quiet-lead nudge is no longer a
+  bespoke `campaign_reply` automation — it is a spec like everything else, and a
+  legacy install is upgraded in place.
+- **Drafting** (`draft.ts`): a sentence or the business profile becomes a spec,
+  metered as `followup_draft` through `lib/model-router`. The keyless path is
+  deterministic pack copy, so the whole flow still demos with `SEND_MODE=simulation`
+  and zero external keys (invariant 4).
+- **Page**: `/automations` is a natural-language bar + one list of follow-up
+  cards — situation, messages, Meta-aware status chip, switch, inline edit,
+  builder link, delete — plus "Write my starter set" on first open. Every draft
+  lands **off**. The two confusing sections and the separate Revenue-Recovery
+  card are gone. **Founder panel**: the same drafting per org from
+  `/admin/orgs/[id]/agent`, not flagship-gated (we set a client up before they
+  are billed) but never silent — a below-plan draft says so in the toast and in
+  the audit detail.
+
+**Two founder decisions recorded along the way (2026-09-20)**
+
+- **A reply does not cancel a follow-up on the `booked` situation.** "Thanks, see
+  you then" was cancelling the appointment reminder and the review ask. A reply
+  still cancels every other situation whatever `stopOn` says.
+- **Neither does a payment.** A deposit paid right after booking was killing the
+  review ask, so a booked spec that arrives without `stopOn` now defaults to
+  `["booking"]` — only a *new* booking supersedes the old one's follow-up. A spec
+  with no parseable situation (a hand-built automation) still cancels on
+  everything.
+
+**What the reviews caught that would otherwise have shipped**
+
+- The installer stored `buildTemplatePayload(...)` whole in `componentsJson`,
+  which `submitRowToMeta` sends as `components:` — **Meta would have rejected
+  every template this feature submitted live.** Simulation hid it by
+  auto-approving. Fixed here and in the identical line in `modules/concierge`.
+- Quiet chases started before the consent gate ran, so a contact who was not
+  `opted_in` burned that follow-up's one-chase-per-contact allowance on a message
+  the gate then refused to send — the lead could never be chased again. Chases
+  now also ignore our own outbound as "activity", carry a lookback window, and
+  don't start at all until every template of that follow-up is approved.
+- The drafter grounded itself in **archived** knowledge entries, i.e. facts the
+  owner had deliberately retired (invariant 7). It reads active knowledge only.
+- The paused state was unrecoverable from the client: switching the pack off left
+  no way back on. There is a resume button that actually resumes.
+- Also: the builder's edit page resolved a stored trigger against a hard-coded
+  five-item list that pre-dated `booking_created`, so saving a quiet-lead chase
+  silently turned it into an every-inbound-message send.
+
+- **1,444 tests pass** (+3 skipped, 190 files; was 1,279); `tsc --noEmit`, `npm
+  run lint` and `npm run build` all exit 0. The seven invariant tests
+  (`consent`, `org-scope`, `agent` 24h-window, `roles`, `model-guard`/`env`,
+  `webhook-verify`, `agent-tools`, `plan-limits`) are untouched by this branch
+  and green; the only invariant-adjacent test edits are additive — an engine
+  mock stub in `credit-gating`, `multi-number-routing` and `payment-link`, plus
+  new assertions that the cancel runs before automations dispatch and that STOP
+  cancels as `opt_out`. No existing assertion was relaxed or deleted.
+- **Deploy step — production needs `npm run db:push` then `npm run db:rls`.**
+  `Automation.spec`, `Automation.source` and `AutomationRunStatus.CANCELLED` were
+  pushed to the **dev** database on 2026-09-20; production has not had them.
+  Until that runs, the follow-ups page and the cron's chase step throw.
+- **Not verified: nobody has exercised the signed-in UI in a browser.** Every
+  claim above is from unit tests, `tsc` and the build. The founder must walk
+  `/automations` on the dev server (:3010) — draft from a sentence, write the
+  starter set, toggle, edit, delete, and reply in the inbox simulator to a
+  contact with a waiting chase to see the run go `CANCELLED` — before this is
+  called done.
+- What was knowingly left undone is one consolidated **Deferred** list at the end
+  of the plan (Meta edit-in-place, orphaned template rows, the unbounded `notIn`
+  in `fireQuietConversations`, the cron's single `try`, no server-side guard on
+  the starter set, and the now-readerless `FollowUpConfig.leadNudge` column).
+
 ## Follow-up timing, nav and section fixes (2026-09-18) ✅ (schema pushed 2026-09-18)
 
 - Founder feedback after testing the page below: the two sections were
