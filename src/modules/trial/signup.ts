@@ -5,17 +5,33 @@ import { prisma } from "@/lib/db";
 import { normalizePhoneE164 } from "@/lib/phone";
 
 const safeOptional = z.string().trim().max(200).optional();
+const safeReferrer = z.string().trim().max(200).transform((value, ctx) => {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      ctx.addIssue({ code: "custom", message: "Referrer must use HTTP or HTTPS." });
+      return z.NEVER;
+    }
+    return url.origin;
+  } catch {
+    ctx.addIssue({ code: "custom", message: "Referrer must be a valid URL." });
+    return z.NEVER;
+  }
+}).optional();
 
 export const trialSignupSchema = z.object({
   ownerName: z.string().trim().min(2).max(80),
   businessName: z.string().trim().min(2).max(120),
   email: z.string().trim().email().max(254),
-  phone: z.string().trim().min(8).max(24),
+  phone: z.string().trim().min(8).max(24).refine(
+    (value) => value.startsWith("+") && Boolean(normalizePhoneE164(value)),
+    "Enter the mobile number with its country code."
+  ),
   contactConsent: z.literal(true),
   honeypot: z.string().max(0).optional(),
   attribution: z.object({
     landingPath: z.string().startsWith("/").max(200).default("/free-trial"),
-    referrer: safeOptional,
+    referrer: safeReferrer,
     utmSource: safeOptional,
     utmMedium: safeOptional,
     utmCampaign: safeOptional,

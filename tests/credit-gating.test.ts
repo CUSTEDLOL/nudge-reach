@@ -65,6 +65,9 @@ vi.mock("@/modules/orgs/auth", () => ({
   requireOrgContext: vi.fn(),
   requireRole: vi.fn(),
 }));
+vi.mock("@/modules/trial/capabilities", () => ({
+  isRestrictedAcquisitionTrial: vi.fn().mockResolvedValue(false),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
@@ -170,6 +173,7 @@ describe("agent reply", () => {
 
     expect(r.handoff).toBe(true);
     expect(r.reply).toContain("One of our team will get back to you");
+    expect(r.generatedByAi).toBeFalsy();
     expect(sendMessage).toHaveBeenCalledWith(
       "whatsapp",
       expect.objectContaining({ address: "+919876543210" }),

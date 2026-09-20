@@ -47,14 +47,16 @@ export async function POST(request: Request) {
     const duplicate = error instanceof Prisma.PrismaClientKnownRequestError
       && error.code === "P2002";
 
+    if (!duplicate) {
+      console.error("[trial-signup] create failed", error);
+    }
+
     return NextResponse.json(
       {
         ok: false,
         error: duplicate
           ? "A trial already exists for that email or mobile. Sign in to resume it."
-          : error instanceof Error
-            ? error.message
-            : "Couldn't start the trial.",
+          : "Couldn't start the trial.",
       },
       { status: duplicate ? 409 : 500 }
     );

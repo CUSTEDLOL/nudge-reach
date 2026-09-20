@@ -8,6 +8,19 @@ export interface TrialReplySummary {
   repliesRemaining: number;
 }
 
+interface TrialMeterableResult {
+  /** Present only when a model successfully generated the customer reply. */
+  generatedByAi?: true;
+}
+
+export type TrialReplyRun<T> =
+  | {
+      kind: "blocked";
+      status: Exclude<TrialStatus, "active">;
+      trial?: TrialReplySummary;
+    }
+  | { kind: "handled"; result: T; trial?: TrialReplySummary };
+
 export async function reserveTrialReply(orgId: string, now = new Date()) {
   const trial = await prisma.acquisitionTrial.findUnique({
     where: { orgId },
@@ -104,4 +117,49 @@ export async function trialReplySummary(
     replyLimit: trial.replyLimit,
     repliesRemaining: Math.max(0, trial.replyLimit - trial.repliesUsed),
   };
+}
+
+/**
+ * The single acquisition-trial boundary around simulated inbound messages.
+ * Both tester entry points use this helper so no direct server action can
+ * bypass the seven-day / 15-generated-reply allowance.
+ */
+export async function withTrialReplyReservation<T extends TrialMeterableResult>(
+  orgId: string,
+  work: () => Promise<T>,
+  now = new Date()
+): Promise<TrialReplyRun<T>> {
+  const reservation = await reserveTrialReply(orgId, now);
+  if (reservation.kind === "blocked") {
+    const trial = await trialReplySummary(orgId, now);
+    return {
+      kind: "blocked",
+      status: reservation.status,
+      ...(trial ? { trial } : {}),
+    };
+  }
+
+  const trialId = reservation.kind === "reserved"
+    ? reservation.trialId
+    : undefined;
+
+  try {
+    const result = await work();
+    if (!trialId) return { kind: "handled", result };
+
+    if (!result.generatedByAi) {
+      await refundTrialReply(trialId);
+      return { kind: "handled", result };
+    }
+
+    const trial = await trialReplySummary(orgId, now);
+    return {
+      kind: "handled",
+      result,
+      ...(trial ? { trial } : {}),
+    };
+  } catch (error) {
+    if (trialId) await refundTrialReply(trialId).catch(() => {});
+    throw error;
+  }
 }

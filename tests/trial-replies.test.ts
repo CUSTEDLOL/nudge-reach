@@ -15,6 +15,7 @@ import {
   refundTrialReply,
   reserveTrialReply,
   trialReplySummary,
+  withTrialReplyReservation,
 } from "@/modules/trial/replies";
 
 const NOW = new Date("2026-09-20T00:00:00Z");
@@ -116,5 +117,61 @@ describe("trial reply allowance", () => {
       replyLimit: 15,
       repliesRemaining: 0,
     });
+  });
+
+  it("does not run an inbound callback after the trial limit", async () => {
+    prisma.acquisitionTrial.updateMany.mockResolvedValue({ count: 0 });
+    const inbound = vi.fn();
+
+    await expect(
+      withTrialReplyReservation("org_1", inbound, NOW)
+    ).resolves.toMatchObject({ kind: "blocked", status: "exhausted" });
+    expect(inbound).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["provider fallback", { reply: "A person will follow up.", aiFailed: true }],
+    ["automation", { reply: "Automated answer", automated: true }],
+    ["no reply", { skipped: "no_profile" }],
+  ])("refunds the reservation for a non-AI %s", async (_case, result) => {
+    const inbound = vi.fn().mockResolvedValue(result);
+
+    await expect(
+      withTrialReplyReservation("org_1", inbound, NOW)
+    ).resolves.toMatchObject({ kind: "handled", result });
+
+    expect(prisma.acquisitionTrial.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "trial_1", repliesUsed: { gt: 0 } },
+      data: { repliesUsed: { decrement: 1 } },
+    });
+  });
+
+  it("keeps the reservation only for an explicitly AI-generated reply", async () => {
+    prisma.acquisitionTrial.findUnique
+      .mockResolvedValueOnce(ACTIVE_TRIAL)
+      .mockResolvedValueOnce({ ...ACTIVE_TRIAL, repliesUsed: 15 });
+    const result = {
+      conversationId: "conversation_1",
+      reply: "We are open tomorrow.",
+      generatedByAi: true as const,
+    };
+
+    await expect(
+      withTrialReplyReservation(
+        "org_1",
+        vi.fn().mockResolvedValue(result),
+        NOW
+      )
+    ).resolves.toEqual({
+      kind: "handled",
+      result,
+      trial: {
+        status: "exhausted",
+        repliesUsed: 15,
+        replyLimit: 15,
+        repliesRemaining: 0,
+      },
+    });
+    expect(prisma.acquisitionTrial.updateMany).toHaveBeenCalledTimes(1);
   });
 });

@@ -17,6 +17,10 @@ import { checkContactLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { fireContactCreated, fireTagAdded } from "@/modules/automation/triggers";
+import {
+  type TrialReplySummary,
+  withTrialReplyReservation,
+} from "@/modules/trial/replies";
 
 export interface ActionResult {
   ok: boolean;
@@ -644,6 +648,8 @@ export async function deleteAudience(
 
 export interface SimulateMessageResult extends ActionResult {
   conversationId?: string;
+  skipped?: "trial_limit";
+  trial?: TrialReplySummary;
 }
 
 export async function simulateContactMessage(
@@ -664,8 +670,22 @@ export async function simulateContactMessage(
     });
     if (!contact) return { ok: false, message: "Contact not found." };
 
-    // Same handler the live webhook uses — creates the conversation if needed.
-    const result = await handleInboundMessage(org.id, contact.phoneE164, text);
+    // Same handler the live webhook uses, behind the shared acquisition-trial
+    // meter so this alternate tester cannot bypass the reply allowance.
+    const outcome = await withTrialReplyReservation(org.id, () =>
+      handleInboundMessage(org.id, contact.phoneE164, text)
+    );
+    if (outcome.kind === "blocked") {
+      return {
+        ok: false,
+        message: outcome.status === "expired"
+          ? "Your seven-day trial has ended. Book your free setup demo to continue."
+          : "You've used all 15 test replies. Book your free setup demo to continue.",
+        skipped: "trial_limit",
+        ...(outcome.trial ? { trial: outcome.trial } : {}),
+      };
+    }
+    const { result } = outcome;
 
     revalidatePath("/inbox");
     revalidatePath(`/inbox/${result.conversationId}`);

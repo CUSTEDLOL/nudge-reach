@@ -54,6 +54,7 @@ describe("the agent never leaves a customer unanswered", () => {
     // name (9b1734d) rather than inventing a second flag for the same thing.
     expect(reply.aiFailed).toBe(true);
     expect(reply.pausedForCredits).toBeFalsy();
+    expect(reply.generatedByAi).toBeFalsy();
   });
 
   it("falls back when the plain (tool-less) reply path errors", async () => {
@@ -75,6 +76,16 @@ describe("the agent never leaves a customer unanswered", () => {
     expect(reply.pausedForCredits).toBe(true);
     // Out of credits is a billing state, not a provider outage.
     expect(reply.aiFailed).toBeFalsy();
+    expect(reply.generatedByAi).toBeFalsy();
+  });
+
+  it("does not mark an empty-model fallback as generated", async () => {
+    runAgent.mockResolvedValue({ text: "", toolCalls: [], cappedOut: false });
+
+    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never);
+
+    expect(reply.text).toBe(FALLBACK);
+    expect(reply.generatedByAi).toBeFalsy();
   });
 
   it("a healthy reply is not marked as a failure", async () => {
@@ -85,5 +96,6 @@ describe("the agent never leaves a customer unanswered", () => {
     expect(reply.text).toBe("Yes, we do.");
     expect(reply.aiFailed).toBeFalsy();
     expect(reply.handoff).toBe(false);
+    expect(reply.generatedByAi).toBe(true);
   });
 });

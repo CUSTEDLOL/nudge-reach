@@ -40,6 +40,11 @@ describe("trial signup", () => {
       phone: "9876500000",
       contactConsent: false,
     }).success).toBe(false);
+
+    expect(trialSignupSchema.safeParse({
+      ...validSignup,
+      phone: "9876500000",
+    }).success).toBe(false);
   });
 
   it("stores normalized contact data and only the token hash", async () => {
@@ -61,6 +66,29 @@ describe("trial signup", () => {
       utmSource: "meta",
     }) });
     expect(JSON.stringify(create.mock.calls[0])).not.toContain(result.claimToken);
+  });
+
+  it("stores only an HTTP(S) referrer origin", async () => {
+    create.mockResolvedValue({ id: "trial_1" });
+
+    await createPendingTrial({
+      ...validSignup,
+      attribution: {
+        landingPath: "/free-trial",
+        referrer: "https://partner.example/private?email=person@example.com#secret",
+      },
+    });
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ referrer: "https://partner.example" }),
+    });
+    expect(trialSignupSchema.safeParse({
+      ...validSignup,
+      attribution: {
+        landingPath: "/free-trial",
+        referrer: "javascript:alert(1)",
+      },
+    }).success).toBe(false);
   });
 
   it("rejects malformed JSON", async () => {
@@ -128,5 +156,26 @@ describe("trial signup", () => {
     expect(body.ok).toBe(true);
     expect(body.claim.claimToken).toMatch(/^[A-Za-z0-9_-]{40,}$/);
     expect(JSON.stringify(body)).not.toContain("claimTokenHash");
+  });
+
+  it("logs unexpected failures without exposing backend details", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    create.mockRejectedValue(new Error("postgresql://user:secret@db.internal"));
+
+    const response = await POST(new Request("https://nudge.test/api/trials", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(validSignup),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ ok: false, error: "Couldn't start the trial." });
+    expect(JSON.stringify(body)).not.toContain("secret");
+    expect(log).toHaveBeenCalledWith(
+      "[trial-signup] create failed",
+      expect.any(Error)
+    );
+    log.mockRestore();
   });
 });

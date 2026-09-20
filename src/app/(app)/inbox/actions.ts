@@ -20,10 +20,8 @@ import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 import {
-  refundTrialReply,
-  reserveTrialReply,
-  trialReplySummary,
   type TrialReplySummary,
+  withTrialReplyReservation,
 } from "@/modules/trial/replies";
 
 /**
@@ -473,7 +471,6 @@ export async function addNoteAction(formData: FormData): Promise<ActionResult> {
 export async function simulateInboundAction(
   formData: FormData
 ): Promise<ActionResult> {
-  let reservedTrialId: string | null = null;
   try {
     const { org } = await requireOrgContext();
     const rawPhone = String(formData.get("phone") ?? "").trim();
@@ -490,38 +487,25 @@ export async function simulateInboundAction(
       return { ok: false, message: "That phone number doesn't look right." };
     }
 
-    const reservation = await reserveTrialReply(org.id);
-    if (reservation.kind === "blocked") {
-      const trial = await trialReplySummary(org.id);
+    const outcome = await withTrialReplyReservation(org.id, () =>
+      handleInboundMessage(org.id, phone, text)
+    );
+    if (outcome.kind === "blocked") {
       return {
         ok: false,
-        message: reservation.status === "expired"
+        message: outcome.status === "expired"
           ? "Your seven-day trial has ended. Book your free setup demo to continue."
           : "You've used all 15 test replies. Book your free setup demo to continue.",
         skipped: "trial_limit",
-        ...(trial ? { trial } : {}),
+        ...(outcome.trial ? { trial: outcome.trial } : {}),
       };
     }
-    if (reservation.kind === "reserved") {
-      reservedTrialId = reservation.trialId;
-    }
 
-    // handleInboundMessage maintains the denormalized inbox-list fields
-    // (lastMessageAt / preview / unread) itself — same path as the webhook.
-    const result = await handleInboundMessage(org.id, phone, text);
-
-    if (reservedTrialId && !result.reply) {
-      await refundTrialReply(reservedTrialId);
-      reservedTrialId = null;
-    }
-    if (result.reply) reservedTrialId = null;
+    const { result, trial } = outcome;
 
     revalidateInbox(result.conversationId);
 
     const conversationId = result.conversationId;
-    const trial = result.reply && reservation.kind === "reserved"
-      ? await trialReplySummary(org.id)
-      : undefined;
     if (result.optedOut) {
       return { ok: true, message: "Customer opted out (STOP) — no reply sent.", conversationId };
     }
@@ -560,7 +544,6 @@ export async function simulateInboundAction(
       ...(trial ? { trial } : {}),
     };
   } catch {
-    if (reservedTrialId) await refundTrialReply(reservedTrialId).catch(() => {});
     return { ok: false, message: "The simulated message failed — try again." };
   }
 }

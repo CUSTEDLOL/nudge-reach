@@ -6,18 +6,14 @@ const {
   suggestReply,
   summarizeConversation,
   handleInboundMessage,
-  reserveTrialReply,
-  refundTrialReply,
-  trialReplySummary,
+  withTrialReplyReservation,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
   suggestReply: vi.fn(),
   summarizeConversation: vi.fn(),
   handleInboundMessage: vi.fn(),
-  reserveTrialReply: vi.fn(),
-  refundTrialReply: vi.fn(),
-  trialReplySummary: vi.fn(),
+  withTrialReplyReservation: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -31,9 +27,7 @@ vi.mock("@/modules/ai/suggest-reply", () => ({
 vi.mock("@/modules/ai/summarize", () => ({ summarizeConversation }));
 vi.mock("@/modules/agent/inbound", () => ({ handleInboundMessage }));
 vi.mock("@/modules/trial/replies", () => ({
-  reserveTrialReply,
-  refundTrialReply,
-  trialReplySummary,
+  withTrialReplyReservation,
 }));
 import {
   buildConversationWhere,
@@ -253,15 +247,12 @@ describe("trial-metered simulated inbound action", () => {
     requireOrgContext.mockResolvedValue({
       org: { id: ORG, simulated: true, dialCode: "+91" },
     });
-    reserveTrialReply.mockResolvedValue({
-      kind: "reserved",
-      trialId: "trial_1",
-      repliesUsed: 4,
-      replyLimit: 15,
-      repliesRemaining: 11,
-    });
-    refundTrialReply.mockResolvedValue(undefined);
-    trialReplySummary.mockResolvedValue(summary);
+    withTrialReplyReservation.mockImplementation(
+      async (_orgId: string, work: () => Promise<unknown>) => ({
+        kind: "handled",
+        result: await work(),
+      })
+    );
   });
 
   function formData() {
@@ -271,32 +262,34 @@ describe("trial-metered simulated inbound action", () => {
     return value;
   }
 
-  it("refunds the reserved slot when the inbound path throws", async () => {
-    handleInboundMessage.mockRejectedValue(new Error("provider down"));
+  it("returns a safe error when the metered inbound boundary throws", async () => {
+    withTrialReplyReservation.mockRejectedValue(new Error("provider down"));
 
     await expect(simulateInboundAction(formData())).resolves.toEqual({
       ok: false,
       message: "The simulated message failed — try again.",
     });
-    expect(refundTrialReply).toHaveBeenCalledWith("trial_1");
   });
 
   it.each([
     ["STOP", { optedOut: true }],
     ["no profile", { conversationId: "conversation_1", skipped: "no_profile" }],
     ["no reply", { conversationId: "conversation_1" }],
-  ])("refunds the slot for %s results", async (_case, result) => {
-    handleInboundMessage.mockResolvedValue(result);
+  ])("renders the handled %s result", async (_case, result) => {
+    withTrialReplyReservation.mockResolvedValue({ kind: "handled", result });
 
     await simulateInboundAction(formData());
-
-    expect(refundTrialReply).toHaveBeenCalledWith("trial_1");
   });
 
   it("keeps the slot for an AI reply and returns the authoritative remainder", async () => {
-    handleInboundMessage.mockResolvedValue({
-      conversationId: "conversation_1",
-      reply: "Yes, we are open.",
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "handled",
+      result: {
+        conversationId: "conversation_1",
+        reply: "Yes, we are open.",
+        generatedByAi: true,
+      },
+      trial: summary,
     });
 
     await expect(simulateInboundAction(formData())).resolves.toMatchObject({
@@ -304,19 +297,18 @@ describe("trial-metered simulated inbound action", () => {
       conversationId: "conversation_1",
       trial: summary,
     });
-    expect(refundTrialReply).not.toHaveBeenCalled();
   });
 
   it("blocks before the inbound path when the trial is exhausted", async () => {
-    reserveTrialReply.mockResolvedValue({
+    withTrialReplyReservation.mockResolvedValue({
       kind: "blocked",
       status: "exhausted",
-    });
-    trialReplySummary.mockResolvedValue({
-      ...summary,
-      status: "exhausted",
-      repliesUsed: 15,
-      repliesRemaining: 0,
+      trial: {
+        ...summary,
+        status: "exhausted",
+        repliesUsed: 15,
+        repliesRemaining: 0,
+      },
     });
 
     await expect(simulateInboundAction(formData())).resolves.toMatchObject({

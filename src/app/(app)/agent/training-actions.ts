@@ -49,6 +49,13 @@ export async function answerQuestionAction(
 ): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
+    requireRole(ctx, "ADMIN");
+    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
+      return {
+        ok: false,
+        message: "This AI knowledge tool is available on paid plans.",
+      };
+    }
     const r = await answerOwnerQuestion(ctx, questionId, answerText);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
@@ -404,6 +411,12 @@ export async function structureExistingInfoAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
+      return {
+        ok: false,
+        message: "This AI knowledge tool is available on paid plans.",
+      };
+    }
     const profile = await prisma.agentProfile.findUnique({
       where: { orgId: ctx.org.id },
       select: { businessInfo: true },
