@@ -13,6 +13,8 @@ export type AttributionSnapshot = {
   gaClientId?: string;
 };
 
+export type TrialSurface = "free_trial" | "trial_setup" | "trial_workspace";
+
 export type MarketingEvent =
   | {
       event: "demo_cta_click";
@@ -30,6 +32,19 @@ export type MarketingEvent =
   | {
       event: "cal_embed_error";
       surface: string;
+    }
+  | { event: "trial_signup_started"; surface: TrialSurface }
+  | { event: "trial_signup_completed"; surface: TrialSurface }
+  | {
+      event: "trial_signup_failed";
+      surface: TrialSurface;
+      reason: "validation" | "intake" | "auth";
+    }
+  | { event: "trial_demo_click"; surface: TrialSurface }
+  | {
+      event: "trial_checkout_click";
+      surface: TrialSurface;
+      plan_id: "entry" | "starter" | "growth" | "pro";
     };
 
 type FirstTouch = Omit<AttributionSnapshot, "gaClientId">;

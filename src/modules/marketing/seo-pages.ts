@@ -55,6 +55,15 @@ export const SEO_PAGES = [
     index: true,
   },
   {
+    path: "/free-trial",
+    title: "Free AI Front Desk Trial for Clinics | Nudge",
+    description: "Teach Nudge about your clinic and test up to 15 grounded AI replies in a safe workspace. No card required, and no live WhatsApp connection needed.",
+    modifiedAt: "2026-09-21",
+    changeFrequency: "weekly",
+    priority: 0.9,
+    index: true,
+  },
+  {
     path: "/whatsapp-ai-automation",
     title: "WhatsApp AI Automation: From Reply to Qualified Lead",
     description: "Learn how WhatsApp AI automation captures and qualifies leads, takes real business actions, follows up compliantly, and hands conversations to your team.",
