@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
-import { setAgentEnabledAction, setFollowUpsEnabledAction, setupClientAction } from "../actions";
+import { draftFollowUpsAction, setAgentEnabledAction, setFollowUpsEnabledAction, setupClientAction } from "../actions";
 
 const VERTICAL_LABEL: Record<string, string> = { clinic: "Clinic / Health", salon: "Salon / Beauty" };
 const inputCls =
@@ -25,9 +25,14 @@ const TEMPLATE_TONE = { APPROVED: "success", REJECTED: "danger", PENDING: "warni
 export default async function AdminOrgAgentPage({ params }: { params: Promise<{ id: string }> }) {
   await requireFounder();
   const { id } = await params;
-  const [d, org] = await Promise.all([
+  const [d, org, followUps] = await Promise.all([
     frontDeskOverview(id),
     prisma.org.findUnique({ where: { id }, select: { name: true, vertical: true } }),
+    prisma.automation.findMany({
+      where: { orgId: id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, enabled: true, source: true },
+    }),
   ]);
   const H = { orgId: id };
   const p = d.profile;
@@ -101,7 +106,6 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
                     ["bookingReminders", "Booking reminders"],
                     ["noShowRebook", "No-show rebooking"],
                     ["postServiceReview", "Post-service review ask"],
-                    ["leadNudge", "Quiet-lead nudge"],
                     ["reminderCalls", "Reminder calls (voice)"],
                   ] as const
                 ).map(([k, label]) => (
@@ -125,6 +129,57 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
           ) : (
             <p className="text-sm text-neutral-400">Installed by client setup.</p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Follow-ups ({followUps.length})</CardTitle>
+          <CardDescription>
+            The same drafting the client gets on their Follow-ups page, run for them. Everything lands off — the
+            client switches it on from /automations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ul className="divide-y divide-neutral-100 text-sm">
+            {followUps.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3 py-1.5">
+                <span className="truncate">{a.name}</span>
+                <span className="flex shrink-0 gap-1.5">
+                  <Badge tone="neutral">{a.source}</Badge>
+                  <Badge tone={a.enabled ? "success" : "neutral"}>{a.enabled ? "on" : "off"}</Badge>
+                </span>
+              </li>
+            ))}
+            {followUps.length === 0 && <li className="py-1.5 text-neutral-400">None yet.</li>}
+          </ul>
+          <div className="grid items-end gap-4 sm:grid-cols-2">
+            <ActionForm
+              action={draftFollowUpsAction}
+              hidden={H}
+              submitLabel="Write starter set"
+              confirm={{
+                title: `Write the starter set for ${org?.name ?? "this client"}?`,
+                description:
+                  "Installs the ready-made pack, then drafts a tailored set from what the agent knows. The drafted ones land off.",
+              }}
+              askReason
+            />
+            <ActionForm
+              action={draftFollowUpsAction}
+              hidden={H}
+              submitLabel="Draft from a sentence"
+              confirm={{ title: "Draft this follow-up?", description: "It lands off, for the client to switch on." }}
+              askReason
+              className="space-y-2"
+            >
+              <Field
+                label="Describe it"
+                name="request"
+                placeholder="Chase anyone who asked about pricing but didn't book, after 2 days"
+              />
+            </ActionForm>
+          </div>
         </CardContent>
       </Card>
 

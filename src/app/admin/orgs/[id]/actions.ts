@@ -416,7 +416,12 @@ export async function setCustomActionEnabledAction(formData: FormData): Promise<
 }
 
 // ---- Front Desk (concierge) ----------------------------------------------
-import { founderSetAgentEnabled, founderSetFollowUpsEnabled, founderSetupClient } from "@/modules/admin/concierge";
+import {
+  founderDraftFollowUps,
+  founderSetAgentEnabled,
+  founderSetFollowUpsEnabled,
+  founderSetupClient,
+} from "@/modules/admin/concierge";
 
 export async function setupClientAction(formData: FormData): Promise<AdminActionResult> {
   return runFounderAction(async (founder) => {
@@ -455,6 +460,16 @@ export async function setFollowUpsEnabledAction(formData: FormData): Promise<Adm
     return withRequiredReason(formData, async (reason) => {
       const orgId = str(formData, "orgId");
       return done(orgId, await founderSetFollowUpsEnabled(orgId, str(formData, "enabled") === "true", founder.email, reason));
+    });
+  });
+}
+
+/** Empty `request` = write the client's whole starter set. */
+export async function draftFollowUpsAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    return withRequiredReason(formData, async (reason) => {
+      const orgId = str(formData, "orgId");
+      return done(orgId, await founderDraftFollowUps(orgId, str(formData, "request"), founder.email, reason));
     });
   });
 }

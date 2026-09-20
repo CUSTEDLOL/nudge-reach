@@ -4813,6 +4813,28 @@ git commit -m "docs: record AI follow-ups shipped"
   second run can create duplicates. Wanted: `@@unique([orgId, name])` on
   `Automation` plus a pending-state button in Task 10 — wire the button first,
   then decide whether the constraint is still needed.
-- The starter-set orchestration (install → draft → filter → save) lives in the
+- ~~The starter-set orchestration (install → draft → filter → save) lives in the
   action. Task 11 needs the same sequence per org from the founder panel; lift
-  it into `src/modules/followup/install.ts` at that point, not before.
+  it into `src/modules/followup/install.ts` at that point, not before.~~ **Done
+  in Task 11**: `writeStarterSet(orgId) → StarterSetOutcome` in
+  `modules/followup/install.ts`; both `writeStarterSetAction` and
+  `founderDraftFollowUps` call it and write their own sentence from the
+  outcome. No import cycle (`draft.ts` imports spec/pack/compile, never
+  `install.ts`).
+
+### Task 11 as built (deviations from the block above)
+
+- The starter-set sequence is the lifted `writeStarterSet`, not a copy.
+- `founderDraftFollowUps` is **not** flagship-gated: the founder sets a client
+  up before they are billed. It is not silent either — a below-plan draft says
+  "This workspace is below the AI Front Desk plan, so the drafting ran on us."
+  in the toast, and " below the AI Front Desk plan" in the audit detail.
+- The founder draft parses the spec (`parseFollowUpSpec` → `specErrorMessage`)
+  before saving, like the client's create action, and passes the drafter's own
+  failure sentence through instead of the generic founder-action message.
+- The card's two forms carry a `confirm` dialog: `askReason` renders its reason
+  box *inside* that dialog, so `askReason` without `confirm` is a dead button.
+- Removed the `leadNudge` status dot from the Revenue Recovery card and the
+  `leadNudge` field from `frontDeskOverview`'s `followUpConfig` select (Task 5
+  made the quiet-lead nudge an automation; it now shows in the Follow-ups
+  card). The DB column stays — Task 12 decides on a migration.

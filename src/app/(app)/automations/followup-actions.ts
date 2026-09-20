@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAiFrontDesk, checkAutomationLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
-import { draftFollowUp, draftStarterSet } from "@/modules/followup/draft";
+import { draftFollowUp } from "@/modules/followup/draft";
 import {
   getFollowUpConfig,
   installRevenueRecoveryPack,
@@ -13,6 +13,7 @@ import {
   setFollowUpEnabled,
   setFollowUpFlag,
   setFollowUpTiming,
+  writeStarterSet,
 } from "@/modules/followup/install";
 import {
   parseFollowUpSpec,
@@ -303,15 +304,8 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
 
-    await installRevenueRecoveryPack(ctx.org.id);
-
-    // The pack is the part we promise; drafting is the bonus. Credits gone or
-    // the provider down must not lose the install.
-    let specs: FollowUpSpec[];
-    try {
-      specs = await draftStarterSet({ orgId: ctx.org.id });
-    } catch (err) {
-      console.warn("[followup-starter-set] drafting failed", { orgId: ctx.org.id, err });
+    const { created, stopped, draftFailed, failed } = await writeStarterSet(ctx.org.id);
+    if (draftFailed) {
       revalidatePath("/automations");
       return {
         ok: true,
@@ -319,47 +313,6 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
         message:
           "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above.",
       };
-    }
-
-    const existing = new Set(
-      (
-        await prisma.automation.findMany({
-          where: { orgId: ctx.org.id },
-          select: { name: true },
-        })
-      ).map((a) => a.name.toLowerCase())
-    );
-    // Checked once, after the install: the loop only ever adds automations.
-    const limit = await checkAutomationLimit(ctx.org.id);
-    const room = limit.limit === null ? Infinity : Math.max(0, limit.limit - limit.used);
-
-    // A save that fails midway must not lose the ones already written: the
-    // boundary is inside the loop, and what was created is always reported.
-    let created = 0;
-    let stopped = false;
-    let failed = false;
-    for (const spec of specs) {
-      if (existing.has(spec.name.toLowerCase())) continue;
-      if (created >= room) {
-        stopped = true;
-        break;
-      }
-      // Defence in depth: the keyless helpers can hand back an unparsed spec.
-      const parsed = parseFollowUpSpec(spec);
-      if (!parsed.ok) continue;
-      try {
-        await saveFollowUpFromSpec({ orgId: ctx.org.id, spec: parsed.spec, source: "ai" });
-        created++;
-        existing.add(spec.name.toLowerCase()); // the model repeats itself
-      } catch (err) {
-        console.warn("[followup-starter-set] save failed", {
-          orgId: ctx.org.id,
-          name: spec.name,
-          err,
-        });
-        failed = true;
-        break;
-      }
     }
 
     recordAudit(ctx, "followup.drafted", `${created} drafted`);

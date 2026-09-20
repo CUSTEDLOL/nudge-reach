@@ -15,10 +15,9 @@ const {
   checkAutomationLimit,
   saveFollowUpFromSpec,
   installRevenueRecoveryPack,
+  writeStarterSet,
   draftFollowUp,
-  draftStarterSet,
   automationFindFirst,
-  automationFindMany,
   automationDeleteMany,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
@@ -28,10 +27,9 @@ const {
   checkAutomationLimit: vi.fn(),
   saveFollowUpFromSpec: vi.fn(),
   installRevenueRecoveryPack: vi.fn(),
+  writeStarterSet: vi.fn(),
   draftFollowUp: vi.fn(),
-  draftStarterSet: vi.fn(),
   automationFindFirst: vi.fn(),
-  automationFindMany: vi.fn(),
   automationDeleteMany: vi.fn(),
 }));
 
@@ -40,7 +38,6 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     automation: {
       findFirst: automationFindFirst,
-      findMany: automationFindMany,
       deleteMany: automationDeleteMany,
     },
   },
@@ -61,12 +58,13 @@ vi.mock("@/modules/billing/limits", () => ({ checkAiFrontDesk, checkAutomationLi
 vi.mock("@/modules/followup/install", () => ({
   saveFollowUpFromSpec,
   installRevenueRecoveryPack,
+  writeStarterSet,
   getFollowUpConfig: vi.fn(),
   setFollowUpEnabled: vi.fn(),
   setFollowUpFlag: vi.fn(),
   setFollowUpTiming: vi.fn(),
 }));
-vi.mock("@/modules/followup/draft", () => ({ draftFollowUp, draftStarterSet }));
+vi.mock("@/modules/followup/draft", () => ({ draftFollowUp }));
 
 import {
   createFollowUpAction,
@@ -99,7 +97,6 @@ beforeEach(() => {
   checkAiFrontDesk.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
   checkAutomationLimit.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
   saveFollowUpFromSpec.mockResolvedValue({ id: "auto1" });
-  automationFindMany.mockResolvedValue([]);
   automationDeleteMany.mockResolvedValue({ count: 1 });
 });
 
@@ -297,103 +294,62 @@ describe("the flagship boundary", () => {
   });
 });
 
+/**
+ * The orchestration itself lives in `modules/followup/install` (the founder
+ * panel runs the same sequence per org) and is tested there; what the action
+ * owns is the gate, the audit, and turning an outcome into a true sentence.
+ */
 describe("writeStarterSetAction", () => {
-  it("installs the ready-made pack, then saves the drafted set, all off", async () => {
-    draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" })]);
+  const outcome = (over: Partial<Record<string, unknown>> = {}) => ({
+    created: 0,
+    stopped: false,
+    draftFailed: false,
+    failed: false,
+    ...over,
+  });
+
+  it("writes the org's starter set and reports what it created", async () => {
+    writeStarterSet.mockResolvedValue(outcome({ created: 2 }));
     const r = await writeStarterSetAction();
-    expect(r.ok).toBe(true);
-    expect(r.created).toBe(2);
+    expect(r).toMatchObject({ ok: true, created: 2 });
     expect(r.message).toContain("2 follow-ups");
-    expect(installRevenueRecoveryPack).toHaveBeenCalledWith("org1");
-    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(2);
-    expect(saveFollowUpFromSpec.mock.calls[0][0].source).toBe("ai");
+    expect(writeStarterSet).toHaveBeenCalledWith("org1");
     expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.drafted", "2 drafted");
+    expect(revalidatePath).toHaveBeenCalledWith("/automations");
   });
 
-  it("skips a name the org already has, whatever its casing", async () => {
-    automationFindMany.mockResolvedValue([{ name: "quiet-lead CHASE" }]);
-    draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" })]);
+  it("says the ready-made pack survived when drafting failed", async () => {
+    writeStarterSet.mockResolvedValue(outcome({ draftFailed: true }));
     const r = await writeStarterSetAction();
-    expect(r.created).toBe(1);
-    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
-    expect(saveFollowUpFromSpec.mock.calls[0][0].spec.name).toBe("Welcome");
+    expect(r).toMatchObject({ ok: true, created: 0 });
+    expect(r.message).toBe(
+      "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above."
+    );
+    expect(revalidatePath).toHaveBeenCalledWith("/automations");
   });
 
-  it("keeps the installed pack when drafting fails, and logs the reason", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      draftStarterSet.mockRejectedValue(new Error("credits exhausted"));
-      const r = await writeStarterSetAction();
-      expect(r.ok).toBe(true);
-      expect(r.message).toBe(
-        "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above."
-      );
-      expect(installRevenueRecoveryPack).toHaveBeenCalledWith("org1");
-      expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
-      expect(warn).toHaveBeenCalledWith(
-        "[followup-starter-set] drafting failed",
-        expect.objectContaining({ orgId: "org1" })
-      );
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("keeps what it saved when a save fails partway, and says so", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" }), spec({ name: "Rebook" })]);
-      saveFollowUpFromSpec
-        .mockResolvedValueOnce({ id: "a1" })
-        .mockRejectedValueOnce(new Error("db went away"));
-      const r = await writeStarterSetAction();
-      expect(r).toMatchObject({ ok: true, created: 1 });
-      expect(r.message).toContain("1 follow-up");
-      expect(r.message).toContain("couldn't finish the rest");
-      expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.drafted", "1 drafted");
-      expect(revalidatePath).toHaveBeenCalledWith("/automations");
-      expect(warn).toHaveBeenCalledWith(
-        "[followup-starter-set] save failed",
-        expect.objectContaining({ orgId: "org1", name: "Welcome" })
-      );
-    } finally {
-      warn.mockRestore();
-    }
-  });
-
-  it("saves one follow-up when the model returns the same name twice", async () => {
-    draftStarterSet.mockResolvedValue([spec(), spec({ name: "QUIET-LEAD CHASE" })]);
+  it("says what it kept when a save fails partway", async () => {
+    writeStarterSet.mockResolvedValue(outcome({ created: 1, failed: true }));
     const r = await writeStarterSetAction();
-    expect(r.created).toBe(1);
-    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
+    expect(r).toMatchObject({ ok: true, created: 1 });
+    expect(r.message).toContain("1 follow-up");
+    expect(r.message).toContain("couldn't finish the rest");
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.drafted", "1 drafted");
   });
 
-  it("skips a spec that doesn't validate instead of saving it", async () => {
-    draftStarterSet.mockResolvedValue([spec({ situation: { kind: "nonsense" } }), spec({ name: "Welcome" })]);
+  it("names the plan's automation limit when it stopped there", async () => {
+    writeStarterSet.mockResolvedValue(outcome({ created: 1, stopped: true }));
     const r = await writeStarterSetAction();
-    expect(r.created).toBe(1);
-    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
-    expect(saveFollowUpFromSpec.mock.calls[0][0].spec.name).toBe("Welcome");
-  });
-
-  it("stops at the plan's automation limit and reports what it created", async () => {
-    checkAutomationLimit.mockResolvedValue({ allowed: true, message: "", used: 4, limit: 5 });
-    draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" }), spec({ name: "Rebook" })]);
-    const r = await writeStarterSetAction();
-    expect(r.ok).toBe(true);
-    expect(r.created).toBe(1);
-    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
+    expect(r).toMatchObject({ ok: true, created: 1 });
     expect(r.message).toContain("1 follow-up");
     expect(r.message).toMatch(/plan allows/i);
   });
 
   it("says nothing was new when the org already has every drafted name", async () => {
-    automationFindMany.mockResolvedValue([{ name: "Quiet-lead chase" }]);
-    draftStarterSet.mockResolvedValue([spec()]);
+    writeStarterSet.mockResolvedValue(outcome());
     const r = await writeStarterSetAction();
-    expect(r.ok).toBe(true);
-    expect(r.created).toBe(0);
-    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ ok: true, created: 0 });
+    expect(r.message).toBe("Your starter set is already here.");
   });
 
   it("installs nothing without the flagship, and refuses an agent", async () => {
@@ -403,7 +359,15 @@ describe("writeStarterSetAction", () => {
     checkAiFrontDesk.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
     requireOrgContext.mockResolvedValue(ctx("AGENT"));
     expect((await writeStarterSetAction()).ok).toBe(false);
-    expect(installRevenueRecoveryPack).not.toHaveBeenCalled();
+    expect(writeStarterSet).not.toHaveBeenCalled();
+  });
+
+  it("reports a failure, and audits nothing, when the write throws", async () => {
+    writeStarterSet.mockRejectedValue(new Error("db went away"));
+    const r = await writeStarterSetAction();
+    expect(r.ok).toBe(false);
+    expect(r.created).toBeUndefined();
+    expect(recordAudit).not.toHaveBeenCalled();
   });
 });
 

@@ -13,7 +13,9 @@ import {
   type FollowUpTiming,
 } from "@/modules/followup/pack";
 import { compileFollowUp, type CompiledTemplate } from "@/modules/followup/compile";
-import type { FollowUpSpec } from "@/modules/followup/spec";
+import { parseFollowUpSpec, type FollowUpSpec } from "@/modules/followup/spec";
+import { draftStarterSet } from "@/modules/followup/draft";
+import { checkAutomationLimit } from "@/modules/billing/limits";
 
 /** The installed automation's name is its identity — matching on it keeps the
  *  install idempotent, so renaming it would orphan every existing install. */
@@ -238,6 +240,71 @@ export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
     create: { orgId, enabled: true },
     update: { enabled: true },
   });
+}
+
+export interface StarterSetOutcome {
+  created: number;
+  /** Stopped early because the plan's automation limit was reached. */
+  stopped: boolean;
+  /** Drafting failed entirely; the ready-made pack is still installed. */
+  draftFailed: boolean;
+  /** A save threw after some had succeeded. */
+  failed: boolean;
+}
+
+/**
+ * An org's starter set: install the tick-driven pack (its quiet-lead nudge
+ * starts ON, as the installer has always done), then draft a tailored set on
+ * top, which lands OFF. Both the owner's first open of /automations and the
+ * founder's concierge onboarding run this, so a client sees exactly what we
+ * set up for them. Never throws for a partial result — what was written is
+ * always reported, and the caller writes the sentence.
+ */
+export async function writeStarterSet(orgId: string): Promise<StarterSetOutcome> {
+  await installRevenueRecoveryPack(orgId);
+
+  // The pack is the part we promise; drafting is the bonus. Credits gone or
+  // the provider down must not lose the install.
+  let specs: FollowUpSpec[];
+  try {
+    specs = await draftStarterSet({ orgId });
+  } catch (err) {
+    console.warn("[followup-starter-set] drafting failed", { orgId, err });
+    return { created: 0, stopped: false, draftFailed: true, failed: false };
+  }
+
+  const existing = new Set(
+    (await prisma.automation.findMany({ where: { orgId }, select: { name: true } })).map((a) =>
+      a.name.toLowerCase()
+    )
+  );
+  // Checked once, after the install: the loop only ever adds automations.
+  const limit = await checkAutomationLimit(orgId);
+  const room = limit.limit === null ? Infinity : Math.max(0, limit.limit - limit.used);
+
+  // A save that fails midway must not lose the ones already written: the
+  // boundary is inside the loop, and what was created is always reported.
+  const outcome: StarterSetOutcome = { created: 0, stopped: false, draftFailed: false, failed: false };
+  for (const spec of specs) {
+    if (existing.has(spec.name.toLowerCase())) continue;
+    if (outcome.created >= room) {
+      outcome.stopped = true;
+      break;
+    }
+    // Defence in depth: the keyless helpers can hand back an unparsed spec.
+    const parsed = parseFollowUpSpec(spec);
+    if (!parsed.ok) continue;
+    try {
+      await saveFollowUpFromSpec({ orgId, spec: parsed.spec, source: "ai" });
+      outcome.created++;
+      existing.add(spec.name.toLowerCase()); // the model repeats itself
+    } catch (err) {
+      console.warn("[followup-starter-set] save failed", { orgId, name: spec.name, err });
+      outcome.failed = true;
+      break;
+    }
+  }
+  return outcome;
 }
 
 /** Flip the whole pack on/off (config + the lead-nudge automation together). */
