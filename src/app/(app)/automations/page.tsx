@@ -44,7 +44,6 @@ export default async function FollowUpsPage() {
     }),
   ]);
 
-  const packAutomation = automations.find((a) => a.name === LEAD_NUDGE_NAME);
   const timing = normalizeTiming(config ?? {});
 
   // The pack's four follow-ups, each with the templates whose wording it sends.
@@ -56,10 +55,6 @@ export default async function FollowUpsPage() {
         description: kind.description,
         enabled: config[kind.flag],
         timingFields: [...kind.timingFields],
-        builderHref:
-          kind.editableInBuilder && packAutomation
-            ? `/automations/${packAutomation.id}`
-            : undefined,
         templates: kind.templateNames.flatMap((name) => {
           const row = packTemplates.get(name);
           return row ? [{ id: row.id, name, status: row.metaStatus }] : [];

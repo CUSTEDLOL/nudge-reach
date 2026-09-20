@@ -4,14 +4,17 @@ vi.mock("@/lib/db", () => ({ prisma: {} }));
 
 import {
   PACK_TEMPLATES,
+  PACK_LEAD_NUDGE_SPEC,
+  PACK_LEAD_NUDGE_TEMPLATE_NAMES,
   FOLLOW_UP_FLAGS,
   FOLLOW_UP_KINDS,
   MAX_TIMING_HOURS,
   MIN_TIMING_HOURS,
   TIMING_DEFAULTS,
-  leadNudgeAutomation,
   normalizeTiming,
 } from "@/modules/followup/pack";
+import { parseFollowUpSpec } from "@/modules/followup/spec";
+import { compileFollowUp } from "@/modules/followup/compile";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 
@@ -54,9 +57,11 @@ describe("Revenue-Recovery pack templates", () => {
 });
 
 describe("owner-facing follow-up rows", () => {
-  it("surfaces every pack template, so none is left uneditable", () => {
+  it("surfaces every tick-driven pack template; the nudge lives on its own card", () => {
     const listed = FOLLOW_UP_KINDS.flatMap((k) => k.templateNames).sort();
-    expect(listed).toEqual(PACK_TEMPLATES.map((t) => t.name).sort());
+    expect([...listed, ...PACK_LEAD_NUDGE_TEMPLATE_NAMES].sort()).toEqual(
+      PACK_TEMPLATES.map((t) => t.name).sort()
+    );
   });
 
   it("every row maps to a real FollowUpConfig switch", () => {
@@ -101,25 +106,18 @@ describe("follow-up timing", () => {
   });
 });
 
-describe("lead-nudge automation (composed, exactly two nudges)", () => {
-  const a = leadNudgeAutomation("t1", "t2");
-
-  it("fires on campaign_reply and sends exactly two templates, spaced by waits", () => {
-    expect(a.trigger).toBe("campaign_reply");
-    const kinds = a.steps.map((s) => s.kind);
-    expect(kinds).toEqual(["wait", "send_template", "wait", "send_template"]);
-    const templateIds = a.steps
-      .filter((s) => s.kind === "send_template")
-      .map((s) => s.config.templateId);
-    expect(templateIds).toEqual(["t1", "t2"]);
+describe("pack quiet-lead nudge (a spec, like every other follow-up)", () => {
+  it("chases once after 3 quiet days, then once more 3 days later, and stops on any signal", () => {
+    expect(PACK_LEAD_NUDGE_SPEC.situation).toEqual({ kind: "went_quiet", afterDays: 3 });
+    expect(PACK_LEAD_NUDGE_SPEC.messages.map((m) => m.afterDays)).toEqual([0, 3]);
+    expect(PACK_LEAD_NUDGE_SPEC.stopOn).toEqual(["reply", "booking", "payment"]);
+    expect(parseFollowUpSpec(PACK_LEAD_NUDGE_SPEC).ok).toBe(true);
   });
 
-  it("each wait is within the 7-day clamp", () => {
-    for (const s of a.steps) {
-      if (s.kind === "wait") {
-        expect(s.config.minutes as number).toBeLessThanOrEqual(7 * 24 * 60);
-      }
-    }
+  it("compiles onto the historical lead_nudge template names", () => {
+    const out = compileFollowUp(PACK_LEAD_NUDGE_SPEC, { templateNames: PACK_LEAD_NUDGE_TEMPLATE_NAMES });
+    expect(out.trigger).toBe("conversation_quiet");
+    expect(out.templates.map((t) => t.name)).toEqual(["lead_nudge_1", "lead_nudge_2"]);
   });
 });
 

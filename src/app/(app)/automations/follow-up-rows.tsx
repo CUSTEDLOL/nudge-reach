@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Clock, Pencil, Workflow } from "lucide-react";
+import { Clock, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,8 +26,6 @@ export interface FollowUpRow {
   enabled: boolean;
   templates: Array<{ id: string; name: string; status: string }>;
   timingFields: Array<{ field: TimingField; label: string }>;
-  /** Set when the steps live in the builder instead of the reminder tick. */
-  builderHref?: string;
 }
 
 export function FollowUpRows({
@@ -114,15 +112,6 @@ function Row({
               )}
             </span>
           ))}
-          {row.builderHref && (
-            <Link
-              href={row.builderHref}
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 outline-none transition-colors duration-150 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400/50"
-            >
-              <Workflow className="h-3 w-3" aria-hidden />
-              Edit the timing and steps
-            </Link>
-          )}
         </div>
       </div>
 

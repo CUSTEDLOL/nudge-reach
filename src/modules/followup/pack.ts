@@ -1,4 +1,5 @@
 import type { CampaignContent } from "@/modules/campaign/schema";
+import type { FollowUpSpec } from "@/modules/followup/spec";
 
 /**
  * Revenue-Recovery pack — the outbound moat, as DATA (no engine). Each template
@@ -98,7 +99,6 @@ export const FOLLOW_UP_FLAGS = [
   "bookingReminders",
   "noShowRebook",
   "postServiceReview",
-  "leadNudge",
 ] as const;
 
 export type FollowUpFlag = (typeof FOLLOW_UP_FLAGS)[number];
@@ -136,8 +136,6 @@ export interface FollowUpKind {
   description: string;
   templateNames: string[];
   timingFields: Array<{ field: TimingField; label: string }>;
-  /** True when the steps live in the automation builder rather than the tick. */
-  editableInBuilder?: boolean;
 }
 
 export const FOLLOW_UP_KINDS: FollowUpKind[] = [
@@ -170,16 +168,6 @@ export const FOLLOW_UP_KINDS: FollowUpKind[] = [
     templateNames: ["review_ask"],
     timingFields: [{ field: "reviewDelayHours", label: "Ask this long after" }],
   },
-  {
-    flag: "leadNudge",
-    label: "Quiet-lead nudge",
-    timing: "3 and 6 days after a campaign reply",
-    description:
-      "A lead who showed interest then went quiet gets two gentle nudges, then we stop.",
-    templateNames: ["lead_nudge_1", "lead_nudge_2"],
-    timingFields: [],
-    editableInBuilder: true,
-  },
 ];
 
 /**
@@ -206,40 +194,20 @@ export function normalizeTiming(raw: Partial<FollowUpTiming>): FollowUpTiming {
   };
 }
 
-/**
- * The lead-quiet nudge, composed from automation primitives: someone who
- * replied to a campaign (showed intent) then went quiet gets exactly two
- * template nudges, three days apart, then stops (encoded structurally — the
- * engine has no per-contact lifetime cap). Reminders/no-show/review are
- * time-absolute and handled by the reminder tick, not the event engine.
- */
-export interface PackAutomation {
-  key: string;
-  name: string;
-  description: string;
-  trigger: string;
-  triggerConfig: Record<string, unknown>;
-  steps: Array<{ kind: string; config: Record<string, unknown> }>;
-}
+export const PACK_LEAD_NUDGE_TEMPLATE_NAMES = ["lead_nudge_1", "lead_nudge_2"];
 
-const THREE_DAYS_MIN = 3 * 24 * 60;
-
-export function leadNudgeAutomation(
-  nudge1TemplateId: string,
-  nudge2TemplateId: string
-): PackAutomation {
-  return {
-    key: "lead_quiet_nudge",
-    name: "Revenue Recovery — quiet-lead nudge",
-    description:
-      "A lead who replied to a campaign then went quiet gets two gentle template nudges (3 days apart), then we stop.",
-    trigger: "campaign_reply",
-    triggerConfig: {},
-    steps: [
-      { kind: "wait", config: { minutes: THREE_DAYS_MIN } },
-      { kind: "send_template", config: { templateId: nudge1TemplateId } },
-      { kind: "wait", config: { minutes: THREE_DAYS_MIN } },
-      { kind: "send_template", config: { templateId: nudge2TemplateId } },
-    ],
-  };
-}
+/** The quiet-lead chase, as a spec: same object an AI draft or the owner's
+ *  own follow-up is, so it gets cancel-on-reply and the card UI for free. */
+export const PACK_LEAD_NUDGE_SPEC: FollowUpSpec = {
+  name: "Quiet-lead nudge",
+  situation: { kind: "went_quiet", afterDays: 3 },
+  messages: PACK_TEMPLATES.filter((t) => PACK_LEAD_NUDGE_TEMPLATE_NAMES.includes(t.name)).map((t, i) => ({
+    afterDays: i === 0 ? 0 : 3,
+    category: t.category,
+    header: t.content.header,
+    body: t.content.body,
+    footer: t.content.footer,
+    buttons: t.content.buttons,
+  })),
+  stopOn: ["reply", "booking", "payment"],
+};

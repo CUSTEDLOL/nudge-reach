@@ -85,7 +85,10 @@ The pack's quiet-lead nudge is re-expressed through the same compiler
 (`went_quiet { afterDays: 3 }` → nudge 1, then nudge 2 three days later,
 `stopOn` all). `installRevenueRecoveryPack` writes it with source `pack`,
 idempotent by name as before. Pack, AI and hand-built follow-ups become one
-kind of object.
+kind of object. Template names are keyed on the automation id, and an edit
+re-uses the templates the automation already sends, so renames never orphan
+approved templates; the pack's nudge keeps its historical `lead_nudge_1/2`
+names.
 
 ## 2. Engine fixes
 
@@ -138,8 +141,10 @@ canned specs using the pack's copy; the starter set in test mode *is* the pack.
 Records synthetic usage like `distillAnswer`. Invariant #4 holds with zero keys.
 
 Failure is never load-bearing: a drafting error is a friendly message; nothing
-is saved until a spec validates; templates + automation are then written in one
-transaction; every draft lands with `enabled: false`.
+is saved until a spec validates; the automation row is written first (off and
+step-less, so the engine ignores it), then its templates go to Meta, then its
+steps — a Meta failure leaves an off, empty automation rather than orphaned
+templates; every draft lands with `enabled: false`.
 
 ## 4. The page and the admin
 

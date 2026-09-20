@@ -817,10 +817,21 @@ git commit -m "feat(followups): compile a FollowUpSpec into engine steps and lib
 
 ### Task 5: Installer — save a compiled spec; the pack goes through it
 
+Four contract decisions, found in review and baked into the code below:
+
+1. **Template identity is per automation, not per name.** The automation row is created FIRST (off, step-less — `matchAutomations` skips step-less automations, so it is inert), template names are keyed on the automation id's last 8 chars, and an update pins names from the templates the automation's existing `send_template` steps already point at — only when the automation has a `spec` (a builder-made automation's steps may reference shared library templates that must not be overwritten). Otherwise a wording edit or a rename would upsert new templates and orphan the approved ones, and two same-named follow-ups would silently overwrite each other's copy.
+2. **`componentsJson` stores Meta's components ARRAY.** `buildTemplatePayload(...)` returns `{ name, language, category, components }`; the old installer stored the whole object and `submitRowToMeta` sends it as `components:` — every live submission would have been rejected (simulation hid it by auto-approving). Fixed here and in the identical line in `src/modules/concierge/index.ts`; `src/modules/demo/seed.ts` is simulation-only and left alone.
+3. **The pack nudge is create-only.** Owners can edit its wording, so re-running the installer (which the starter-set action will do) must not overwrite their edits.
+4. **No single transaction across Meta.** Template creation calls Meta, so the ordering is: automation row (off, empty) → templates → steps (one transaction). A Meta failure leaves an off, empty automation rather than orphaned templates. The design doc's "one transaction" sentence is replaced accordingly.
+
 **Files:**
-- Modify: `src/modules/followup/install.ts` (whole file — see below)
+- Rewrite: `src/modules/followup/install.ts`
 - Modify: `src/modules/followup/pack.ts` (replace `leadNudgeAutomation` with `PACK_LEAD_NUDGE_SPEC`; drop `leadNudge` from `FOLLOW_UP_FLAGS`/`FOLLOW_UP_KINDS`)
+- Modify: `src/modules/concierge/index.ts` (one line, the `componentsJson` shape)
 - Modify: `tests/followup-pack.test.ts`
+- Create: `tests/followup-install.test.ts`
+- Modify (minimal, to keep tsc green): `src/app/(app)/automations/page.tsx`, `src/app/(app)/automations/follow-up-rows.tsx`
+- Modify: `docs/plans/2026-09-19-ai-followups-design.md` (the transaction sentence in §3; the per-automation naming sentence in §1)
 
 **Step 1: Update the pack tests**
 
@@ -843,30 +854,203 @@ describe("pack quiet-lead nudge (a spec, like every other follow-up)", () => {
 });
 ```
 
-Change the "owner-facing follow-up rows" test so the quiet nudge is no longer expected as a row:
+Change the first "owner-facing follow-up rows" test so the quiet nudge is no longer expected as a row:
 
 ```ts
   it("surfaces every tick-driven pack template; the nudge lives on its own card", () => {
     const listed = FOLLOW_UP_KINDS.flatMap((k) => k.templateNames).sort();
-    const nudge = PACK_LEAD_NUDGE_TEMPLATE_NAMES;
-    expect([...listed, ...nudge].sort()).toEqual(PACK_TEMPLATES.map((t) => t.name).sort());
+    expect([...listed, ...PACK_LEAD_NUDGE_TEMPLATE_NAMES].sort()).toEqual(
+      PACK_TEMPLATES.map((t) => t.name).sort()
+    );
   });
 ```
 
 Update the import at the top: remove `leadNudgeAutomation`; add `PACK_LEAD_NUDGE_SPEC, PACK_LEAD_NUDGE_TEMPLATE_NAMES` from pack, `parseFollowUpSpec` from `@/modules/followup/spec`, `compileFollowUp` from `@/modules/followup/compile`.
 
-**Step 2: Run to verify it fails**
+**Step 2: Write the installer tests**
 
-Run: `npx vitest run tests/followup-pack.test.ts`
-Expected: FAIL — `PACK_LEAD_NUDGE_SPEC` not exported.
-
-**Step 3: Implement — pack.ts**
-
-Remove the `leadNudgeAutomation` function, `PackAutomation` interface and `THREE_DAYS_MIN`. Remove `"leadNudge"` from `FOLLOW_UP_FLAGS` and delete the `leadNudge` entry from `FOLLOW_UP_KINDS` (and the `editableInBuilder` field from the interface — nothing uses it now). Append:
+Create `tests/followup-install.test.ts` (prisma, `orgSendMode` and `submitRowToMeta` mocked; `m.calls` records call order):
 
 ```ts
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const m = vi.hoisted(() => ({
+  templateFindFirst: vi.fn(),
+  templateFindMany: vi.fn(),
+  templateCreate: vi.fn(),
+  templateUpdate: vi.fn(),
+  automationFindFirst: vi.fn(),
+  automationCreate: vi.fn(),
+  automationUpdate: vi.fn(),
+  stepDeleteMany: vi.fn(),
+  stepCreateMany: vi.fn(),
+  configUpsert: vi.fn(),
+  tx: vi.fn(),
+  sendMode: vi.fn(),
+  submit: vi.fn(),
+  calls: [] as string[],
+}));
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    template: { findFirst: m.templateFindFirst, findMany: m.templateFindMany, create: m.templateCreate, update: m.templateUpdate },
+    automation: { findFirst: m.automationFindFirst, create: m.automationCreate, update: m.automationUpdate },
+    automationStep: { deleteMany: m.stepDeleteMany, createMany: m.stepCreateMany },
+    followUpConfig: { upsert: m.configUpsert },
+    $transaction: m.tx,
+  },
+}));
+vi.mock("@/modules/orgs/mode", () => ({ orgSendMode: m.sendMode }));
+vi.mock("@/modules/whatsapp/library", () => ({ submitRowToMeta: m.submit }));
+
+import { installRevenueRecoveryPack, saveFollowUpFromSpec } from "@/modules/followup/install";
 import type { FollowUpSpec } from "@/modules/followup/spec";
 
+const spec: FollowUpSpec = {
+  name: "Pricing chase",
+  situation: { kind: "went_quiet", afterDays: 2 },
+  messages: [
+    { afterDays: 0, category: "MARKETING", header: "Still deciding?", body: "Hi {{1}}, any questions?", footer: "Reply STOP to unsubscribe", buttons: [] },
+    { afterDays: 3, category: "MARKETING", header: "One last note", body: "Hi {{1}}, here when ready.", footer: "Reply STOP to unsubscribe", buttons: [] },
+  ],
+  stopOn: ["reply", "booking", "payment"],
+};
+
+let seq = 0;
+beforeEach(() => {
+  for (const fn of Object.values(m)) if (typeof fn === "function" && "mockReset" in fn) fn.mockReset();
+  m.calls.length = 0;
+  seq = 0;
+  m.sendMode.mockResolvedValue("simulation");
+  m.tx.mockImplementation(async (ops: unknown[]) => Promise.all(ops));
+  m.templateFindFirst.mockImplementation(async () => { m.calls.push("template.findFirst"); return null; });
+  m.templateCreate.mockImplementation(async ({ data }) => { m.calls.push("template.create"); return { id: `t${++seq}`, ...data }; });
+  m.templateUpdate.mockImplementation(async ({ where, data }) => { m.calls.push("template.update"); return { id: where.id, ...data }; });
+  m.automationCreate.mockImplementation(async () => { m.calls.push("automation.create"); return { id: "cmauto0000000abcdefgh" }; });
+  m.automationUpdate.mockImplementation(async () => { m.calls.push("automation.update"); return {}; });
+  m.stepDeleteMany.mockResolvedValue({ count: 0 });
+  m.stepCreateMany.mockImplementation(async () => { m.calls.push("step.createMany"); return { count: 0 }; });
+  m.configUpsert.mockResolvedValue({});
+  m.templateFindMany.mockResolvedValue([]);
+});
+
+describe("saveFollowUpFromSpec — create", () => {
+  it("writes the automation first (off, no steps), keys template names on its id, then steps", async () => {
+    const { id } = await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai" });
+    expect(id).toBe("cmauto0000000abcdefgh");
+    expect(m.calls.indexOf("automation.create")).toBeLessThan(m.calls.indexOf("template.findFirst"));
+    expect(m.calls.indexOf("template.create")).toBeLessThan(m.calls.indexOf("step.createMany"));
+    const created = m.automationCreate.mock.calls[0][0].data;
+    expect(created).toMatchObject({ orgId: "o1", enabled: false, source: "ai", trigger: "conversation_quiet" });
+    expect(created.spec).toEqual(spec);
+    const names = m.templateCreate.mock.calls.map((c) => c[0].data.name);
+    expect(names).toEqual(["fu_pricing_chase_abcdefgh_1", "fu_pricing_chase_abcdefgh_2"]);
+  });
+
+  it("stores the Meta components ARRAY, not the whole payload, and resolves templateId into the steps", async () => {
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai" });
+    for (const c of m.templateCreate.mock.calls) expect(Array.isArray(c[0].data.componentsJson)).toBe(true);
+    const steps = m.stepCreateMany.mock.calls[0][0].data;
+    expect(steps.map((s: { kind: string }) => s.kind)).toEqual(["send_template", "wait", "send_template"]);
+    expect(steps[0].config).toEqual({ templateId: "t1" });
+    expect(steps[2].config).toEqual({ templateId: "t2" });
+    expect(steps.every((s: { automationId: string }) => s.automationId === "cmauto0000000abcdefgh")).toBe(true);
+  });
+
+  it("can create it switched on when the caller says so (the pack)", async () => {
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "pack", enabled: true, name: "Custom name" });
+    expect(m.automationCreate.mock.calls[0][0].data).toMatchObject({ enabled: true, name: "Custom name" });
+  });
+});
+
+describe("saveFollowUpFromSpec — update", () => {
+  const existing = {
+    id: "cmauto0000000abcdefgh",
+    orgId: "o1",
+    spec: { ...spec },
+    steps: [
+      { order: 1, kind: "send_template", config: { templateId: "old1" } },
+      { order: 2, kind: "wait", config: { minutes: 4320 } },
+      { order: 3, kind: "send_template", config: { templateId: "old2" } },
+    ],
+  };
+
+  it("keeps the templates a spec-backed automation already sends, even after a rename", async () => {
+    m.automationFindFirst.mockResolvedValue(existing);
+    m.templateFindMany.mockResolvedValue([{ id: "old1", name: "lead_nudge_1" }, { id: "old2", name: "lead_nudge_2" }]);
+    m.templateFindFirst.mockImplementation(async ({ where }) => ({ id: where.name === "lead_nudge_1" ? "old1" : "old2", name: where.name, content: {}, metaStatus: "APPROVED", metaTemplateId: "x" }));
+    await saveFollowUpFromSpec({ orgId: "o1", spec: { ...spec, name: "Renamed chase" }, source: "ai", automationId: existing.id });
+    expect(m.templateCreate).not.toHaveBeenCalled();
+    expect(m.templateUpdate.mock.calls.map((c) => c[0].where.id)).toEqual(["old1", "old2"]);
+    expect(m.automationCreate).not.toHaveBeenCalled();
+    expect(m.stepDeleteMany).toHaveBeenCalledWith({ where: { automationId: existing.id } });
+    expect(m.automationUpdate.mock.calls[0][0].data).toMatchObject({ name: "Renamed chase", source: "ai" });
+  });
+
+  it("never pins onto a builder-made automation's steps (they may be shared library templates)", async () => {
+    m.automationFindFirst.mockResolvedValue({ ...existing, spec: null });
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai", automationId: existing.id });
+    expect(m.templateFindMany).not.toHaveBeenCalled();
+    expect(m.templateCreate.mock.calls.map((c) => c[0].data.name)).toEqual(["fu_pricing_chase_abcdefgh_1", "fu_pricing_chase_abcdefgh_2"]);
+  });
+
+  it("refuses an automation outside the org", async () => {
+    m.automationFindFirst.mockResolvedValue(null);
+    await expect(saveFollowUpFromSpec({ orgId: "o2", spec, source: "ai", automationId: "nope" })).rejects.toThrow(/not found/i);
+  });
+});
+
+describe("live mode template handling", () => {
+  it("keeps an unchanged row's approval and resubmits changed copy", async () => {
+    m.sendMode.mockResolvedValue("live");
+    const unchangedContent = { productName: "Pricing chase — message 1", campaignAngle: "Follow-up.", header: "Still deciding?", body: "Hi {{1}}, any questions?", footer: "Reply STOP to unsubscribe", buttons: [], sampleName: "Priya", imageTreatment: "", notes: "Created from a follow-up." };
+    m.templateFindFirst.mockImplementation(async ({ where }) =>
+      where.name.endsWith("_1")
+        ? { id: "k1", name: where.name, content: unchangedContent, metaStatus: "APPROVED", metaTemplateId: "meta-1" }
+        : { id: "k2", name: where.name, content: { stale: true }, metaStatus: "APPROVED", metaTemplateId: "meta-2" }
+    );
+    m.submit.mockResolvedValue({});
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai" });
+    const [first, second] = m.templateUpdate.mock.calls.map((c) => c[0].data);
+    expect(first).toMatchObject({ metaStatus: "APPROVED", metaTemplateId: "meta-1" });
+    expect(second).toMatchObject({ metaStatus: "PENDING", metaTemplateId: null });
+    expect(m.submit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("installRevenueRecoveryPack", () => {
+  it("creates the nudge once, switched on, with its historical template names — and never overwrites it", async () => {
+    m.automationFindFirst.mockResolvedValueOnce(null);
+    await installRevenueRecoveryPack("o1");
+    expect(m.automationCreate).toHaveBeenCalledTimes(1);
+    expect(m.automationCreate.mock.calls[0][0].data).toMatchObject({ enabled: true, source: "pack", name: "Revenue Recovery — quiet-lead nudge" });
+    const names = m.templateCreate.mock.calls.map((c) => c[0].data.name).sort();
+    expect(names).toEqual(["appt_reminder_24h", "appt_reminder_2h", "lead_nudge_1", "lead_nudge_2", "no_show_rebook", "review_ask"]);
+    expect(m.configUpsert).toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    m.sendMode.mockResolvedValue("simulation");
+    m.automationFindFirst.mockResolvedValueOnce({ id: "existing" });
+    m.templateFindFirst.mockResolvedValue(null);
+    m.templateCreate.mockImplementation(async ({ data }) => ({ id: "t", ...data }));
+    m.configUpsert.mockResolvedValue({});
+    await installRevenueRecoveryPack("o1");
+    expect(m.automationCreate).not.toHaveBeenCalled();
+    expect(m.templateCreate.mock.calls.map((c) => c[0].data.name).some((n: string) => n.startsWith("lead_nudge"))).toBe(false);
+  });
+});
+```
+
+**Step 3: Run to verify it fails**
+
+Run: `npx vitest run tests/followup-pack.test.ts tests/followup-install.test.ts`
+Expected: FAIL — `PACK_LEAD_NUDGE_SPEC` not exported; `saveFollowUpFromSpec` not exported.
+
+**Step 4: Implement — pack.ts**
+
+Remove the `leadNudgeAutomation` function, `PackAutomation` interface and `THREE_DAYS_MIN`. Remove `"leadNudge"` from `FOLLOW_UP_FLAGS` and delete the `leadNudge` entry from `FOLLOW_UP_KINDS` (and the `editableInBuilder` field from the interface — nothing uses it now). Add `import type { FollowUpSpec } from "@/modules/followup/spec";` beside the other imports and append:
+
+```ts
 export const PACK_LEAD_NUDGE_TEMPLATE_NAMES = ["lead_nudge_1", "lead_nudge_2"];
 
 /** The quiet-lead chase, as a spec: same object an AI draft or the owner's
@@ -886,9 +1070,9 @@ export const PACK_LEAD_NUDGE_SPEC: FollowUpSpec = {
 };
 ```
 
-(Put the `import type` at the top of the file with the other imports.)
+(`PACK_TEMPLATES` lists `lead_nudge_1` before `lead_nudge_2`, so the `map` index is the message order.)
 
-**Step 4: Implement — install.ts**
+**Step 5: Implement — install.ts**
 
 Rewrite the file:
 
@@ -915,10 +1099,17 @@ export const LEAD_NUDGE_NAME = "Revenue Recovery — quiet-lead nudge";
 
 export type FollowUpSource = "ai" | "pack" | "builder";
 
-/** Create/refresh library templates by name. Test mode approves them
- *  immediately (so the demo works); live submits each to Meta for review and
- *  records a refusal on the row so the owner can fix and resubmit. Edited
- *  copy on an existing row goes back through approval. */
+/** Template names are keyed on the automation so two follow-ups with the same
+ *  name never share (and overwrite) a template. cuids are lowercase base36,
+ *  so the tail is already Meta-safe. */
+const templateKey = (automationId: string) => automationId.slice(-8);
+
+/**
+ * Create/refresh library templates by name. Test mode approves them
+ * immediately (so the demo works); live keeps an unchanged row's approval and
+ * sends changed copy back to Meta, recording a refusal on the row so the owner
+ * can fix and resubmit.
+ */
 export async function ensureLibraryTemplates(
   orgId: string,
   templates: CompiledTemplate[]
@@ -926,17 +1117,30 @@ export async function ensureLibraryTemplates(
   const byName = new Map<string, string>();
   const approve = (await orgSendMode(orgId)) !== "live";
   for (const t of templates) {
-    const componentsJson = buildTemplatePayload(t.content, { name: t.name }) as Prisma.InputJsonValue;
+    // Meta takes the components array; name/language/category travel beside it.
+    const componentsJson = buildTemplatePayload(t.content, { name: t.name })
+      .components as Prisma.InputJsonValue;
     const content = t.content as unknown as Prisma.InputJsonValue;
-    const existing = await prisma.template.findFirst({ where: { orgId, name: t.name, campaignId: null } });
-    const unchanged = existing && JSON.stringify(existing.content) === JSON.stringify(t.content);
+    const existing = await prisma.template.findFirst({
+      where: { orgId, name: t.name, campaignId: null },
+    });
+    const unchanged =
+      existing !== null && JSON.stringify(existing.content) === JSON.stringify(t.content);
     const data = {
       language: "en",
       category: t.category,
       content,
       componentsJson,
-      metaStatus: approve ? ("APPROVED" as const) : unchanged ? existing.metaStatus : ("PENDING" as const),
-      metaTemplateId: approve ? `sim-tpl-${t.name}` : unchanged ? existing.metaTemplateId : null,
+      metaStatus: approve
+        ? ("APPROVED" as const)
+        : unchanged
+          ? existing.metaStatus
+          : ("PENDING" as const),
+      metaTemplateId: approve
+        ? `sim-tpl-${t.name}`
+        : unchanged
+          ? existing.metaTemplateId
+          : null,
     };
     const row = existing
       ? await prisma.template.update({ where: { id: existing.id }, data })
@@ -957,10 +1161,30 @@ export async function ensureLibraryTemplates(
   return byName;
 }
 
+/** The template names a spec-backed automation already sends, in step order,
+ *  so an edit re-uses (and re-approves) those rows instead of orphaning them. */
+async function pinnedTemplateNames(
+  steps: Array<{ kind: string; config: unknown }>
+): Promise<string[]> {
+  const ids = steps
+    .filter((s) => s.kind === "send_template")
+    .map((s) => String((s.config as { templateId?: unknown })?.templateId ?? ""))
+    .filter(Boolean);
+  if (!ids.length) return [];
+  const rows = await prisma.template.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(rows.map((r) => [r.id, r.name]));
+  return ids.map((id) => nameById.get(id) ?? "");
+}
+
 /**
- * Persist a spec as an automation + its templates. Creates when `automationId`
- * is absent (always OFF — a human switches it on), otherwise replaces the
- * steps and re-stores the spec, keeping the current enabled state.
+ * Persist a spec as an automation + its templates. The automation row is
+ * written first — off and step-less, which the engine ignores — so its id can
+ * key the template names and a Meta failure leaves nothing half-wired. Then
+ * the templates, then the steps. Creates land OFF unless `enabled` says
+ * otherwise; updates keep the current switch.
  */
 export async function saveFollowUpFromSpec(opts: {
   orgId: string;
@@ -969,64 +1193,89 @@ export async function saveFollowUpFromSpec(opts: {
   automationId?: string;
   name?: string;
   templateNames?: string[];
+  enabled?: boolean;
 }): Promise<{ id: string }> {
-  const compiled = compileFollowUp(opts.spec, { templateNames: opts.templateNames });
-  const ids = await ensureLibraryTemplates(opts.orgId, compiled.templates);
-  const stepsCreate = compiled.steps.map((s, i) => ({
-    order: i + 1,
-    kind: s.kind,
-    config: (s.kind === "send_template"
-      ? { templateId: ids.get(String(s.config.templateName)) }
-      : s.config) as Prisma.InputJsonValue,
-  }));
-  const data = {
+  const n = opts.spec.messages.length;
+  const base = {
     name: opts.name ?? opts.spec.name,
-    description: opts.spec.messages.length > 1 ? `${opts.spec.messages.length} messages` : "1 message",
-    trigger: compiled.trigger,
-    triggerConfig: compiled.triggerConfig as Prisma.InputJsonValue,
+    description: `${n} message${n === 1 ? "" : "s"}`,
     spec: opts.spec as unknown as Prisma.InputJsonValue,
     source: opts.source,
   };
 
-  if (opts.automationId) {
-    await prisma.$transaction([
-      prisma.automationStep.deleteMany({ where: { automationId: opts.automationId } }),
-      prisma.automation.update({
-        where: { id: opts.automationId },
-        data: { ...data, steps: { create: stepsCreate } },
-      }),
-    ]);
-    return { id: opts.automationId };
+  let id = opts.automationId;
+  let pinned = opts.templateNames ?? [];
+  if (id) {
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: opts.orgId },
+      include: { steps: { orderBy: { order: "asc" } } },
+    });
+    if (!existing) throw new Error("Follow-up not found.");
+    if (!pinned.length && existing.spec !== null) pinned = await pinnedTemplateNames(existing.steps);
+  } else {
+    const { trigger, triggerConfig } = compileFollowUp(opts.spec);
+    const created = await prisma.automation.create({
+      data: {
+        orgId: opts.orgId,
+        enabled: opts.enabled ?? false,
+        trigger,
+        triggerConfig: triggerConfig as Prisma.InputJsonValue,
+        ...base,
+      },
+      select: { id: true },
+    });
+    id = created.id;
   }
-  const created = await prisma.automation.create({
-    data: { orgId: opts.orgId, enabled: false, ...data, steps: { create: stepsCreate } },
-    select: { id: true },
-  });
-  return created;
+
+  const compiled = compileFollowUp(opts.spec, { templateNames: pinned, key: templateKey(id) });
+  const ids = await ensureLibraryTemplates(opts.orgId, compiled.templates);
+  const automationId = id;
+  const steps = compiled.steps.map((s, i) => ({
+    automationId,
+    order: i + 1,
+    kind: s.kind,
+    config: (s.kind === "send_template"
+      ? { templateId: ids.get(s.config.templateName) }
+      : s.config) as Prisma.InputJsonValue,
+  }));
+  await prisma.$transaction([
+    prisma.automationStep.deleteMany({ where: { automationId } }),
+    prisma.automation.update({
+      where: { id: automationId },
+      data: { ...base, trigger: compiled.trigger, triggerConfig: compiled.triggerConfig as Prisma.InputJsonValue },
+    }),
+    prisma.automationStep.createMany({ data: steps }),
+  ]);
+  return { id: automationId };
 }
 
 /**
  * One-toggle install of the Revenue-Recovery pack for an org: the tick-driven
- * templates + the quiet-lead nudge (as a spec) + an enabled FollowUpConfig.
- * Idempotent (upsert by name), so re-running is safe.
+ * templates, the quiet-lead nudge as a spec (created once — its wording is the
+ * owner's to edit from then on, so re-running never overwrites it), and an
+ * enabled FollowUpConfig. Idempotent.
  */
 export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
-  const tickTemplates = PACK_TEMPLATES.filter((t) => !PACK_LEAD_NUDGE_TEMPLATE_NAMES.includes(t.name));
-  await ensureLibraryTemplates(orgId, tickTemplates);
-
-  const existing = await prisma.automation.findFirst({ where: { orgId, name: LEAD_NUDGE_NAME } });
-  await saveFollowUpFromSpec({
+  await ensureLibraryTemplates(
     orgId,
-    spec: PACK_LEAD_NUDGE_SPEC,
-    source: "pack",
-    name: LEAD_NUDGE_NAME,
-    automationId: existing?.id,
-    templateNames: PACK_LEAD_NUDGE_TEMPLATE_NAMES,
+    PACK_TEMPLATES.filter((t) => !PACK_LEAD_NUDGE_TEMPLATE_NAMES.includes(t.name))
+  );
+  const nudge = await prisma.automation.findFirst({
+    where: { orgId, name: LEAD_NUDGE_NAME },
+    select: { id: true },
   });
-  // The pack's nudge is the one follow-up that starts ON: it is the moat the
-  // plan is sold on, and its copy was written and reviewed by us.
-  await prisma.automation.updateMany({ where: { orgId, name: LEAD_NUDGE_NAME }, data: { enabled: true } });
-
+  if (!nudge) {
+    // The one follow-up that starts ON: it is the moat the plan is sold on and
+    // its copy was written and reviewed by us.
+    await saveFollowUpFromSpec({
+      orgId,
+      spec: PACK_LEAD_NUDGE_SPEC,
+      source: "pack",
+      name: LEAD_NUDGE_NAME,
+      templateNames: PACK_LEAD_NUDGE_TEMPLATE_NAMES,
+      enabled: true,
+    });
+  }
   await prisma.followUpConfig.upsert({
     where: { orgId },
     create: { orgId, enabled: true },
@@ -1056,7 +1305,10 @@ export async function setFollowUpFlag(orgId: string, flag: FollowUpFlag, enabled
 
 /** Save when the time-absolute follow-ups fire, normalized so the tick's
  *  windows stay valid. */
-export async function setFollowUpTiming(orgId: string, raw: Partial<FollowUpTiming>): Promise<FollowUpTiming> {
+export async function setFollowUpTiming(
+  orgId: string,
+  raw: Partial<FollowUpTiming>
+): Promise<FollowUpTiming> {
   const timing = normalizeTiming(raw);
   await prisma.followUpConfig.upsert({
     where: { orgId },
@@ -1070,27 +1322,51 @@ export async function getFollowUpConfig(orgId: string) {
   return prisma.followUpConfig.findUnique({ where: { orgId } });
 }
 
-/** The pack's tick-driven templates for this org, by name — for the "edit the
+/** The pack's templates for this org, by template name — for the "edit the
  *  wording" links on the follow-ups page. */
-export async function getPackTemplateIds(orgId: string): Promise<Map<string, { id: string; metaStatus: string }>> {
+export async function getPackTemplateIds(
+  orgId: string
+): Promise<Map<string, { id: string; metaStatus: string }>> {
   const rows = await prisma.template.findMany({
-    where: { orgId, campaignId: null, name: { in: PACK_TEMPLATES.map((t) => t.name) } },
+    where: {
+      orgId,
+      campaignId: null,
+      name: { in: PACK_TEMPLATES.map((t) => t.name) },
+    },
     select: { id: true, name: true, metaStatus: true },
   });
   return new Map(rows.map((r) => [r.name, { id: r.id, metaStatus: r.metaStatus }]));
 }
 ```
 
-**Step 5: Verify**
+**Step 6: The same `componentsJson` fix in concierge**
 
-Run: `npx vitest run tests/followup-pack.test.ts && npx tsc --noEmit`
-Expected: PASS; tsc may report `followup-actions.ts` / `page.tsx` referencing the removed `leadNudge`/`editableInBuilder` — fix those two references now (delete the `builderHref` computation in `page.tsx` and the `builderHref` field in `follow-up-rows.tsx`; they are replaced in Task 11). Then tsc silent.
+In `src/modules/concierge/index.ts` (`installVerticalPack`), change the `componentsJson` assignment to `buildTemplatePayload(t.content, { name: t.name }).components as Prisma.InputJsonValue`. No test asserts the old shape.
 
-**Step 6: Commit**
+**Step 7: Keep tsc green on the page**
+
+`src/app/(app)/automations/page.tsx` computed `builderHref` from `kind.editableInBuilder` (and `packAutomation` only fed it); `follow-up-rows.tsx` declared and rendered `builderHref` (and imported `Workflow` only for it). Remove all of that and nothing else — Task 10 rewrites the page.
+
+**Step 8: Docs**
+
+In `docs/plans/2026-09-19-ai-followups-design.md` §3, replace "templates + automation are then written in one transaction" with the real ordering (automation row first, off and step-less; then templates to Meta; then steps). In §1 append: "Template names are keyed on the automation id, and an edit re-uses the templates the automation already sends, so renames never orphan approved templates; the pack's nudge keeps its historical `lead_nudge_1/2` names."
+
+**Step 9: Verify**
+
+Run: `npx vitest run tests/followup-pack.test.ts tests/followup-install.test.ts tests/followup-compile.test.ts && npx tsc --noEmit && npm run lint && npm test`
+Expected: PASS, tsc silent. `grep -rn "leadNudge" src/` still finds the admin org page reading `config.leadNudge` for a founder status dot and `modules/admin/concierge.ts` selecting the column — the column still exists; leave both (Task 11 revisits the admin page).
+
+**Step 10: Commit**
 
 ```bash
-git add src/modules/followup/install.ts src/modules/followup/pack.ts tests/followup-pack.test.ts "src/app/(app)/automations/page.tsx" "src/app/(app)/automations/follow-up-rows.tsx"
-git commit -m "feat(followups): install follow-ups from specs; the pack nudge becomes a went_quiet spec"
+git add src/modules/followup/install.ts src/modules/followup/pack.ts src/modules/concierge/index.ts tests/followup-pack.test.ts tests/followup-install.test.ts "src/app/(app)/automations/page.tsx" "src/app/(app)/automations/follow-up-rows.tsx" docs/plans/2026-09-19-ai-followups.md docs/plans/2026-09-19-ai-followups-design.md
+git commit -m "feat(followups): install follow-ups from specs; the pack nudge becomes a went_quiet spec
+
+Template names are keyed on the automation id and an edit re-uses the
+templates the automation already sends, so renames never orphan approved
+copy. Stores Meta's components array (not the whole payload) as
+componentsJson — the previous shape would have been rejected live. The
+pack nudge is created once and never overwritten."
 ```
 
 ---
