@@ -133,11 +133,20 @@ describe("agent reply", () => {
     });
   });
 
-  it("any other error still propagates", async () => {
+  it("any other error also answers the customer, but as degraded not out-of-credits", async () => {
+    // Changed 2026-09-20: a provider error used to propagate, which 500'd the
+    // WhatsApp webhook and left the customer in silence while Meta retried.
+    // Now it answers with the same handoff line, flagged `degraded` so it
+    // stays distinguishable from a billing stop.
     runAgent.mockRejectedValue(new Error("provider down"));
-    await expect(
-      generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx)
-    ).rejects.toThrow("provider down");
+    const r = await generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx);
+    expect(r).toEqual({
+      text: expect.stringContaining("One of our team will get back to you"),
+      handoff: true,
+      actions: [],
+      degraded: true,
+    });
+    expect(r.pausedForCredits).toBeUndefined();
   });
 
   it("inbound path still answers the customer with the handoff line and flags the conversation", async () => {

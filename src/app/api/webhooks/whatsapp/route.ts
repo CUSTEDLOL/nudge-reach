@@ -175,11 +175,25 @@ async function processInbound(
     }
     // Threads the conversation, handles STOP, and auto-replies if the agent
     // is enabled (see lib/agent/inbound.ts).
-    await handleInboundMessage(account.orgId, inbound.from, text, {
-      metaMessageId: inbound.id,
-      // E4: the number the customer wrote to — replies leave from it.
-      whatsappAccountId: account.id,
-    });
+    //
+    // Isolated per message: Meta batches several customers into one delivery,
+    // and an unhandled throw here would 500 the whole request — dropping
+    // everyone else in the batch and making Meta redeliver the lot, which
+    // just repeats the same failure. The agent already answers with the
+    // handoff line when the MODEL fails; this is the backstop for everything
+    // else, and it must stay quiet-but-logged rather than loud-and-fatal.
+    try {
+      await handleInboundMessage(account.orgId, inbound.from, text, {
+        metaMessageId: inbound.id,
+        // E4: the number the customer wrote to — replies leave from it.
+        whatsappAccountId: account.id,
+      });
+    } catch (err) {
+      console.error(
+        `[webhook] inbound ${inbound.id ?? "(no id)"} for org ${account.orgId} failed`,
+        err
+      );
+    }
   }
 }
 

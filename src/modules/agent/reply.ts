@@ -18,10 +18,29 @@ import { CreditsExhaustedError } from "@/modules/billing/credits";
 export interface AgentReply {
   text: string;
   handoff: boolean;
+  /**
+   * The model call failed (revoked key, provider outage, a BYOK model id the
+   * provider rejects) and the customer got the handoff line instead of a real
+   * answer. Distinct from a handoff the agent chose to make, and from
+   * `pausedForCredits` — this one means something is broken and the owner
+   * should be told.
+   */
+  degraded?: boolean;
 }
 
 const HANDOFF_MESSAGE =
   "Thanks for your message! One of our team will get back to you shortly. 🙏";
+
+/**
+ * A provider failure must never leave a customer in silence. Anything that is
+ * not a credits problem becomes the handoff line plus a loud log: the lead
+ * stays warm, a human picks the thread up, and the webhook still returns 200
+ * so Meta does not retry a message we already answered.
+ */
+function degradedReply(where: string, err: unknown): AgentReply & { actions: string[] } {
+  console.error(`[agent] ${where} failed — replying with the handoff line`, err);
+  return { text: HANDOFF_MESSAGE, handoff: true, degraded: true, actions: [] };
+}
 
 /**
  * Turn the scoped system prompt + conversation history into a reply.
@@ -35,16 +54,21 @@ export async function generateAgentReply(
   promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
 ): Promise<AgentReply> {
   const system = buildAgentSystemPrompt(profile, promptOptions);
-  const raw = await chat({
-    system,
-    messages: history,
-    maxTokens: 400,
-    attribution: {
-      orgId: ctx.orgId,
-      conversationId: ctx.conversationId,
-      purpose: "agent_reply",
-    },
-  });
+  let raw: string;
+  try {
+    raw = await chat({
+      system,
+      messages: history,
+      maxTokens: 400,
+      attribution: {
+        orgId: ctx.orgId,
+        conversationId: ctx.conversationId,
+        purpose: "agent_reply",
+      },
+    });
+  } catch (err) {
+    return degradedReply("generateAgentReply", err);
+  }
 
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
     return { text: HANDOFF_MESSAGE, handoff: true };
@@ -99,8 +123,10 @@ export async function generateAgentActionReply(
       },
     }));
   } catch (err) {
-    if (!(err instanceof CreditsExhaustedError)) throw err;
-    return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+    if (err instanceof CreditsExhaustedError) {
+      return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+    }
+    return degradedReply("generateAgentActionReply", err);
   }
 
   const handoff = calledHandoff(toolCalls);
