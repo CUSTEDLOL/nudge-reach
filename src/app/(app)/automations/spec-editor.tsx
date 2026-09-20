@@ -52,9 +52,6 @@ export function SpecEditor({
         <div key={i} className="rounded-xl border border-neutral-200 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral">{describeMessageTiming(i, m.afterDays)}</Badge>
-            <Badge tone={m.category === "MARKETING" ? "brand" : "info"}>
-              {m.category.toLowerCase()}
-            </Badge>
             {/* A quiet chase's first message goes the moment the trigger fires
                 — its wait already lives on the situation, so there is nothing
                 to set here. */}
@@ -82,22 +79,28 @@ export function SpecEditor({
               </label>
             )}
           </div>
-          <Input
-            value={m.header}
-            disabled={disabled}
-            maxLength={60}
-            onChange={(e) => setMessage(i, { header: e.target.value })}
-            className="mt-2"
-            aria-label="Headline"
-          />
-          <Textarea
-            value={m.body}
-            disabled={disabled}
-            maxLength={600}
-            onChange={(e) => setMessage(i, { body: e.target.value })}
-            className="mt-2"
-            aria-label="Message"
-          />
+          <label className="mt-2 block">
+            <span className="text-xs font-medium text-neutral-600">
+              Headline
+            </span>
+            <Input
+              value={m.header}
+              disabled={disabled}
+              maxLength={60}
+              onChange={(e) => setMessage(i, { header: e.target.value })}
+              className="mt-1"
+            />
+          </label>
+          <label className="mt-2 block">
+            <span className="text-xs font-medium text-neutral-600">Message</span>
+            <Textarea
+              value={m.body}
+              disabled={disabled}
+              maxLength={600}
+              onChange={(e) => setMessage(i, { body: e.target.value })}
+              className="mt-1"
+            />
+          </label>
           <p className="mt-1 text-xs text-neutral-500">
             {"{{1}}"} becomes the customer&rsquo;s first name.
             {m.category === "MARKETING" &&

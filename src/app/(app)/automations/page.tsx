@@ -32,7 +32,9 @@ export default async function FollowUpsPage() {
     getPackTemplateIds(org.id),
     prisma.automation.findMany({
       where: { orgId: org.id },
-      orderBy: [{ enabled: "desc" }, { createdAt: "asc" }],
+      // Creation order only: everything the AI writes lands off, and sorting
+      // enabled-first would drop a brand-new follow-up below the fold.
+      orderBy: { createdAt: "asc" },
       include: { steps: { orderBy: { order: "asc" } } },
     }),
     prisma.agentProfile.findUnique({
@@ -54,10 +56,10 @@ export default async function FollowUpsPage() {
   const templates = templateIds.length
     ? await prisma.template.findMany({
         where: { orgId: org.id, id: { in: templateIds } },
-        select: { id: true, metaStatus: true },
+        select: { id: true, name: true, metaStatus: true },
       })
     : [];
-  const statusById = new Map(templates.map((t) => [t.id, t.metaStatus]));
+  const templateById = new Map(templates.map((t) => [t.id, t]));
 
   const cards: FollowUpCardModel[] = automations.map((a) => {
     const spec = followUpSpecSchema.safeParse(a.spec);
@@ -69,9 +71,17 @@ export default async function FollowUpsPage() {
       enabled: a.enabled,
       triggerLabel: TRIGGER_LABELS[a.trigger as AutomationTrigger] ?? a.trigger,
       stepsCount: a.steps.length,
-      templateStatuses: a.steps
+      templates: a.steps
         .filter((s) => s.kind === "send_template")
-        .map((s) => statusById.get(templateIdOf(s.config)) ?? "PENDING"),
+        .map((s) => {
+          const id = templateIdOf(s.config);
+          const t = templateById.get(id);
+          return {
+            id: t ? t.id : "",
+            name: t?.name ?? "Message",
+            status: t?.metaStatus ?? "PENDING",
+          };
+        }),
     };
   });
 
@@ -113,22 +123,32 @@ export default async function FollowUpsPage() {
 
       <FollowUpBar
         vertical={profile?.vertical || org.vertical || "default"}
-        canManage={canManage && hasFrontDesk}
+        canManage={canManage}
+        hasFrontDesk={hasFrontDesk}
         hasSpecFollowUps={cards.some((c) => c.spec !== null)}
       />
 
+      {/* Only the quiet chase's first message and the chained waits go through
+          the daily tick; contact_created, booking_created, keyword and
+          campaign_reply all fire inline from matchAutomations. */}
       <p className="mt-3 text-xs text-neutral-500">
-        Follow-ups go out during the nightly run, so a &ldquo;2 days later&rdquo;
-        message lands the next night after that. A conversation you&rsquo;ve
-        handed to a teammate is left alone until it&rsquo;s back to open.
+        The first message usually goes out straight away. A message set for
+        &ldquo;N days later&rdquo; goes out on the next daily run after that
+        time — once every 24 hours. A lead you&rsquo;ve handed to a teammate
+        isn&rsquo;t chased until the conversation is back to open.
       </p>
 
       <section className="mt-6 space-y-3">
+        {config && !config.enabled && (
+          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Your follow-ups are paused. Switch any one back on to resume them.
+          </p>
+        )}
         {tickRows.length > 0 && (
           <FollowUpRows
             rows={tickRows}
             timing={timing}
-            canManage={canManage}
+            canManage={canManage && hasFrontDesk}
             paused={!config?.enabled}
           />
         )}
@@ -137,8 +157,11 @@ export default async function FollowUpsPage() {
         ))}
         {cards.length === 0 && tickRows.length === 0 && (
           <p className="rounded-xl border border-dashed border-neutral-200 p-6 text-center text-sm text-neutral-500">
-            Nothing yet. Describe one above, or let the AI write your starter
-            set.
+            {!canManage
+              ? "No follow-ups yet. An admin can set them up."
+              : hasFrontDesk
+                ? "Nothing yet. Describe one above, or let the AI write your starter set."
+                : "Nothing yet. Build your first one by hand — or upgrade to have the AI write them for you."}
           </p>
         )}
       </section>

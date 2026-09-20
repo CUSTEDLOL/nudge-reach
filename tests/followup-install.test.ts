@@ -31,7 +31,11 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/modules/orgs/mode", () => ({ orgSendMode: m.sendMode }));
 vi.mock("@/modules/whatsapp/library", () => ({ submitRowToMeta: m.submit }));
 
-import { installRevenueRecoveryPack, saveFollowUpFromSpec } from "@/modules/followup/install";
+import {
+  installRevenueRecoveryPack,
+  saveFollowUpFromSpec,
+  setFollowUpFlag,
+} from "@/modules/followup/install";
 import type { FollowUpSpec } from "@/modules/followup/spec";
 
 const spec: FollowUpSpec = {
@@ -262,5 +266,27 @@ describe("installRevenueRecoveryPack", () => {
     const steps = m.stepCreateMany.mock.calls[0][0].data;
     expect(steps.map((s: { kind: string }) => s.kind)).toEqual(["send_template", "wait", "send_template"]);
     expect(steps.every((s: { automationId: string }) => s.automationId === "legacy")).toBe(true);
+  });
+});
+
+/**
+ * `followUpConfig.enabled` is the pack's master switch, and since the
+ * pause/resume card was removed the only UI that touches it is a row switch.
+ * Turning any row on therefore has to resume the pack, or a founder-side pause
+ * (`founderSetFollowUpsEnabled`) is a dead end the owner can never leave.
+ */
+describe("setFollowUpFlag", () => {
+  it("resumes a paused pack when a row is switched on", async () => {
+    await setFollowUpFlag("o1", "bookingReminders", true);
+    const args = m.configUpsert.mock.calls[0][0];
+    expect(args.where).toEqual({ orgId: "o1" });
+    expect(args.update).toEqual({ bookingReminders: true, enabled: true });
+  });
+
+  it("never pauses the pack when a row is switched off", async () => {
+    await setFollowUpFlag("o1", "bookingReminders", false);
+    const args = m.configUpsert.mock.calls[0][0];
+    expect(args.update).toEqual({ bookingReminders: false });
+    expect(args.update).not.toHaveProperty("enabled");
   });
 });

@@ -3553,20 +3553,29 @@ git commit -m "feat(followups): draft/create/update/delete actions and the start
 - Create: `src/app/(app)/automations/follow-up-card.tsx`
 - Create: `src/app/(app)/automations/spec-editor.tsx`
 - Rewrite: `src/app/(app)/automations/page.tsx`
-- Delete: `src/app/(app)/automations/revenue-recovery-card.tsx`
-- Modify: `tests/followups-page.test.ts`
+- Delete: `src/app/(app)/automations/revenue-recovery-card.tsx`, `automations-list.tsx`
+- Modify: `src/app/(app)/automations/follow-up-rows.tsx`, `src/modules/followup/install.ts`,
+  `src/modules/admin/concierge.ts`
+- Modify: `tests/followups-page.test.ts`, `tests/followup-install.test.ts`
 
 **Step 1: Update the page tests** (replace the file):
 
 ```ts
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { statusOf } from "@/app/(app)/automations/follow-up-card";
 
 const page = readFileSync("src/app/(app)/automations/page.tsx", "utf8");
 const bar = readFileSync("src/app/(app)/automations/follow-up-bar.tsx", "utf8");
 const card = readFileSync("src/app/(app)/automations/follow-up-card.tsx", "utf8");
 const rows = readFileSync("src/app/(app)/automations/follow-up-rows.tsx", "utf8");
 
+/**
+ * Source assertions, the repo's pattern for pages that need a database and a
+ * session to render. They guard the regressions this page has had: the builder
+ * stranded at an unlinked URL, the same follow-up listed twice, a plan-locked
+ * org left staring at an empty page, and a pause nobody could undo.
+ */
 describe("follow-ups page", () => {
   it("leads with the natural-language bar and the starter-set CTA", () => {
     expect(page).toContain("<FollowUpBar");
@@ -3587,9 +3596,13 @@ describe("follow-ups page", () => {
     expect(card).toContain("/automations/${");
   });
 
-  it("keeps the builder reachable and is honest about the nightly run", () => {
+  it("keeps the builder reachable and is honest about when messages send", () => {
     expect(page).toContain('href="/automations/new"');
-    expect(page).toMatch(/nightly run/i);
+    // Four of the five situations fire inline; only chained waits wait.
+    expect(page).toContain("goes out straight away");
+    expect(page).toContain("next daily run");
+    expect(page).not.toMatch(/nightly/i);
+    // Scoped to the chase: reminders don't check conversation status.
     expect(page).toContain("handed to a teammate");
   });
 
@@ -3601,6 +3614,17 @@ describe("follow-ups page", () => {
     expect(rows).toContain("setFollowUpFlagAction");
   });
 
+  it("explains a paused pack and leaves the row switches live to undo it", () => {
+    expect(page).toContain("config && !config.enabled");
+    expect(page).toContain(
+      "Your follow-ups are paused. Switch any one back on to resume them."
+    );
+    // The switch must not be disabled by `paused` — that was the dead end.
+    expect(rows).toContain("disabled={!canManage || pending}");
+    // The hour fields stay disabled: they are not a way out.
+    expect(rows).toContain("canManage={canManage && !paused}");
+  });
+
   it("renders a hand-built follow-up as itself: trigger label, step count, no inline edit", () => {
     expect(card).toContain("When: ${model.triggerLabel}");
     expect(card).toContain("built in the editor");
@@ -3608,19 +3632,128 @@ describe("follow-ups page", () => {
     expect(card).toContain("Open in builder");
   });
 
-  it("never shows a paused follow-up as waiting on Meta", () => {
-    expect(card).toMatch(/REJECTED[\s\S]{0,300}!m\.enabled[\s\S]{0,300}APPROVED/);
-  });
-
   it("re-renders from the spec the server stored, not the one submitted", () => {
     expect(card).toContain("r.ok && r.spec");
   });
 
+  it("says a booked follow-up is timed from the booking, not the appointment", () => {
+    expect(card).toContain('model.spec?.situation.kind === "booked"');
+    expect(card).toContain("Timed from when they book");
+    expect(card).toContain("use Appointment reminders above");
+  });
+
+  it("links the templates Meta has not approved, so a rejection isn't a dead end", () => {
+    expect(card).toContain("/templates/${t.id}?from=followups");
+    expect(card).toContain('t.status !== "APPROVED"');
+    expect(page).toContain("name: true");
+  });
+
   it("offers the starter set until there is an AI-written follow-up, and once per session", () => {
-    expect(bar).toContain("Write my starter set (about 3–5 AI credits)");
+    expect(bar).toContain("Write my starter set");
+    expect(bar).toContain("Uses about 5 AI credits");
     expect(bar).toContain("hasSpecFollowUps");
     expect(bar).toContain("setDone(true)");
     expect(page).toMatch(/hasSpecFollowUps=\{cards\.some/);
+  });
+
+  it("uses separate transitions so the starter set doesn't spin Draft it", () => {
+    expect(bar).toContain("startDraft");
+    expect(bar).toContain("startStarter");
+  });
+
+  it("lists newest-last by creation, not enabled-first", () => {
+    expect(page).toContain('orderBy: { createdAt: "asc" }');
+    expect(page).not.toContain('enabled: "desc"');
+  });
+});
+
+/**
+ * A plan without AI Front Desk still reaches this page (Free, Entry and
+ * Starter all get automations). The bar is the only thing above the list, so
+ * it must explain the lock rather than vanish.
+ */
+describe("follow-ups page without AI Front Desk", () => {
+  it("renders the bar locked, with an upgrade path and the honest fallback", () => {
+    expect(bar).toContain("hasFrontDesk");
+    expect(bar).toContain("if (!hasFrontDesk)");
+    expect(bar).toContain(
+      "Describe a follow-up in plain English and the AI writes it."
+    );
+    expect(bar).toContain(
+      "Available from the Growth plan — upgrade in Settings → Billing."
+    );
+    expect(bar).toContain("You can still build one by hand.");
+  });
+
+  it("passes the role and the plan gate separately", () => {
+    // The builder, the switches and delete are ADMIN-only, not plan-gated.
+    expect(page).toContain("canManage={canManage}");
+    expect(page).toContain("hasFrontDesk={hasFrontDesk}");
+    // The tick rows' own actions ARE plan-gated, so they take both.
+    expect(page).toContain("canManage={canManage && hasFrontDesk}");
+  });
+
+  it("never points the empty state at a control that isn't rendered", () => {
+    expect(page).toContain("Build your first one by hand");
+    expect(page).toContain("An admin can set them up");
+  });
+});
+
+/**
+ * The chip sits beside the switch, so it must never contradict it. Every
+ * freshly created follow-up lands off with pending templates.
+ */
+describe("statusOf", () => {
+  it("surfaces a rejection even when the follow-up is off", () => {
+    expect(
+      statusOf({ enabled: false, templates: [{ status: "REJECTED" }] })
+    ).toEqual({ label: "Rejected by Meta", tone: "danger" });
+  });
+
+  it("reads Off when it is off, not Waiting for Meta", () => {
+    expect(
+      statusOf({ enabled: false, templates: [{ status: "APPROVED" }] })
+    ).toEqual({ label: "Off", tone: "neutral" });
+    expect(
+      statusOf({ enabled: false, templates: [{ status: "PENDING" }] })
+    ).toEqual({ label: "Off", tone: "neutral" });
+  });
+
+  it("warns only when it is on and Meta hasn't approved yet", () => {
+    expect(
+      statusOf({ enabled: true, templates: [{ status: "PENDING" }] })
+    ).toEqual({ label: "Waiting for Meta", tone: "warning" });
+  });
+
+  it("reads On when it is on and nothing is waiting", () => {
+    expect(statusOf({ enabled: true, templates: [] })).toEqual({
+      label: "On",
+      tone: "success",
+    });
+    expect(
+      statusOf({ enabled: true, templates: [{ status: "APPROVED" }] })
+    ).toEqual({ label: "On", tone: "success" });
+  });
+});
+```
+
+And append to `tests/followup-install.test.ts` (import `setFollowUpFlag` alongside
+the existing imports) the guard that keeps a pause undoable:
+
+```ts
+describe("setFollowUpFlag", () => {
+  it("resumes a paused pack when a row is switched on", async () => {
+    await setFollowUpFlag("o1", "bookingReminders", true);
+    const args = m.configUpsert.mock.calls[0][0];
+    expect(args.where).toEqual({ orgId: "o1" });
+    expect(args.update).toEqual({ bookingReminders: true, enabled: true });
+  });
+
+  it("never pauses the pack when a row is switched off", async () => {
+    await setFollowUpFlag("o1", "bookingReminders", false);
+    const args = m.configUpsert.mock.calls[0][0];
+    expect(args.update).toEqual({ bookingReminders: false });
+    expect(args.update).not.toHaveProperty("enabled");
   });
 });
 ```
@@ -3636,9 +3769,9 @@ Expected: FAIL — `follow-up-bar.tsx` does not exist.
 // src/app/(app)/automations/spec-editor.tsx
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   describeMessageTiming,
   describeSituation,
@@ -3646,8 +3779,11 @@ import {
   type FollowUpSpec,
 } from "@/modules/followup/spec";
 
-/** Edits the parts an owner cares about: name, days, wording. The situation is
- *  shown, not edited — change it by describing a new follow-up. */
+/**
+ * Edits the parts an owner cares about: name, days, wording. The situation is
+ * shown, not edited — to change what starts a follow-up, describe a new one.
+ * Shared by the bar's draft preview and a card's inline edit.
+ */
 export function SpecEditor({
   spec,
   onChange,
@@ -3657,8 +3793,14 @@ export function SpecEditor({
   onChange: (next: FollowUpSpec) => void;
   disabled?: boolean;
 }) {
-  const setMessage = (i: number, patch: Partial<FollowUpSpec["messages"][number]>) =>
-    onChange({ ...spec, messages: spec.messages.map((m, j) => (j === i ? { ...m, ...patch } : m)) });
+  const setMessage = (
+    i: number,
+    patch: Partial<FollowUpSpec["messages"][number]>
+  ) =>
+    onChange({
+      ...spec,
+      messages: spec.messages.map((m, j) => (j === i ? { ...m, ...patch } : m)),
+    });
 
   return (
     <div className="space-y-4">
@@ -3672,47 +3814,66 @@ export function SpecEditor({
           className="mt-1"
         />
       </label>
-      <p className="text-sm text-neutral-700">{describeSituation(spec.situation)}</p>
+      <p className="text-sm text-neutral-700">
+        {describeSituation(spec.situation)}
+      </p>
       {spec.messages.map((m, i) => (
         <div key={i} className="rounded-xl border border-neutral-200 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral">{describeMessageTiming(i, m.afterDays)}</Badge>
-            <Badge tone={m.category === "MARKETING" ? "brand" : "info"}>{m.category.toLowerCase()}</Badge>
+            {/* A quiet chase's first message goes the moment the trigger fires
+                — its wait already lives on the situation, so there is nothing
+                to set here. */}
             {(i > 0 || spec.situation.kind !== "went_quiet") && (
               <label className="ml-auto flex items-center gap-1.5 text-xs text-neutral-600">
                 after
                 <Input
                   type="number"
+                  inputMode="numeric"
                   min={0}
                   max={MAX_GAP_DAYS}
                   value={m.afterDays}
                   disabled={disabled}
-                  onChange={(e) => setMessage(i, { afterDays: Math.max(0, Math.min(MAX_GAP_DAYS, Number(e.target.value) || 0)) })}
+                  onChange={(e) =>
+                    setMessage(i, {
+                      afterDays: Math.max(
+                        0,
+                        Math.min(MAX_GAP_DAYS, Number(e.target.value) || 0)
+                      ),
+                    })
+                  }
                   className="w-16"
                 />
                 days
               </label>
             )}
           </div>
-          <Input
-            value={m.header}
-            disabled={disabled}
-            maxLength={60}
-            onChange={(e) => setMessage(i, { header: e.target.value })}
-            className="mt-2"
-            aria-label="Headline"
-          />
-          <Textarea
-            value={m.body}
-            disabled={disabled}
-            maxLength={600}
-            onChange={(e) => setMessage(i, { body: e.target.value })}
-            className="mt-2"
-            aria-label="Message"
-          />
+          <label className="mt-2 block">
+            <span className="text-xs font-medium text-neutral-600">
+              Headline
+            </span>
+            <Input
+              value={m.header}
+              disabled={disabled}
+              maxLength={60}
+              onChange={(e) => setMessage(i, { header: e.target.value })}
+              className="mt-1"
+            />
+          </label>
+          <label className="mt-2 block">
+            <span className="text-xs font-medium text-neutral-600">Message</span>
+            <Textarea
+              value={m.body}
+              disabled={disabled}
+              maxLength={600}
+              onChange={(e) => setMessage(i, { body: e.target.value })}
+              className="mt-1"
+            />
+          </label>
           <p className="mt-1 text-xs text-neutral-500">
             {"{{1}}"} becomes the customer&rsquo;s first name.
-            {m.category === "MARKETING" && " Marketing messages carry the STOP footer."}
+            {m.category === "MARKETING" &&
+              " Marketing messages carry the STOP footer."}
           </p>
         </div>
       ))}
@@ -3721,6 +3882,10 @@ export function SpecEditor({
 }
 ```
 
+Both fields carry a visible label, like the name field above them. There is no
+MARKETING/UTILITY badge: the category is our jargon, and the footer note
+already tells the owner what a marketing message carries.
+
 **Step 4: The bar**
 
 ```tsx
@@ -3728,13 +3893,17 @@ export function SpecEditor({
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Wand2 } from "lucide-react";
+import { Lock, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import type { FollowUpSpec } from "@/modules/followup/spec";
-import { createFollowUpAction, draftFollowUpAction, writeStarterSetAction } from "./followup-actions";
+import {
+  createFollowUpAction,
+  draftFollowUpAction,
+  writeStarterSetAction,
+} from "./followup-actions";
 import { SpecEditor } from "./spec-editor";
 
 const EXAMPLES: Record<string, string[]> = {
@@ -3756,13 +3925,30 @@ const DEFAULT_EXAMPLES = [
   "Welcome every new lead with what we do and how to book",
 ];
 
+function BarFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+          <Sparkles className="h-4 w-4" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </Card>
+  );
+}
+
 export function FollowUpBar({
   vertical,
   canManage,
+  hasFrontDesk,
   hasSpecFollowUps,
 }: {
   vertical: string;
   canManage: boolean;
+  /** Drafting is flagship-only. Without it the bar still renders — locked —
+   *  because it is the only thing above the empty state. */
+  hasFrontDesk: boolean;
   /** Has the org any AI-written follow-up yet? A builder-only org is still
    *  offered the starter set. */
   hasSpecFollowUps: boolean;
@@ -3770,14 +3956,17 @@ export function FollowUpBar({
   const { toast } = useToast();
   const [request, setRequest] = useState("");
   const [draft, setDraft] = useState<FollowUpSpec | null>(null);
-  // The starter set costs two model calls, so it is offered once per session —
+  // The starter set costs a model call, so it is offered once per session —
   // the action's own "already here" reply covers a second tab.
   const [done, setDone] = useState(false);
-  const [pending, start] = useTransition();
+  // Two transitions, so writing the starter set doesn't spin "Draft it".
+  const [drafting, startDraft] = useTransition();
+  const [starting, startStarter] = useTransition();
+  const pending = drafting || starting;
   const examples = EXAMPLES[vertical] ?? DEFAULT_EXAMPLES;
 
   function draftIt() {
-    start(async () => {
+    startDraft(async () => {
       const r = await draftFollowUpAction(request);
       if (r.ok && r.spec) setDraft(r.spec);
       else toast({ description: r.message, tone: "error" });
@@ -3786,9 +3975,11 @@ export function FollowUpBar({
 
   function createIt() {
     if (!draft) return;
-    start(async () => {
+    startDraft(async () => {
       const r = await createFollowUpAction(draft);
       toast({ description: r.message, tone: r.ok ? "success" : "error" });
+      // The server repairs what it stores; the saved follow-up now renders from
+      // its own card, so the draft is dropped rather than kept.
       if (r.ok) {
         setDraft(null);
         setRequest("");
@@ -3797,7 +3988,7 @@ export function FollowUpBar({
   }
 
   function starter() {
-    start(async () => {
+    startStarter(async () => {
       const r = await writeStarterSetAction();
       toast({ description: r.message, tone: r.ok ? "success" : "error" });
       if (r.ok) setDone(true);
@@ -3806,72 +3997,118 @@ export function FollowUpBar({
 
   if (!canManage) return null;
 
+  // Locked, not missing: on Free/Entry/Starter this card is the only thing
+  // above the list, and the builder genuinely still works (saveAutomation is
+  // role-gated, not plan-gated).
+  if (!hasFrontDesk) {
+    return (
+      <BarFrame>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+          <Lock className="h-3.5 w-3.5 text-neutral-400" aria-hidden />
+          Describe a follow-up
+        </h2>
+        <p className="mt-0.5 text-sm text-neutral-500">
+          {"Describe a follow-up in plain English and the AI writes it. "}
+          {"Available from the Growth plan — upgrade in Settings → Billing. "}
+          {"You can still build one by hand."}
+        </p>
+      </BarFrame>
+    );
+  }
+
   return (
-    <Card className="p-5">
-      <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-          <Sparkles className="h-4 w-4" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-neutral-900">Describe a follow-up</h2>
-          <p className="mt-0.5 text-sm text-neutral-500">
-            Say who, when and what — the AI writes the message and the timing. You review it before anything is created.
-          </p>
-          <Textarea
-            value={request}
+    <BarFrame>
+      <h2 className="text-sm font-semibold text-neutral-900">
+        Describe a follow-up
+      </h2>
+      <p className="mt-0.5 text-sm text-neutral-500">
+        Say who, when and what — the AI writes the message and the timing. You
+        review it before anything is created.
+      </p>
+      <Textarea
+        value={request}
+        disabled={pending}
+        maxLength={500}
+        placeholder={examples[0]}
+        aria-label="Describe a follow-up"
+        onChange={(e) => setRequest(e.target.value)}
+        className="mt-3"
+      />
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {examples.map((ex) => (
+          <button
+            key={ex}
+            type="button"
             disabled={pending}
-            maxLength={500}
-            placeholder={examples[0]}
-            aria-label="Describe a follow-up"
-            onChange={(e) => setRequest(e.target.value)}
-            className="mt-3"
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {examples.map((ex) => (
-              <button
-                key={ex}
-                type="button"
-                disabled={pending}
-                onClick={() => setRequest(ex)}
-                className="rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-200"
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button onClick={draftIt} loading={pending} disabled={!request.trim()}>
-              <Wand2 className="h-4 w-4" aria-hidden />
-              Draft it
-            </Button>
-            {!hasSpecFollowUps && (
-              <Button variant="secondary" onClick={starter} loading={pending} disabled={done}>
-                Write my starter set (about 3–5 AI credits)
-              </Button>
-            )}
-          </div>
-          {draft && (
-            <div className="mt-4 rounded-xl bg-neutral-50 p-4">
-              <SpecEditor spec={draft} onChange={setDraft} disabled={pending} />
-              <div className="mt-3 flex items-center gap-2">
-                <Button onClick={createIt} loading={pending}>
-                  Create follow-up
-                </Button>
-                <Button variant="ghost" onClick={() => setDraft(null)} disabled={pending}>
-                  Discard
-                </Button>
-                <span className="text-xs text-neutral-500">It starts off. Its message goes to Meta for approval.</span>
-              </div>
-            </div>
-          )}
-        </div>
+            onClick={() => setRequest(ex)}
+            className="rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600 outline-none transition-colors duration-150 hover:bg-neutral-200 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:opacity-60"
+          >
+            {ex}
+          </button>
+        ))}
       </div>
-    </Card>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Button
+          onClick={draftIt}
+          loading={drafting}
+          disabled={!request.trim() || pending}
+        >
+          <Wand2 className="h-4 w-4" aria-hidden />
+          Draft it
+        </Button>
+        {!hasSpecFollowUps && (
+          <span className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={starter}
+              loading={starting}
+              disabled={done || pending}
+            >
+              Write my starter set
+            </Button>
+            <span className="text-xs text-neutral-500">
+              Uses about 5 AI credits
+            </span>
+          </span>
+        )}
+      </div>
+      {draft && (
+        <div className="mt-4 rounded-xl bg-neutral-50 p-4">
+          <SpecEditor spec={draft} onChange={setDraft} disabled={pending} />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button onClick={createIt} loading={drafting} disabled={pending}>
+              Create follow-up
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDraft(null)}
+              disabled={pending}
+            >
+              Discard
+            </Button>
+            <span className="text-xs text-neutral-500">
+              It starts off. Its messages go to Meta for approval before they
+              can send.
+            </span>
+          </div>
+        </div>
+      )}
+    </BarFrame>
   );
 }
 ```
 
-A single draft is about 1 AI credit; the starter set about 3–5 (one model call, 4–6 specs) — the starter button says so, the bar does not need to.
+A single draft is about 1 AI credit; the starter set is one model call over the
+business profile, about 5 — the cost sits beside the button as sub-text rather
+than inside its label. Two transitions, so writing the starter set does not
+spin "Draft it".
+
+**Without AI Front Desk the bar renders locked, not missing.** Free, Entry and
+Starter all get automations (`limits.automations` 2 / null / null) while
+`limits.aiFrontDesk` is false — three of the six live tiers. The bar is the only
+thing above the list, so returning null left those orgs looking at an empty
+state that pointed at a control that was not there. `saveAutomation` is
+role-gated, not plan-gated, so "You can still build one by hand" is true.
 
 **Step 5: The card**
 
@@ -3887,10 +4124,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
-import { describeMessageTiming, describeSituation, type FollowUpSpec } from "@/modules/followup/spec";
+import {
+  describeMessageTiming,
+  describeSituation,
+  type FollowUpSpec,
+} from "@/modules/followup/spec";
 import { toggleAutomation } from "./actions";
 import { deleteFollowUpAction, updateFollowUpAction } from "./followup-actions";
 import { SpecEditor } from "./spec-editor";
+
+export interface CardTemplate {
+  id: string;
+  name: string;
+  status: string;
+}
 
 export interface FollowUpCardModel {
   id: string;
@@ -3902,8 +4149,9 @@ export interface FollowUpCardModel {
   enabled: boolean;
   triggerLabel: string;
   stepsCount: number;
-  /** Meta status of every template this follow-up sends. */
-  templateStatuses: string[];
+  /** Every template this follow-up sends, so the card can both colour its chip
+   *  and link the ones Meta has not approved. */
+  templates: CardTemplate[];
 }
 
 /**
@@ -3913,19 +4161,40 @@ export interface FollowUpCardModel {
  * (Every freshly created follow-up lands off with pending templates, so the
  * naive order labelled the whole starter set "Waiting for Meta".)
  */
-function statusOf(m: FollowUpCardModel): { label: string; tone: BadgeTone } {
-  if (m.templateStatuses.includes("REJECTED")) return { label: "Rejected by Meta", tone: "danger" };
+export function statusOf(m: {
+  enabled: boolean;
+  templates: Array<{ status: string }>;
+}): { label: string; tone: BadgeTone } {
+  if (m.templates.some((t) => t.status === "REJECTED")) {
+    return { label: "Rejected by Meta", tone: "danger" };
+  }
   if (!m.enabled) return { label: "Off", tone: "neutral" };
-  if (m.templateStatuses.some((s) => s !== "APPROVED")) return { label: "Waiting for Meta", tone: "warning" };
+  if (m.templates.some((t) => t.status !== "APPROVED")) {
+    return { label: "Waiting for Meta", tone: "warning" };
+  }
   return { label: "On", tone: "success" };
 }
 
-export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; canManage: boolean }) {
+export function FollowUpCard({
+  model,
+  canManage,
+}: {
+  model: FollowUpCardModel;
+  canManage: boolean;
+}) {
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
+  // Derived from a prop on purpose, and safe: the list is keyed by automation
+  // id, so a different follow-up is a different component instance, and a
+  // successful save writes the server's spec back into this state. A stale
+  // draft can only survive a Cancel, which re-reads the prop.
   const [draft, setDraft] = useState<FollowUpSpec | null>(model.spec);
   const status = statusOf(model);
+  // Only the unapproved ones: an approved template needs no attention here.
+  const needsAttention = model.templates.filter(
+    (t) => t.id && t.status !== "APPROVED"
+  );
 
   function toggle(next: boolean) {
     start(async () => {
@@ -3952,7 +4221,13 @@ export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; c
   }
 
   function remove() {
-    if (!window.confirm(`Delete "${model.name}"? Its templates stay in your library.`)) return;
+    if (
+      !window.confirm(
+        `Delete "${model.name}"? Its templates stay in your library.`
+      )
+    ) {
+      return;
+    }
     start(async () => {
       const r = await deleteFollowUpAction(model.id);
       toast({ description: r.message, tone: r.ok ? "success" : "error" });
@@ -3964,61 +4239,129 @@ export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; c
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-neutral-900">{model.name}</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">
+              {model.name}
+            </h3>
             <Badge tone={status.tone}>{status.label}</Badge>
             {model.source === "pack" && <Badge tone="brand">Included</Badge>}
           </div>
           <p className="mt-1 text-sm text-neutral-700">
-            {model.spec ? describeSituation(model.spec.situation) : `When: ${model.triggerLabel}`}
+            {model.spec
+              ? describeSituation(model.spec.situation)
+              : `When: ${model.triggerLabel}`}
           </p>
+
+          {/* The days on a booked follow-up run from the booking, not from the
+              appointment — an owner reading "1 day later" as "the day after the
+              visit" would send "How did it go?" before they had been. */}
+          {model.spec?.situation.kind === "booked" && (
+            <p className="mt-1 text-xs text-neutral-500">
+              Timed from when they book, not from the appointment date. For
+              reminders before an appointment, use Appointment reminders above.
+            </p>
+          )}
+
           {model.spec && !editing && (
             <ol className="mt-2 space-y-1.5">
               {model.spec.messages.map((m, i) => (
                 <li key={i} className="flex gap-2 text-sm">
-                  <span className="shrink-0 text-xs text-neutral-500">{describeMessageTiming(i, m.afterDays)}</span>
-                  <span className="min-w-0 truncate text-neutral-600">{m.body}</span>
+                  <span className="shrink-0 text-xs text-neutral-500">
+                    {describeMessageTiming(i, m.afterDays)}
+                  </span>
+                  <span className="min-w-0 truncate text-neutral-600">
+                    {m.body}
+                  </span>
                 </li>
               ))}
             </ol>
           )}
+
           {/* Hand-built: no spec to read back, so say what it is and send the
-              owner to the editor that owns it — no inline Edit, no message
-              list, just the step count, the switch, the builder link, delete. */}
+              owner to the editor that owns it. */}
           {!model.spec && (
             <p className="mt-1 text-xs text-neutral-500">
               {model.stepsCount} step{model.stepsCount === 1 ? "" : "s"}
               {" · built in the editor"}
             </p>
           )}
+
+          {/* A rejected or pending chip is otherwise a dead end: link the
+              template whose wording has to change, as the rows above do. */}
+          {needsAttention.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              {needsAttention.map((t) => (
+                <span key={t.id} className="inline-flex items-center gap-1.5">
+                  <Link
+                    href={`/templates/${t.id}?from=followups`}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 outline-none transition-colors duration-150 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+                  >
+                    <Pencil className="h-3 w-3" aria-hidden />
+                    {t.name}
+                  </Link>
+                  <Badge tone={t.status === "REJECTED" ? "danger" : "warning"}>
+                    {t.status.toLowerCase()}
+                  </Badge>
+                </span>
+              ))}
+            </div>
+          )}
+
           {editing && draft && (
             <div className="mt-3">
               <SpecEditor spec={draft} onChange={setDraft} disabled={pending} />
               <div className="mt-3 flex items-center gap-2">
-                <Button size="sm" onClick={save} loading={pending}>Save</Button>
-                <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setDraft(model.spec); }} disabled={pending}>
+                <Button size="sm" onClick={save} loading={pending}>
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft(model.spec);
+                  }}
+                  disabled={pending}
+                >
                   Cancel
                 </Button>
               </div>
             </div>
           )}
+
           {canManage && !editing && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
               {model.spec && (
-                <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-800">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  disabled={pending}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 outline-none transition-colors duration-150 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:opacity-60"
+                >
                   <Pencil className="h-3 w-3" aria-hidden /> Edit
                 </button>
               )}
-              <Link href={`/automations/${model.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-800">
+              <Link
+                href={`/automations/${model.id}`}
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 outline-none transition-colors duration-150 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+              >
                 <Workflow className="h-3 w-3" aria-hidden /> Open in builder
               </Link>
-              <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-red-600">
+              <button
+                type="button"
+                onClick={remove}
+                disabled={pending}
+                className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 outline-none transition-colors duration-150 hover:text-red-600 focus-visible:ring-2 focus-visible:ring-brand-400/50 disabled:opacity-60"
+              >
                 <Trash2 className="h-3 w-3" aria-hidden /> Delete
               </button>
             </div>
           )}
         </div>
+
         <div className="flex shrink-0 items-center gap-2 pt-0.5">
-          <span className="text-xs text-neutral-500">{model.enabled ? "On" : "Off"}</span>
+          <span className="text-xs text-neutral-500">
+            {model.enabled ? "On" : "Off"}
+          </span>
           <Switch
             checked={model.enabled}
             onCheckedChange={toggle}
@@ -4032,6 +4375,20 @@ export function FollowUpCard({ model, canManage }: { model: FollowUpCardModel; c
 }
 ```
 
+Three things the first draft of this card got wrong:
+
+- **The chip contradicted the switch.** Every follow-up lands off with pending
+  templates, so ordering the Meta check before the enabled check labelled the
+  whole starter set "Waiting for Meta" beside a switch reading Off. A rejection
+  still wins, because it is the owner's to fix. `statusOf` is exported and unit
+  tested over the four-case matrix.
+- **A rejection was a dead end.** The offending templates are now pencil links
+  to `/templates/${id}?from=followups`, exactly as the rows above do it.
+- **`booked` timing reads from the booking, not the appointment.** An owner who
+  reads "1 day later" as "the day after the visit" ships "How did it go?"
+  before they have been, so a booked spec carries a one-line correction that
+  also points at the reminder rows.
+
 **Step 6: The page** — rewrite `page.tsx`:
 
 ```tsx
@@ -4040,7 +4397,10 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { hasRole, requireOrgContext } from "@/modules/orgs/auth";
-import { TRIGGER_LABELS, type AutomationTrigger } from "@/modules/automation/definitions";
+import {
+  TRIGGER_LABELS,
+  type AutomationTrigger,
+} from "@/modules/automation/definitions";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { getFollowUpConfig, getPackTemplateIds } from "@/modules/followup/install";
 import { FOLLOW_UP_KINDS, normalizeTiming } from "@/modules/followup/pack";
@@ -4056,10 +4416,8 @@ export const metadata: Metadata = { title: "Follow-ups" };
 export default async function FollowUpsPage() {
   const { org, role } = await requireOrgContext();
   // Managing an automation (switch, edit, delete, builder) is ADMIN, as it has
-  // always been — `saveAutomation`/`toggleAutomation`/`deleteFollowUpAction`
-  // are role-gated, not plan-gated, and Free/Entry/Starter orgs do get
-  // automations. The AI bar is the flagship part, so only it takes the plan
-  // gate; every action behind it refuses server-side anyway.
+  // always been; the AI bar needs the flagship, because every action behind it
+  // is flagship-gated server-side.
   const canManage = hasRole(role, "ADMIN");
   const hasFrontDesk = planHasAiFrontDesk(org.plan);
 
@@ -4068,24 +4426,34 @@ export default async function FollowUpsPage() {
     getPackTemplateIds(org.id),
     prisma.automation.findMany({
       where: { orgId: org.id },
-      orderBy: [{ enabled: "desc" }, { createdAt: "asc" }],
+      // Creation order only: everything the AI writes lands off, and sorting
+      // enabled-first would drop a brand-new follow-up below the fold.
+      orderBy: { createdAt: "asc" },
       include: { steps: { orderBy: { order: "asc" } } },
     }),
-    prisma.agentProfile.findUnique({ where: { orgId: org.id }, select: { vertical: true } }),
+    prisma.agentProfile.findUnique({
+      where: { orgId: org.id },
+      select: { vertical: true },
+    }),
   ]);
 
   const templateIdOf = (stepConfig: unknown) =>
     String((stepConfig as { templateId?: string })?.templateId ?? "");
 
+  // One lookup for every template these follow-ups send, so a card can say
+  // whether Meta has approved the wording yet.
   const templateIds = automations
     .flatMap((a) =>
       a.steps.filter((s) => s.kind === "send_template").map((s) => templateIdOf(s.config))
     )
     .filter(Boolean);
   const templates = templateIds.length
-    ? await prisma.template.findMany({ where: { orgId: org.id, id: { in: templateIds } }, select: { id: true, metaStatus: true } })
+    ? await prisma.template.findMany({
+        where: { orgId: org.id, id: { in: templateIds } },
+        select: { id: true, name: true, metaStatus: true },
+      })
     : [];
-  const statusById = new Map(templates.map((t) => [t.id, t.metaStatus]));
+  const templateById = new Map(templates.map((t) => [t.id, t]));
 
   const cards: FollowUpCardModel[] = automations.map((a) => {
     const spec = followUpSpecSchema.safeParse(a.spec);
@@ -4097,12 +4465,22 @@ export default async function FollowUpsPage() {
       enabled: a.enabled,
       triggerLabel: TRIGGER_LABELS[a.trigger as AutomationTrigger] ?? a.trigger,
       stepsCount: a.steps.length,
-      templateStatuses: a.steps
+      templates: a.steps
         .filter((s) => s.kind === "send_template")
-        .map((s) => statusById.get(templateIdOf(s.config)) ?? "PENDING"),
+        .map((s) => {
+          const id = templateIdOf(s.config);
+          const t = templateById.get(id);
+          return {
+            id: t ? t.id : "",
+            name: t?.name ?? "Message",
+            status: t?.metaStatus ?? "PENDING",
+          };
+        }),
     };
   });
 
+  // The tick-driven follow-ups: they hang off a booking, not off a spec, so
+  // they keep their own rows and hour fields.
   const timing = normalizeTiming(config ?? {});
   const tickRows: FollowUpRow[] = config
     ? FOLLOW_UP_KINDS.map((kind) => ({
@@ -4126,7 +4504,10 @@ export default async function FollowUpsPage() {
         description="Nudge chases every quiet lead, reminds every booking and asks for every review — you describe it, the AI writes it, you switch it on."
         actions={
           canManage && (
-            <Link href="/automations/new" className={buttonVariants({ variant: "secondary" })}>
+            <Link
+              href="/automations/new"
+              className={buttonVariants({ variant: "secondary" })}
+            >
               <Plus className="h-4 w-4" aria-hidden />
               Build one by hand
             </Link>
@@ -4136,26 +4517,45 @@ export default async function FollowUpsPage() {
 
       <FollowUpBar
         vertical={profile?.vertical || org.vertical || "default"}
-        canManage={canManage && hasFrontDesk}
+        canManage={canManage}
+        hasFrontDesk={hasFrontDesk}
         hasSpecFollowUps={cards.some((c) => c.spec !== null)}
       />
 
+      {/* Only the quiet chase's first message and the chained waits go through
+          the daily tick; contact_created, booking_created, keyword and
+          campaign_reply all fire inline from matchAutomations. */}
       <p className="mt-3 text-xs text-neutral-500">
-        Follow-ups go out during the nightly run, so a &ldquo;2 days later&rdquo;
-        message lands the next night after that. A conversation you&rsquo;ve
-        handed to a teammate is left alone until it&rsquo;s back to open.
+        The first message usually goes out straight away. A message set for
+        &ldquo;N days later&rdquo; goes out on the next daily run after that
+        time — once every 24 hours. A lead you&rsquo;ve handed to a teammate
+        isn&rsquo;t chased until the conversation is back to open.
       </p>
 
       <section className="mt-6 space-y-3">
+        {config && !config.enabled && (
+          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Your follow-ups are paused. Switch any one back on to resume them.
+          </p>
+        )}
         {tickRows.length > 0 && (
-          <FollowUpRows rows={tickRows} timing={timing} canManage={canManage} paused={!config?.enabled} />
+          <FollowUpRows
+            rows={tickRows}
+            timing={timing}
+            canManage={canManage && hasFrontDesk}
+            paused={!config?.enabled}
+          />
         )}
         {cards.map((c) => (
           <FollowUpCard key={c.id} model={c} canManage={canManage} />
         ))}
         {cards.length === 0 && tickRows.length === 0 && (
           <p className="rounded-xl border border-dashed border-neutral-200 p-6 text-center text-sm text-neutral-500">
-            Nothing yet. Describe one above, or let the AI write your starter set.
+            {!canManage
+              ? "No follow-ups yet. An admin can set them up."
+              : hasFrontDesk
+                ? "Nothing yet. Describe one above, or let the AI write your starter set."
+                : "Nothing yet. Build your first one by hand — or upgrade to have the AI write them for you."}
           </p>
         )}
       </section>
@@ -4168,16 +4568,50 @@ export default async function FollowUpsPage() {
 prefers the agent profile's, so the page uses the same order: `profile?.vertical
 || org.vertical || "default"`.
 
-`revenue-recovery-card.tsx` is deleted (the page was its only importer).
-`toggleRevenueRecoveryAction` in `followup-actions.ts` is now **caller-less** —
-the pack's master pause/resume lost its only UI. Left in place deliberately;
-Task 12 decides whether to remove it or give `config.enabled` a home. Note
-`FollowUpRows` still reads it as `paused={!config?.enabled}`, and
-`writeStarterSetAction` → `installRevenueRecoveryPack` is now the only thing
-that sets it true.
+**The role gate and the plan gate are separate.** `canManage` stays
+`hasRole(role, "ADMIN")` — `saveAutomation`, `toggleAutomation`,
+`updateFollowUpAction` and `deleteFollowUpAction` are role-gated, not
+plan-gated, and Free/Entry/Starter orgs really do get automations. The bar and
+the tick rows take `canManage && hasFrontDesk`, because every action behind
+those two (`draftFollowUpAction`, `createFollowUpAction`,
+`writeStarterSetAction`, `setFollowUpFlagAction`, `setFollowUpTimingAction`)
+calls `checkAiFrontDesk`. The UI hides exactly what the server would refuse.
 
-`automations-list.tsx` also loses its last importer. Left in place for Task 12
-for the same reason.
+**A founder pause must be undoable.** `founderSetFollowUpsEnabled` can set
+`followUpConfig.enabled = false`, and with the pause/resume card gone nothing
+could set it back: `setFollowUpFlag` and `setFollowUpTiming` never touched
+`enabled` on update, and the starter CTA is hidden the moment the pack's own
+spec-backed nudge exists. Three changes close it:
+
+```ts
+// src/modules/followup/install.ts — setFollowUpFlag
+    update: { ...patch, ...(enabled ? { enabled: true } : {}) },
+```
+
+```tsx
+// src/app/(app)/automations/follow-up-rows.tsx — the row Switch
+          disabled={!canManage || pending}
+```
+
+...the page's amber line when `config && !config.enabled`, and in
+`src/modules/admin/concierge.ts`, `founderSetFollowUpsEnabled` calls
+`setFollowUpEnabled(orgId, enabled)` instead of writing `followUpConfig`
+directly — the quiet-lead nudge is its own automation row, and a founder pause
+that left it enabled kept sending while the client's page showed dead switches.
+`TimingForm` keeps `canManage={canManage && !paused}`: the hour fields are not
+a way out of a pause.
+
+**The cron paragraph had to change too.** Only the quiet chase's first message
+and chained `afterDays` waits go through the tick; `contact_created`,
+`booking_created`, `keyword` and `campaign_reply` all fire inline via
+`matchAutomations`. And `0 3 * * *` UTC is 08:30 IST, not "nightly". The
+handoff sentence is scoped to the chase, because the reminder tick does not
+check conversation status.
+
+`revenue-recovery-card.tsx` and `automations-list.tsx` are deleted — the page
+was the last importer of both. `toggleRevenueRecoveryAction` in
+`followup-actions.ts` is now **caller-less**; left in place deliberately, Task
+12 decides. `getRecoveryMetrics` is untouched (the dashboard still uses it).
 
 **Step 7: Verify**
 
@@ -4197,7 +4631,8 @@ one in the builder and back.
 **Step 9: Commit**
 
 ```bash
-git add "src/app/(app)/automations/" tests/followups-page.test.ts docs/plans/2026-09-19-ai-followups.md
+git add "src/app/(app)/automations/" src/modules/followup/install.ts src/modules/admin/concierge.ts \
+  tests/followups-page.test.ts tests/followup-install.test.ts docs/plans/2026-09-19-ai-followups.md
 git commit -m "feat(followups): one list of follow-up cards with a natural-language bar and AI starter set"
 ```
 

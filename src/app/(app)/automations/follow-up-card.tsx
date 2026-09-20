@@ -17,6 +17,12 @@ import { toggleAutomation } from "./actions";
 import { deleteFollowUpAction, updateFollowUpAction } from "./followup-actions";
 import { SpecEditor } from "./spec-editor";
 
+export interface CardTemplate {
+  id: string;
+  name: string;
+  status: string;
+}
+
 export interface FollowUpCardModel {
   id: string;
   name: string;
@@ -27,21 +33,27 @@ export interface FollowUpCardModel {
   enabled: boolean;
   triggerLabel: string;
   stepsCount: number;
-  /** Meta status of every template this follow-up sends. */
-  templateStatuses: string[];
+  /** Every template this follow-up sends, so the card can both colour its chip
+   *  and link the ones Meta has not approved. */
+  templates: CardTemplate[];
 }
 
 /**
  * The chip has to agree with the switch beside it. A rejection is surfaced
  * whatever the switch says — it is the owner's to fix — but an off follow-up
  * reads "Off" rather than "Waiting for Meta", which would imply it is armed.
+ * (Every freshly created follow-up lands off with pending templates, so the
+ * naive order labelled the whole starter set "Waiting for Meta".)
  */
-function statusOf(m: FollowUpCardModel): { label: string; tone: BadgeTone } {
-  if (m.templateStatuses.includes("REJECTED")) {
+export function statusOf(m: {
+  enabled: boolean;
+  templates: Array<{ status: string }>;
+}): { label: string; tone: BadgeTone } {
+  if (m.templates.some((t) => t.status === "REJECTED")) {
     return { label: "Rejected by Meta", tone: "danger" };
   }
   if (!m.enabled) return { label: "Off", tone: "neutral" };
-  if (m.templateStatuses.some((s) => s !== "APPROVED")) {
+  if (m.templates.some((t) => t.status !== "APPROVED")) {
     return { label: "Waiting for Meta", tone: "warning" };
   }
   return { label: "On", tone: "success" };
@@ -57,8 +69,16 @@ export function FollowUpCard({
   const { toast } = useToast();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
+  // Derived from a prop on purpose, and safe: the list is keyed by automation
+  // id, so a different follow-up is a different component instance, and a
+  // successful save writes the server's spec back into this state. A stale
+  // draft can only survive a Cancel, which re-reads the prop.
   const [draft, setDraft] = useState<FollowUpSpec | null>(model.spec);
   const status = statusOf(model);
+  // Only the unapproved ones: an approved template needs no attention here.
+  const needsAttention = model.templates.filter(
+    (t) => t.id && t.status !== "APPROVED"
+  );
 
   function toggle(next: boolean) {
     start(async () => {
@@ -115,6 +135,16 @@ export function FollowUpCard({
               : `When: ${model.triggerLabel}`}
           </p>
 
+          {/* The days on a booked follow-up run from the booking, not from the
+              appointment — an owner reading "1 day later" as "the day after the
+              visit" would send "How did it go?" before they had been. */}
+          {model.spec?.situation.kind === "booked" && (
+            <p className="mt-1 text-xs text-neutral-500">
+              Timed from when they book, not from the appointment date. For
+              reminders before an appointment, use Appointment reminders above.
+            </p>
+          )}
+
           {model.spec && !editing && (
             <ol className="mt-2 space-y-1.5">
               {model.spec.messages.map((m, i) => (
@@ -137,6 +167,27 @@ export function FollowUpCard({
               {model.stepsCount} step{model.stepsCount === 1 ? "" : "s"}
               {" · built in the editor"}
             </p>
+          )}
+
+          {/* A rejected or pending chip is otherwise a dead end: link the
+              template whose wording has to change, as the rows above do. */}
+          {needsAttention.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              {needsAttention.map((t) => (
+                <span key={t.id} className="inline-flex items-center gap-1.5">
+                  <Link
+                    href={`/templates/${t.id}?from=followups`}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 outline-none transition-colors duration-150 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400/50"
+                  >
+                    <Pencil className="h-3 w-3" aria-hidden />
+                    {t.name}
+                  </Link>
+                  <Badge tone={t.status === "REJECTED" ? "danger" : "warning"}>
+                    {t.status.toLowerCase()}
+                  </Badge>
+                </span>
+              ))}
+            </div>
           )}
 
           {editing && draft && (

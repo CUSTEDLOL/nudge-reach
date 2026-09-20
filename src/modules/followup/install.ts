@@ -250,13 +250,19 @@ export async function setFollowUpEnabled(orgId: string, enabled: boolean): Promi
   await prisma.automation.updateMany({ where: { orgId, name: LEAD_NUDGE_NAME }, data: { enabled } });
 }
 
-/** Flip ONE tick-driven follow-up on/off, leaving the rest running. */
+/**
+ * Flip ONE tick-driven follow-up on/off, leaving the rest running.
+ * Switching any row ON also resumes the pack: `enabled: false` (a founder
+ * pause) is the master switch the tick reads, and with the pause card gone
+ * this is the owner's only way back — a paused org could otherwise never send
+ * again. Switching a row OFF never pauses the pack.
+ */
 export async function setFollowUpFlag(orgId: string, flag: FollowUpFlag, enabled: boolean): Promise<void> {
   const patch = { [flag]: enabled } as Prisma.FollowUpConfigUncheckedUpdateInput;
   await prisma.followUpConfig.upsert({
     where: { orgId },
     create: { orgId, enabled: true, [flag]: enabled },
-    update: patch,
+    update: { ...patch, ...(enabled ? { enabled: true } : {}) },
   });
 }
 

@@ -119,10 +119,13 @@ function Row({
         <span className="text-xs text-neutral-500">
           {row.enabled ? "On" : "Off"}
         </span>
+        {/* Live even while the pack is paused: switching any row on is what
+            resumes it (setFollowUpFlag), so disabling these would be a dead
+            end. The hour fields stay disabled — they are not a way out. */}
         <Switch
           checked={row.enabled}
           onCheckedChange={onToggle}
-          disabled={!canManage || pending || paused}
+          disabled={!canManage || pending}
           aria-label={`${row.enabled ? "Pause" : "Enable"} ${row.label}`}
         />
       </div>

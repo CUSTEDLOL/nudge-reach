@@ -7,7 +7,10 @@ import {
   VERTICAL_PACKS,
   type KnowledgeBaseInput,
 } from "@/modules/concierge";
-import { installRevenueRecoveryPack } from "@/modules/followup/install";
+import {
+  installRevenueRecoveryPack,
+  setFollowUpEnabled,
+} from "@/modules/followup/install";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
 
 /**
@@ -110,7 +113,10 @@ export async function founderSetFollowUpsEnabled(orgId: string, enabled: boolean
   const cfg = await prisma.followUpConfig.findUnique({ where: { orgId }, select: { enabled: true } });
   if (!cfg) return { ok: false, error: "No follow-up config yet — run client setup first." };
   if (cfg.enabled === enabled) return { ok: false, error: `Already ${enabled ? "on" : "off"}.` };
-  await prisma.followUpConfig.update({ where: { orgId }, data: { enabled } });
+  // Not a raw config write: the quiet-lead nudge is its own automation, and a
+  // founder pause that left it enabled kept sending while the client's page
+  // showed dead switches.
+  await setFollowUpEnabled(orgId, enabled);
   await founderAudit(orgId, founderEmail, "admin.followups_toggled", null, withReason(enabled ? "on" : "off", reason));
   return { ok: true, message: `Follow-ups ${enabled ? "on" : "off"}.` };
 }
