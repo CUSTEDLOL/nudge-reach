@@ -106,6 +106,7 @@ model Org {
   llmAccount              LlmAccount?
   creditGrants            CreditGrant[]
   creditDebits            CreditDebit[]
+  acquisitionTrial        AcquisitionTrial?
 }
 
 // An outbound webhook subscription (spec §M8 integrations): the app POSTs
@@ -719,27 +720,91 @@ model AudienceContact {
 // These are pre-signup platform leads, not tenant data. The app accesses them
 // only through server-side Prisma; enable RLS with no browser policies.
 model DemoBooking {
-  id                String   @id @default(cuid())
-  calUid            String   @unique
-  attendeeName      String?
-  attendeeEmail     String?
-  attendeePhoneE164 String?
-  eventType         String
-  startTime         DateTime
-  source            String   @default("cal")
-  status            String   @default("new")
-  landingPath       String?
-  referrer          String?
-  utmSource         String?
-  utmMedium         String?
-  utmCampaign       String?
-  gaClientId        String?
-  notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String            @id @default(cuid())
+  calUid             String            @unique
+  attendeeName       String?
+  attendeeEmail      String?
+  attendeePhoneE164  String?
+  eventType          String
+  startTime          DateTime
+  source             String            @default("cal")
+  status             String            @default("new")
+  landingPath        String?
+  referrer           String?
+  utmSource          String?
+  utmMedium          String?
+  utmCampaign        String?
+  gaClientId         String?
+  notes              String?
+  acquisitionTrialId String?
+  acquisitionTrial   AcquisitionTrial? @relation(fields: [acquisitionTrialId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   @@index([status, createdAt])
   @@index([createdAt])
+  @@index([acquisitionTrialId])
+}
+
+model AcquisitionTrial {
+  id                    String                  @id @default(cuid())
+  orgId                 String?                 @unique
+  org                   Org?                    @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  ownerName             String
+  businessName          String
+  email                 String
+  emailNormalized       String                  @unique
+  phoneE164             String                  @unique
+  contactConsentAt      DateTime
+  claimTokenHash        String                  @unique
+  claimExpiresAt        DateTime
+  claimedAt             DateTime?
+  startedAt             DateTime?
+  expiresAt             DateTime?
+  replyLimit            Int                     @default(15)
+  repliesUsed           Int                     @default(0)
+  knowledgeSource       String?
+  knowledgeSourceUsedAt DateTime?
+  tourStep              String                  @default("welcome")
+  tourCompletedAt       DateTime?
+  tourDismissedAt       DateTime?
+  firstReplyAt          DateTime?
+  exploreViewedAt       DateTime?
+  exhaustedAt           DateTime?
+  expiredAt             DateTime?
+  demoClickedAt         DateTime?
+  demoBookedAt          DateTime?
+  checkoutClickedAt     DateTime?
+  convertedAt           DateTime?
+  landingPath           String                  @default("/free-trial")
+  referrer              String?
+  utmSource             String?
+  utmMedium             String?
+  utmCampaign           String?
+  gaClientId            String?
+  source                String                  @default("free-trial")
+  leadStatus            String                  @default("new")
+  founderNotes          String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  events                AcquisitionTrialEvent[]
+  demoBookings          DemoBooking[]
+
+  @@index([leadStatus, createdAt])
+  @@index([expiresAt])
+}
+
+model AcquisitionTrialEvent {
+  id        String           @id @default(cuid())
+  trialId   String
+  trial     AcquisitionTrial @relation(fields: [trialId], references: [id], onDelete: Cascade)
+  orgId     String?
+  name      String
+  props     Json             @default("{}")
+  createdAt DateTime         @default(now())
+
+  @@index([trialId, createdAt])
+  @@index([name, createdAt])
 }
 
 // Public waitlist signups from the marketing landing page (/waitlist).

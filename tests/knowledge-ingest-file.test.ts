@@ -77,6 +77,16 @@ describe("ingestFile", () => {
     }
   });
 
+  it("accepts a smaller draft cap for acquisition trials", async () => {
+    const result = await ingestFile("org1", {
+      base64: "IMGDATA",
+      mediaType: "image/png",
+    }, 1);
+
+    expect(result.drafts).toBe(1);
+    expect(prisma.knowledgeEntry.create).toHaveBeenCalledOnce();
+  });
+
   it("dedupes against existing facts", async () => {
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { fact: "classic facial ₹1,800 for 50 minutes" },

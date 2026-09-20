@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { providerFor, saveConnection } from "@/modules/crm/connections";
 import { verifyState } from "@/modules/crm/oauth-state";
+import { checkAiFrontDesk } from "@/modules/billing/limits";
 
 /** The provider sends the browser back here; the signed state names the org. */
 export async function GET(request: Request, { params }: { params: Promise<{ provider: string }> }) {
@@ -20,6 +21,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
   });
   if (!org) return NextResponse.json({ error: "org missing" }, { status: 404 });
   const base = env.NEXT_PUBLIC_APP_URL ?? url.origin;
+  const gate = await checkAiFrontDesk(verified.orgId);
+  if (!gate.allowed) {
+    return NextResponse.redirect(`${base}/explore?feature=crm`, 307);
+  }
   const meta: Record<string, string> = {};
   for (const [k, v] of url.searchParams) meta[k] = v;
   const p = providerFor(verified.provider, org);

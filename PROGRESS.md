@@ -2898,3 +2898,13 @@ id can be withdrawn, which would recreate this bug.
 
 **Note:** both Flash rates are promotional through 2026-12-31 and double on
 2027-01-01.
+
+## 2026-09-20 — Free-trial foundation
+
+- Added pending acquisition trials with secure one-use claims while global signup remains closed.
+- Added server-side restricted capabilities, one bounded training source, and an atomic seven-day/15-reply allowance.
+- Centralized simulated-inbound metering across both tester entry points; only successful AI-generated replies consume the allowance, while provider fallbacks and automations refund it.
+- Locked campaign creation and extra model-backed training actions for restricted trials, and hardened signup referrer/error handling.
+- Trial workspaces remain tenant-isolated and simulated; paid checkout can later activate the same org.
+- New `AcquisitionTrial` and `AcquisitionTrialEvent` tables require `npm run db:rls` immediately after `npm run db:push` in every environment.
+- Verification passed for Prisma schema validation, the focused foundation suite, the full 1,512-test suite, lint, and the production build. The three real-database credit-concurrency tests remained skipped because `TEST_DATABASE_URL` is not configured; no shared or production database was used.

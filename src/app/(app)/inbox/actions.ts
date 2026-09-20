@@ -18,6 +18,11 @@ import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
+import {
+  type TrialReplySummary,
+  withTrialReplyReservation,
+} from "@/modules/trial/replies";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -30,7 +35,9 @@ export interface ActionResult {
   /** Set by the simulation tester so the caller can open the thread. */
   conversationId?: string;
   /** The tester's message landed but no AI reply was sent, and why. */
-  skipped?: "no_profile" | "disabled";
+  skipped?: "no_profile" | "disabled" | "trial_limit";
+  /** Present only for a restricted acquisition trial. */
+  trial?: TrialReplySummary;
 }
 
 export interface SuggestActionResult extends ActionResult {
@@ -226,6 +233,9 @@ export async function suggestReplyAction(
 ): Promise<SuggestActionResult> {
   try {
     const { org } = await requireOrgContext();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return { ok: false, message: "This AI tool is available on paid plans." };
+    }
     const conversationId = String(formData.get("conversationId") ?? "");
     const tone = String(formData.get("tone") ?? "friendly");
     if (!isSuggestTone(tone)) {
@@ -477,9 +487,21 @@ export async function simulateInboundAction(
       return { ok: false, message: "That phone number doesn't look right." };
     }
 
-    // handleInboundMessage maintains the denormalized inbox-list fields
-    // (lastMessageAt / preview / unread) itself — same path as the webhook.
-    const result = await handleInboundMessage(org.id, phone, text);
+    const outcome = await withTrialReplyReservation(org.id, () =>
+      handleInboundMessage(org.id, phone, text)
+    );
+    if (outcome.kind === "blocked") {
+      return {
+        ok: false,
+        message: outcome.status === "expired"
+          ? "Your seven-day trial has ended. Book your free setup demo to continue."
+          : "You've used all 15 test replies. Book your free setup demo to continue.",
+        skipped: "trial_limit",
+        ...(outcome.trial ? { trial: outcome.trial } : {}),
+      };
+    }
+
+    const { result, trial } = outcome;
 
     revalidateInbox(result.conversationId);
 
@@ -504,12 +526,23 @@ export async function simulateInboundAction(
         message:
           "The AI couldn't answer just now, so the chat was handed to a person — exactly what a customer would get. Try again in a minute.",
         conversationId,
+        ...(trial ? { trial } : {}),
       };
     }
     if (result.handoff) {
-      return { ok: true, message: "Message received — the agent handed off to a human.", conversationId };
+      return {
+        ok: true,
+        message: "Message received — the agent handed off to a human.",
+        conversationId,
+        ...(trial ? { trial } : {}),
+      };
     }
-    return { ok: true, message: "Message received — the agent replied.", conversationId };
+    return {
+      ok: true,
+      message: "Message received — the agent replied.",
+      conversationId,
+      ...(trial ? { trial } : {}),
+    };
   } catch {
     return { ok: false, message: "The simulated message failed — try again." };
   }
@@ -526,6 +559,9 @@ export async function summarizeConversationAction(
 ): Promise<SummarizeActionResult> {
   try {
     const { org } = await requireOrgContext();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return { ok: false, message: "This AI tool is available on paid plans." };
+    }
     const conversationId = String(formData.get("conversationId") ?? "");
     const rate = checkRateLimit(`summarize:${org.id}`, RATE_LIMITS.aiSuggest);
     if (!rate.allowed) {

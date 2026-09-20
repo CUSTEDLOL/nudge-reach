@@ -24,6 +24,8 @@ export interface InboundResult {
   actions?: string[];
   /** The model call failed; the customer got the hand-off line and the thread needs a person. */
   aiFailed?: true;
+  /** A model successfully generated this reply; acquisition trials meter only these. */
+  generatedByAi?: true;
 }
 
 const HISTORY_LIMIT = 12;
@@ -174,7 +176,13 @@ export async function handleInboundMessage(
   const history = buildHistory(recent);
   if (history.length === 0) history.push({ role: "user", text });
 
-  const { text: replyText, handoff, actions, aiFailed } = await generateAgentActionReply(
+  const {
+    text: replyText,
+    handoff,
+    actions,
+    aiFailed,
+    generatedByAi,
+  } = await generateAgentActionReply(
     {
       vertical: profile.vertical,
       businessName: profile.businessName,
@@ -235,6 +243,7 @@ export async function handleInboundMessage(
     conversationId: conversation.id,
     reply: replyText,
     handoff,
+    ...(generatedByAi ? { generatedByAi } : {}),
     ...(actions.length ? { actions } : {}),
     ...(aiFailed ? { aiFailed } : {}),
   };

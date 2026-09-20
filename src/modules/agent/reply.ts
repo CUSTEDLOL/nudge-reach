@@ -90,6 +90,8 @@ export interface AgentActionReply extends AgentReply {
   actions: string[];
   /** The org's AI credits are used up: handed off without calling the model. */
   pausedForCredits?: true;
+  /** Present only when the model returned non-empty customer-facing text. */
+  generatedByAi?: true;
 }
 
 /**
@@ -144,7 +146,12 @@ export async function generateAgentActionReply(
   if (!text) {
     return { text: HANDOFF_MESSAGE, handoff: true, actions };
   }
-  return { text: normalizeWhatsAppMarkdown(text), handoff, actions };
+  return {
+    text: normalizeWhatsAppMarkdown(text),
+    handoff,
+    actions,
+    generatedByAi: true,
+  };
 }
 
 /**

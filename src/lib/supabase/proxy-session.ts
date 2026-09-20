@@ -27,6 +27,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/cron",
   "/api/waitlist",
   "/api/access",
+  "/api/trials",
   // customer-facing hosted payment page
   "/pay",
   // public marketing pages split off the landing page

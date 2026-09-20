@@ -8,7 +8,7 @@ const { createServerClient, getClaims } = vi.hoisted(() => ({
 
 vi.mock("@supabase/ssr", () => ({ createServerClient }));
 
-import { updateSession } from "@/lib/supabase/proxy-session";
+import { isPublicPath, updateSession } from "@/lib/supabase/proxy-session";
 
 function request(path: string) {
   return new NextRequest(`https://nudge.test${path}`);
@@ -22,6 +22,11 @@ describe("updateSession", () => {
     getClaims.mockReset();
     getClaims.mockResolvedValue({ data: { claims: null } });
     createServerClient.mockReturnValue({ auth: { getClaims } });
+  });
+
+  it("keeps trial signup public while protecting trial setup", () => {
+    expect(isPublicPath("/api/trials")).toBe(true);
+    expect(isPublicPath("/trial/setup")).toBe(false);
   });
 
   it.each(["/admin", "/admin/orgs"])(
