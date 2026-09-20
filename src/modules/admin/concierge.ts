@@ -205,7 +205,7 @@ export async function founderDraftFollowUps(
       headline,
       ...lines,
       offPlan &&
-        `This workspace is ${offPlan} — the drafting ran on us, and the client can't switch these on until the plan changes.`,
+        `This workspace is ${offPlan} — the drafting ran on us, and these won't run until the plan changes.`,
     ]
       .filter(Boolean)
       .join(" "),
