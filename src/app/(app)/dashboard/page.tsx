@@ -35,6 +35,7 @@ import {
   dashboardRedirectFor,
   getTrialWorkspace,
 } from "@/modules/trial/workspace";
+import { TrialHome } from "@/components/features/trial/trial-home";
 
 export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
@@ -42,6 +43,9 @@ export default async function DashboardPage() {
   const trial = await getTrialWorkspace(org.id, now);
   const trialRedirect = dashboardRedirectFor(trial, false);
   if (trialRedirect) redirect(trialRedirect);
+  if (trial && !trial.converted) {
+    return <TrialHome businessName={org.name} workspace={trial} />;
+  }
   const isAgent = membership.role === "AGENT";
   const allowedWhatsappAccountIds =
     isAgent && membership.whatsappAccountIds.length > 0
