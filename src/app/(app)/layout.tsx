@@ -5,6 +5,7 @@ import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseUiPreferences } from "@/modules/dashboard/workspace-profile";
 import { AppShell } from "@/components/features/app-shell/shell";
 import { ToastProvider } from "@/components/ui/toast";
+import { getTrialWorkspace } from "@/modules/trial/workspace";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
 /** Authenticated app shell: dark sidebar + topbar + toasts (spec §3.6). */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { org, role, email, membership } = await requireOrgContext();
+  const trial = await getTrialWorkspace(org.id);
+  const activeTrial = trial && !trial.converted ? trial : null;
   const uiPreferences = parseUiPreferences(membership.uiPreferences);
 
   const name =
@@ -25,6 +28,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         orgName={org.name}
         user={{ name, email }}
         role={role}
+        mode={activeTrial ? "trial" : "standard"}
+        trial={activeTrial}
         simulation={isSimulated(org)}
         initialSidebarCollapsed={uiPreferences.sidebarCollapsed}
       >

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 export type AppRole = "OWNER" | "ADMIN" | "AGENT";
+export type AppShellMode = "standard" | "trial";
 
 export type NavKey =
   | "today"
@@ -56,6 +57,7 @@ export type NavItem = {
   icon: LucideIcon;
   activePrefixes: readonly string[];
   hideForAgent?: boolean;
+  tourTarget?: string;
   children?: readonly NavChild[];
 };
 
@@ -208,6 +210,45 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   },
 ];
 
+export const TRIAL_NAV_ITEMS = [
+  {
+    key: "today",
+    label: "Home",
+    mobileLabel: "Home",
+    href: "/dashboard",
+    icon: House,
+    activePrefixes: ["/dashboard"],
+    tourTarget: "nav-home",
+  },
+  {
+    key: "front-desk",
+    label: "Train AI",
+    mobileLabel: "Train",
+    href: "/agent",
+    icon: Bot,
+    activePrefixes: ["/agent", "/knowledge"],
+    tourTarget: "nav-train",
+  },
+  {
+    key: "inbox",
+    label: "Test Inbox",
+    mobileLabel: "Test",
+    href: "/inbox/try",
+    icon: Inbox,
+    activePrefixes: ["/inbox/try"],
+    tourTarget: "nav-test",
+  },
+  {
+    key: "integrations",
+    label: "Explore",
+    mobileLabel: "Explore",
+    href: "/explore",
+    icon: Blocks,
+    activePrefixes: ["/explore"],
+    tourTarget: "nav-explore",
+  },
+] satisfies readonly NavItem[];
+
 const MOBILE_PRIMARY_KEYS: readonly NavKey[] = [
   "today",
   "inbox",
@@ -228,12 +269,37 @@ export function navItemsForRole(role: AppRole): NavItem[] {
   return navGroupsForRole(role).flatMap((group) => [...group.items]);
 }
 
+export function navGroupsForMode(
+  mode: AppShellMode,
+  role: AppRole,
+): NavGroup[] {
+  if (mode === "trial") {
+    return [{ label: "Workspace", items: TRIAL_NAV_ITEMS }];
+  }
+  return navGroupsForRole(role);
+}
+
+export function navItemsForMode(
+  mode: AppShellMode,
+  role: AppRole,
+): NavItem[] {
+  return navGroupsForMode(mode, role).flatMap((group) => [...group.items]);
+}
+
 export function mobilePrimaryItemsForRole(role: AppRole): NavItem[] {
   const items = navItemsForRole(role);
   return MOBILE_PRIMARY_KEYS.flatMap((key) => {
     const item = items.find((candidate) => candidate.key === key);
     return item ? [item] : [];
   });
+}
+
+export function mobilePrimaryItemsForMode(
+  mode: AppShellMode,
+  role: AppRole,
+): NavItem[] {
+  if (mode === "trial") return [...TRIAL_NAV_ITEMS];
+  return mobilePrimaryItemsForRole(role);
 }
 
 const QUICK_COMMANDS: readonly AppCommand[] = [
@@ -282,6 +348,20 @@ export function commandsForRole(role: AppRole): AppCommand[] {
   return [...navigation, ...actions];
 }
 
+export function commandsForMode(
+  mode: AppShellMode,
+  role: AppRole,
+): AppCommand[] {
+  if (mode === "standard") return commandsForRole(role);
+  return navItemsForMode(mode, role).map<AppCommand>((item) => ({
+    label: item.label,
+    href: item.href,
+    group: "Navigate",
+    icon: item.icon,
+    keywords: [item.mobileLabel, item.key],
+  }));
+}
+
 function cleanPathname(pathname: string): string {
   return pathname.split(/[?#]/, 1)[0] || "/";
 }
@@ -301,7 +381,8 @@ export function activeNavKey(pathname: string): NavKey | null {
 }
 
 export function isNavItemActive(pathname: string, item: NavItem): boolean {
-  return activeNavKey(pathname) === item.key;
+  const clean = cleanPathname(pathname);
+  return item.activePrefixes.some((prefix) => routeMatches(clean, prefix));
 }
 
 /**

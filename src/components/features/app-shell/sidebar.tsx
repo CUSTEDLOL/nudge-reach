@@ -9,7 +9,8 @@ import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
   activeNavChildKey,
   isNavItemActive,
-  navGroupsForRole,
+  navGroupsForMode,
+  type AppShellMode,
   type AppRole,
 } from "@/components/features/app-shell/nav";
 
@@ -22,17 +23,19 @@ export type SidebarUser = { name: string; email: string };
  */
 export function Sidebar({
   role = "OWNER",
+  mode = "standard",
   user,
   collapsed,
   onCollapsedChange,
 }: {
   role?: AppRole;
+  mode?: AppShellMode;
   user: SidebarUser;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const pathname = usePathname();
-  const groups = navGroupsForRole(role);
+  const groups = navGroupsForMode(mode, role);
 
   const iconButton =
     "grid h-9 w-9 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500";
@@ -97,6 +100,7 @@ export function Sidebar({
                       <li key={item.key}>
                         <Link
                           href={item.href}
+                          data-tour={item.tourTarget}
                           aria-current={active ? "page" : undefined}
                           aria-label={collapsed ? item.label : undefined}
                           title={collapsed ? item.label : undefined}

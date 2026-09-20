@@ -4,12 +4,41 @@ import {
   activeNavChildKey,
   activeNavKey,
   commandsForRole,
+  commandsForMode,
   mobilePrimaryItemsForRole,
+  mobilePrimaryItemsForMode,
   navGroupsForRole,
+  navItemsForMode,
 } from "@/components/features/app-shell/nav";
 import { isThreadRoute } from "@/components/features/app-shell/bottom-nav";
 
 describe("adaptive app navigation", () => {
+  it("gives acquisition trials exactly four honest destinations", () => {
+    expect(navItemsForMode("trial", "OWNER").map((item) => [item.label, item.href])).toEqual([
+      ["Home", "/dashboard"],
+      ["Train AI", "/agent"],
+      ["Test Inbox", "/inbox/try"],
+      ["Explore", "/explore"],
+    ]);
+    expect(
+      navItemsForMode("trial", "OWNER").some((item) => item.href === "/campaigns"),
+    ).toBe(false);
+    expect(mobilePrimaryItemsForMode("trial", "OWNER")).toHaveLength(4);
+    expect(commandsForMode("trial", "OWNER").map((command) => command.href)).toEqual([
+      "/dashboard",
+      "/agent",
+      "/inbox/try",
+      "/explore",
+    ]);
+  });
+
+  it("keeps standard role navigation unchanged", () => {
+    expect(navItemsForMode("standard", "OWNER")).toEqual(
+      navGroupsForRole("OWNER").flatMap((group) => [...group.items]),
+    );
+    expect(commandsForMode("standard", "AGENT")).toEqual(commandsForRole("AGENT"));
+  });
+
   it("puts owner destinations in the approved stable group order", () => {
     expect(
       navGroupsForRole("OWNER").map((group) => [
