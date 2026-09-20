@@ -149,7 +149,7 @@ describe("founder WhatsApp connection", () => {
     });
     expect(saveWhatsappAccount).toHaveBeenCalledWith(
       { orgId: "o1", ...CONNECTION },
-      { activateOrg: false, db: prisma }
+      { db: prisma }
     );
     expect(prisma.auditLog.create).toHaveBeenCalledOnce();
     expect(prisma.$transaction).toHaveBeenCalledOnce();

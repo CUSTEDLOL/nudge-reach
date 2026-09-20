@@ -101,7 +101,7 @@ export async function founderConnectWhatsapp(
   return prisma.$transaction(async (tx) => {
     const saved = await saveWhatsappAccount(
       { orgId, ...validation.value },
-      { activateOrg: false, db: tx }
+      { db: tx }
     );
     if (!saved.ok) return { ok: false, error: saved.message };
 

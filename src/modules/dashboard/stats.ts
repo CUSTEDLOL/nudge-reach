@@ -536,7 +536,11 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       key: "whatsapp",
       title: "Go live on WhatsApp",
       description: input.whatsappConnected
-        ? "Your business number is linked."
+        ? input.simulationMode
+          // Connecting no longer flips the workspace live, so "linked" and
+          // "live" are different things and the checklist must not blur them.
+          ? "Your number is linked — we'll switch you live once we've checked the setup."
+          : "Your business number is linked."
         : input.simulationMode
           ? "We connect your number with you — nothing here reaches a real customer yet."
           : "We connect your WhatsApp Business number with you.",
