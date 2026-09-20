@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAutomationLimit } from "@/modules/billing/limits";
@@ -79,6 +79,10 @@ export async function saveAutomation(
             enabled: draft.enabled,
             trigger: draft.trigger,
             triggerConfig,
+            // A hand edit invalidates the spec the follow-up card renders from:
+            // the steps are now the owner's, not the spec's.
+            spec: Prisma.DbNull,
+            source: "builder",
             steps: { create: stepsCreate },
           },
         }),

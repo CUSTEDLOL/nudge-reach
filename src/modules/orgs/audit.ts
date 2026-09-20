@@ -26,6 +26,10 @@ export type AuditAction =
   | "followup.enabled"
   | "followup.disabled"
   | "followup.timing"
+  | "followup.drafted"
+  | "followup.created"
+  | "followup.updated"
+  | "followup.deleted"
   | "concierge.client_setup"
   | "demo.reset"
   | "knowledge.answered"
@@ -90,6 +94,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "followup.enabled": "Follow-up enabled",
   "followup.disabled": "Follow-up paused",
   "followup.timing": "Follow-up timing changed",
+  "followup.drafted": "AI drafted follow-ups",
+  "followup.created": "Follow-up created",
+  "followup.updated": "Follow-up edited",
+  "followup.deleted": "Follow-up deleted",
   "concierge.client_setup": "Concierge client setup",
   "demo.reset": "Demo data reset",
   "knowledge.answered": "Owner answered agent question",

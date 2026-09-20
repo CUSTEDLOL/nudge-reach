@@ -1,16 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
-import { checkAiFrontDesk } from "@/modules/billing/limits";
+import { checkAiFrontDesk, checkAutomationLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
+import { draftFollowUp, draftStarterSet } from "@/modules/followup/draft";
 import {
   getFollowUpConfig,
   installRevenueRecoveryPack,
+  saveFollowUpFromSpec,
   setFollowUpEnabled,
   setFollowUpFlag,
   setFollowUpTiming,
 } from "@/modules/followup/install";
+import {
+  parseFollowUpSpec,
+  specErrorMessage,
+  type FollowUpSpec,
+} from "@/modules/followup/spec";
 import {
   FOLLOW_UP_FLAGS,
   FOLLOW_UP_KINDS,
@@ -130,6 +138,206 @@ export async function setFollowUpFlagAction(
       ok: false,
       message:
         err instanceof Error ? err.message : "Couldn't update that follow-up.",
+    };
+  }
+}
+
+export interface DraftResult extends ActionResult {
+  /** The unsaved draft the owner reviews before it is created. */
+  spec?: FollowUpSpec;
+}
+
+/** Sentence → reviewable spec. Nothing is saved. ADMIN + AI Front Desk. */
+export async function draftFollowUpAction(request: string): Promise<DraftResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const gate = await checkAiFrontDesk(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
+
+    const spec = await draftFollowUp({
+      orgId: ctx.org.id,
+      request: String(request ?? "").slice(0, 500),
+    });
+    return { ok: true, message: "Here's a draft — edit anything, then create it.", spec };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't draft that follow-up.",
+    };
+  }
+}
+
+export interface CreateResult extends ActionResult {
+  id?: string;
+}
+
+/** Save a reviewed spec as a new follow-up. Lands OFF. */
+export async function createFollowUpAction(raw: unknown): Promise<CreateResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const gate = await checkAiFrontDesk(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
+    // Plan limit: automations (creates only, exactly like the builder's save).
+    const limit = await checkAutomationLimit(ctx.org.id);
+    if (!limit.allowed) return { ok: false, message: limit.message };
+
+    const parsed = parseFollowUpSpec(raw);
+    if (!parsed.ok) return { ok: false, message: specErrorMessage(parsed.error) };
+
+    const { id } = await saveFollowUpFromSpec({
+      orgId: ctx.org.id,
+      spec: parsed.spec,
+      source: "ai",
+    });
+    recordAudit(ctx, "followup.created", parsed.spec.name);
+    revalidatePath("/automations");
+    return { ok: true, message: "Created — it's off until you switch it on.", id };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't create that follow-up.",
+    };
+  }
+}
+
+/** Re-save an edited spec over an existing follow-up (org-scoped). */
+export async function updateFollowUpAction(
+  id: string,
+  raw: unknown
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { id: true, source: true },
+    });
+    if (!existing) return { ok: false, message: "Follow-up not found." };
+
+    const parsed = parseFollowUpSpec(raw);
+    if (!parsed.ok) return { ok: false, message: specErrorMessage(parsed.error) };
+
+    await saveFollowUpFromSpec({
+      orgId: ctx.org.id,
+      spec: parsed.spec,
+      // A pack follow-up stays the pack's (its templates are pinned by name);
+      // anything else edited here is now spec-backed.
+      source: existing.source === "pack" ? "pack" : "ai",
+      automationId: id,
+    });
+    recordAudit(ctx, "followup.updated", parsed.spec.name);
+    revalidatePath("/automations");
+    return { ok: true, message: "Saved. Changed wording goes back to Meta for approval." };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't save that follow-up.",
+    };
+  }
+}
+
+export async function deleteFollowUpAction(id: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { name: true },
+    });
+    if (!existing) return { ok: false, message: "Follow-up not found." };
+
+    await prisma.automation.delete({ where: { id } });
+    recordAudit(ctx, "followup.deleted", existing.name);
+    revalidatePath("/automations");
+    return { ok: true, message: "Deleted. Its templates stay in your library." };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't delete that follow-up.",
+    };
+  }
+}
+
+export interface StarterSetResult extends ActionResult {
+  /** How many drafted follow-ups were actually saved. */
+  created?: number;
+}
+
+/** First-open: install the tick-driven pack (its quiet-lead nudge starts ON,
+ *  as the installer has always done) AND draft a tailored set, which lands OFF. */
+export async function writeStarterSetAction(): Promise<StarterSetResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const gate = await checkAiFrontDesk(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
+
+    await installRevenueRecoveryPack(ctx.org.id);
+
+    // The pack is the part we promise; drafting is the bonus. Credits gone or
+    // the provider down must not lose the install.
+    let specs: FollowUpSpec[];
+    try {
+      specs = await draftStarterSet({ orgId: ctx.org.id });
+    } catch {
+      revalidatePath("/automations");
+      return {
+        ok: true,
+        created: 0,
+        message:
+          "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above.",
+      };
+    }
+
+    const existing = new Set(
+      (
+        await prisma.automation.findMany({
+          where: { orgId: ctx.org.id },
+          select: { name: true },
+        })
+      ).map((a) => a.name.toLowerCase())
+    );
+    // Checked once, after the install: the loop only ever adds automations.
+    const limit = await checkAutomationLimit(ctx.org.id);
+    const room = limit.limit === null ? Infinity : Math.max(0, limit.limit - limit.used);
+
+    let created = 0;
+    let stopped = false;
+    for (const spec of specs) {
+      if (existing.has(spec.name.toLowerCase())) continue;
+      if (created >= room) {
+        stopped = true;
+        break;
+      }
+      await saveFollowUpFromSpec({ orgId: ctx.org.id, spec, source: "ai" });
+      created++;
+    }
+
+    recordAudit(ctx, "followup.drafted", `${created} drafted`);
+    revalidatePath("/automations");
+    const message = created
+      ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} for you — read them, then switch on the ones you want.`
+      : stopped
+        ? "Installed the ready-made follow-ups."
+        : "Your starter set is already here.";
+    return {
+      ok: true,
+      created,
+      message: stopped
+        ? `${message} We stopped there — that's as many automations as your plan allows.`
+        : message,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't write your starter set.",
     };
   }
 }

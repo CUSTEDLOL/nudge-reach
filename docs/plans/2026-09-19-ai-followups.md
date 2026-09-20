@@ -84,6 +84,7 @@ import {
   describeSituation,
   parseFollowUpSpec,
   shouldCancelOnSignal,
+  specErrorMessage,
   STOP_SIGNALS,
 } from "@/modules/followup/spec";
 
@@ -180,6 +181,48 @@ describe("parseFollowUpSpec", () => {
     if (!r.ok) return;
     expect(r.spec.messages[0].header.isWellFormed()).toBe(true);
     expect(r.spec.messages[0].header.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe("specErrorMessage", () => {
+  it("turns each field's zod complaint into a sentence the owner can act on", () => {
+    expect(specErrorMessage("messages.0.body: Too big: expected string to have <=600 characters")).toBe(
+      "That message is too long — keep it under 600 characters."
+    );
+    expect(specErrorMessage("messages.1.header: Too small: expected string to have >=1 characters")).toBe(
+      "That headline is too long — keep it under 60 characters."
+    );
+    expect(specErrorMessage("situation.afterDays: Expected int, received number")).toBe(
+      "The timing has to be a whole number of days, at most 14."
+    );
+    expect(specErrorMessage("situation: Invalid discriminator value")).toBe(
+      "We couldn't tell what should start that follow-up — try rewording it."
+    );
+    expect(specErrorMessage("messages: Too small: expected array to have >=1 items")).toBe(
+      "A follow-up needs between one and three messages."
+    );
+    expect(specErrorMessage("name: Too big: expected string to have <=80 characters")).toBe(
+      "Give the follow-up a short name (under 80 characters)."
+    );
+  });
+
+  it("falls back to a plain sentence for anything else", () => {
+    expect(specErrorMessage("spec: That follow-up isn't valid.")).toBe(
+      "That follow-up isn't valid — try rewording it."
+    );
+    expect(specErrorMessage("")).toBe("That follow-up isn't valid — try rewording it.");
+  });
+
+  it("never leaks a raw zod string from a real parse failure", () => {
+    const r = parseFollowUpSpec({
+      ...quiet,
+      messages: [{ ...quiet.messages[0], body: `Hi {{1}}, ${"x".repeat(700)}` }],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    const owner = specErrorMessage(r.error);
+    expect(owner).toBe("That message is too long — keep it under 600 characters.");
+    expect(owner).not.toContain("expected");
   });
 });
 
@@ -364,6 +407,19 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   }
   if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking"];
   return { ok: true, spec };
+}
+
+/** Owner-facing sentence for a spec that failed validation. The raw zod
+ *  message is precise but unreadable; the field is what the owner can fix. */
+export function specErrorMessage(error: string): string {
+  const field = error.split(":")[0] ?? "";
+  if (field.includes("body")) return "That message is too long — keep it under 600 characters.";
+  if (field.includes("header")) return "That headline is too long — keep it under 60 characters.";
+  if (field.includes("afterDays")) return "The timing has to be a whole number of days, at most 14.";
+  if (field.includes("situation")) return "We couldn't tell what should start that follow-up — try rewording it.";
+  if (field.includes("messages")) return "A follow-up needs between one and three messages.";
+  if (field.includes("name")) return "Give the follow-up a short name (under 80 characters).";
+  return "That follow-up isn't valid — try rewording it.";
 }
 
 function days(n: number): string {
@@ -2151,6 +2207,13 @@ describe("draftOffline (zero-key simulation path)", () => {
     expect(draftOffline("chase leads who asked about pricing but never booked").situation.kind).toBe("went_quiet");
     expect(draftOffline("remind quiet leads to book").situation.kind).toBe("went_quiet");
   });
+  it("hears the everyday ways an owner says a lead went quiet", () => {
+    expect(draftOffline("chase people who don't reply to my first message").situation.kind).toBe("went_quiet");
+    expect(draftOffline("follow up with anyone who has not replied in 3 days").situation).toEqual({
+      kind: "went_quiet",
+      afterDays: 3,
+    });
+  });
   it("never claims a visit happened: the review ask is timed from the booking", () => {
     const r = draftOffline("ask for a review the day after the appointment");
     expect(r.situation.kind).toBe("booked");
@@ -2325,6 +2388,16 @@ describe("draft with a key (model path)", () => {
     expect(system).not.toContain("About the business:");
   });
 
+  it("treats a whitespace-only profile as knowing nothing", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "   \n  " });
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("know nothing");
+    expect(system).not.toContain("About the business:");
+  });
+
   it("gives up with a friendly error after two bad replies, logging only the reason", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
@@ -2423,10 +2496,12 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
   return {
     businessName: profile?.businessName || org?.name || "the business",
     vertical: profile?.vertical || org?.vertical || "services",
-    businessInfo: profile?.businessInfo ?? "",
+    // Trimmed: a whitespace-only profile is no grounding at all, and must not
+    // suppress the "you know nothing about this business" line.
+    businessInfo: (profile?.businessInfo ?? "").trim(),
     tone: profile?.tone ?? "Warm, friendly, and concise",
     doNots: profile?.doNots ?? "",
-    knowledge: buildKnowledgeDigest(entries, 2500),
+    knowledge: buildKnowledgeDigest(entries, 2500).trim(),
   };
 }
 
@@ -2573,7 +2648,8 @@ const WELCOME_COPY = {
   buttons: [],
 };
 
-const QUIET_PHRASING = /quiet|silent|ghost|no reply|didn't reply|stopped replying|haven't heard|never booked|didn't book/;
+const QUIET_PHRASING =
+  /quiet|silent|ghost|no reply|didn't reply|don't reply|not replied|stopped replying|haven't heard|never booked|didn't book/;
 
 function daysIn(text: string, fallback: number): number {
   const m = text.match(/(\d+)\s*(day|days|d)\b/i);
@@ -2694,10 +2770,341 @@ git commit -m "feat(followups): draft follow-ups from a sentence or the business
 
 **Files:**
 - Modify: `src/app/(app)/automations/followup-actions.ts` (append)
-- Modify: `src/modules/orgs/audit.ts` (`AuditAction` union ~line 26 and `AUDIT_ACTION_LABELS` ~line 89)
-- Modify: `src/app/(app)/automations/actions.ts:71-84` (builder edit clears the spec)
+- Modify: `src/modules/orgs/audit.ts` (`AuditAction` union + `AUDIT_ACTION_LABELS`)
+- Modify: `src/app/(app)/automations/actions.ts` (builder edit clears the spec)
+- Modify: `src/modules/followup/spec.ts` (`specErrorMessage` — owner copy for a
+  parse failure; the raw zod string must never reach the page)
+- Modify: `src/modules/followup/draft.ts` (two residuals from Task 8's review:
+  trim the grounding strings, hear "don't reply" / "not replied")
+- Test: `tests/followups-actions.test.ts` (new), plus additions to
+  `tests/followup-spec.test.ts` and `tests/followup-draft.test.ts`
 
-**Step 1: Audit vocabulary** — in `audit.ts` add after `"followup.timing"`:
+**Step 1: Write the failing tests**
+
+```ts
+// tests/followups-actions.test.ts
+import { readFileSync } from "node:fs";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * The follow-up server actions: every one is ADMIN-gated, flagship-gated where
+ * it costs AI, org-scoped on read, and never shows the owner a raw zod string.
+ */
+
+const {
+  requireOrgContext,
+  revalidatePath,
+  recordAudit,
+  checkAiFrontDesk,
+  checkAutomationLimit,
+  saveFollowUpFromSpec,
+  installRevenueRecoveryPack,
+  draftFollowUp,
+  draftStarterSet,
+  automationFindFirst,
+  automationFindMany,
+  automationDelete,
+} = vi.hoisted(() => ({
+  requireOrgContext: vi.fn(),
+  revalidatePath: vi.fn(),
+  recordAudit: vi.fn(),
+  checkAiFrontDesk: vi.fn(),
+  checkAutomationLimit: vi.fn(),
+  saveFollowUpFromSpec: vi.fn(),
+  installRevenueRecoveryPack: vi.fn(),
+  draftFollowUp: vi.fn(),
+  draftStarterSet: vi.fn(),
+  automationFindFirst: vi.fn(),
+  automationFindMany: vi.fn(),
+  automationDelete: vi.fn(),
+}));
+
+vi.mock("next/cache", () => ({ revalidatePath }));
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    automation: {
+      findFirst: automationFindFirst,
+      findMany: automationFindMany,
+      delete: automationDelete,
+    },
+  },
+}));
+vi.mock("@/modules/orgs/auth", () => {
+  const ORDER: Record<string, number> = { OWNER: 3, ADMIN: 2, AGENT: 1 };
+  return {
+    requireOrgContext,
+    requireRole: (ctx: { role: string }, min: string) => {
+      if (ORDER[ctx.role] < ORDER[min]) {
+        throw new Error("Only an admin or above can do this.");
+      }
+    },
+  };
+});
+vi.mock("@/modules/orgs/audit", () => ({ recordAudit }));
+vi.mock("@/modules/billing/limits", () => ({ checkAiFrontDesk, checkAutomationLimit }));
+vi.mock("@/modules/followup/install", () => ({
+  saveFollowUpFromSpec,
+  installRevenueRecoveryPack,
+  getFollowUpConfig: vi.fn(),
+  setFollowUpEnabled: vi.fn(),
+  setFollowUpFlag: vi.fn(),
+  setFollowUpTiming: vi.fn(),
+}));
+vi.mock("@/modules/followup/draft", () => ({ draftFollowUp, draftStarterSet }));
+
+import {
+  createFollowUpAction,
+  deleteFollowUpAction,
+  draftFollowUpAction,
+  updateFollowUpAction,
+  writeStarterSetAction,
+} from "@/app/(app)/automations/followup-actions";
+
+const ctx = (role: "OWNER" | "ADMIN" | "AGENT" = "ADMIN") => ({
+  role,
+  org: { id: "org1" },
+  userId: "u1",
+  email: "owner@example.com",
+  membership: { displayName: "Asha" },
+});
+
+const spec = (over: Record<string, unknown> = {}) => ({
+  name: "Quiet-lead chase",
+  situation: { kind: "went_quiet", afterDays: 2 },
+  messages: [
+    { afterDays: 0, category: "MARKETING", header: "Still deciding?", body: "Hi {{1}}, any questions?", footer: "" },
+  ],
+  ...over,
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  requireOrgContext.mockResolvedValue(ctx());
+  checkAiFrontDesk.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
+  checkAutomationLimit.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
+  saveFollowUpFromSpec.mockResolvedValue({ id: "auto1" });
+  automationFindMany.mockResolvedValue([]);
+});
+
+describe("draftFollowUpAction", () => {
+  it("returns the spec for review and saves nothing", async () => {
+    draftFollowUp.mockResolvedValue(spec());
+    const r = await draftFollowUpAction("chase quiet leads after 2 days");
+    expect(r.ok).toBe(true);
+    expect(r.spec?.name).toBe("Quiet-lead chase");
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+    expect(draftFollowUp).toHaveBeenCalledWith({
+      orgId: "org1",
+      request: "chase quiet leads after 2 days",
+    });
+  });
+
+  it("caps the request so a pasted essay can't run up the bill", async () => {
+    draftFollowUp.mockResolvedValue(spec());
+    await draftFollowUpAction("x".repeat(900));
+    expect(draftFollowUp.mock.calls[0][0].request).toHaveLength(500);
+  });
+
+  it("refuses an agent and a workspace without the flagship", async () => {
+    requireOrgContext.mockResolvedValue(ctx("AGENT"));
+    expect((await draftFollowUpAction("chase")).ok).toBe(false);
+
+    requireOrgContext.mockResolvedValue(ctx());
+    checkAiFrontDesk.mockResolvedValue({ allowed: false, message: "Upgrade first.", used: 0, limit: 0 });
+    const r = await draftFollowUpAction("chase");
+    expect(r).toEqual({ ok: false, message: "Upgrade first." });
+    expect(draftFollowUp).not.toHaveBeenCalled();
+  });
+
+  it("passes the drafter's own friendly failure through", async () => {
+    draftFollowUp.mockRejectedValue(new Error("We couldn't write that follow-up just now — try rephrasing."));
+    const r = await draftFollowUpAction("chase");
+    expect(r.ok).toBe(false);
+    expect(r.message).toContain("couldn't write that follow-up");
+  });
+});
+
+describe("createFollowUpAction", () => {
+  it("saves a reviewed spec as an AI follow-up that lands off", async () => {
+    const r = await createFollowUpAction(spec());
+    expect(r).toMatchObject({ ok: true, id: "auto1" });
+    expect(r.message).toMatch(/off/i);
+    const arg = saveFollowUpFromSpec.mock.calls[0][0];
+    expect(arg.orgId).toBe("org1");
+    expect(arg.source).toBe("ai");
+    expect(arg.spec.messages[0].footer).toContain("STOP");
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.created", "Quiet-lead chase");
+    expect(revalidatePath).toHaveBeenCalledWith("/automations");
+  });
+
+  it("shows an owner-facing sentence, not a zod string, for an invalid spec", async () => {
+    const long = spec({
+      messages: [
+        { afterDays: 0, category: "MARKETING", header: "Hi", body: `Hi {{1}} ${"x".repeat(700)}`, footer: "" },
+      ],
+    });
+    const r = await createFollowUpAction(long);
+    expect(r.ok).toBe(false);
+    expect(r.message).toBe("That message is too long — keep it under 600 characters.");
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
+
+  it("checks the plan's automation limit before saving", async () => {
+    checkAutomationLimit.mockResolvedValue({
+      allowed: false,
+      message: "You've reached the Starter plan's limit of 3 automations.",
+      used: 3,
+      limit: 3,
+    });
+    const r = await createFollowUpAction(spec());
+    expect(r.ok).toBe(false);
+    expect(r.message).toContain("limit of 3 automations");
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
+
+  it("refuses an agent", async () => {
+    requireOrgContext.mockResolvedValue(ctx("AGENT"));
+    expect((await createFollowUpAction(spec())).ok).toBe(false);
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateFollowUpAction", () => {
+  it("re-saves over an org-scoped follow-up and keeps a pack follow-up in the pack", async () => {
+    automationFindFirst.mockResolvedValue({ id: "a1", source: "pack" });
+    const r = await updateFollowUpAction("a1", spec());
+    expect(r.ok).toBe(true);
+    expect(automationFindFirst.mock.calls[0][0].where).toEqual({ id: "a1", orgId: "org1" });
+    expect(saveFollowUpFromSpec).toHaveBeenCalledWith(
+      expect.objectContaining({ orgId: "org1", automationId: "a1", source: "pack" })
+    );
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.updated", "Quiet-lead chase");
+  });
+
+  it("a hand-built follow-up edited here becomes an AI-spec one", async () => {
+    automationFindFirst.mockResolvedValue({ id: "a1", source: "builder" });
+    await updateFollowUpAction("a1", spec());
+    expect(saveFollowUpFromSpec.mock.calls[0][0].source).toBe("ai");
+  });
+
+  it("refuses another org's id and an invalid spec", async () => {
+    automationFindFirst.mockResolvedValue(null);
+    expect(await updateFollowUpAction("other", spec())).toEqual({
+      ok: false,
+      message: "Follow-up not found.",
+    });
+
+    automationFindFirst.mockResolvedValue({ id: "a1", source: "ai" });
+    const r = await updateFollowUpAction("a1", spec({ situation: { kind: "nonsense" } }));
+    expect(r.ok).toBe(false);
+    expect(r.message).toBe("We couldn't tell what should start that follow-up — try rewording it.");
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteFollowUpAction", () => {
+  it("deletes an org-scoped follow-up and says the templates stay", async () => {
+    automationFindFirst.mockResolvedValue({ name: "Quiet-lead chase" });
+    const r = await deleteFollowUpAction("a1");
+    expect(r.ok).toBe(true);
+    expect(r.message).toMatch(/templates/i);
+    expect(automationFindFirst.mock.calls[0][0].where).toEqual({ id: "a1", orgId: "org1" });
+    expect(automationDelete).toHaveBeenCalledWith({ where: { id: "a1" } });
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.deleted", "Quiet-lead chase");
+  });
+
+  it("refuses another org's id", async () => {
+    automationFindFirst.mockResolvedValue(null);
+    expect(await deleteFollowUpAction("other")).toEqual({ ok: false, message: "Follow-up not found." });
+    expect(automationDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("writeStarterSetAction", () => {
+  it("installs the ready-made pack, then saves the drafted set, all off", async () => {
+    draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" })]);
+    const r = await writeStarterSetAction();
+    expect(r.ok).toBe(true);
+    expect(r.created).toBe(2);
+    expect(r.message).toContain("2 follow-ups");
+    expect(installRevenueRecoveryPack).toHaveBeenCalledWith("org1");
+    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(2);
+    expect(saveFollowUpFromSpec.mock.calls[0][0].source).toBe("ai");
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), "followup.drafted", "2 drafted");
+  });
+
+  it("skips a name the org already has, whatever its casing", async () => {
+    automationFindMany.mockResolvedValue([{ name: "quiet-lead CHASE" }]);
+    draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" })]);
+    const r = await writeStarterSetAction();
+    expect(r.created).toBe(1);
+    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
+    expect(saveFollowUpFromSpec.mock.calls[0][0].spec.name).toBe("Welcome");
+  });
+
+  it("keeps the installed pack when drafting fails", async () => {
+    draftStarterSet.mockRejectedValue(new Error("credits exhausted"));
+    const r = await writeStarterSetAction();
+    expect(r.ok).toBe(true);
+    expect(r.message).toBe(
+      "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above."
+    );
+    expect(installRevenueRecoveryPack).toHaveBeenCalledWith("org1");
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
+
+  it("stops at the plan's automation limit and reports what it created", async () => {
+    checkAutomationLimit.mockResolvedValue({ allowed: true, message: "", used: 4, limit: 5 });
+    draftStarterSet.mockResolvedValue([spec(), spec({ name: "Welcome" }), spec({ name: "Rebook" })]);
+    const r = await writeStarterSetAction();
+    expect(r.ok).toBe(true);
+    expect(r.created).toBe(1);
+    expect(saveFollowUpFromSpec).toHaveBeenCalledTimes(1);
+    expect(r.message).toContain("1 follow-up");
+    expect(r.message).toMatch(/plan allows/i);
+  });
+
+  it("says nothing was new when the org already has every drafted name", async () => {
+    automationFindMany.mockResolvedValue([{ name: "Quiet-lead chase" }]);
+    draftStarterSet.mockResolvedValue([spec()]);
+    const r = await writeStarterSetAction();
+    expect(r.ok).toBe(true);
+    expect(r.created).toBe(0);
+    expect(saveFollowUpFromSpec).not.toHaveBeenCalled();
+  });
+
+  it("installs nothing without the flagship, and refuses an agent", async () => {
+    checkAiFrontDesk.mockResolvedValue({ allowed: false, message: "Upgrade first.", used: 0, limit: 0 });
+    expect(await writeStarterSetAction()).toMatchObject({ ok: false, message: "Upgrade first." });
+
+    checkAiFrontDesk.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
+    requireOrgContext.mockResolvedValue(ctx("AGENT"));
+    expect((await writeStarterSetAction()).ok).toBe(false);
+    expect(installRevenueRecoveryPack).not.toHaveBeenCalled();
+  });
+});
+
+describe("the builder writes over a spec", () => {
+  // Source-level: saveAutomation drags in the engine + draft parser, so this
+  // one line is asserted on the file. A hand edit invalidates the spec the
+  // follow-up card renders from, so the row must stop claiming to have one.
+  const source = readFileSync("src/app/(app)/automations/actions.ts", "utf8");
+
+  it("clears the spec and marks the automation hand-built on a builder save", () => {
+    const update = source.slice(source.indexOf("prisma.automation.update"));
+    expect(update).toContain("spec: Prisma.DbNull");
+    expect(update).toContain('source: "builder"');
+    expect(source).toContain('import { Prisma } from "@prisma/client"');
+  });
+});
+```
+
+**Step 2: Run to verify it fails**
+
+Run: `npx vitest run tests/followups-actions.test.ts tests/followup-spec.test.ts tests/followup-draft.test.ts`
+Expected: FAIL — `draftFollowUpAction` and `specErrorMessage` don't exist yet.
+
+**Step 3: Audit vocabulary** — in `audit.ts` add after `"followup.timing"`:
 
 ```ts
   | "followup.drafted"
@@ -2715,10 +3122,11 @@ and labels:
   "followup.deleted": "Follow-up deleted",
 ```
 
-**Step 2: Actions** — append to `followup-actions.ts` (extend the imports: `checkAutomationLimit` from `@/modules/billing/limits`; `prisma` from `@/lib/db`; `draftFollowUp, draftStarterSet` from `@/modules/followup/draft`; `saveFollowUpFromSpec` from `@/modules/followup/install`; `parseFollowUpSpec, type FollowUpSpec` from `@/modules/followup/spec`):
+**Step 4: Actions** — append to `followup-actions.ts` (extend the imports: `checkAutomationLimit` from `@/modules/billing/limits`; `prisma` from `@/lib/db`; `draftFollowUp, draftStarterSet` from `@/modules/followup/draft`; `saveFollowUpFromSpec` from `@/modules/followup/install`; `parseFollowUpSpec, specErrorMessage, type FollowUpSpec` from `@/modules/followup/spec`):
 
 ```ts
 export interface DraftResult extends ActionResult {
+  /** The unsaved draft the owner reviews before it is created. */
   spec?: FollowUpSpec;
 }
 
@@ -2729,10 +3137,18 @@ export async function draftFollowUpAction(request: string): Promise<DraftResult>
     requireRole(ctx, "ADMIN");
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
-    const spec = await draftFollowUp({ orgId: ctx.org.id, request: String(request ?? "").slice(0, 500) });
+
+    const spec = await draftFollowUp({
+      orgId: ctx.org.id,
+      request: String(request ?? "").slice(0, 500),
+    });
     return { ok: true, message: "Here's a draft — edit anything, then create it.", spec };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't draft that follow-up." };
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't draft that follow-up.",
+    };
   }
 }
 
@@ -2747,31 +3163,52 @@ export async function createFollowUpAction(raw: unknown): Promise<CreateResult> 
     requireRole(ctx, "ADMIN");
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
+    // Plan limit: automations (creates only, exactly like the builder's save).
     const limit = await checkAutomationLimit(ctx.org.id);
     if (!limit.allowed) return { ok: false, message: limit.message };
+
     const parsed = parseFollowUpSpec(raw);
-    if (!parsed.ok) return { ok: false, message: parsed.error };
-    const { id } = await saveFollowUpFromSpec({ orgId: ctx.org.id, spec: parsed.spec, source: "ai" });
+    if (!parsed.ok) return { ok: false, message: specErrorMessage(parsed.error) };
+
+    const { id } = await saveFollowUpFromSpec({
+      orgId: ctx.org.id,
+      spec: parsed.spec,
+      source: "ai",
+    });
     recordAudit(ctx, "followup.created", parsed.spec.name);
     revalidatePath("/automations");
     return { ok: true, message: "Created — it's off until you switch it on.", id };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't create that follow-up." };
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't create that follow-up.",
+    };
   }
 }
 
 /** Re-save an edited spec over an existing follow-up (org-scoped). */
-export async function updateFollowUpAction(id: string, raw: unknown): Promise<ActionResult> {
+export async function updateFollowUpAction(
+  id: string,
+  raw: unknown
+): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
-    const existing = await prisma.automation.findFirst({ where: { id, orgId: ctx.org.id }, select: { id: true, source: true } });
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { id: true, source: true },
+    });
     if (!existing) return { ok: false, message: "Follow-up not found." };
+
     const parsed = parseFollowUpSpec(raw);
-    if (!parsed.ok) return { ok: false, message: parsed.error };
+    if (!parsed.ok) return { ok: false, message: specErrorMessage(parsed.error) };
+
     await saveFollowUpFromSpec({
       orgId: ctx.org.id,
       spec: parsed.spec,
+      // A pack follow-up stays the pack's (its templates are pinned by name);
+      // anything else edited here is now spec-backed.
       source: existing.source === "pack" ? "pack" : "ai",
       automationId: id,
     });
@@ -2779,7 +3216,11 @@ export async function updateFollowUpAction(id: string, raw: unknown): Promise<Ac
     revalidatePath("/automations");
     return { ok: true, message: "Saved. Changed wording goes back to Meta for approval." };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save that follow-up." };
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't save that follow-up.",
+    };
   }
 }
 
@@ -2787,67 +3228,131 @@ export async function deleteFollowUpAction(id: string): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
-    const existing = await prisma.automation.findFirst({ where: { id, orgId: ctx.org.id }, select: { name: true } });
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { name: true },
+    });
     if (!existing) return { ok: false, message: "Follow-up not found." };
+
     await prisma.automation.delete({ where: { id } });
     recordAudit(ctx, "followup.deleted", existing.name);
     revalidatePath("/automations");
     return { ok: true, message: "Deleted. Its templates stay in your library." };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't delete that follow-up." };
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't delete that follow-up.",
+    };
   }
 }
 
-/** First-open: install the tick-driven pack AND draft a tailored set, all OFF. */
-export async function writeStarterSetAction(): Promise<ActionResult> {
+export interface StarterSetResult extends ActionResult {
+  /** How many drafted follow-ups were actually saved. */
+  created?: number;
+}
+
+/** First-open: install the tick-driven pack (its quiet-lead nudge starts ON,
+ *  as the installer has always done) AND draft a tailored set, which lands OFF. */
+export async function writeStarterSetAction(): Promise<StarterSetResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
     const gate = await checkAiFrontDesk(ctx.org.id);
     if (!gate.allowed) return { ok: false, message: gate.message };
+
     await installRevenueRecoveryPack(ctx.org.id);
-    const specs = await draftStarterSet({ orgId: ctx.org.id });
+
+    // The pack is the part we promise; drafting is the bonus. Credits gone or
+    // the provider down must not lose the install.
+    let specs: FollowUpSpec[];
+    try {
+      specs = await draftStarterSet({ orgId: ctx.org.id });
+    } catch {
+      revalidatePath("/automations");
+      return {
+        ok: true,
+        created: 0,
+        message:
+          "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above.",
+      };
+    }
+
     const existing = new Set(
-      (await prisma.automation.findMany({ where: { orgId: ctx.org.id }, select: { name: true } })).map((a) => a.name)
+      (
+        await prisma.automation.findMany({
+          where: { orgId: ctx.org.id },
+          select: { name: true },
+        })
+      ).map((a) => a.name.toLowerCase())
     );
+    // Checked once, after the install: the loop only ever adds automations.
+    const limit = await checkAutomationLimit(ctx.org.id);
+    const room = limit.limit === null ? Infinity : Math.max(0, limit.limit - limit.used);
+
     let created = 0;
+    let stopped = false;
     for (const spec of specs) {
-      if (existing.has(spec.name)) continue;
+      if (existing.has(spec.name.toLowerCase())) continue;
+      if (created >= room) {
+        stopped = true;
+        break;
+      }
       await saveFollowUpFromSpec({ orgId: ctx.org.id, spec, source: "ai" });
       created++;
     }
+
     recordAudit(ctx, "followup.drafted", `${created} drafted`);
     revalidatePath("/automations");
+    const message = created
+      ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} for you — read them, then switch on the ones you want.`
+      : stopped
+        ? "Installed the ready-made follow-ups."
+        : "Your starter set is already here.";
     return {
       ok: true,
-      message: created
-        ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} for you — read them, then switch on the ones you want.`
-        : "Your starter set is already here.",
+      created,
+      message: stopped
+        ? `${message} We stopped there — that's as many automations as your plan allows.`
+        : message,
     };
   } catch (err) {
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't write your starter set." };
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't write your starter set.",
+    };
   }
 }
 ```
 
-Remove the now-unused `toggleRevenueRecoveryAction`'s "enabling" install path? **No** — keep it; the page still uses pause/resume. But note `writeStarterSetAction` calls `installRevenueRecoveryPack` directly.
+`toggleRevenueRecoveryAction` stays — the page still uses pause/resume — but
+note `writeStarterSetAction` calls `installRevenueRecoveryPack` directly.
 
-**Step 3: A builder edit clears the spec** — in `automations/actions.ts`, change `import type { Prisma } from "@prisma/client"` to `import { Prisma } from "@prisma/client"` and in the update branch's `data:` add:
+Why the starter set is shaped this way: the pack is what we promise, the
+drafting is the bonus, so a drafting failure (credits gone, provider down)
+returns `ok: true` with the pack installed and points the owner at the bar.
+Names are compared case-insensitively — the model returns "Quiet-lead chase"
+whatever case the org's existing one has — and the plan's automation limit is
+read once, after the install, so a trip reports how many were created rather
+than failing the whole action.
+
+**Step 5: A builder edit clears the spec** — in `automations/actions.ts`, change `import type { Prisma } from "@prisma/client"` to `import { Prisma } from "@prisma/client"` and in the update branch's `data:` add:
 
 ```ts
             spec: Prisma.DbNull,
             source: "builder",
 ```
 
-**Step 4: Verify**
+**Step 6: Verify**
 
-Run: `npx tsc --noEmit && npm run lint`
-Expected: both silent.
+Run: `npx vitest run tests/followups-actions.test.ts tests/followup-spec.test.ts tests/followup-draft.test.ts && npx tsc --noEmit && npm run lint && npm test`
+Expected: all green.
 
-**Step 5: Commit**
+**Step 7: Commit**
 
 ```bash
-git add "src/app/(app)/automations/followup-actions.ts" "src/app/(app)/automations/actions.ts" src/modules/orgs/audit.ts
+git add "src/app/(app)/automations/followup-actions.ts" "src/app/(app)/automations/actions.ts" src/modules/orgs/audit.ts src/modules/followup/spec.ts src/modules/followup/draft.ts tests/followups-actions.test.ts tests/followup-spec.test.ts tests/followup-draft.test.ts docs/plans/2026-09-19-ai-followups.md
 git commit -m "feat(followups): draft/create/update/delete actions and the starter set"
 ```
 

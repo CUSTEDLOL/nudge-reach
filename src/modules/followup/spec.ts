@@ -114,6 +114,19 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   return { ok: true, spec };
 }
 
+/** Owner-facing sentence for a spec that failed validation. The raw zod
+ *  message is precise but unreadable; the field is what the owner can fix. */
+export function specErrorMessage(error: string): string {
+  const field = error.split(":")[0] ?? "";
+  if (field.includes("body")) return "That message is too long — keep it under 600 characters.";
+  if (field.includes("header")) return "That headline is too long — keep it under 60 characters.";
+  if (field.includes("afterDays")) return "The timing has to be a whole number of days, at most 14.";
+  if (field.includes("situation")) return "We couldn't tell what should start that follow-up — try rewording it.";
+  if (field.includes("messages")) return "A follow-up needs between one and three messages.";
+  if (field.includes("name")) return "Give the follow-up a short name (under 80 characters).";
+  return "That follow-up isn't valid — try rewording it.";
+}
+
 function days(n: number): string {
   return `${n} day${n === 1 ? "" : "s"}`;
 }

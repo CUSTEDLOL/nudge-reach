@@ -52,6 +52,13 @@ describe("draftOffline (zero-key simulation path)", () => {
     expect(draftOffline("chase leads who asked about pricing but never booked").situation.kind).toBe("went_quiet");
     expect(draftOffline("remind quiet leads to book").situation.kind).toBe("went_quiet");
   });
+  it("hears the everyday ways an owner says a lead went quiet", () => {
+    expect(draftOffline("chase people who don't reply to my first message").situation.kind).toBe("went_quiet");
+    expect(draftOffline("follow up with anyone who has not replied in 3 days").situation).toEqual({
+      kind: "went_quiet",
+      afterDays: 3,
+    });
+  });
   it("never claims a visit happened: the review ask is timed from the booking", () => {
     const r = draftOffline("ask for a review the day after the appointment");
     expect(r.situation.kind).toBe("booked");
@@ -218,6 +225,16 @@ describe("draft with a key (model path)", () => {
 
   it("tells the model it knows nothing when there is no business info or knowledge", async () => {
     prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "" });
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("know nothing");
+    expect(system).not.toContain("About the business:");
+  });
+
+  it("treats a whitespace-only profile as knowing nothing", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "   \n  " });
     prisma.knowledgeEntry.findMany.mockResolvedValue([]);
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });

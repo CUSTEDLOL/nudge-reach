@@ -4,6 +4,7 @@ import {
   describeSituation,
   parseFollowUpSpec,
   shouldCancelOnSignal,
+  specErrorMessage,
   STOP_SIGNALS,
 } from "@/modules/followup/spec";
 
@@ -100,6 +101,48 @@ describe("parseFollowUpSpec", () => {
     if (!r.ok) return;
     expect(r.spec.messages[0].header.isWellFormed()).toBe(true);
     expect(r.spec.messages[0].header.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe("specErrorMessage", () => {
+  it("turns each field's zod complaint into a sentence the owner can act on", () => {
+    expect(specErrorMessage("messages.0.body: Too big: expected string to have <=600 characters")).toBe(
+      "That message is too long — keep it under 600 characters."
+    );
+    expect(specErrorMessage("messages.1.header: Too small: expected string to have >=1 characters")).toBe(
+      "That headline is too long — keep it under 60 characters."
+    );
+    expect(specErrorMessage("situation.afterDays: Expected int, received number")).toBe(
+      "The timing has to be a whole number of days, at most 14."
+    );
+    expect(specErrorMessage("situation: Invalid discriminator value")).toBe(
+      "We couldn't tell what should start that follow-up — try rewording it."
+    );
+    expect(specErrorMessage("messages: Too small: expected array to have >=1 items")).toBe(
+      "A follow-up needs between one and three messages."
+    );
+    expect(specErrorMessage("name: Too big: expected string to have <=80 characters")).toBe(
+      "Give the follow-up a short name (under 80 characters)."
+    );
+  });
+
+  it("falls back to a plain sentence for anything else", () => {
+    expect(specErrorMessage("spec: That follow-up isn't valid.")).toBe(
+      "That follow-up isn't valid — try rewording it."
+    );
+    expect(specErrorMessage("")).toBe("That follow-up isn't valid — try rewording it.");
+  });
+
+  it("never leaks a raw zod string from a real parse failure", () => {
+    const r = parseFollowUpSpec({
+      ...quiet,
+      messages: [{ ...quiet.messages[0], body: `Hi {{1}}, ${"x".repeat(700)}` }],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    const owner = specErrorMessage(r.error);
+    expect(owner).toBe("That message is too long — keep it under 600 characters.");
+    expect(owner).not.toContain("expected");
   });
 });
 

@@ -45,10 +45,12 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
   return {
     businessName: profile?.businessName || org?.name || "the business",
     vertical: profile?.vertical || org?.vertical || "services",
-    businessInfo: profile?.businessInfo ?? "",
+    // Trimmed: a whitespace-only profile is no grounding at all, and must not
+    // suppress the "you know nothing about this business" line.
+    businessInfo: (profile?.businessInfo ?? "").trim(),
     tone: profile?.tone ?? "Warm, friendly, and concise",
     doNots: profile?.doNots ?? "",
-    knowledge: buildKnowledgeDigest(entries, 2500),
+    knowledge: buildKnowledgeDigest(entries, 2500).trim(),
   };
 }
 
@@ -195,7 +197,8 @@ const WELCOME_COPY = {
   buttons: [],
 };
 
-const QUIET_PHRASING = /quiet|silent|ghost|no reply|didn't reply|stopped replying|haven't heard|never booked|didn't book/;
+const QUIET_PHRASING =
+  /quiet|silent|ghost|no reply|didn't reply|don't reply|not replied|stopped replying|haven't heard|never booked|didn't book/;
 
 function daysIn(text: string, fallback: number): number {
   const m = text.match(/(\d+)\s*(day|days|d)\b/i);
