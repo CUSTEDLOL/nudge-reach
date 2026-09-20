@@ -8,7 +8,7 @@ import { recordContactEvent } from "@/modules/contacts/events";
 import { scoreContactSoon } from "@/modules/scoring/compute";
 import { buildHistory, generateAgentActionReply } from "@/modules/agent/reply";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
-import { runInboundAutomations } from "@/modules/automation/engine";
+import { cancelWaitingRuns, runInboundAutomations } from "@/modules/automation/engine";
 import { toPreview } from "@/modules/inbox/format";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 
@@ -73,6 +73,7 @@ export async function handleInboundMessage(
       contactId: contact.id,
       props: { source: "stop" },
     });
+    await cancelWaitingRuns(orgId, contact.id, "opt_out");
     return { optedOut: true };
   }
 
@@ -119,6 +120,10 @@ export async function handleInboundMessage(
     from: phoneE164,
     text,
   });
+
+  // The customer is talking to us again — nothing should keep chasing them.
+  // Runs before the dispatch so a reply can never cancel the run it starts.
+  await cancelWaitingRuns(orgId, contact.id, "reply");
 
   // Automations run BEFORE the AI agent (spec §M6). Loop-safe: automation
   // sends go OUT through sendMessage and never re-enter this function — only

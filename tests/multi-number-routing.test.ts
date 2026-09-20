@@ -25,6 +25,7 @@ vi.mock("@/modules/crm/events", () => ({ crmContactCreated: vi.fn() }));
 vi.mock("@/modules/contacts/events", () => ({ recordContactEvent: vi.fn() }));
 vi.mock("@/modules/automation/engine", () => ({
   runInboundAutomations: vi.fn().mockResolvedValue({ replied: false }),
+  cancelWaitingRuns: vi.fn().mockResolvedValue(0),
 }));
 vi.mock("@/modules/agent/profile", () => ({
   ensureAgentProfile: vi.fn().mockResolvedValue(null), // stop before the model

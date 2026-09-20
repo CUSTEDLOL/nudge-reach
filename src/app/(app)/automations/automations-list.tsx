@@ -36,6 +36,7 @@ const RUN_TONES: Record<string, BadgeTone> = {
   FAILED: "danger",
   WAITING: "warning",
   RUNNING: "info",
+  CANCELLED: "neutral",
 };
 
 const dateFormat = new Intl.DateTimeFormat("en-IN", {

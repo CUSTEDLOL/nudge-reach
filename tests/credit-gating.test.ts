@@ -58,6 +58,7 @@ vi.mock("@/modules/contacts/events", () => ({ recordContactEvent: vi.fn() }));
 vi.mock("@/modules/scoring/compute", () => ({ scoreContactSoon: vi.fn() }));
 vi.mock("@/modules/automation/engine", () => ({
   runInboundAutomations: vi.fn().mockResolvedValue({ replied: false }),
+  cancelWaitingRuns: vi.fn().mockResolvedValue(0),
 }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({ dispatchWebhook: vi.fn() }));
 vi.mock("@/modules/orgs/auth", () => ({

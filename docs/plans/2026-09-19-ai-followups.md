@@ -1513,8 +1513,8 @@ pack nudge is created once and never overwritten."
 - Modify: `src/modules/agent/inbound.ts` (~line 72 opt-out; ~line 126 before `runInboundAutomations`)
 - Modify: `src/modules/agent/tools/capture-booking.ts:109`
 - Modify: `src/modules/payments/index.ts:158`
-- Modify: `src/app/(app)/automations/automations-list.tsx:34` (`RUN_TONES`)
-- Test: `tests/followup-cancel.test.ts`
+- Modify: `src/app/(app)/automations/automations-list.tsx:34` (`RUN_TONES`) and `src/app/(app)/automations/[id]/runs/runs-table.tsx:33` (`STATUS_TONES`)
+- Test: `tests/followup-cancel.test.ts` (new); `tests/credit-gating.test.ts` + `tests/multi-number-routing.test.ts` (their engine mock gains `cancelWaitingRuns`)
 
 **Step 1: Write the failing test**
 
@@ -1558,6 +1558,7 @@ describe("cancelWaitingRuns", () => {
     const second = updateRun.mock.calls[1][0];
     expect(second.where).toEqual({ id: "r2" });
     expect(second.data.status).toBe("CANCELLED");
+    expect(second.data.resumeAt).toBeNull();
     expect(second.data.log).toHaveLength(2);
     expect(second.data.log[1].detail).toMatch(/replied/i);
   });
@@ -1566,6 +1567,12 @@ describe("cancelWaitingRuns", () => {
     const n = await cancelWaitingRuns("o1", "c1", "booking");
     expect(n).toBe(1);
     expect(updateRun.mock.calls[0][0].where).toEqual({ id: "r2" });
+  });
+
+  it("an opt-out cancels everything regardless of stopOn", async () => {
+    const n = await cancelWaitingRuns("o1", "c1", "opt_out");
+    expect(n).toBe(2);
+    expect(updateRun.mock.calls[0][0].data.log[0].detail).toMatch(/opted out/i);
   });
 
   it("never throws — a database error is logged and returns 0", async () => {
@@ -1631,44 +1638,47 @@ export async function cancelWaitingRuns(
 }
 ```
 
-(`normalizeLogEntries` is already exported from `definitions.ts`; add it to the existing import from there if it isn't imported in the engine yet.)
+(`normalizeLogEntries`, `logEntry` and `toJson` already live in the engine — nothing else to import.) Import-cycle check: `followup/spec.ts` pulls in only `automation/definitions` (pure) and the campaign schema/guardrails, and nothing reachable from the engine (`messaging`, `consent`, `orgs`, `whatsapp`, `integrations`, `campaign`, `followup`, `agent/window`, `lib`) imports `payments`, `agent/inbound` or `agent/tools` — verified with a grep, acyclic.
 
 **Step 4: Wire the four signal sites**
 
 `src/modules/agent/inbound.ts` — add `cancelWaitingRuns` to the existing import from `@/modules/automation/engine` (the file already imports `runInboundAutomations` from it), then:
 
-- Directly **after** the `recordContactEvent(orgId, "opted_out", { … })` call (~line 72):
+- Directly **after** the `recordContactEvent(orgId, "opted_out", { … })` call and **before** the block's early `return { optedOut: true };` (~line 76). The opt-out block returns straight away, so a cancel placed after the block would never run:
   ```ts
     await cancelWaitingRuns(orgId, contact.id, "opt_out");
   ```
-- Directly **before** `const automations = await runInboundAutomations(orgId, {` (~line 126), so a reply can never cancel the run it is about to start:
+- Directly **before** the comment block that introduces `const automations = await runInboundAutomations(orgId, {` (~line 123), so a reply can never cancel the run it is about to start:
   ```ts
   // The customer is talking to us again — nothing should keep chasing them.
+  // Runs before the dispatch so a reply can never cancel the run it starts.
   await cancelWaitingRuns(orgId, contact.id, "reply");
   ```
-  (If the variable holding the contact at that point is not `contact`, use whatever the surrounding code passes as `contactId: …` into `runInboundAutomations`.)
+  (The contact at that point is `contact` — the same `contact.id` the code passes as `contactId` into `runInboundAutomations`.)
 
-`src/modules/agent/tools/capture-booking.ts` — import `cancelWaitingRuns` from `@/modules/automation/engine`; directly before `await fireBookingCreated(ctx.orgId, ctx.contactId, booking.id);` add:
+`src/modules/agent/tools/capture-booking.ts` — import `cancelWaitingRuns` from `@/modules/automation/engine`; inside `if (booked) {`, before the existing comment + `await fireBookingCreated(ctx.orgId, ctx.contactId, booking.id);` add:
 ```ts
+      // They booked — stop chasing them. Cancel BEFORE firing the booked
+      // trigger so the signal can never cancel the run it is about to start.
       await cancelWaitingRuns(ctx.orgId, ctx.contactId, "booking");
 ```
 
-`src/modules/payments/index.ts` — import `cancelWaitingRuns`; directly after the `recordContactEvent(row.orgId, "payment_paid", { … });` statement add:
+`src/modules/payments/index.ts` — import `cancelWaitingRuns`; directly after the `recordContactEvent(row.orgId, "payment_paid", { … });` statement add (`PaymentRequest.contactId` is a non-null `String`, so no guard):
 ```ts
     await cancelWaitingRuns(row.orgId, row.contactId, "payment");
 ```
 
-`src/app/(app)/automations/automations-list.tsx` — add `CANCELLED: "neutral",` to `RUN_TONES`. Run `grep -n "COMPLETED" "src/app/(app)/automations/run-log.tsx" "src/app/(app)/automations/[id]/runs/"*.tsx` — if any of those maps statuses to tones/labels, add a `CANCELLED` entry the same way.
+`src/app/(app)/automations/automations-list.tsx` — add `CANCELLED: "neutral",` to `RUN_TONES`; `src/app/(app)/automations/[id]/runs/runs-table.tsx` — the same entry in `STATUS_TONES`. `run-log.tsx` has no status map, and `actions.ts`'s test-run messages need no entry — a test run can't be cancelled mid-call.
 
 **Step 5: Verify**
 
-Run: `npx vitest run tests/followup-cancel.test.ts && npx tsc --noEmit && npm test`
-Expected: PASS; tsc silent; full suite green (the inbound/booking/payment tests mock prisma — if one now fails because `automationRun.findMany` is undefined in its mock, `cancelWaitingRuns` already swallows that as a logged error and returns 0, so the test should still pass; if a test asserts on console.error being silent, add `automationRun: { findMany: vi.fn().mockResolvedValue([]) }` to that test's prisma mock).
+Run: `npx vitest run tests/followup-cancel.test.ts && npx tsc --noEmit && npm run lint && npm test`
+Expected: PASS; tsc and lint silent; full suite green after one adjustment: `tests/credit-gating.test.ts` and `tests/multi-number-routing.test.ts` mock `@/modules/automation/engine` with a factory that returned only `runInboundAutomations`, and vitest refuses a missing export on a factory mock (`No "cancelWaitingRuns" export is defined`), so both gain `cancelWaitingRuns: vi.fn().mockResolvedValue(0)`. `tests/payment-link.test.ts`'s prisma mock has no `automationRun`; `cancelWaitingRuns` swallows that as one logged error and returns 0, and the test asserts nothing about `console.error`, so it is left alone.
 
 **Step 6: Commit**
 
 ```bash
-git add src/modules/automation/engine.ts src/modules/agent/inbound.ts src/modules/agent/tools/capture-booking.ts src/modules/payments/index.ts "src/app/(app)/automations/automations-list.tsx" tests/followup-cancel.test.ts
+git add src/modules/automation/engine.ts src/modules/agent/inbound.ts src/modules/agent/tools/capture-booking.ts src/modules/payments/index.ts "src/app/(app)/automations/automations-list.tsx" "src/app/(app)/automations/[id]/runs/runs-table.tsx" tests/followup-cancel.test.ts tests/credit-gating.test.ts tests/multi-number-routing.test.ts docs/plans/2026-09-19-ai-followups.md
 git commit -m "feat(automations): cancel waiting runs when the customer replies, books, pays or opts out"
 ```
 

@@ -35,6 +35,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   WAITING: "warning",
   COMPLETED: "success",
   FAILED: "danger",
+  CANCELLED: "neutral",
 };
 
 const dateFormat = new Intl.DateTimeFormat("en-IN", {

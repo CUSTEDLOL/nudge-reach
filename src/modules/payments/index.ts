@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { crmPaymentPaid } from "@/modules/crm/events";
 import { recordContactEvent } from "@/modules/contacts/events";
+import { cancelWaitingRuns } from "@/modules/automation/engine";
 import { env } from "@/lib/env";
 import { sendModeFor, type SendMode } from "@/modules/orgs/mode";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
@@ -163,6 +164,7 @@ export async function markPaymentPaid(paymentRequestId: string): Promise<boolean
         currency: row.currency,
       },
     });
+    await cancelWaitingRuns(row.orgId, row.contactId, "payment");
     void crmPaymentPaid(
       row.orgId,
       { id: row.id, amountMinorUnits: row.amountMinor, currency: row.currency, purpose: row.purpose },
