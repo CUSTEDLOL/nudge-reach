@@ -2908,3 +2908,10 @@ id can be withdrawn, which would recreate this bug.
 - Trial workspaces remain tenant-isolated and simulated; paid checkout can later activate the same org.
 - New `AcquisitionTrial` and `AcquisitionTrialEvent` tables require `npm run db:rls` immediately after `npm run db:push` in every environment.
 - Verification passed for Prisma schema validation, the focused foundation suite, the full 1,512-test suite, lint, and the production build. The three real-database credit-concurrency tests remained skipped because `TEST_DATABASE_URL` is not configured; no shared or production database was used.
+
+## 2026-09-20 — Guided free-trial experience
+
+- Added the clinic-focused `/free-trial` acquisition page and Supabase claim handoff.
+- Added a short one-source setup, four-destination trial workspace, inline simulated test inbox, persistent checklist, and route-aware coach-mark tour.
+- Paid capabilities remain locked behind server gates and are previewed through demo-first cards in Explore.
+- The public route returned 200 and authenticated trial routes correctly redirected signed-out requests to login in local HTTP smoke checks. Automated tests cover both responsive presentation modes, but the 390 px/1440 px visual and keyboard walkthrough remains browser-unverified because no browser was attached to this session.
