@@ -42,16 +42,45 @@ describe("draftOffline (zero-key simulation path)", () => {
       keywords: ["price"],
     });
   });
+  it("accepts smart quotes around a keyword", () => {
+    expect(draftOffline("when someone says “price” send our price list").situation).toEqual({
+      kind: "keyword",
+      keywords: ["price"],
+    });
+  });
+  it("reads quiet phrasing before booking or keyword words", () => {
+    expect(draftOffline("chase leads who asked about pricing but never booked").situation.kind).toBe("went_quiet");
+    expect(draftOffline("remind quiet leads to book").situation.kind).toBe("went_quiet");
+  });
+  it("never claims a visit happened: the review ask is timed from the booking", () => {
+    const r = draftOffline("ask for a review the day after the appointment");
+    expect(r.situation.kind).toBe("booked");
+    expect(r.messages[0].header).toBe("How did it go?");
+    expect(r.messages[0].body).not.toMatch(/coming in/);
+    expect(r.messages[0].footer).toContain("STOP");
+  });
+  it("welcomes a new lead with the shared welcome copy and a STOP footer", () => {
+    const r = draftOffline("welcome every new lead");
+    expect(r.messages[0].header).toBe("Thanks for reaching out");
+    expect(r.messages[0].footer).toContain("STOP");
+  });
   it("falls back to a 2-day quiet chase for anything else", () => {
     expect(draftOffline("something").situation).toEqual({ kind: "went_quiet", afterDays: 2 });
   });
 });
 
 describe("starterSetOffline", () => {
-  it("yields four valid, compilable follow-ups", () => {
-    const set = starterSetOffline("clinic");
-    expect(set).toHaveLength(4);
+  it("yields three valid, compilable follow-ups timed from the booking", () => {
+    const set = starterSetOffline();
+    expect(set.map((s) => s.name)).toEqual(["Quiet-lead chase", "Booking confirmed", "Welcome new leads"]);
     for (const s of set) expect(() => compileFollowUp(s)).not.toThrow();
+    const booked = set[1];
+    expect(booked.situation.kind).toBe("booked");
+    expect(booked.stopOn).toEqual(["booking"]);
+    expect(booked.messages[0].afterDays).toBe(0);
+    expect(booked.messages[0].body).not.toMatch(/tomorrow|coming in/);
+    expect(set[2].messages[0].header).toBe("Thanks for reaching out");
+    expect(set[2].messages[0].footer).toContain("STOP");
   });
 });
 
@@ -62,6 +91,13 @@ describe("parseDraftOutput", () => {
       "single"
     );
     expect(r.ok && r.specs[0].messages[0].body).toContain("{{1}}");
+  });
+  it("takes the first entry when a single draft comes back as a list", () => {
+    const r = parseDraftOutput(
+      '{"followUps":[{"name":"First","situation":{"kind":"new_lead"},"messages":[{"afterDays":0,"category":"MARKETING","header":"Hi","body":"Hi {{1}}","footer":""}]}]}',
+      "single"
+    );
+    expect(r.ok && r.specs.map((s) => s.name)).toEqual(["First"]);
   });
   it("accepts a starter set and drops the invalid entries", () => {
     const r = parseDraftOutput(
@@ -88,6 +124,16 @@ describe("draftFollowUp / draftStarterSet without a key", () => {
       expect.any(String)
     );
   });
+  it("writes the offline starter set and meters a synthetic row", async () => {
+    const set = await draftStarterSet({ orgId: "o1" });
+    expect(set).toHaveLength(3);
+    expect(generate).not.toHaveBeenCalled();
+    expect(recordSyntheticUsage).toHaveBeenCalledWith(
+      { orgId: "o1", purpose: "followup_draft" },
+      "starter set",
+      expect.any(String)
+    );
+  });
   it("refuses an empty sentence", async () => {
     await expect(draftFollowUp({ orgId: "o1", request: "   " })).rejects.toThrow(
       "Describe the follow-up in a sentence first."
@@ -105,18 +151,19 @@ const VALID_BOOKED = {
   situation: { kind: "booked" },
   messages: [{ afterDays: 1, category: "UTILITY", header: "See you", body: "Hi {{1}}", footer: "" }],
 };
+const PROFILE = {
+  businessName: "Glow Clinic",
+  vertical: "clinic",
+  businessInfo: "Hair transplant consults.",
+  tone: "Warm",
+  doNots: "",
+};
 
 describe("draft with a key (model path)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     envState.ANTHROPIC_API_KEY = "test-key";
-    prisma.agentProfile.findUnique.mockResolvedValue({
-      businessName: "Glow Clinic",
-      vertical: "clinic",
-      businessInfo: "Hair transplant consults.",
-      tone: "Warm",
-      doNots: "",
-    });
+    prisma.agentProfile.findUnique.mockResolvedValue(PROFILE);
     prisma.org.findUnique.mockResolvedValue({ name: "Glow", vertical: "clinic" });
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { category: "pricing", fact: "Consults are ₹500", condition: null },
@@ -140,31 +187,81 @@ describe("draft with a key (model path)", () => {
     }
   });
 
-  it("grounds the system prompt in the business, its knowledge and the stopOn rule", async () => {
+  it("grounds the system prompt in the business, its active knowledge and the rules", async () => {
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    expect(prisma.knowledgeEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { orgId: "o1", status: "active" },
+        orderBy: { createdAt: "asc" },
+      })
+    );
     const { system } = generate.mock.calls[0][0];
     expect(system).toContain("Glow Clinic");
     expect(system).toContain("clinic business");
+    expect(system).toContain("Hair transplant consults.");
     expect(system).toContain("Consults are ₹500");
-    expect(system).toContain("For booked situations omit stopOn");
+    expect(system).toContain("booked situations omit it");
+    expect(system).toContain("never write 'tomorrow'");
+    expect(system).toContain("unless it appears in the business information below");
+    expect(system).not.toContain("know nothing");
+    // Blank-line separators survive the conditional-line filter.
+    expect(system).toContain("\n\nSituations (use exactly these kinds):");
   });
 
-  it("gives up with a friendly error after two bad replies", async () => {
-    generate.mockResolvedValue("no json here");
-    await expect(draftFollowUp({ orgId: "o1", request: "chase quiet leads" })).rejects.toThrow(
-      "We couldn't write that follow-up just now"
-    );
-    expect(generate).toHaveBeenCalledTimes(2);
+  it("lists the owner's do-nots as a Never line", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, doNots: "promise results" });
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    expect(generate.mock.calls[0][0].system).toContain("- Never: promise results");
   });
 
-  it("keeps the valid entries of a starter set", async () => {
+  it("tells the model it knows nothing when there is no business info or knowledge", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "" });
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("know nothing");
+    expect(system).not.toContain("About the business:");
+  });
+
+  it("gives up with a friendly error after two bad replies, logging only the reason", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      generate.mockResolvedValue("no json here");
+      await expect(draftFollowUp({ orgId: "o1", request: "chase quiet leads" })).rejects.toThrow(
+        "We couldn't write that follow-up just now"
+      );
+      expect(generate).toHaveBeenCalledTimes(2);
+      expect(warn).toHaveBeenCalledWith("[followup-draft] unusable model output", {
+        orgId: "o1",
+        mode: "single",
+        error: expect.any(String),
+      });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("shows the set the object shape and keeps the valid entries", async () => {
     generate.mockResolvedValueOnce(
       JSON.stringify({ followUps: [VALID_BOOKED, { name: "bad", situation: { kind: "nope" }, messages: [] }] })
     );
     const set = await draftStarterSet({ orgId: "o1" });
     expect(set.map((s) => s.name)).toEqual(["See you"]);
     expect(set[0].stopOn).toEqual(["booking"]);
-    expect(generate.mock.calls[0][0].maxTokens).toBe(4000);
+    const { prompt, maxTokens } = generate.mock.calls[0][0];
+    expect(maxTokens).toBe(4000);
+    expect(prompt).toContain('"situation"');
+    expect(prompt).toContain('"messages"');
+  });
+
+  it("returns all six of a full set, with STOP footers on the marketing ones", async () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ ...VALID_SINGLE, name: `Chase ${i + 1}` }));
+    generate.mockResolvedValueOnce(JSON.stringify({ followUps: six }));
+    const set = await draftStarterSet({ orgId: "o1" });
+    expect(set).toHaveLength(6);
+    for (const s of set) expect(s.messages[0].footer).toContain("STOP");
   });
 });

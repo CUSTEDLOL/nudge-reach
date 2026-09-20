@@ -2141,16 +2141,45 @@ describe("draftOffline (zero-key simulation path)", () => {
       keywords: ["price"],
     });
   });
+  it("accepts smart quotes around a keyword", () => {
+    expect(draftOffline("when someone says “price” send our price list").situation).toEqual({
+      kind: "keyword",
+      keywords: ["price"],
+    });
+  });
+  it("reads quiet phrasing before booking or keyword words", () => {
+    expect(draftOffline("chase leads who asked about pricing but never booked").situation.kind).toBe("went_quiet");
+    expect(draftOffline("remind quiet leads to book").situation.kind).toBe("went_quiet");
+  });
+  it("never claims a visit happened: the review ask is timed from the booking", () => {
+    const r = draftOffline("ask for a review the day after the appointment");
+    expect(r.situation.kind).toBe("booked");
+    expect(r.messages[0].header).toBe("How did it go?");
+    expect(r.messages[0].body).not.toMatch(/coming in/);
+    expect(r.messages[0].footer).toContain("STOP");
+  });
+  it("welcomes a new lead with the shared welcome copy and a STOP footer", () => {
+    const r = draftOffline("welcome every new lead");
+    expect(r.messages[0].header).toBe("Thanks for reaching out");
+    expect(r.messages[0].footer).toContain("STOP");
+  });
   it("falls back to a 2-day quiet chase for anything else", () => {
     expect(draftOffline("something").situation).toEqual({ kind: "went_quiet", afterDays: 2 });
   });
 });
 
 describe("starterSetOffline", () => {
-  it("yields four valid, compilable follow-ups", () => {
-    const set = starterSetOffline("clinic");
-    expect(set).toHaveLength(4);
+  it("yields three valid, compilable follow-ups timed from the booking", () => {
+    const set = starterSetOffline();
+    expect(set.map((s) => s.name)).toEqual(["Quiet-lead chase", "Booking confirmed", "Welcome new leads"]);
     for (const s of set) expect(() => compileFollowUp(s)).not.toThrow();
+    const booked = set[1];
+    expect(booked.situation.kind).toBe("booked");
+    expect(booked.stopOn).toEqual(["booking"]);
+    expect(booked.messages[0].afterDays).toBe(0);
+    expect(booked.messages[0].body).not.toMatch(/tomorrow|coming in/);
+    expect(set[2].messages[0].header).toBe("Thanks for reaching out");
+    expect(set[2].messages[0].footer).toContain("STOP");
   });
 });
 
@@ -2161,6 +2190,13 @@ describe("parseDraftOutput", () => {
       "single"
     );
     expect(r.ok && r.specs[0].messages[0].body).toContain("{{1}}");
+  });
+  it("takes the first entry when a single draft comes back as a list", () => {
+    const r = parseDraftOutput(
+      '{"followUps":[{"name":"First","situation":{"kind":"new_lead"},"messages":[{"afterDays":0,"category":"MARKETING","header":"Hi","body":"Hi {{1}}","footer":""}]}]}',
+      "single"
+    );
+    expect(r.ok && r.specs.map((s) => s.name)).toEqual(["First"]);
   });
   it("accepts a starter set and drops the invalid entries", () => {
     const r = parseDraftOutput(
@@ -2187,6 +2223,16 @@ describe("draftFollowUp / draftStarterSet without a key", () => {
       expect.any(String)
     );
   });
+  it("writes the offline starter set and meters a synthetic row", async () => {
+    const set = await draftStarterSet({ orgId: "o1" });
+    expect(set).toHaveLength(3);
+    expect(generate).not.toHaveBeenCalled();
+    expect(recordSyntheticUsage).toHaveBeenCalledWith(
+      { orgId: "o1", purpose: "followup_draft" },
+      "starter set",
+      expect.any(String)
+    );
+  });
   it("refuses an empty sentence", async () => {
     await expect(draftFollowUp({ orgId: "o1", request: "   " })).rejects.toThrow(
       "Describe the follow-up in a sentence first."
@@ -2204,18 +2250,19 @@ const VALID_BOOKED = {
   situation: { kind: "booked" },
   messages: [{ afterDays: 1, category: "UTILITY", header: "See you", body: "Hi {{1}}", footer: "" }],
 };
+const PROFILE = {
+  businessName: "Glow Clinic",
+  vertical: "clinic",
+  businessInfo: "Hair transplant consults.",
+  tone: "Warm",
+  doNots: "",
+};
 
 describe("draft with a key (model path)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     envState.ANTHROPIC_API_KEY = "test-key";
-    prisma.agentProfile.findUnique.mockResolvedValue({
-      businessName: "Glow Clinic",
-      vertical: "clinic",
-      businessInfo: "Hair transplant consults.",
-      tone: "Warm",
-      doNots: "",
-    });
+    prisma.agentProfile.findUnique.mockResolvedValue(PROFILE);
     prisma.org.findUnique.mockResolvedValue({ name: "Glow", vertical: "clinic" });
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { category: "pricing", fact: "Consults are ₹500", condition: null },
@@ -2239,32 +2286,82 @@ describe("draft with a key (model path)", () => {
     }
   });
 
-  it("grounds the system prompt in the business, its knowledge and the stopOn rule", async () => {
+  it("grounds the system prompt in the business, its active knowledge and the rules", async () => {
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    expect(prisma.knowledgeEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { orgId: "o1", status: "active" },
+        orderBy: { createdAt: "asc" },
+      })
+    );
     const { system } = generate.mock.calls[0][0];
     expect(system).toContain("Glow Clinic");
     expect(system).toContain("clinic business");
+    expect(system).toContain("Hair transplant consults.");
     expect(system).toContain("Consults are ₹500");
-    expect(system).toContain("For booked situations omit stopOn");
+    expect(system).toContain("booked situations omit it");
+    expect(system).toContain("never write 'tomorrow'");
+    expect(system).toContain("unless it appears in the business information below");
+    expect(system).not.toContain("know nothing");
+    // Blank-line separators survive the conditional-line filter.
+    expect(system).toContain("\n\nSituations (use exactly these kinds):");
   });
 
-  it("gives up with a friendly error after two bad replies", async () => {
-    generate.mockResolvedValue("no json here");
-    await expect(draftFollowUp({ orgId: "o1", request: "chase quiet leads" })).rejects.toThrow(
-      "We couldn't write that follow-up just now"
-    );
-    expect(generate).toHaveBeenCalledTimes(2);
+  it("lists the owner's do-nots as a Never line", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, doNots: "promise results" });
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    expect(generate.mock.calls[0][0].system).toContain("- Never: promise results");
   });
 
-  it("keeps the valid entries of a starter set", async () => {
+  it("tells the model it knows nothing when there is no business info or knowledge", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "" });
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("know nothing");
+    expect(system).not.toContain("About the business:");
+  });
+
+  it("gives up with a friendly error after two bad replies, logging only the reason", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      generate.mockResolvedValue("no json here");
+      await expect(draftFollowUp({ orgId: "o1", request: "chase quiet leads" })).rejects.toThrow(
+        "We couldn't write that follow-up just now"
+      );
+      expect(generate).toHaveBeenCalledTimes(2);
+      expect(warn).toHaveBeenCalledWith("[followup-draft] unusable model output", {
+        orgId: "o1",
+        mode: "single",
+        error: expect.any(String),
+      });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("shows the set the object shape and keeps the valid entries", async () => {
     generate.mockResolvedValueOnce(
       JSON.stringify({ followUps: [VALID_BOOKED, { name: "bad", situation: { kind: "nope" }, messages: [] }] })
     );
     const set = await draftStarterSet({ orgId: "o1" });
     expect(set.map((s) => s.name)).toEqual(["See you"]);
     expect(set[0].stopOn).toEqual(["booking"]);
-    expect(generate.mock.calls[0][0].maxTokens).toBe(4000);
+    const { prompt, maxTokens } = generate.mock.calls[0][0];
+    expect(maxTokens).toBe(4000);
+    expect(prompt).toContain('"situation"');
+    expect(prompt).toContain('"messages"');
+  });
+
+  it("returns all six of a full set, with STOP footers on the marketing ones", async () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ ...VALID_SINGLE, name: `Chase ${i + 1}` }));
+    generate.mockResolvedValueOnce(JSON.stringify({ followUps: six }));
+    const set = await draftStarterSet({ orgId: "o1" });
+    expect(set).toHaveLength(6);
+    for (const s of set) expect(s.messages[0].footer).toContain("STOP");
   });
 });
 ```
@@ -2315,8 +2412,10 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
   const [profile, org, entries] = await Promise.all([
     prisma.agentProfile.findUnique({ where: { orgId } }),
     prisma.org.findUnique({ where: { id: orgId }, select: { name: true, vertical: true } }),
+    // Active facts only — archived or unreviewed imports must not ground a draft (invariant #7).
     prisma.knowledgeEntry.findMany({
-      where: { orgId },
+      where: { orgId, status: "active" },
+      orderBy: { createdAt: "asc" },
       select: { category: true, fact: true, condition: true },
       take: 60,
     }),
@@ -2332,37 +2431,41 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
 }
 
 function systemPrompt(b: BusinessContext): string {
+  const grounded = Boolean(b.businessInfo || b.knowledge);
   return [
     `You design WhatsApp follow-ups for ${b.businessName}, a ${b.vertical} business. A follow-up is a message (or up to ${MAX_MESSAGES}) sent automatically after a situation, to bring a customer back.`,
     "",
     "Situations (use exactly these kinds):",
     '- went_quiet {afterDays 1-14, stage?}: a customer who messaged us has not replied for N days. Use for chasing leads. stage is one of NEW, CONTACTED, QUALIFIED, WON, LOST — omit unless the owner named one.',
-    "- booked {}: right after an appointment is booked (confirmations, prep, thank-you).",
+    "- booked {}: the moment an appointment is booked. Messages here are timed from the booking, not from the appointment — never write 'tomorrow', 'today' or 'thanks for coming in'; confirmations and prep only.",
     "- campaign_reply {}: the customer replied to a marketing campaign.",
     "- keyword {keywords[]}: a message contains one of these words.",
     "- new_lead {}: the customer's first ever message.",
     "",
     "Message rules (Meta WhatsApp templates):",
-    "- body: warm, concrete, under 500 characters, uses {{1}} exactly once near the start for the first name. No ALL-CAPS, no pressure, no medical or financial claims, nothing the business did not state.",
+    "- body: warm, concrete, under 500 characters, uses {{1}} exactly once near the start for the first name. No ALL-CAPS, no pressure, no medical or financial claims; never mention a price, offer, discount, opening hour, guarantee or named service unless it appears in the business information below.",
     "- header: under 50 characters. footer: leave empty (we add the opt-out).",
     "- category: MARKETING for anything promotional or a chase; UTILITY only for a transactional message about a booking the customer made.",
     `- afterDays: days after the previous message (0 = immediately), max ${MAX_GAP_DAYS}. For went_quiet the first message is always 0 — the waiting is in the situation.`,
-    "- For booked situations omit stopOn — we default it.",
+    "- stopOn: which customer actions end the follow-up early — any of reply, booking, payment (default: all three; booked situations omit it).",
     `- Tone: ${b.tone}.`,
-    b.doNots ? `- Never: ${b.doNots}` : "",
-    b.businessInfo ? `\nAbout the business:\n${b.businessInfo}` : "",
-    b.knowledge ? `\nWhat the business has told us (only use facts from here):\n${b.knowledge}` : "",
+    b.doNots ? `- Never: ${b.doNots}` : false,
+    grounded
+      ? false
+      : "\nYou know nothing about this business except its name and type. Do not mention prices, offers, discounts, hours, staff, or named services — keep every message generic: invite a reply, offer to help.",
+    b.businessInfo ? `\nAbout the business:\n${b.businessInfo}` : false,
+    b.knowledge ? `\nWhat the business has told us (only use facts from here):\n${b.knowledge}` : false,
     "",
     "Return ONLY a JSON object, no markdown, no commentary.",
   ]
-    .filter((line) => line !== "")
+    .filter((line): line is string => line !== false)
     .join("\n");
 }
 
-const SINGLE_SHAPE =
-  'Shape: {"followUp": {"name": "short name", "situation": {...}, "messages": [{"afterDays": 0, "category": "MARKETING", "header": "...", "body": "...", "footer": ""}], "stopOn": ["reply","booking","payment"]}}';
-const SET_SHAPE =
-  'Shape: {"followUps": [ ...4 to 6 follow-up objects as above... ]}. Cover: a quiet-lead chase, something right after a booking, a post-visit review ask, and a welcome for new leads; add one or two specific to this kind of business.';
+const OBJECT_SHAPE =
+  '{"name": "short name", "situation": {"kind": "went_quiet", "afterDays": 2}, "messages": [{"afterDays": 0, "category": "MARKETING", "header": "...", "body": "...", "footer": ""}], "stopOn": ["reply","booking","payment"]}';
+const SINGLE_SHAPE = `Shape: {"followUp": ${OBJECT_SHAPE}}`;
+const SET_SHAPE = `Shape: {"followUps": [${OBJECT_SHAPE}, ...]} — 4 to 6 objects in total. Cover: a quiet-lead chase, a booking confirmation, and a welcome for new leads; add one or two specific to this kind of business. In the starter set keep each follow-up to at most 2 messages and each body under 300 characters.`;
 
 export type DraftParse =
   | { ok: true; specs: FollowUpSpec[] }
@@ -2373,7 +2476,12 @@ export function parseDraftOutput(text: string, mode: "single" | "set"): DraftPar
   const json = extractJson(text);
   if (!json.ok) return { ok: false, error: json.error };
   const obj = json.value && typeof json.value === "object" ? (json.value as Record<string, unknown>) : {};
-  const raws = mode === "single" ? [obj.followUp ?? obj] : Array.isArray(obj.followUps) ? obj.followUps : [];
+  const raws =
+    mode === "single"
+      ? [obj.followUp ?? (Array.isArray(obj.followUps) ? obj.followUps[0] : obj)]
+      : Array.isArray(obj.followUps)
+        ? obj.followUps
+        : [];
   const specs: FollowUpSpec[] = [];
   for (const raw of raws) {
     const parsed = parseFollowUpSpec(raw);
@@ -2402,7 +2510,11 @@ async function draftWithModel(orgId: string, mode: "single" | "set", userPrompt:
     });
     parsed = parseDraftOutput(text, mode);
   }
-  if (!parsed.ok) throw new Error("We couldn't write that follow-up just now — try rephrasing, or try again in a moment.");
+  if (!parsed.ok) {
+    // The reason only — never the prompt or the business text.
+    console.warn("[followup-draft] unusable model output", { orgId, mode, error: parsed.error });
+    throw new Error("We couldn't write that follow-up just now — try rephrasing, or try again in a moment.");
+  }
   return parsed.specs;
 }
 
@@ -2420,8 +2532,7 @@ export async function draftFollowUp(opts: { orgId: string; request: string }): P
 
 export async function draftStarterSet(opts: { orgId: string }): Promise<FollowUpSpec[]> {
   if (!env.ANTHROPIC_API_KEY) {
-    const b = await loadBusinessContext(opts.orgId).catch(() => null);
-    const set = starterSetOffline(b?.vertical ?? "services");
+    const set = starterSetOffline();
     recordSyntheticUsage({ orgId: opts.orgId, purpose: "followup_draft" }, "starter set", JSON.stringify(set));
     return set;
   }
@@ -2437,6 +2548,33 @@ const packCopy = (name: string) => {
   return { category: t.category, header: t.content.header, body: t.content.body, footer: t.content.footer, buttons: t.content.buttons };
 };
 
+/** Copy that is safe at the moment it fires: `booked` runs when the booking is
+ *  made, not when the appointment happens, so nothing here says "tomorrow" or
+ *  "thanks for coming in". MARKETING footers are filled in by parse. */
+const CONFIRM_COPY = {
+  category: "UTILITY" as const,
+  header: "You're booked",
+  body: "Hi {{1}}, your booking is confirmed — thank you! If anything changes, just reply here and we'll sort it.",
+  footer: "",
+  buttons: [],
+};
+const REVIEW_AFTER_BOOKING_COPY = {
+  category: "MARKETING" as const,
+  header: "How did it go?",
+  body: "Hi {{1}}, how did everything go? If you have a minute, reply with a quick word — it really helps us.",
+  footer: "",
+  buttons: [],
+};
+const WELCOME_COPY = {
+  category: "MARKETING" as const,
+  header: "Thanks for reaching out",
+  body: "Hi {{1}}, thanks for getting in touch! Tell us what you're looking for and we'll get you sorted — or just reply with any question.",
+  footer: "",
+  buttons: [],
+};
+
+const QUIET_PHRASING = /quiet|silent|ghost|no reply|didn't reply|stopped replying|haven't heard|never booked|didn't book/;
+
 function daysIn(text: string, fallback: number): number {
   const m = text.match(/(\d+)\s*(day|days|d)\b/i);
   const weeks = text.match(/(\d+)\s*(week|weeks|w)\b/i) ?? (/\ba week\b/i.test(text) ? ["", "1"] : null);
@@ -2444,11 +2582,27 @@ function daysIn(text: string, fallback: number): number {
   return Math.min(Math.max(n, 1), MAX_GAP_DAYS);
 }
 
-/** Sentence → spec without a model. Good enough to demo every situation. */
+function quietChase(r: string): FollowUpSpec {
+  const messages: FollowUpSpec["messages"] = [{ afterDays: 0, ...packCopy("lead_nudge_1") }];
+  if (/again|then|once more|second/.test(r)) {
+    const tail = r.split(/again|then|once more|second/).pop() ?? "";
+    messages.push({ afterDays: daysIn(tail, 3), ...packCopy("lead_nudge_2") });
+  }
+  return {
+    name: "Quiet-lead chase",
+    situation: { kind: "went_quiet", afterDays: daysIn(r.split(/again|then|once more|second/)[0], 2) },
+    messages,
+    stopOn: ["reply", "booking", "payment"],
+  };
+}
+
+/** Sentence → spec without a model. Good enough to demo every situation.
+ *  Quiet phrasing is read first: "never booked" is a chase, not a booking. */
 export function draftOffline(request: string): FollowUpSpec {
   const r = request.toLowerCase();
-  const keyword = r.match(/"([^"]{1,40})"/);
+  const keyword = r.match(/["“”']([^"“”']{1,40})["“”']/);
   const spec = ((): FollowUpSpec => {
+    if (QUIET_PHRASING.test(r)) return quietChase(r);
     if (keyword) {
       return {
         name: `Reply to "${keyword[1]}"`,
@@ -2461,15 +2615,15 @@ export function draftOffline(request: string): FollowUpSpec {
       return {
         name: "Review ask",
         situation: { kind: "booked" },
-        messages: [{ afterDays: daysIn(r, 1), ...packCopy("review_ask") }],
+        messages: [{ afterDays: daysIn(r, 1), ...REVIEW_AFTER_BOOKING_COPY }],
         stopOn: ["booking"],
       };
     }
     if (/book|appointment|confirm/.test(r)) {
       return {
-        name: "After booking",
+        name: "Booking confirmed",
         situation: { kind: "booked" },
-        messages: [{ afterDays: 0, ...packCopy("appt_reminder_24h") }],
+        messages: [{ afterDays: 0, ...CONFIRM_COPY }],
         stopOn: ["booking"],
       };
     }
@@ -2477,29 +2631,19 @@ export function draftOffline(request: string): FollowUpSpec {
       return {
         name: "Welcome",
         situation: { kind: "new_lead" },
-        messages: [{ afterDays: 0, ...packCopy("lead_nudge_1") }],
+        messages: [{ afterDays: 0, ...WELCOME_COPY }],
         stopOn: ["reply", "booking", "payment"],
       };
     }
-    const messages: FollowUpSpec["messages"] = [{ afterDays: 0, ...packCopy("lead_nudge_1") }];
-    if (/again|then|once more|second/.test(r)) {
-      const tail = r.split(/again|then|once more|second/).pop() ?? "";
-      messages.push({ afterDays: daysIn(tail, 3), ...packCopy("lead_nudge_2") });
-    }
-    return {
-      name: "Quiet-lead chase",
-      situation: { kind: "went_quiet", afterDays: daysIn(r.split(/again|then|once more|second/)[0], 2) },
-      messages,
-      stopOn: ["reply", "booking", "payment"],
-    };
+    return quietChase(r);
   })();
   const parsed = parseFollowUpSpec(spec);
   return parsed.ok ? parsed.spec : spec;
 }
 
-/** The starter set with no model: the pack's copy across the four situations. */
-export function starterSetOffline(vertical: string): FollowUpSpec[] {
-  const visit = vertical === "clinic" ? "consultation" : "visit";
+/** The starter set with no model: a quiet chase, a booking confirmation and a
+ *  welcome. No review ask — the reminder tick already sends one after the visit. */
+export function starterSetOffline(): FollowUpSpec[] {
   const set: FollowUpSpec[] = [
     {
       name: "Quiet-lead chase",
@@ -2511,21 +2655,15 @@ export function starterSetOffline(vertical: string): FollowUpSpec[] {
       stopOn: ["reply", "booking", "payment"],
     },
     {
-      name: `Before your ${visit}`,
+      name: "Booking confirmed",
       situation: { kind: "booked" },
-      messages: [{ afterDays: 0, ...packCopy("appt_reminder_24h") }],
-      stopOn: ["booking"],
-    },
-    {
-      name: "Review ask",
-      situation: { kind: "booked" },
-      messages: [{ afterDays: 1, ...packCopy("review_ask") }],
+      messages: [{ afterDays: 0, ...CONFIRM_COPY }],
       stopOn: ["booking"],
     },
     {
       name: "Welcome new leads",
       situation: { kind: "new_lead" },
-      messages: [{ afterDays: 0, ...packCopy("lead_nudge_1") }],
+      messages: [{ afterDays: 0, ...WELCOME_COPY }],
       stopOn: ["reply", "booking", "payment"],
     },
   ];
@@ -2541,7 +2679,7 @@ If `tsc` complains that `knowledgeEntry` has no `fact`/`condition`/`category` fi
 **Step 4: Verify**
 
 Run: `npx vitest run tests/followup-draft.test.ts && npx tsc --noEmit`
-Expected: PASS, 13 tests; tsc silent.
+Expected: PASS, 22 tests; tsc silent.
 
 **Step 5: Commit**
 
@@ -2975,7 +3113,7 @@ export function FollowUpBar({
             </Button>
             {!hasAny && (
               <Button variant="secondary" onClick={starter} loading={pending}>
-                Write my starter set
+                Write my starter set (about 3–5 AI credits)
               </Button>
             )}
           </div>
@@ -2999,6 +3137,8 @@ export function FollowUpBar({
   );
 }
 ```
+
+A single draft is about 1 AI credit; the starter set about 3–5 (one model call, 4–6 specs) — the starter button says so, the bar does not need to.
 
 **Step 5: The card**
 
@@ -3269,7 +3409,7 @@ Delete `revenue-recovery-card.tsx` and remove `toggleRevenueRecoveryAction` from
 Run: `npx vitest run tests/followups-page.test.ts && npx tsc --noEmit && npm run lint && npm test`
 Expected: all green.
 
-**Step 8: Check it in the browser** — the dev server is usually running on `:3000`; the founder is signed in there. Ask them to reload `/automations`, click **Write my starter set** (in test mode this is instant and keyless), confirm four AI cards + the pack nudge + three reminder rows appear, all Off except the pack nudge; type a sentence, **Draft it**, edit a word, **Create follow-up**; switch one on; open one in the builder and back. Fix anything they report before committing.
+**Step 8: Check it in the browser** — the dev server is usually running on `:3000`; the founder is signed in there. Ask them to reload `/automations`, click **Write my starter set** (in test mode this is instant and keyless), confirm three AI cards (offline starter set) + the pack nudge + three reminder rows appear, all Off except the pack nudge; type a sentence, **Draft it**, edit a word, **Create follow-up**; switch one on; open one in the builder and back. Fix anything they report before committing.
 
 **Step 9: Commit**
 
