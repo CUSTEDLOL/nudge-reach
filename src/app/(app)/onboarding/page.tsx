@@ -7,6 +7,10 @@ import {
   parseWorkspaceProfile,
 } from "@/modules/dashboard/workspace-profile";
 import { OnboardingWizard } from "./wizard";
+import {
+  getTrialWorkspace,
+  onboardingRedirectFor,
+} from "@/modules/trial/workspace";
 
 export const metadata = { title: "Get started — Nudge" };
 
@@ -21,6 +25,9 @@ export default async function OnboardingPage({
     requireOrgContext(),
     searchParams,
   ]);
+  const trial = await getTrialWorkspace(org.id);
+  const trialRedirect = onboardingRedirectFor(trial);
+  if (trialRedirect) redirect(trialRedirect);
   const customizing = params.customize === "1";
   if (org.onboardedAt && !customizing) {
     redirect("/dashboard");

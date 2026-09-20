@@ -59,7 +59,7 @@ export function AppShell({
     });
   }
 
-  if (pathname === "/onboarding") {
+  if (pathname === "/onboarding" || pathname === "/trial/setup") {
     return (
       <div className="min-h-dvh overflow-x-clip bg-[#f7f8f7]">
         <SkipLink />
