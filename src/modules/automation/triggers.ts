@@ -8,12 +8,15 @@
  * cascade into more tag_added runs.
  */
 
+import { prisma } from "@/lib/db";
 import {
   matchAutomations,
   runAutomation,
   MAX_AUTOMATIONS_PER_EVENT,
   type AutomationWithSteps,
 } from "@/modules/automation/engine";
+import { parseQuietConfig } from "@/modules/automation/definitions";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 
 export interface TriggerContext {
@@ -91,4 +94,53 @@ async function runMatched(
       );
     }
   }
+}
+
+const QUIET_BATCH = 200;
+
+/**
+ * The outbound moat's trigger: a customer who messaged us (so they showed
+ * interest) has not written back for the configured hours. Runs on the cron
+ * tick. One chase per contact per automation, ever — enforced by excluding
+ * anyone with an existing run — so a nightly tick can never double-send. Like
+ * the reminder tick, gated on the AI Front Desk plan at runtime: an org that
+ * downgraded stops chasing even though its automations stay enabled.
+ * Returns how many runs were started.
+ */
+export async function fireQuietConversations(now: Date = new Date()): Promise<number> {
+  const automations = await prisma.automation.findMany({
+    where: { enabled: true, trigger: "conversation_quiet" },
+    include: { steps: { orderBy: { order: "asc" } }, org: { select: { plan: true } } },
+  });
+  let started = 0;
+  for (const automation of automations) {
+    if (!automation.steps.length || !planHasAiFrontDesk(automation.org.plan)) continue;
+    const { hours, stage } = parseQuietConfig(automation.triggerConfig);
+    const chased = await prisma.automationRun.findMany({
+      where: { automationId: automation.id, contactId: { not: null } },
+      select: { contactId: true },
+    });
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        orgId: automation.orgId,
+        channel: "whatsapp",
+        status: { in: ["open", "pending"] },
+        lastInboundAt: { not: null, lte: new Date(now.getTime() - hours * 3_600_000) },
+        contactId: { notIn: chased.map((r) => r.contactId as string) },
+        contact: { optedOutAt: null, ...(stage ? { leadStage: stage } : {}) },
+      },
+      select: { id: true, contactId: true },
+      orderBy: { lastInboundAt: "asc" },
+      take: QUIET_BATCH,
+    });
+    for (const c of conversations) {
+      try {
+        await runAutomation(automation, { orgId: automation.orgId, contactId: c.contactId, conversationId: c.id });
+        started++;
+      } catch (error) {
+        console.error(`[automations] quiet chase "${automation.name}" (${automation.id}) failed`, error);
+      }
+    }
+  }
+  return started;
 }

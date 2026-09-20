@@ -1795,7 +1795,7 @@ git commit -m "fix(automations): claim runs atomically when cancelling; cancel o
 
 **Files:**
 - Modify: `src/modules/automation/triggers.ts` (append)
-- Modify: `src/app/api/cron/process-queue/route.ts` (after `resume-automations`)
+- Modify: `src/app/api/cron/process-queue/route.ts` (new step after `resume-automations`; new `chased` summary key)
 - Test: `tests/followup-quiet.test.ts`
 
 **Step 1: Write the failing test**
@@ -1832,6 +1832,7 @@ const automation = {
   name: "Quiet chase",
   trigger: "conversation_quiet",
   triggerConfig: { hours: 48, stage: "QUALIFIED" },
+  org: { plan: "growth" },
   steps: [{ id: "s1", automationId: "a1", order: 1, kind: "send_template", config: { templateId: "t1" } }],
 };
 
@@ -1849,11 +1850,18 @@ describe("fireQuietConversations", () => {
     await fireQuietConversations(now);
     const where = findConversations.mock.calls[0][0].where;
     expect(where.orgId).toBe("o1");
+    expect(where.channel).toBe("whatsapp");
     expect(where.status).toEqual({ in: ["open", "pending"] });
     expect(where.lastInboundAt.lte.getTime()).toBe(now.getTime() - 48 * 3_600_000);
     expect(where.lastInboundAt.not).toBeNull();
     expect(where.contact).toMatchObject({ optedOutAt: null, leadStage: "QUALIFIED" });
     expect(where.contactId).toEqual({ notIn: ["c-done"] });
+  });
+
+  it("omits the stage filter when the config has none", async () => {
+    findAutomations.mockResolvedValue([{ ...automation, triggerConfig: { hours: 24 } }]);
+    await fireQuietConversations(now);
+    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null });
   });
 
   it("starts one run per quiet conversation and reports the count", async () => {
@@ -1866,12 +1874,23 @@ describe("fireQuietConversations", () => {
     expect(runAutomation).toHaveBeenCalledWith(automation, { orgId: "o1", contactId: "c1", conversationId: "v1" });
   });
 
-  it("skips an automation with no steps and survives a failing run", async () => {
-    findAutomations.mockResolvedValue([{ ...automation, steps: [] }, automation]);
-    findConversations.mockResolvedValue([{ id: "v1", contactId: "c1" }]);
+  it("skips a step-less automation and an org off the AI Front Desk plans", async () => {
+    findAutomations.mockResolvedValue([
+      { ...automation, id: "empty", steps: [] },
+      { ...automation, id: "downgraded", org: { plan: "starter" } },
+    ]);
+    await fireQuietConversations(now);
+    expect(findConversations).not.toHaveBeenCalled();
+    expect(runAutomation).not.toHaveBeenCalled();
+  });
+
+  it("survives a failing run and keeps going", async () => {
+    findConversations.mockResolvedValue([{ id: "v1", contactId: "c1" }, { id: "v2", contactId: "c2" }]);
     runAutomation.mockRejectedValueOnce(new Error("boom"));
-    await expect(fireQuietConversations(now)).resolves.toBe(0);
-    expect(findConversations).toHaveBeenCalledTimes(1);
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(fireQuietConversations(now)).resolves.toBe(1);
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 });
 ```
@@ -1881,11 +1900,12 @@ describe("fireQuietConversations", () => {
 Run: `npx vitest run tests/followup-quiet.test.ts`
 Expected: FAIL — `fireQuietConversations` is not exported.
 
-**Step 3: Implement** — append to `triggers.ts` (add `prisma` and `parseQuietConfig` imports):
+**Step 3: Implement** — append to `triggers.ts` (add `prisma`, `parseQuietConfig` and `planHasAiFrontDesk` imports). An org's automations stay enabled when it downgrades, so the tick gates on the AI Front Desk plan at runtime — the same `planHasAiFrontDesk(org.plan)` check `tickBookingReminders` makes in `src/modules/followup/reminders.ts` — instead of trusting the `enabled` flag alone:
 
 ```ts
 import { prisma } from "@/lib/db";
 import { parseQuietConfig } from "@/modules/automation/definitions";
+import { planHasAiFrontDesk } from "@/modules/billing/limits";
 
 const QUIET_BATCH = 200;
 
@@ -1893,17 +1913,19 @@ const QUIET_BATCH = 200;
  * The outbound moat's trigger: a customer who messaged us (so they showed
  * interest) has not written back for the configured hours. Runs on the cron
  * tick. One chase per contact per automation, ever — enforced by excluding
- * anyone with an existing run — so a nightly tick can never double-send.
+ * anyone with an existing run — so a nightly tick can never double-send. Like
+ * the reminder tick, gated on the AI Front Desk plan at runtime: an org that
+ * downgraded stops chasing even though its automations stay enabled.
  * Returns how many runs were started.
  */
 export async function fireQuietConversations(now: Date = new Date()): Promise<number> {
   const automations = await prisma.automation.findMany({
     where: { enabled: true, trigger: "conversation_quiet" },
-    include: { steps: { orderBy: { order: "asc" } } },
+    include: { steps: { orderBy: { order: "asc" } }, org: { select: { plan: true } } },
   });
   let started = 0;
   for (const automation of automations) {
-    if (!automation.steps.length) continue;
+    if (!automation.steps.length || !planHasAiFrontDesk(automation.org.plan)) continue;
     const { hours, stage } = parseQuietConfig(automation.triggerConfig);
     const chased = await prisma.automationRun.findMany({
       where: { automationId: automation.id, contactId: { not: null } },
@@ -1942,17 +1964,17 @@ In the cron route, import `fireQuietConversations` from `@/modules/automation/tr
     const chased = await fireQuietConversations();
 ```
 
-Then find the JSON the route returns at the end (it includes `resumedRuns`) and add `chased` beside it.
+In the route's `summary` object add `chased: boundedCount(chased),` right after `resumedRuns`. Nothing else in the route.
 
 **Step 4: Verify**
 
-Run: `npx vitest run tests/followup-quiet.test.ts && npx tsc --noEmit`
-Expected: PASS; tsc silent.
+Run: `npx vitest run tests/followup-quiet.test.ts && npx tsc --noEmit && npm run lint && npm test`
+Expected: PASS; tsc and lint silent; the full suite green.
 
 **Step 5: Commit**
 
 ```bash
-git add src/modules/automation/triggers.ts src/app/api/cron/process-queue/route.ts tests/followup-quiet.test.ts
+git add src/modules/automation/triggers.ts src/app/api/cron/process-queue/route.ts tests/followup-quiet.test.ts docs/plans/2026-09-19-ai-followups.md
 git commit -m "feat(automations): chase quiet conversations on the cron tick"
 ```
 
