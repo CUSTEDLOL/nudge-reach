@@ -1,4 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const {
+  requireOrgContext,
+  isRestrictedAcquisitionTrial,
+  suggestReply,
+  summarizeConversation,
+} = vi.hoisted(() => ({
+  requireOrgContext: vi.fn(),
+  isRestrictedAcquisitionTrial: vi.fn(),
+  suggestReply: vi.fn(),
+  summarizeConversation: vi.fn(),
+}));
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/db", () => ({ prisma: {} }));
+vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext }));
+vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
+vi.mock("@/modules/ai/suggest-reply", () => ({
+  isSuggestTone: () => true,
+  suggestReply,
+}));
+vi.mock("@/modules/ai/summarize", () => ({ summarizeConversation }));
 import {
   buildConversationWhere,
   parseInboxFilter,
@@ -10,6 +32,10 @@ import {
   serviceWindowState,
   toPreview,
 } from "@/modules/inbox/format";
+import {
+  suggestReplyAction,
+  summarizeConversationAction,
+} from "@/app/(app)/inbox/actions";
 
 const ORG = "org_1";
 const ME = "user_me";
@@ -165,5 +191,36 @@ describe("format helpers", () => {
     expect(preview.endsWith("…")).toBe(true);
     // A reply already ending in half an emoji (maxTokens truncation) is cleaned.
     expect(toPreview("thanks \uD83D")).toBe("thanks");
+  });
+});
+
+describe("restricted acquisition-trial inbox actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireOrgContext.mockResolvedValue({ org: { id: ORG } });
+    isRestrictedAcquisitionTrial.mockResolvedValue(true);
+  });
+
+  it("blocks AI draft suggestions before reaching the model", async () => {
+    const formData = new FormData();
+    formData.set("conversationId", "conversation_1");
+    formData.set("tone", "friendly");
+
+    await expect(suggestReplyAction(formData)).resolves.toEqual({
+      ok: false,
+      message: "This AI tool is available on paid plans.",
+    });
+    expect(suggestReply).not.toHaveBeenCalled();
+  });
+
+  it("blocks conversation summaries before reaching the model", async () => {
+    const formData = new FormData();
+    formData.set("conversationId", "conversation_1");
+
+    await expect(summarizeConversationAction(formData)).resolves.toEqual({
+      ok: false,
+      message: "This AI tool is available on paid plans.",
+    });
+    expect(summarizeConversation).not.toHaveBeenCalled();
   });
 });

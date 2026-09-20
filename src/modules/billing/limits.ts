@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getPlan, PLANS, type Plan, type PlanLimits } from "@/modules/billing/plans";
+import { ACQUISITION_TRIAL_PLAN } from "@/modules/trial/capabilities";
 
 /** Lowest sold tier that includes the agent's real actions — used in upsells. */
 export const AI_FRONT_DESK_PLAN = PLANS.find(
@@ -109,8 +110,20 @@ export function applyFeatureOverrides(plan: Plan, raw: unknown): Plan {
 async function planFor(orgId: string): Promise<Plan> {
   const org = await prisma.org.findUnique({
     where: { id: orgId },
-    select: { plan: true, featureOverrides: true },
+    select: {
+      plan: true,
+      featureOverrides: true,
+      subscriptionStatus: true,
+      acquisitionTrial: { select: { id: true, convertedAt: true } },
+    },
   });
+  if (
+    org?.acquisitionTrial
+    && !org.acquisitionTrial.convertedAt
+    && org.subscriptionStatus !== "active"
+  ) {
+    return ACQUISITION_TRIAL_PLAN;
+  }
   return applyFeatureOverrides(getPlan(org?.plan ?? "free"), org?.featureOverrides);
 }
 

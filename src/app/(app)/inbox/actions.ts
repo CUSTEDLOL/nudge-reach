@@ -18,6 +18,7 @@ import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -226,6 +227,9 @@ export async function suggestReplyAction(
 ): Promise<SuggestActionResult> {
   try {
     const { org } = await requireOrgContext();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return { ok: false, message: "This AI tool is available on paid plans." };
+    }
     const conversationId = String(formData.get("conversationId") ?? "");
     const tone = String(formData.get("tone") ?? "friendly");
     if (!isSuggestTone(tone)) {
@@ -526,6 +530,9 @@ export async function summarizeConversationAction(
 ): Promise<SummarizeActionResult> {
   try {
     const { org } = await requireOrgContext();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return { ok: false, message: "This AI tool is available on paid plans." };
+    }
     const conversationId = String(formData.get("conversationId") ?? "");
     const rate = checkRateLimit(`summarize:${org.id}`, RATE_LIMITS.aiSuggest);
     if (!rate.allowed) {

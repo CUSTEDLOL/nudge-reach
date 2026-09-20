@@ -1,6 +1,24 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+
+const { prisma } = vi.hoisted(() => ({
+  prisma: {
+    org: { findUnique: vi.fn() },
+    contact: { count: vi.fn() },
+    membership: { count: vi.fn() },
+    invite: { count: vi.fn() },
+    automation: { count: vi.fn() },
+    message: { count: vi.fn() },
+  },
+}));
+
+vi.mock("@/lib/db", () => ({ prisma }));
+
 import {
   applyFeatureOverrides,
+  checkAiFrontDesk,
+  checkAutomationLimit,
+  checkMessageLimit,
+  checkWhatsappNumbers,
   evaluateLimit,
   sanitizeFeatureOverrides,
 } from "@/modules/billing/limits";
@@ -131,5 +149,48 @@ describe("feature overrides (founder panel bespoke deals)", () => {
   it("a null count means unlimited", () => {
     const merged = applyFeatureOverrides(getPlan("free"), { contacts: null });
     expect(merged.limits.contacts).toBeNull();
+  });
+});
+
+describe("acquisition trial effective limits", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prisma.org.findUnique.mockResolvedValue({
+      plan: "free",
+      featureOverrides: {},
+      subscriptionStatus: "inactive",
+      acquisitionTrial: { id: "trial_1", convertedAt: null },
+    });
+    prisma.automation.count.mockResolvedValue(0);
+    prisma.message.count.mockResolvedValue(0);
+  });
+
+  it("blocks WhatsApp, campaigns, automations and real AI Front Desk actions", async () => {
+    const results = await Promise.all([
+      checkWhatsappNumbers("org_1", 0),
+      checkMessageLimit("org_1", 1),
+      checkAutomationLimit("org_1"),
+      checkAiFrontDesk("org_1"),
+    ]);
+
+    expect(results.map((result) => result.allowed)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("uses the purchased plan after payment activates the subscription", async () => {
+    prisma.org.findUnique.mockResolvedValue({
+      plan: "growth",
+      featureOverrides: {},
+      subscriptionStatus: "active",
+      acquisitionTrial: { id: "trial_1", convertedAt: null },
+    });
+
+    await expect(checkAiFrontDesk("org_1")).resolves.toMatchObject({
+      allowed: true,
+    });
   });
 });
