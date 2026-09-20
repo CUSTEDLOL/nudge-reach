@@ -16,6 +16,7 @@ export type UsagePurpose =
   | "distill"
   | "ingest"
   | "campaign_copy"
+  | "followup_draft"
   | "summary";
 
 export interface Attribution {

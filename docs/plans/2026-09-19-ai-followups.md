@@ -2098,13 +2098,31 @@ git commit -m "feat(automations): chase quiet conversations on the cron tick"
 
 ```ts
 // tests/followup-draft.test.ts
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/db", () => ({ prisma: {} }));
-vi.mock("@/lib/env", () => ({ env: { ANTHROPIC_API_KEY: undefined } }));
-vi.mock("@/lib/model-router/usage", () => ({ recordSyntheticUsage: vi.fn() }));
+const { prisma, generate, recordSyntheticUsage, envState } = vi.hoisted(() => ({
+  envState: { ANTHROPIC_API_KEY: undefined as string | undefined },
+  prisma: {
+    agentProfile: { findUnique: vi.fn() },
+    org: { findUnique: vi.fn() },
+    knowledgeEntry: { findMany: vi.fn() },
+  },
+  generate: vi.fn(),
+  recordSyntheticUsage: vi.fn(),
+}));
 
-import { draftOffline, parseDraftOutput, starterSetOffline } from "@/modules/followup/draft";
+vi.mock("@/lib/db", () => ({ prisma }));
+vi.mock("@/lib/env", () => ({ env: envState }));
+vi.mock("@/lib/model-router", () => ({ generate }));
+vi.mock("@/lib/model-router/usage", () => ({ recordSyntheticUsage }));
+
+import {
+  draftFollowUp,
+  draftOffline,
+  draftStarterSet,
+  parseDraftOutput,
+  starterSetOffline,
+} from "@/modules/followup/draft";
 import { compileFollowUp } from "@/modules/followup/compile";
 
 describe("draftOffline (zero-key simulation path)", () => {
@@ -2153,6 +2171,100 @@ describe("parseDraftOutput", () => {
   });
   it("fails cleanly on non-JSON", () => {
     expect(parseDraftOutput("sorry, I can't", "single").ok).toBe(false);
+  });
+});
+
+describe("draftFollowUp / draftStarterSet without a key", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("never calls the model and still meters a synthetic row", async () => {
+    const spec = await draftFollowUp({ orgId: "o1", request: "welcome every new lead" });
+    expect(spec.situation.kind).toBe("new_lead");
+    expect(generate).not.toHaveBeenCalled();
+    expect(recordSyntheticUsage).toHaveBeenCalledWith(
+      { orgId: "o1", purpose: "followup_draft" },
+      "welcome every new lead",
+      expect.any(String)
+    );
+  });
+  it("refuses an empty sentence", async () => {
+    await expect(draftFollowUp({ orgId: "o1", request: "   " })).rejects.toThrow(
+      "Describe the follow-up in a sentence first."
+    );
+  });
+});
+
+const VALID_SINGLE = {
+  name: "Chase",
+  situation: { kind: "went_quiet", afterDays: 3 },
+  messages: [{ afterDays: 0, category: "MARKETING", header: "Hi", body: "Still there {{1}}?", footer: "" }],
+};
+const VALID_BOOKED = {
+  name: "See you",
+  situation: { kind: "booked" },
+  messages: [{ afterDays: 1, category: "UTILITY", header: "See you", body: "Hi {{1}}", footer: "" }],
+};
+
+describe("draft with a key (model path)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    envState.ANTHROPIC_API_KEY = "test-key";
+    prisma.agentProfile.findUnique.mockResolvedValue({
+      businessName: "Glow Clinic",
+      vertical: "clinic",
+      businessInfo: "Hair transplant consults.",
+      tone: "Warm",
+      doNots: "",
+    });
+    prisma.org.findUnique.mockResolvedValue({ name: "Glow", vertical: "clinic" });
+    prisma.knowledgeEntry.findMany.mockResolvedValue([
+      { category: "pricing", fact: "Consults are ₹500", condition: null },
+    ]);
+  });
+  afterEach(() => {
+    envState.ANTHROPIC_API_KEY = undefined;
+  });
+
+  it("retries once on prose, attributes both calls, and returns the parsed spec", async () => {
+    generate
+      .mockResolvedValueOnce("Sure! Here is a follow-up for you.")
+      .mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    const spec = await draftFollowUp({ orgId: "o1", request: "chase quiet leads after 3 days" });
+    expect(spec.name).toBe("Chase");
+    expect(spec.messages[0].footer).toContain("STOP");
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[1][0].prompt).toContain("IMPORTANT");
+    for (const [call] of generate.mock.calls) {
+      expect(call.attribution).toEqual({ orgId: "o1", purpose: "followup_draft" });
+    }
+  });
+
+  it("grounds the system prompt in the business, its knowledge and the stopOn rule", async () => {
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("Glow Clinic");
+    expect(system).toContain("clinic business");
+    expect(system).toContain("Consults are ₹500");
+    expect(system).toContain("For booked situations omit stopOn");
+  });
+
+  it("gives up with a friendly error after two bad replies", async () => {
+    generate.mockResolvedValue("no json here");
+    await expect(draftFollowUp({ orgId: "o1", request: "chase quiet leads" })).rejects.toThrow(
+      "We couldn't write that follow-up just now"
+    );
+    expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the valid entries of a starter set", async () => {
+    generate.mockResolvedValueOnce(
+      JSON.stringify({ followUps: [VALID_BOOKED, { name: "bad", situation: { kind: "nope" }, messages: [] }] })
+    );
+    const set = await draftStarterSet({ orgId: "o1" });
+    expect(set.map((s) => s.name)).toEqual(["See you"]);
+    expect(set[0].stopOn).toEqual(["booking"]);
+    expect(generate.mock.calls[0][0].maxTokens).toBe(4000);
   });
 });
 ```
@@ -2276,14 +2388,16 @@ async function draftWithModel(orgId: string, mode: "single" | "set", userPrompt:
   const b = await loadBusinessContext(orgId);
   const system = systemPrompt(b);
   const shape = mode === "single" ? SINGLE_SHAPE : SET_SHAPE;
+  // A 4–6 spec set with three messages each does not fit in a single-spec budget.
+  const maxTokens = mode === "set" ? 4000 : 1200;
   const attribution = { orgId, purpose: "followup_draft" } as const;
-  let text = await generate({ system, prompt: `${userPrompt}\n\n${shape}`, maxTokens: 1800, attribution });
+  let text = await generate({ system, prompt: `${userPrompt}\n\n${shape}`, maxTokens, attribution });
   let parsed = parseDraftOutput(text, mode);
   if (!parsed.ok) {
     text = await generate({
       system,
       prompt: `${userPrompt}\n\n${shape}\n\nIMPORTANT: your previous reply was not valid (${parsed.error}). Respond with ONLY the JSON object — first character "{", last character "}".`,
-      maxTokens: 1800,
+      maxTokens,
       attribution,
     });
     parsed = parseDraftOutput(text, mode);
@@ -2427,12 +2541,12 @@ If `tsc` complains that `knowledgeEntry` has no `fact`/`condition`/`category` fi
 **Step 4: Verify**
 
 Run: `npx vitest run tests/followup-draft.test.ts && npx tsc --noEmit`
-Expected: PASS, 8 tests; tsc silent.
+Expected: PASS, 13 tests; tsc silent.
 
 **Step 5: Commit**
 
 ```bash
-git add src/lib/model-router/usage.ts src/modules/followup/draft.ts tests/followup-draft.test.ts
+git add src/lib/model-router/usage.ts src/modules/followup/draft.ts tests/followup-draft.test.ts docs/plans/2026-09-19-ai-followups.md
 git commit -m "feat(followups): draft follow-ups from a sentence or the business profile, with a keyless fallback"
 ```
 
@@ -3331,3 +3445,5 @@ git commit -m "docs: record AI follow-ups shipped"
 
 - Live wording edits do not reach Meta: `submitRowToMeta` always creates; for an existing name it re-syncs the old template's status. Needs edit-in-place via Meta's template edit endpoint using `metaTemplateId` (`library.ts`).
 - Shrinking a spec's message count leaves the extra template rows in the library.
+- `fireQuietConversations` loads every prior contactId per automation into a `notIn` — needs a `Contact`↔`AutomationRun` relation (or a NOT EXISTS) before any single follow-up accumulates ~10k runs.
+- The cron route wraps every step in one try; a `chase-quiet` DB error skips the remaining steps that night — per-step try is a separate change.
