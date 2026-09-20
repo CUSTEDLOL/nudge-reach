@@ -36,30 +36,60 @@ const automation = {
 
 beforeEach(() => {
   runAutomation.mockClear();
-  findConversations.mockClear();
-  findTemplates.mockReset().mockResolvedValue([{ id: "t1", metaStatus: "APPROVED" }]);
-  findRuns.mockResolvedValue([{ contactId: "c-done" }]);
+  findRuns.mockClear().mockResolvedValue([{ contactId: "c-done" }]);
+  findConversations.mockClear().mockResolvedValue([]);
+  findTemplates.mockReset().mockResolvedValue([{ id: "t1", metaStatus: "APPROVED", category: "MARKETING" }]);
   findAutomations.mockResolvedValue([automation]);
 });
 
 describe("fireQuietConversations", () => {
   const now = new Date("2026-09-20T03:00:00Z");
+  const cutoff = now.getTime() - 48 * 3_600_000;
+  const week = 7 * 24 * 3_600_000;
 
-  it("selects open/pending WhatsApp conversations quiet past the cutoff, opted-in, at the stage, never chased before", async () => {
+  it("selects open/pending WhatsApp conversations silent both ways past the cutoff, within the lookback, opted-in, at the stage, never chased before", async () => {
     await fireQuietConversations(now);
-    const where = findConversations.mock.calls[0][0].where;
+    expect(findTemplates.mock.calls[0][0]).toMatchObject({
+      where: { orgId: "o1", id: { in: ["t1"] } },
+      select: { id: true, metaStatus: true, category: true },
+    });
+    expect(findRuns.mock.calls[0][0].where).toEqual({
+      automationId: "a1",
+      contactId: { not: null },
+      NOT: { status: "FAILED", currentStep: { lte: 1 } },
+    });
+    const query = findConversations.mock.calls[0][0];
+    const where = query.where;
     expect(where.orgId).toBe("o1");
     expect(where.channel).toBe("whatsapp");
     expect(where.status).toEqual({ in: ["open", "pending"] });
-    expect(where.lastInboundAt.lte.getTime()).toBe(now.getTime() - 48 * 3_600_000);
     expect(where.lastInboundAt.not).toBeNull();
-    expect(where.contact).toMatchObject({ optedOutAt: null, leadStage: "QUALIFIED" });
+    expect(where.lastInboundAt.lte.getTime()).toBe(cutoff);
+    expect(where.lastInboundAt.gt.getTime()).toBe(cutoff - week);
+    expect(where.lastMessageAt.lte.getTime()).toBe(cutoff);
+    expect(where.contact).toEqual({ optedOutAt: null, optedIn: true, leadStage: "QUALIFIED" });
     expect(where.contactId).toEqual({ notIn: ["c-done"] });
-    expect(findTemplates.mock.calls[0][0].where).toMatchObject({ orgId: "o1", id: { in: ["t1"] } });
+    expect(query.orderBy).toEqual({ lastInboundAt: "asc" });
+    expect(query.take).toBe(200);
+  });
+
+  it("does not require opt-in when every send template is UTILITY", async () => {
+    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "APPROVED", category: "UTILITY" }]);
+    await fireQuietConversations(now);
+    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null, leadStage: "QUALIFIED" });
+  });
+
+  it("never looks templates up for an automation with no send_template step", async () => {
+    findAutomations.mockResolvedValue([
+      { ...automation, steps: [{ id: "s1", automationId: "a1", order: 1, kind: "send_message", config: { text: "Still there?" } }] },
+    ]);
+    await fireQuietConversations(now);
+    expect(findTemplates).not.toHaveBeenCalled();
+    expect(findConversations).toHaveBeenCalledTimes(1);
   });
 
   it("starts nothing while a send template is still pending at Meta", async () => {
-    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "PENDING" }]);
+    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "PENDING", category: "MARKETING" }]);
     await expect(fireQuietConversations(now)).resolves.toBe(0);
     expect(findConversations).not.toHaveBeenCalled();
     expect(runAutomation).not.toHaveBeenCalled();
@@ -75,7 +105,7 @@ describe("fireQuietConversations", () => {
   it("omits the stage filter when the config has none", async () => {
     findAutomations.mockResolvedValue([{ ...automation, triggerConfig: { hours: 24 } }]);
     await fireQuietConversations(now);
-    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null });
+    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null, optedIn: true });
   });
 
   it("starts one run per quiet conversation and reports the count", async () => {
@@ -96,6 +126,25 @@ describe("fireQuietConversations", () => {
     await fireQuietConversations(now);
     expect(findConversations).not.toHaveBeenCalled();
     expect(runAutomation).not.toHaveBeenCalled();
+  });
+
+  it("keeps going past skipped automations to a valid one", async () => {
+    findAutomations.mockResolvedValue([
+      { ...automation, id: "empty", steps: [] },
+      { ...automation, id: "downgraded", org: { plan: "starter" } },
+      automation,
+    ]);
+    findConversations.mockResolvedValue([{ id: "v1", contactId: "c1" }]);
+    await expect(fireQuietConversations(now)).resolves.toBe(1);
+    expect(runAutomation).toHaveBeenCalledTimes(1);
+    expect(runAutomation.mock.calls[0][0]).toMatchObject({ id: "a1" });
+  });
+
+  it("evaluates every automation of an org separately", async () => {
+    findAutomations.mockResolvedValue([automation, { ...automation, id: "a2" }]);
+    await fireQuietConversations(now);
+    expect(findRuns.mock.calls.map((c) => c[0].where.automationId)).toEqual(["a1", "a2"]);
+    expect(findConversations).toHaveBeenCalledTimes(2);
   });
 
   it("survives a failing run and keeps going", async () => {

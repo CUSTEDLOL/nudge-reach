@@ -118,12 +118,19 @@ automation get the fix for free.
 **`conversation_quiet` trigger.** Added to `AUTOMATION_TRIGGERS`; config
 `{ hours, stage? }`. Evaluated on the cron tick by `fireQuietConversations(now)`
 in `modules/automation/triggers.ts`: for each enabled automation with this
-trigger, select org conversations where `lastInboundAt` is older than `hours`
-and not null (they messaged, so they showed interest), status `open` or
-`pending`, contact not opted out, lead stage matches if set, and **no
-`AutomationRun` exists for this automation + contact** — one chase per person
-per follow-up, ever, the same structural cap the pack encodes. Batched at 200,
-like the reminder tick. Starts runs through the existing `runAutomation`.
+trigger, select org conversations with no message in either direction for
+`hours` (`lastInboundAt` not null — they messaged, so they showed interest —
+and both it and `lastMessageAt` older than the cutoff, so a staff reply from
+the inbox postpones the chase), within a 7-day lookback so switching a chase on
+never drains months of stale threads, status `open` or `pending`, contact not
+opted out, lead stage matches if set, and **no `AutomationRun` exists for this
+automation + contact** — one chase per person per follow-up, ever, the same
+structural cap the pack encodes. MARKETING chases go only to opted-in contacts
+(invariant #2), selected up front so the consent gate never turns a lead into a
+FAILED run; a step-1 failure that sent nothing does not count against the
+one-chase cap; and no chase starts until every send template is APPROVED at
+Meta. Batched at 200, like the reminder tick. Starts runs through the existing
+`runAutomation`.
 
 ## 3. AI drafting
 

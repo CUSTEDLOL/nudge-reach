@@ -1840,30 +1840,60 @@ const automation = {
 
 beforeEach(() => {
   runAutomation.mockClear();
-  findConversations.mockClear();
-  findTemplates.mockReset().mockResolvedValue([{ id: "t1", metaStatus: "APPROVED" }]);
-  findRuns.mockResolvedValue([{ contactId: "c-done" }]);
+  findRuns.mockClear().mockResolvedValue([{ contactId: "c-done" }]);
+  findConversations.mockClear().mockResolvedValue([]);
+  findTemplates.mockReset().mockResolvedValue([{ id: "t1", metaStatus: "APPROVED", category: "MARKETING" }]);
   findAutomations.mockResolvedValue([automation]);
 });
 
 describe("fireQuietConversations", () => {
   const now = new Date("2026-09-20T03:00:00Z");
+  const cutoff = now.getTime() - 48 * 3_600_000;
+  const week = 7 * 24 * 3_600_000;
 
-  it("selects open/pending WhatsApp conversations quiet past the cutoff, opted-in, at the stage, never chased before", async () => {
+  it("selects open/pending WhatsApp conversations silent both ways past the cutoff, within the lookback, opted-in, at the stage, never chased before", async () => {
     await fireQuietConversations(now);
-    const where = findConversations.mock.calls[0][0].where;
+    expect(findTemplates.mock.calls[0][0]).toMatchObject({
+      where: { orgId: "o1", id: { in: ["t1"] } },
+      select: { id: true, metaStatus: true, category: true },
+    });
+    expect(findRuns.mock.calls[0][0].where).toEqual({
+      automationId: "a1",
+      contactId: { not: null },
+      NOT: { status: "FAILED", currentStep: { lte: 1 } },
+    });
+    const query = findConversations.mock.calls[0][0];
+    const where = query.where;
     expect(where.orgId).toBe("o1");
     expect(where.channel).toBe("whatsapp");
     expect(where.status).toEqual({ in: ["open", "pending"] });
-    expect(where.lastInboundAt.lte.getTime()).toBe(now.getTime() - 48 * 3_600_000);
     expect(where.lastInboundAt.not).toBeNull();
-    expect(where.contact).toMatchObject({ optedOutAt: null, leadStage: "QUALIFIED" });
+    expect(where.lastInboundAt.lte.getTime()).toBe(cutoff);
+    expect(where.lastInboundAt.gt.getTime()).toBe(cutoff - week);
+    expect(where.lastMessageAt.lte.getTime()).toBe(cutoff);
+    expect(where.contact).toEqual({ optedOutAt: null, optedIn: true, leadStage: "QUALIFIED" });
     expect(where.contactId).toEqual({ notIn: ["c-done"] });
-    expect(findTemplates.mock.calls[0][0].where).toMatchObject({ orgId: "o1", id: { in: ["t1"] } });
+    expect(query.orderBy).toEqual({ lastInboundAt: "asc" });
+    expect(query.take).toBe(200);
+  });
+
+  it("does not require opt-in when every send template is UTILITY", async () => {
+    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "APPROVED", category: "UTILITY" }]);
+    await fireQuietConversations(now);
+    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null, leadStage: "QUALIFIED" });
+  });
+
+  it("never looks templates up for an automation with no send_template step", async () => {
+    findAutomations.mockResolvedValue([
+      { ...automation, steps: [{ id: "s1", automationId: "a1", order: 1, kind: "send_message", config: { text: "Still there?" } }] },
+    ]);
+    await fireQuietConversations(now);
+    expect(findTemplates).not.toHaveBeenCalled();
+    expect(findConversations).toHaveBeenCalledTimes(1);
   });
 
   it("starts nothing while a send template is still pending at Meta", async () => {
-    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "PENDING" }]);
+    findTemplates.mockResolvedValue([{ id: "t1", metaStatus: "PENDING", category: "MARKETING" }]);
     await expect(fireQuietConversations(now)).resolves.toBe(0);
     expect(findConversations).not.toHaveBeenCalled();
     expect(runAutomation).not.toHaveBeenCalled();
@@ -1879,7 +1909,7 @@ describe("fireQuietConversations", () => {
   it("omits the stage filter when the config has none", async () => {
     findAutomations.mockResolvedValue([{ ...automation, triggerConfig: { hours: 24 } }]);
     await fireQuietConversations(now);
-    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null });
+    expect(findConversations.mock.calls[0][0].where.contact).toEqual({ optedOutAt: null, optedIn: true });
   });
 
   it("starts one run per quiet conversation and reports the count", async () => {
@@ -1902,6 +1932,25 @@ describe("fireQuietConversations", () => {
     expect(runAutomation).not.toHaveBeenCalled();
   });
 
+  it("keeps going past skipped automations to a valid one", async () => {
+    findAutomations.mockResolvedValue([
+      { ...automation, id: "empty", steps: [] },
+      { ...automation, id: "downgraded", org: { plan: "starter" } },
+      automation,
+    ]);
+    findConversations.mockResolvedValue([{ id: "v1", contactId: "c1" }]);
+    await expect(fireQuietConversations(now)).resolves.toBe(1);
+    expect(runAutomation).toHaveBeenCalledTimes(1);
+    expect(runAutomation.mock.calls[0][0]).toMatchObject({ id: "a1" });
+  });
+
+  it("evaluates every automation of an org separately", async () => {
+    findAutomations.mockResolvedValue([automation, { ...automation, id: "a2" }]);
+    await fireQuietConversations(now);
+    expect(findRuns.mock.calls.map((c) => c[0].where.automationId)).toEqual(["a1", "a2"]);
+    expect(findConversations).toHaveBeenCalledTimes(2);
+  });
+
   it("survives a failing run and keeps going", async () => {
     findConversations.mockResolvedValue([{ id: "v1", contactId: "c1" }, { id: "v2", contactId: "c2" }]);
     runAutomation.mockRejectedValueOnce(new Error("boom"));
@@ -1918,7 +1967,7 @@ describe("fireQuietConversations", () => {
 Run: `npx vitest run tests/followup-quiet.test.ts`
 Expected: FAIL — `fireQuietConversations` is not exported.
 
-**Step 3: Implement** — append to `triggers.ts` (add `prisma`, `parseQuietConfig` and `planHasAiFrontDesk` imports). An org's automations stay enabled when it downgrades, so the tick gates on the AI Front Desk plan at runtime — the same `planHasAiFrontDesk(org.plan)` check `tickBookingReminders` makes in `src/modules/followup/reminders.ts` — instead of trusting the `enabled` flag alone. It also starts no chases for an automation whose `send_template` steps reference a template that is missing from the org's library or not yet `APPROVED` at Meta: a chase against a pending template would produce a FAILED run, and the one-run-per-contact cap (kept on all run statuses — retrying FAILED runs would re-send message 1 of a multi-message chase that failed on message 2) would then exclude that contact forever, whereas holding off keeps every contact eligible until approval:
+**Step 3: Implement** — append to `triggers.ts` (add `prisma`, `parseQuietConfig` and `planHasAiFrontDesk` imports). An org's automations stay enabled when it downgrades, so the tick gates on the AI Front Desk plan at runtime — the same `planHasAiFrontDesk(org.plan)` check `tickBookingReminders` makes in `src/modules/followup/reminders.ts` — instead of trusting the `enabled` flag alone. It also starts no chases for an automation whose `send_template` steps reference a template that is missing from the org's library or not yet `APPROVED` at Meta: a chase against a pending template would produce a FAILED run, and the one-run-per-contact cap would then exclude that contact forever, whereas holding off keeps every contact eligible until approval. The cap counts every prior run except a FAILED one that never got past step 1 (always the first send for a `went_quiet` spec, since `parseFollowUpSpec` forces `afterDays` 0) — a run that failed on message 2 still counts, because retrying it would re-send message 1, while a never-sent failure just re-attempts on the next tick. "Quiet" means silence in both directions (`lastMessageAt` as well as `lastInboundAt` older than the cutoff — a staff reply from the inbox postpones the chase) within a 7-day lookback, so switching a chase on never drains months of stale threads oldest-first. And a MARKETING chase selects only opted-in contacts (invariant #2; `canSendMarketing` requires `optedIn`, which inbound-created contacts lack by default), so the consent gate in `sendMessage` never turns a lead into a FAILED run:
 
 ```ts
 import { prisma } from "@/lib/db";
@@ -1926,13 +1975,16 @@ import { parseQuietConfig } from "@/modules/automation/definitions";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 
 const QUIET_BATCH = 200;
+/** Only threads that went quiet in the past week — switching a chase on must not drain months of stale threads. */
+const QUIET_LOOKBACK_MS = 7 * 24 * 3_600_000;
 
 /**
  * The outbound moat's trigger: a customer who messaged us (so they showed
- * interest) has not written back for the configured hours. Runs on the cron
- * tick. One chase per contact per automation, ever — enforced by excluding
- * anyone with an existing run — so a nightly tick can never double-send. Like
- * the reminder tick, gated on the AI Front Desk plan at runtime: an org that
+ * interest) and the thread has since been silent in both directions for the
+ * configured hours. Runs on the cron tick. One chase per contact per
+ * automation, ever — enforced by excluding anyone with an existing run that
+ * got past its first send — so a nightly tick can never double-send. Like the
+ * reminder tick, gated on the AI Front Desk plan at runtime: an org that
  * downgraded stops chasing even though its automations stay enabled.
  * Returns how many runs were started.
  */
@@ -1949,19 +2001,35 @@ export async function fireQuietConversations(now: Date = new Date()): Promise<nu
     // until every send template is approved; the contacts stay eligible.
     const templateIds = automation.steps
       .filter((s) => s.kind === "send_template")
-      .map((s) => String((s.config as { templateId?: unknown })?.templateId ?? ""))
+      .map((s) => {
+        const { templateId } = (s.config ?? {}) as { templateId?: unknown };
+        return typeof templateId === "string" ? templateId : "";
+      })
       .filter(Boolean);
+    // Invariant #2: a MARKETING chase reaches only opted-in contacts — selected
+    // up front so the consent gate in sendMessage never turns a lead into a
+    // FAILED run.
+    let needsOptIn = false;
     if (templateIds.length) {
       const templates = await prisma.template.findMany({
         where: { orgId: automation.orgId, id: { in: templateIds } },
-        select: { id: true, metaStatus: true },
+        select: { id: true, metaStatus: true, category: true },
       });
       const approved = new Set(templates.filter((t) => t.metaStatus === "APPROVED").map((t) => t.id));
       if (!templateIds.every((id) => approved.has(id))) continue;
+      needsOptIn = templates.some((t) => t.category === "MARKETING");
     }
     const { hours, stage } = parseQuietConfig(automation.triggerConfig);
-    const chased = await prisma.automationRun.findMany({
-      where: { automationId: automation.id, contactId: { not: null } },
+    const cutoff = new Date(now.getTime() - hours * 3_600_000);
+    // A FAILED run that never sent (step 1 is always the first send for a
+    // went_quiet spec) does not burn the cap: a suspended org re-attempts each
+    // tick until unsuspended — bounded and intended.
+    const priorRuns = await prisma.automationRun.findMany({
+      where: {
+        automationId: automation.id,
+        contactId: { not: null },
+        NOT: { status: "FAILED", currentStep: { lte: 1 } },
+      },
       select: { contactId: true },
     });
     const conversations = await prisma.conversation.findMany({
@@ -1969,9 +2037,15 @@ export async function fireQuietConversations(now: Date = new Date()): Promise<nu
         orgId: automation.orgId,
         channel: "whatsapp",
         status: { in: ["open", "pending"] },
-        lastInboundAt: { not: null, lte: new Date(now.getTime() - hours * 3_600_000) },
-        contactId: { notIn: chased.map((r) => r.contactId as string) },
-        contact: { optedOutAt: null, ...(stage ? { leadStage: stage } : {}) },
+        // Quiet in both directions: a staff reply from the inbox postpones the chase.
+        lastInboundAt: { not: null, gt: new Date(cutoff.getTime() - QUIET_LOOKBACK_MS), lte: cutoff },
+        lastMessageAt: { lte: cutoff },
+        contactId: { notIn: priorRuns.map((r) => r.contactId as string) },
+        contact: {
+          optedOutAt: null,
+          ...(needsOptIn ? { optedIn: true } : {}),
+          ...(stage ? { leadStage: stage } : {}),
+        },
       },
       select: { id: true, contactId: true },
       orderBy: { lastInboundAt: "asc" },
