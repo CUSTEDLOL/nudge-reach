@@ -7,7 +7,6 @@ const {
   summarizeConversation,
   handleInboundMessage,
   withTrialReplyReservation,
-  trialReplySummary,
   trialFindUnique,
   trialUpdateMany,
 } = vi.hoisted(() => ({
@@ -17,7 +16,6 @@ const {
   summarizeConversation: vi.fn(),
   handleInboundMessage: vi.fn(),
   withTrialReplyReservation: vi.fn(),
-  trialReplySummary: vi.fn(),
   trialFindUnique: vi.fn(),
   trialUpdateMany: vi.fn(),
 }));
@@ -41,7 +39,6 @@ vi.mock("@/modules/ai/summarize", () => ({ summarizeConversation }));
 vi.mock("@/modules/agent/inbound", () => ({ handleInboundMessage }));
 vi.mock("@/modules/trial/replies", () => ({
   withTrialReplyReservation,
-  trialReplySummary,
 }));
 import {
   buildConversationWhere,
@@ -294,7 +291,6 @@ describe("trial-metered simulated inbound action", () => {
     );
     trialFindUnique.mockResolvedValue({ id: "trial_1" });
     trialUpdateMany.mockResolvedValue({ count: 1 });
-    trialReplySummary.mockResolvedValue(summary);
     isRestrictedAcquisitionTrial.mockResolvedValue(true);
   });
 
@@ -353,7 +349,7 @@ describe("trial-metered simulated inbound action", () => {
     });
   });
 
-  it("records the first successful reply and returns a fresh trial summary", async () => {
+  it("records the first successful reply and preserves the reserved summary", async () => {
     const freshSummary = {
       ...summary,
       repliesUsed: 5,
@@ -366,9 +362,8 @@ describe("trial-metered simulated inbound action", () => {
         reply: "Yes, we are open.",
         generatedByAi: true,
       },
-      trial: summary,
+      trial: freshSummary,
     });
-    trialReplySummary.mockResolvedValue(freshSummary);
 
     await expect(simulateInboundAction(formData())).resolves.toMatchObject({
       ok: true,

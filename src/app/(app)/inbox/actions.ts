@@ -21,7 +21,6 @@ import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 import {
   type TrialReplySummary,
-  trialReplySummary,
   withTrialReplyReservation,
 } from "@/modules/trial/replies";
 import { trialSandboxAddress } from "@/modules/trial/test-inbox";
@@ -541,20 +540,19 @@ export async function simulateInboundAction(
     }
 
     const { result, trial } = outcome;
-    let freshTrial = trial;
+    const freshTrial = trial;
     if (result.generatedByAi && trial) {
-      const acquisitionTrial = await prisma.acquisitionTrial.findUnique({
-        where: { orgId: org.id },
-        select: { id: true },
-      });
       try {
+        const acquisitionTrial = await prisma.acquisitionTrial.findUnique({
+          where: { orgId: org.id },
+          select: { id: true },
+        });
         if (acquisitionTrial) {
           await prisma.acquisitionTrial.updateMany({
             where: { id: acquisitionTrial.id, firstReplyAt: null },
             data: { firstReplyAt: new Date() },
           });
         }
-        freshTrial = await trialReplySummary(org.id) ?? trial;
       } catch (error) {
         console.error("[trial] first reply milestone failed", error);
       }

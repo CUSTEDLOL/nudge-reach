@@ -139,27 +139,37 @@ export async function withTrialReplyReservation<T extends TrialMeterableResult>(
     };
   }
 
-  const trialId = reservation.kind === "reserved"
-    ? reservation.trialId
-    : undefined;
-
+  let result: T;
   try {
-    const result = await work();
-    if (!trialId) return { kind: "handled", result };
-
-    if (!result.generatedByAi) {
-      await refundTrialReply(trialId);
-      return { kind: "handled", result };
-    }
-
-    const trial = await trialReplySummary(orgId, now);
-    return {
-      kind: "handled",
-      result,
-      ...(trial ? { trial } : {}),
-    };
+    result = await work();
   } catch (error) {
-    if (trialId) await refundTrialReply(trialId).catch(() => {});
+    if (reservation.kind === "reserved") {
+      await refundTrialReply(reservation.trialId).catch(() => {});
+    }
     throw error;
+  }
+
+  if (reservation.kind !== "reserved") return { kind: "handled", result };
+
+  if (!result.generatedByAi) {
+    await refundTrialReply(reservation.trialId);
+    return { kind: "handled", result };
+  }
+
+  const reservedSummary: TrialReplySummary = {
+    status: reservation.repliesRemaining === 0 ? "exhausted" : "active",
+    repliesUsed: reservation.repliesUsed,
+    replyLimit: reservation.replyLimit,
+    repliesRemaining: reservation.repliesRemaining,
+  };
+  try {
+    const trial = await trialReplySummary(orgId, now);
+    return { kind: "handled", result, trial: trial ?? reservedSummary };
+  } catch (error) {
+    // The reply is already persisted and its slot was atomically reserved.
+    // A follow-up read must never turn that success into a false failure or
+    // refund a reply that the customer actually received.
+    console.error("[trial] reply summary refresh failed", error);
+    return { kind: "handled", result, trial: reservedSummary };
   }
 }
