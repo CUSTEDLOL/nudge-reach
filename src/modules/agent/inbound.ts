@@ -6,11 +6,16 @@ import { sendMessage } from "@/modules/messaging";
 import { crmContactCreated } from "@/modules/crm/events";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { scoreContactSoon } from "@/modules/scoring/compute";
-import { buildHistory, generateAgentActionReply } from "@/modules/agent/reply";
+import {
+  buildHistory,
+  generateAgentActionReply,
+  generateAgentReply,
+} from "@/modules/agent/reply";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { runInboundAutomations } from "@/modules/automation/engine";
 import { toPreview } from "@/modules/inbox/format";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
 export interface InboundResult {
   optedOut?: boolean;
@@ -41,6 +46,7 @@ export async function handleInboundMessage(
   text: string,
   opts: { metaMessageId?: string; whatsappAccountId?: string } = {}
 ): Promise<InboundResult> {
+  const restrictedTrial = await isRestrictedAcquisitionTrial(orgId);
   // Meta's webhook always sends `from` with the country code but no "+"
   // (e.g. "919876543210", "971501234567") — so a bare digit string is an
   // international number as-is, never a local number to prefix.
@@ -65,7 +71,9 @@ export async function handleInboundMessage(
     },
     update: {},
   });
-  if (!existingContact) await crmContactCreated(orgId, contact, "WhatsApp (Nudge)");
+  if (!existingContact && !restrictedTrial) {
+    await crmContactCreated(orgId, contact, "WhatsApp (Nudge)");
+  }
 
   // Opt-out always wins, and we never auto-reply to it.
   if (isStopMessage(text)) {
@@ -114,32 +122,36 @@ export async function handleInboundMessage(
   });
 
   // E6: refresh the lead score on activity (fire-and-forget, plan-gated inside).
-  scoreContactSoon(orgId, contact.id);
+  if (!restrictedTrial) scoreContactSoon(orgId, contact.id);
 
   // Notify any integrations subscribed to inbound messages (fire-and-forget).
-  void dispatchWebhook(orgId, "message.received", {
-    conversationId: conversation.id,
-    contactId: contact.id,
-    from: phoneE164,
-    text,
-  });
+  if (!restrictedTrial) {
+    void dispatchWebhook(orgId, "message.received", {
+      conversationId: conversation.id,
+      contactId: contact.id,
+      from: phoneE164,
+      text,
+    });
+  }
 
   // Automations run BEFORE the AI agent (spec §M6). Loop-safe: automation
   // sends go OUT through sendMessage and never re-enter this function — only
   // genuine inbound webhooks / the simulation tester reach here.
-  const automations = await runInboundAutomations(orgId, {
-    contactId: contact.id,
-    conversationId: conversation.id,
-    messageText: text,
-  });
-  if (automations.replied) {
-    // An automation already answered this message — skip the AI auto-reply so
-    // the customer never gets two responses to one message.
-    return {
+  if (!restrictedTrial) {
+    const automations = await runInboundAutomations(orgId, {
+      contactId: contact.id,
       conversationId: conversation.id,
-      reply: automations.replyText,
-      automated: true,
-    };
+      messageText: text,
+    });
+    if (automations.replied) {
+      // An automation already answered this message — skip the AI auto-reply so
+      // the customer never gets two responses to one message.
+      return {
+        conversationId: conversation.id,
+        reply: automations.replyText,
+        automated: true,
+      };
+    }
   }
 
   const profile = await ensureAgentProfile(orgId);
@@ -176,34 +188,55 @@ export async function handleInboundMessage(
   const history = buildHistory(recent);
   if (history.length === 0) history.push({ role: "user", text });
 
+  const reply = restrictedTrial
+    ? await generateAgentReply(
+        {
+          vertical: profile.vertical,
+          businessName: profile.businessName,
+          businessInfo: profile.businessInfo,
+          tone: profile.tone,
+          doNots: profile.doNots,
+        },
+        history,
+        { orgId, conversationId: conversation.id },
+        {
+          knowledgeDigest: buildKnowledgeDigest(knowledgeEntries),
+          now: new Date(),
+          timezone: org?.timezone ?? "Asia/Kolkata",
+        },
+      )
+    : await generateAgentActionReply(
+        {
+          vertical: profile.vertical,
+          businessName: profile.businessName,
+          businessInfo: profile.businessInfo,
+          tone: profile.tone,
+          doNots: profile.doNots,
+        },
+        history,
+        {
+          orgId,
+          contactId: contact.id,
+          conversationId: conversation.id,
+          contactName: contact.name,
+          contactPhone: phoneE164,
+        },
+        {
+          knowledgeDigest: buildKnowledgeDigest(knowledgeEntries),
+          now: new Date(),
+          timezone: org?.timezone ?? "Asia/Kolkata",
+        },
+      );
+
   const {
     text: replyText,
     handoff,
-    actions,
     aiFailed,
     generatedByAi,
-  } = await generateAgentActionReply(
-    {
-      vertical: profile.vertical,
-      businessName: profile.businessName,
-      businessInfo: profile.businessInfo,
-      tone: profile.tone,
-      doNots: profile.doNots,
-    },
-    history,
-    {
-      orgId,
-      contactId: contact.id,
-      conversationId: conversation.id,
-      contactName: contact.name,
-      contactPhone: phoneE164,
-    },
-    {
-      knowledgeDigest: buildKnowledgeDigest(knowledgeEntries),
-      now: new Date(),
-      timezone: org?.timezone ?? "Asia/Kolkata",
-    }
-  );
+  } = reply;
+  const actions = "actions" in reply && Array.isArray(reply.actions)
+    ? reply.actions.filter((action): action is string => typeof action === "string")
+    : [];
 
   const sent = await sendMessage(
     "whatsapp",
@@ -232,7 +265,7 @@ export async function handleInboundMessage(
     },
   });
 
-  if (handoff) {
+  if (handoff && !restrictedTrial) {
     await prisma.conversation.update({
       where: { id: conversation.id },
       data: { status: "handoff" },

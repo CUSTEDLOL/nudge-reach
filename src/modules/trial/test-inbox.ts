@@ -23,7 +23,8 @@ export type TrialTestInboxEvent =
       messages: ThreadMessage[];
       trial?: TrialReplySummary;
     }
-  | { type: "failed"; trial?: TrialReplySummary };
+  | { type: "failed"; trial?: TrialReplySummary }
+  | { type: "snapshot_failed"; trial?: TrialReplySummary };
 
 function canCompose(status: TrialReplySummary["status"]) {
   return status === "active";
@@ -31,10 +32,11 @@ function canCompose(status: TrialReplySummary["status"]) {
 
 export function createTrialTestInboxState(
   trial: TrialReplySummary,
+  messages: ThreadMessage[] = [],
 ): TrialTestInboxState {
   return {
     ...trial,
-    messages: [],
+    messages: snapshotMessages(messages),
     phase: "idle",
     composerEnabled: canCompose(trial.status),
     announcement: "",
@@ -87,6 +89,16 @@ export function reduceTrialTestInbox(
     };
   }
 
+  if (event.type === "snapshot_failed") {
+    return {
+      ...state,
+      ...trial,
+      phase: "error",
+      composerEnabled: canCompose(trial.status),
+      announcement: "",
+    };
+  }
+
   const messages = snapshotMessages(event.messages);
   const lastReply = messages.findLast((message) => message.speaker === "nudge");
   return {
@@ -99,17 +111,25 @@ export function reduceTrialTestInbox(
   };
 }
 
-/** Stable fake customer input. The server derives and returns it per tenant. */
-export function trialTestIdentity(orgId: string) {
+function trialIdentityDigits(orgId: string) {
   let hash = 2_166_136_261;
   for (const character of orgId) {
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16_777_619);
   }
   const suffix = (hash >>> 0) % 1_000_000_000;
+  return String(7_000_000_000 + suffix);
+}
+
+/** Stable, unassigned +999 address. It can never route to a real person. */
+export function trialSandboxAddress(orgId: string) {
+  return `+999${trialIdentityDigits(orgId)}`;
+}
+
+/** Public UI identity deliberately omits the server-authoritative address. */
+export function trialTestIdentity() {
   return {
     label: "Test customer · private simulation",
-    phone: String(7_000_000_000 + suffix),
   };
 }
 

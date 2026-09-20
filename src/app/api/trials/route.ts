@@ -1,7 +1,21 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { createPendingTrial, trialSignupSchema } from "@/modules/trial/signup";
+import {
+  createPendingTrial,
+  TRIAL_RESUME_COOKIE,
+  TrialSignupConflictError,
+  trialSignupSchema,
+} from "@/modules/trial/signup";
+
+function resumeTokenFrom(request: Request) {
+  const header = request.headers.get("cookie");
+  const cookie = header
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${TRIAL_RESUME_COOKIE}=`));
+  return cookie ? decodeURIComponent(cookie.slice(TRIAL_RESUME_COOKIE.length + 1)) : undefined;
+}
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-real-ip")?.trim()
@@ -41,11 +55,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const claim = await createPendingTrial(parsed.data);
-    return NextResponse.json({ ok: true, claim });
+    const claim = await createPendingTrial(
+      parsed.data,
+      new Date(),
+      resumeTokenFrom(request),
+    );
+    const response = NextResponse.json({ ok: true, claim });
+    response.cookies.set(TRIAL_RESUME_COOKIE, claim.claimToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/api/trials",
+      maxAge: 24 * 60 * 60,
+    });
+    return response;
   } catch (error) {
-    const duplicate = error instanceof Prisma.PrismaClientKnownRequestError
-      && error.code === "P2002";
+    const duplicate = (
+      error instanceof Prisma.PrismaClientKnownRequestError
+      && error.code === "P2002"
+    ) || error instanceof TrialSignupConflictError;
 
     if (!duplicate) {
       console.error("[trial-signup] create failed", error);

@@ -21,6 +21,7 @@ import {
   type TrialReplySummary,
   withTrialReplyReservation,
 } from "@/modules/trial/replies";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
 export interface ActionResult {
   ok: boolean;
@@ -657,6 +658,12 @@ export async function simulateContactMessage(
 ): Promise<SimulateMessageResult> {
   try {
     const org = await requireOrg();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return {
+        ok: false,
+        message: "Use the private Test Inbox during your free trial.",
+      };
+    }
     if (!isSimulated(org)) {
       return { ok: false, message: "The tester only works in simulation mode." };
     }

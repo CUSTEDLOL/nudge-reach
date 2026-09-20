@@ -32,27 +32,30 @@ export function TryYourAi({
   connectedName,
   trial,
   testIdentity,
+  initialMessages = [],
 }: {
   simulation: boolean;
   dialCode: string;
   connectedName: string | null;
   trial: TrialWorkspace | null;
-  testIdentity: { label: string; phone: string } | null;
+  testIdentity: { label: string } | null;
+  initialMessages?: ThreadSnapshot["messages"];
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [phone, setPhone] = useState("9876500001");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [trialState, dispatchTrial] = useReducer(
-    reduceTrialTestInbox,
-    trial ?? {
+  const initialTrial = trial ?? {
       status: "active" as const,
       repliesUsed: 0,
       replyLimit: 15,
       repliesRemaining: 15,
-    },
-    createTrialTestInboxState,
+    };
+  const [trialState, dispatchTrial] = useReducer(
+    reduceTrialTestInbox,
+    undefined,
+    () => createTrialTestInboxState(initialTrial, initialMessages),
   );
   const keyboardSubmitRef = useRef(false);
   const focusReplyRef = useRef(false);
@@ -82,9 +85,10 @@ export function TryYourAi({
 
     if (trial) dispatchTrial({ type: "sent", body });
     setSending(true);
+    let actionSucceeded = false;
     try {
       const fd = new FormData();
-      fd.set("phone", testIdentity?.phone ?? phone);
+      if (!trial) fd.set("phone", phone);
       fd.set("text", body);
       const result = await simulateInboundAction(fd);
       if (!result.ok) {
@@ -92,6 +96,8 @@ export function TryYourAi({
         toast({ tone: "error", description: result.message });
         return;
       }
+      actionSucceeded = true;
+      router.refresh();
       if (result.skipped) toast({ tone: "error", description: result.message });
       if (result.conversationId) {
         const destination = trialConversationDestination(
@@ -121,10 +127,16 @@ export function TryYourAi({
       if (trial) dispatchTrial({ type: "failed", trial: result.trial });
       toast({ tone: "success", description: result.message });
     } catch {
-      if (trial) dispatchTrial({ type: "failed" });
+      if (trial) {
+        dispatchTrial({
+          type: actionSucceeded ? "snapshot_failed" : "failed",
+        });
+      }
       toast({
         tone: "error",
-        description: "Couldn't load the test conversation — try again.",
+        description: actionSucceeded
+          ? "Your message was saved, but the conversation couldn't refresh. Reload to see it."
+          : "The simulated message failed — try again.",
       });
     } finally {
       setSending(false);

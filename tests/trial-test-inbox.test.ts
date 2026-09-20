@@ -72,9 +72,34 @@ describe("trial test inbox state", () => {
   );
 
   it("keeps one private test identity stable per organization", () => {
-    expect(trialTestIdentity("org_1")).toEqual(trialTestIdentity("org_1"));
-    expect(trialTestIdentity("org_1")).not.toEqual(trialTestIdentity("org_2"));
-    expect(trialTestIdentity("org_1").phone).toMatch(/^7\d{9}$/);
+    expect(trialTestIdentity()).toEqual({
+      label: "Test customer · private simulation",
+    });
+  });
+
+  it("hydrates persisted history and preserves an optimistic message if refresh fails", () => {
+    const persisted = [{
+      id: "message_1",
+      direction: "inbound",
+      body: "What are your timings?",
+      createdAt: "2026-09-21T09:00:00.000Z",
+      metaMessageId: null,
+    }];
+    const initial = createTrialTestInboxState(activeTrial, persisted);
+    const sent = reduceTrialTestInbox(initial, {
+      type: "sent",
+      body: "What about Sunday?",
+    });
+    const refreshFailed = reduceTrialTestInbox(sent, { type: "snapshot_failed" });
+
+    expect(initial.messages.map((message) => message.body)).toEqual([
+      "What are your timings?",
+    ]);
+    expect(refreshFailed.messages.at(-1)).toMatchObject({
+      body: "What about Sunday?",
+      optimistic: true,
+    });
+    expect(refreshFailed.composerEnabled).toBe(true);
   });
 
   it("redirects standard workspaces but keeps acquisition trials inline", () => {

@@ -35,6 +35,7 @@ export default async function AgentPage() {
       <TrialTraining
         canEdit={canEdit}
         source={trial.knowledgeSource}
+        setupComplete={trial.setupComplete}
         facts={facts.map((fact) => ({
           id: fact.id,
           category: fact.category,

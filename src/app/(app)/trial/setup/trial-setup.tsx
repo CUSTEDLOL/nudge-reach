@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import {
@@ -11,7 +12,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -297,7 +298,15 @@ function ReviewStep({ drafts }: { drafts: TrialDraftFact[] }) {
             </div>
           </Card>
         )) : (
-          <Card className="p-5 text-sm text-neutral-600">No draft facts remain. Add an approved fact from Train AI to continue.</Card>
+          <Card className="p-5 text-sm text-neutral-600">
+            <p>No draft facts remain. Add one clinic fact to continue.</p>
+            <Link
+              href="/agent"
+              className={`${buttonVariants({ size: "sm" })} mt-4`}
+            >
+              Add a fact manually
+            </Link>
+          </Card>
         )}
       </div>
       {drafts.length ? (

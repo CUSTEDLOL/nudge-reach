@@ -62,6 +62,7 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
   const mounted = useMounted();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const targetRef = useRef<HTMLElement>(null);
   const [stepId, setStepId] = useState(trial.tourStep);
   const [open, setOpen] = useState(
     !trial.tourCompleted && !trial.tourDismissed,
@@ -85,13 +86,14 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
     });
   }, []);
 
-  useOverlay(mounted && open, handleDismiss, panelRef);
+  useOverlay(mounted && open, handleDismiss, panelRef, targetRef);
 
   useEffect(() => {
     function restart() {
       setStepId("welcome");
       setMissingTarget(false);
       setTargetRect(null);
+      targetRef.current = null;
       setOpen(true);
       router.push("/dashboard");
     }
@@ -127,11 +129,16 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
     firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
         if (cancelled) return;
-        const target = document.querySelector(trialTourTargetSelector(step));
+        const target = document.querySelector<HTMLElement>(
+          trialTourTargetSelector(step),
+        );
         if (!target) {
+          targetRef.current = null;
           setMissingTarget(true);
           return;
         }
+        targetRef.current = target;
+        setMissingTarget(false);
         const reduceMotion = window.matchMedia(
           "(prefers-reduced-motion: reduce)",
         ).matches;
@@ -140,13 +147,17 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
           behavior: reduceMotion ? "auto" : "smooth",
         });
         measureFrame = window.requestAnimationFrame(() => {
-          if (!cancelled) setTargetRect(elementRect(target));
+          if (!cancelled) {
+            setTargetRect(elementRect(target));
+            panelRef.current?.focus({ preventScroll: true });
+          }
         });
       });
     });
 
     return () => {
       cancelled = true;
+      targetRef.current = null;
       window.cancelAnimationFrame(firstFrame);
       window.cancelAnimationFrame(secondFrame);
       window.cancelAnimationFrame(measureFrame);
@@ -160,7 +171,9 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
     function measure() {
       window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(() => {
-        const target = document.querySelector(trialTourTargetSelector(step));
+        const target = document.querySelector<HTMLElement>(
+          trialTourTargetSelector(step),
+        );
         if (target) setTargetRect(elementRect(target));
       });
     }
@@ -190,6 +203,7 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
     setStepId(destination.id);
     setMissingTarget(false);
     setTargetRect(null);
+    targetRef.current = null;
     if (pathname !== destination.route) router.push(destination.route);
   }
 
@@ -247,7 +261,7 @@ export function TrialTour({ trial }: { trial: TrialWorkspace }) {
       <div
         ref={panelRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby={titleId}
         tabIndex={-1}
         style={

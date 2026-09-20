@@ -17,10 +17,12 @@ export function TrialTraining({
   facts,
   source,
   canEdit,
+  setupComplete,
 }: {
   facts: LibraryFact[];
   source: TrialKnowledgeSource | null;
   canEdit: boolean;
+  setupComplete: boolean;
 }) {
   return (
     <section>
@@ -28,8 +30,12 @@ export function TrialTraining({
         title="Train AI"
         description="Review and edit the clinic facts that ground every trial reply."
         actions={
-          <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
-            Test your AI <ArrowRight className="h-4 w-4" aria-hidden />
+          <Link
+            href={setupComplete ? "/inbox/try" : "/trial/setup"}
+            className={buttonVariants({ size: "sm" })}
+          >
+            {setupComplete ? "Test your AI" : "Continue setup"}
+            <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         }
       />

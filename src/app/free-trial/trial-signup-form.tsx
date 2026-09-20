@@ -15,6 +15,7 @@ import {
   trialSignupDestination,
   validateTrialPassword,
   type TrialIntakeResponse,
+  type TrialClaimResponse,
   type TrialSignupValues,
 } from "@/modules/trial/browser-signup";
 
@@ -37,6 +38,7 @@ export function TrialSignupForm() {
   const [message, setMessage] = useState("");
   const [duplicate, setDuplicate] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [pendingClaim, setPendingClaim] = useState<TrialClaimResponse | null>(null);
 
   function update(event: ChangeEvent<HTMLInputElement>) {
     const { name, type, checked, value } = event.currentTarget;
@@ -70,43 +72,52 @@ export function TrialSignupForm() {
     }
 
     setBusy(true);
+    let claim = pendingClaim;
     try {
-      const attribution = captureAttribution(
-        new URL(window.location.href),
-        document.referrer,
-        window.localStorage,
-        document.cookie,
-      );
-      pushMarketingEvent({
-        event: "trial_signup_started",
-        surface: "free_trial",
-      });
-
-      const response = await fetch("/api/trials", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(trialIntakePayload(values, attribution)),
-      });
-      const result = (await response.json()) as TrialIntakeResponse;
-      if (!response.ok || !result.ok) {
-        setDuplicate(response.status === 409);
-        fail(
-          "intake",
-          response.status === 409
-            ? "A trial already exists—sign in to continue."
-            : result.ok
-              ? "Couldn't start the trial. Please try again."
-              : result.error,
+      if (!claim) {
+        const attribution = captureAttribution(
+          new URL(window.location.href),
+          document.referrer,
+          window.localStorage,
+          document.cookie,
         );
-        return;
+        pushMarketingEvent({
+          event: "trial_signup_started",
+          surface: "free_trial",
+        });
+
+        const response = await fetch("/api/trials", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(trialIntakePayload(values, attribution)),
+        });
+        const result = (await response.json()) as TrialIntakeResponse;
+        if (!response.ok || !result.ok) {
+          setDuplicate(response.status === 409);
+          fail(
+            "intake",
+            response.status === 409
+              ? "A trial already exists—sign in to continue."
+              : result.ok
+                ? "Couldn't start the trial. Please try again."
+                : result.error,
+          );
+          return;
+        }
+        claim = result.claim;
+        setPendingClaim(claim);
       }
 
       const supabase = createClient();
       const { data, error } = await supabase.auth.signUp(
-        trialAuthCredentials(values, window.location.origin, result.claim),
+        trialAuthCredentials(values, window.location.origin, claim),
       );
       if (error) {
-        fail("auth", error.message);
+        setDuplicate(true);
+        fail(
+          "auth",
+          `${error.message} Your trial details are saved—update the password if needed, then retry account creation.`,
+        );
         return;
       }
 
@@ -114,6 +125,7 @@ export function TrialSignupForm() {
         event: "trial_signup_completed",
         surface: "free_trial",
       });
+      setPendingClaim(null);
       setValues((current) => ({ ...current, password: "" }));
 
       const destination = trialSignupDestination(Boolean(data.session));
@@ -124,7 +136,13 @@ export function TrialSignupForm() {
         setConfirmationEmail(values.email);
       }
     } catch {
-      fail("intake", "Couldn't start the trial. Please try again.");
+      if (claim) setDuplicate(true);
+      fail(
+        claim ? "auth" : "intake",
+        claim
+          ? "Your trial details are saved, but secure account creation was interrupted. Please retry."
+          : "Couldn't start the trial. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -141,6 +159,12 @@ export function TrialSignupForm() {
           We sent a secure confirmation link to <strong>{confirmationEmail}</strong>.
           Open it to continue your clinic setup.
         </p>
+        <p className="mt-3 text-sm text-ink/60">
+          Already confirmed or created the account?{" "}
+          <Link href="/login" className="font-semibold text-brand-800 underline underline-offset-2">
+            Sign in to resume
+          </Link>
+        </p>
       </div>
     );
   }
@@ -155,6 +179,7 @@ export function TrialSignupForm() {
           onChange={update}
           autoComplete="name"
           placeholder="Dr Asha Mehta"
+          disabled={Boolean(pendingClaim)}
         />
         <Field
           label="Clinic name"
@@ -163,6 +188,7 @@ export function TrialSignupForm() {
           onChange={update}
           autoComplete="organization"
           placeholder="Aster Clinic"
+          disabled={Boolean(pendingClaim)}
         />
       </div>
       <Field
@@ -173,6 +199,7 @@ export function TrialSignupForm() {
         type="email"
         autoComplete="email"
         placeholder="you@clinic.com"
+        disabled={Boolean(pendingClaim)}
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
@@ -183,6 +210,7 @@ export function TrialSignupForm() {
           type="tel"
           autoComplete="tel"
           placeholder="+91 98765 43210"
+          disabled={Boolean(pendingClaim)}
         />
         <Field
           label="Create a password"
@@ -215,6 +243,7 @@ export function TrialSignupForm() {
           type="checkbox"
           checked={values.contactConsent}
           onChange={update}
+          disabled={Boolean(pendingClaim)}
           required
           className="mt-0.5 h-4 w-4 rounded border-ink/25 accent-brand-600"
         />
@@ -234,7 +263,11 @@ export function TrialSignupForm() {
         ) : (
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" aria-hidden />
         )}
-        {busy ? "Creating your workspace…" : "Start my free trial"}
+        {busy
+          ? "Creating your workspace…"
+          : pendingClaim
+            ? "Retry secure account creation"
+            : "Start my free trial"}
       </button>
 
       <div aria-live="polite" className="min-h-6 text-sm text-red-700">

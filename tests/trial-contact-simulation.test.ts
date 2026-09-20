@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   prisma,
   requireOrg,
+  isRestrictedAcquisitionTrial,
   handleInboundMessage,
   withTrialReplyReservation,
 } = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const {
     contact: { findFirst: vi.fn() },
   },
   requireOrg: vi.fn(),
+  isRestrictedAcquisitionTrial: vi.fn(),
   handleInboundMessage: vi.fn(),
   withTrialReplyReservation: vi.fn(),
 }));
@@ -23,6 +25,7 @@ vi.mock("@/modules/orgs/auth", () => ({
 }));
 vi.mock("@/modules/orgs/mode", () => ({ isSimulated: () => true }));
 vi.mock("@/modules/agent/inbound", () => ({ handleInboundMessage }));
+vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 vi.mock("@/modules/trial/replies", () => ({ withTrialReplyReservation }));
 vi.mock("@/modules/contacts/events", () => ({ recordContactEvent: vi.fn() }));
 vi.mock("@/modules/automation/triggers", () => ({
@@ -36,6 +39,7 @@ describe("contact simulation trial boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireOrg.mockResolvedValue({ id: "org_1", simulated: true });
+    isRestrictedAcquisitionTrial.mockResolvedValue(true);
     prisma.contact.findFirst.mockResolvedValue({
       id: "contact_1",
       phoneE164: "+919876500001",
@@ -57,17 +61,16 @@ describe("contact simulation trial boundary", () => {
     });
   });
 
-  it("blocks the direct contact action before the inbound handler", async () => {
+  it("blocks the hidden contact tester before the inbound handler", async () => {
     const formData = new FormData();
     formData.set("contactId", "contact_1");
     formData.set("text", "Are you open tomorrow?");
 
-    await expect(simulateContactMessage(formData)).resolves.toMatchObject({
+    await expect(simulateContactMessage(formData)).resolves.toEqual({
       ok: false,
-      skipped: "trial_limit",
-      trial: { repliesRemaining: 0 },
+      message: "Use the private Test Inbox during your free trial.",
     });
-    expect(withTrialReplyReservation).toHaveBeenCalledTimes(1);
+    expect(withTrialReplyReservation).not.toHaveBeenCalled();
     expect(handleInboundMessage).not.toHaveBeenCalled();
   });
 });

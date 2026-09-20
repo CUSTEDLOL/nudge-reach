@@ -55,10 +55,19 @@ import {
   toPreview,
 } from "@/modules/inbox/format";
 import {
+  addContactTagAction,
+  addNoteAction,
+  assignConversationAction,
+  removeContactTagAction,
+  sendTemplateAction,
+  sendTextAction,
+  setConversationStatusAction,
+  setLeadStageAction,
   suggestReplyAction,
   simulateInboundAction,
   summarizeConversationAction,
 } from "@/app/(app)/inbox/actions";
+import { trialSandboxAddress } from "@/modules/trial/test-inbox";
 
 const ORG = "org_1";
 const ME = "user_me";
@@ -246,6 +255,22 @@ describe("restricted acquisition-trial inbox actions", () => {
     });
     expect(summarizeConversation).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["send text", sendTextAction],
+    ["send template", sendTemplateAction],
+    ["change status", setConversationStatusAction],
+    ["assign", assignConversationAction],
+    ["change lead stage", setLeadStageAction],
+    ["add tag", addContactTagAction],
+    ["remove tag", removeContactTagAction],
+    ["add note", addNoteAction],
+  ])("blocks the hidden paid mutation: %s", async (_label, action) => {
+    await expect(action(new FormData())).resolves.toEqual({
+      ok: false,
+      message: "This action is available on paid plans.",
+    });
+  });
 });
 
 describe("trial-metered simulated inbound action", () => {
@@ -270,6 +295,7 @@ describe("trial-metered simulated inbound action", () => {
     trialFindUnique.mockResolvedValue({ id: "trial_1" });
     trialUpdateMany.mockResolvedValue({ count: 1 });
     trialReplySummary.mockResolvedValue(summary);
+    isRestrictedAcquisitionTrial.mockResolvedValue(true);
   });
 
   function formData() {
@@ -286,6 +312,16 @@ describe("trial-metered simulated inbound action", () => {
       ok: false,
       message: "The simulated message failed — try again.",
     });
+  });
+
+  it("ignores a forged phone and always uses the org's +999 sandbox identity", async () => {
+    await simulateInboundAction(formData());
+
+    expect(handleInboundMessage).toHaveBeenCalledWith(
+      ORG,
+      trialSandboxAddress(ORG),
+      "Are you open tomorrow?",
+    );
   });
 
   it.each([
@@ -343,6 +379,28 @@ describe("trial-metered simulated inbound action", () => {
       where: { id: "trial_1", firstReplyAt: null },
       data: { firstReplyAt: expect.any(Date) },
     });
+  });
+
+  it("keeps the successful reply when milestone stamping fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "handled",
+      result: {
+        conversationId: "conversation_1",
+        reply: "Yes, we are open.",
+        generatedByAi: true,
+      },
+      trial: summary,
+    });
+    trialUpdateMany.mockRejectedValue(new Error("database unavailable"));
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: true,
+      conversationId: "conversation_1",
+      trial: summary,
+    });
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
   });
 
   it("blocks before the inbound path when the trial is exhausted", async () => {

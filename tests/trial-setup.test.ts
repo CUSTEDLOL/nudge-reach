@@ -188,6 +188,17 @@ describe("three-screen trial setup", () => {
     expect(trialSetupStage(importing, 1)).toBe("review");
   });
 
+  it("offers a manual escape hatch when every imported draft is discarded", () => {
+    const importing = { ...workspace, knowledgeSource: "website" as const };
+    const html = renderToStaticMarkup(
+      createElement(TrialSetup, { workspace: importing, drafts: [], questions }),
+    );
+
+    expect(html).toContain("No draft facts remain");
+    expect(html).toContain('href="/agent"');
+    expect(html).toContain("Add a fact manually");
+  });
+
   it("ends with one clear handoff into the workspace", () => {
     const ready = { ...workspace, knowledgeSource: "interview" as const, knowledgeReady: true, knowledgeCount: 5 };
     const html = renderToStaticMarkup(

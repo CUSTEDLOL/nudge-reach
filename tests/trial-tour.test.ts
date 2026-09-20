@@ -54,7 +54,9 @@ describe("trial tour accessibility contract", () => {
   it("is a labelled dialog with explicit dismissal and shared focus handling", () => {
     expect(source).toContain('role="dialog"');
     expect(source).toContain("aria-labelledby={titleId}");
-    expect(source).toContain("useOverlay(mounted && open, handleDismiss, panelRef)");
+    expect(source).toContain("useOverlay(mounted && open, handleDismiss, panelRef, targetRef)");
+    expect(source).toContain("targetRef.current = target");
+    expect(source).toContain("panelRef.current?.focus");
     expect(source).toContain("Skip tour");
   });
 

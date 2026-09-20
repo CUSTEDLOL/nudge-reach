@@ -29,6 +29,9 @@ vi.mock("@/modules/automation/engine", () => ({
 vi.mock("@/modules/agent/profile", () => ({
   ensureAgentProfile: vi.fn().mockResolvedValue(null), // stop before the model
 }));
+vi.mock("@/modules/trial/capabilities", () => ({
+  isRestrictedAcquisitionTrial: vi.fn().mockResolvedValue(false),
+}));
 vi.mock("@/modules/orgs/mode", () => ({
   isOrgSuspended: vi.fn().mockResolvedValue(false),
   orgSendMode: vi.fn().mockResolvedValue("live"),
