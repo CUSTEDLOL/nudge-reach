@@ -15,6 +15,7 @@ import {
 import { compileFollowUp, type CompiledTemplate } from "@/modules/followup/compile";
 import { parseFollowUpSpec, type FollowUpSpec } from "@/modules/followup/spec";
 import { draftStarterSet } from "@/modules/followup/draft";
+import type { UsagePurpose } from "@/lib/model-router/usage";
 import { checkAutomationLimit } from "@/modules/billing/limits";
 
 /** The installed automation's name is its identity — matching on it keeps the
@@ -207,24 +208,35 @@ export async function saveFollowUpFromSpec(opts: {
 
 /**
  * One-toggle install of the Revenue-Recovery pack for an org: the tick-driven
- * templates, the quiet-lead nudge as a spec, and an enabled FollowUpConfig.
+ * templates, the quiet-lead nudge as a spec, and a FollowUpConfig.
  * The tick-driven templates are re-written from PACK_TEMPLATES on every run.
  * The nudge is created once; a legacy campaign-reply install (no spec) is
  * upgraded in place; a spec-backed one is the owner's and never overwritten.
  * Idempotent.
+ *
+ * A FIRST install is switched on — that is what the client is buying. A
+ * re-install is not a resume: it never touches an existing config's `enabled`
+ * (`update: {}`) and re-creates a missing nudge in whatever state the pack is
+ * in. Only `setFollowUpEnabled(true)` — the client's own resume button —
+ * un-pauses outbound, so neither the founder's "write starter set" nor a
+ * re-open of /automations can start sends a client switched off.
  */
 export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
   await ensureLibraryTemplates(
     orgId,
     PACK_TEMPLATES.filter((t) => !PACK_LEAD_NUDGE_TEMPLATE_NAMES.includes(t.name))
   );
-  const nudge = await prisma.automation.findFirst({
-    where: { orgId, name: LEAD_NUDGE_NAME },
-    select: { id: true, spec: true },
-  });
+  const [nudge, config] = await Promise.all([
+    prisma.automation.findFirst({
+      where: { orgId, name: LEAD_NUDGE_NAME },
+      select: { id: true, spec: true },
+    }),
+    getFollowUpConfig(orgId),
+  ]);
   // No spec means a legacy install from before there was any UI to edit it, so
   // upgrading keeps its id and switch. A fresh one starts ON: it is the moat
-  // the plan is sold on and its copy was written and reviewed by us.
+  // the plan is sold on and its copy was written and reviewed by us — unless
+  // this org's pack is paused, in which case it comes back paused too.
   if (!nudge || nudge.spec === null) {
     await saveFollowUpFromSpec({
       orgId,
@@ -232,13 +244,13 @@ export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
       source: "pack",
       name: LEAD_NUDGE_NAME,
       templateNames: PACK_LEAD_NUDGE_TEMPLATE_NAMES,
-      ...(nudge ? { automationId: nudge.id } : { enabled: true }),
+      ...(nudge ? { automationId: nudge.id } : { enabled: config ? config.enabled : true }),
     });
   }
   await prisma.followUpConfig.upsert({
     where: { orgId },
     create: { orgId, enabled: true },
-    update: { enabled: true },
+    update: {},
   });
 }
 
@@ -253,21 +265,26 @@ export interface StarterSetOutcome {
 }
 
 /**
- * An org's starter set: install the tick-driven pack (its quiet-lead nudge
- * starts ON, as the installer has always done), then draft a tailored set on
- * top, which lands OFF. Both the owner's first open of /automations and the
- * founder's concierge onboarding run this, so a client sees exactly what we
- * set up for them. Never throws for a partial result — what was written is
- * always reported, and the caller writes the sentence.
+ * An org's starter set: install the tick-driven pack (a first install is
+ * switched on, a re-install leaves the client's switches exactly as they
+ * are), then draft a tailored set on top, which lands OFF. Both the owner's
+ * first open of /automations and the founder's concierge onboarding run this,
+ * so a client sees exactly what we set up for them. Never throws for a partial
+ * result — what was written is always reported, and the caller writes the
+ * sentence.
  */
-export async function writeStarterSet(orgId: string): Promise<StarterSetOutcome> {
+export async function writeStarterSet(
+  orgId: string,
+  /** Who pays for the drafting — the founder panel absorbs it (`concierge_draft`). */
+  purpose?: UsagePurpose
+): Promise<StarterSetOutcome> {
   await installRevenueRecoveryPack(orgId);
 
   // The pack is the part we promise; drafting is the bonus. Credits gone or
   // the provider down must not lose the install.
   let specs: FollowUpSpec[];
   try {
-    specs = await draftStarterSet({ orgId });
+    specs = await draftStarterSet({ orgId, purpose });
   } catch (err) {
     console.warn("[followup-starter-set] drafting failed", { orgId, err });
     return { created: 0, stopped: false, draftFailed: true, failed: false };

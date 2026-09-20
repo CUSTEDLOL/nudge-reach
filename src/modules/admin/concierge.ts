@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { checkAiFrontDesk } from "@/modules/billing/limits";
+import { checkAiFrontDesk, checkAutomationLimit } from "@/modules/billing/limits";
 import {
   buildBusinessInfo,
   getConciergeStatus,
@@ -130,13 +130,16 @@ export async function founderSetFollowUpsEnabled(orgId: string, enabled: boolean
 /**
  * Concierge drafting: one follow-up from a sentence, or the whole starter set
  * when `request` is empty — the same path the client's Follow-ups page uses,
- * so onboarding produces exactly what they will later see. Everything lands
- * OFF; the client switches it on.
+ * so onboarding produces exactly what they will later see. Drafted follow-ups
+ * land OFF; the ready-made pack is switched on only on a FIRST install (a
+ * re-run never un-pauses a client — see `installRevenueRecoveryPack`).
  *
  * Deliberately NOT flagship-gated: the founder sets a client up before they
- * are billed, and `founderSetupClient`'s gate already covers going live. But
- * drafting spends AI on us, so a below-plan draft says so in the founder's
- * toast AND in the org's audit row — never silently.
+ * are billed, and `founderSetupClient`'s gate already covers going live. The
+ * drafting is metered as `concierge_draft`, which the ledger absorbs — Nudge
+ * pays, and a trial or zero-credit org (what onboarding starts from) is never
+ * refused. A below-plan draft still says so, in the toast and in the org's
+ * audit row.
  */
 export async function founderDraftFollowUps(
   orgId: string,
@@ -150,12 +153,18 @@ export async function founderDraftFollowUps(
   const offPlan = gate.allowed ? "" : "below the AI Front Desk plan";
 
   let created = 0;
-  let note = "";
+  let target: string | null = null;
+  const lines: string[] = [];
+  const detail: string[] = [];
   const sentence = request.trim();
   if (sentence) {
+    // Same plan limit the client's own create honours — checked before we
+    // spend AI on a follow-up that could not be saved.
+    const limit = await checkAutomationLimit(orgId);
+    if (!limit.allowed) return { ok: false, error: limit.message };
     let spec;
     try {
-      spec = await draftFollowUp({ orgId, request: sentence.slice(0, 500) });
+      spec = await draftFollowUp({ orgId, request: sentence.slice(0, 500), purpose: "concierge_draft" });
     } catch (err) {
       // The drafter's own message is the useful one ("try rephrasing").
       return { ok: false, error: err instanceof Error ? err.message : "Couldn't draft that follow-up." };
@@ -165,33 +174,39 @@ export async function founderDraftFollowUps(
     if (!parsed.ok) return { ok: false, error: specErrorMessage(parsed.error) };
     await saveFollowUpFromSpec({ orgId, spec: parsed.spec, source: "ai" });
     created = 1;
+    target = parsed.spec.name;
   } else {
-    const outcome = await writeStarterSet(orgId);
+    const outcome = await writeStarterSet(orgId, "concierge_draft");
     created = outcome.created;
-    note = outcome.draftFailed
-      ? "Installed the ready-made pack, but couldn't draft the extra ones just now."
-      : outcome.stopped
-        ? "Stopped there — that's as many automations as this plan allows."
-        : outcome.failed
-          ? "Something went wrong after that, so the rest weren't written."
-          : "";
+    if (outcome.draftFailed) lines.push("Couldn't draft the extra ones just now.");
+    else if (outcome.stopped) lines.push("Stopped there — that's as many automations as this plan allows.");
+    else if (outcome.failed) lines.push("Something went wrong after that, so the rest weren't written.");
+    lines.push(
+      "Ready-made pack installed — switched on for a new client, left as it is for one already set up."
+    );
+    detail.push("ready-made pack installed");
   }
 
   await founderAudit(
     orgId,
     founderEmail,
     "admin.followups_drafted",
-    null,
-    withReason(`${created} drafted${offPlan ? ` ${offPlan}` : ""}`, reason)
+    target,
+    withReason([`${created} drafted`, ...detail, offPlan].filter(Boolean).join(", "), reason)
   );
   const headline = created
     ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} — off until the client switches them on.`
-    : note
+    : lines.length
       ? ""
       : "Nothing new — this client already has these follow-ups.";
   return {
     ok: true,
-    message: [headline, note, offPlan && `This workspace is ${offPlan}, so the drafting ran on us.`]
+    message: [
+      headline,
+      ...lines,
+      offPlan &&
+        `This workspace is ${offPlan} — the drafting ran on us, and the client can't switch these on until the plan changes.`,
+    ]
       .filter(Boolean)
       .join(" "),
   };

@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { generate } from "@/lib/model-router";
-import { recordSyntheticUsage } from "@/lib/model-router/usage";
+import { recordSyntheticUsage, type UsagePurpose } from "@/lib/model-router/usage";
 import { extractJson } from "@/modules/campaign/guardrails";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { PACK_TEMPLATES } from "@/modules/followup/pack";
@@ -15,7 +15,8 @@ import {
 
 /**
  * Turn a sentence (or a business profile) into FollowUpSpecs. Runs on the
- * router (RUNTIME_MODEL, BYOK-aware, credit-metered as followup_draft). The
+ * router (RUNTIME_MODEL, BYOK-aware, credit-metered as followup_draft — the
+ * founder panel passes `concierge_draft` instead, which Nudge absorbs). The
  * keyless path is deterministic so the whole flow demos with no API key
  * (invariant #4). Never load-bearing: every failure is a readable error and
  * nothing is saved until a spec validates.
@@ -116,13 +117,18 @@ export function parseDraftOutput(text: string, mode: "single" | "set"): DraftPar
   return { ok: true, specs };
 }
 
-async function draftWithModel(orgId: string, mode: "single" | "set", userPrompt: string): Promise<FollowUpSpec[]> {
+async function draftWithModel(
+  orgId: string,
+  mode: "single" | "set",
+  userPrompt: string,
+  purpose: UsagePurpose
+): Promise<FollowUpSpec[]> {
   const b = await loadBusinessContext(orgId);
   const system = systemPrompt(b);
   const shape = mode === "single" ? SINGLE_SHAPE : SET_SHAPE;
   // A 4–6 spec set with three messages each does not fit in a single-spec budget.
   const maxTokens = mode === "set" ? 4000 : 1200;
-  const attribution = { orgId, purpose: "followup_draft" } as const;
+  const attribution = { orgId, purpose } as const;
   let text = await generate({ system, prompt: `${userPrompt}\n\n${shape}`, maxTokens, attribution });
   let parsed = parseDraftOutput(text, mode);
   if (!parsed.ok) {
@@ -142,25 +148,42 @@ async function draftWithModel(orgId: string, mode: "single" | "set", userPrompt:
   return parsed.specs;
 }
 
-export async function draftFollowUp(opts: { orgId: string; request: string }): Promise<FollowUpSpec> {
+/** `purpose` is who pays: the owner's own drafting is `followup_draft`
+ *  (their credits); the founder's concierge setup is `concierge_draft`,
+ *  which the ledger absorbs. */
+export async function draftFollowUp(opts: {
+  orgId: string;
+  request: string;
+  purpose?: UsagePurpose;
+}): Promise<FollowUpSpec> {
   const request = opts.request.trim();
   if (!request) throw new Error("Describe the follow-up in a sentence first.");
+  const purpose = opts.purpose ?? "followup_draft";
   if (!env.ANTHROPIC_API_KEY) {
     const spec = draftOffline(request);
-    recordSyntheticUsage({ orgId: opts.orgId, purpose: "followup_draft" }, request, JSON.stringify(spec));
+    recordSyntheticUsage({ orgId: opts.orgId, purpose }, request, JSON.stringify(spec));
     return spec;
   }
-  const [spec] = await draftWithModel(opts.orgId, "single", `The owner asked for this follow-up: "${request}"`);
+  const [spec] = await draftWithModel(
+    opts.orgId,
+    "single",
+    `The owner asked for this follow-up: "${request}"`,
+    purpose
+  );
   return spec;
 }
 
-export async function draftStarterSet(opts: { orgId: string }): Promise<FollowUpSpec[]> {
+export async function draftStarterSet(opts: {
+  orgId: string;
+  purpose?: UsagePurpose;
+}): Promise<FollowUpSpec[]> {
+  const purpose = opts.purpose ?? "followup_draft";
   if (!env.ANTHROPIC_API_KEY) {
     const set = starterSetOffline();
-    recordSyntheticUsage({ orgId: opts.orgId, purpose: "followup_draft" }, "starter set", JSON.stringify(set));
+    recordSyntheticUsage({ orgId: opts.orgId, purpose }, "starter set", JSON.stringify(set));
     return set;
   }
-  return draftWithModel(opts.orgId, "set", "Write the starter set of follow-ups for this business.");
+  return draftWithModel(opts.orgId, "set", "Write the starter set of follow-ups for this business.", purpose);
 }
 
 // ---------------------------------------------------------------------------

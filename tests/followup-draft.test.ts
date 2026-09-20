@@ -146,6 +146,23 @@ describe("draftFollowUp / draftStarterSet without a key", () => {
       "Describe the follow-up in a sentence first."
     );
   });
+
+  // The founder's concierge drafting is absorbed (Nudge pays); the client's own
+  // drafting stays `followup_draft` and comes out of their credits.
+  it("meters the caller's purpose when one is given", async () => {
+    await draftFollowUp({ orgId: "o1", request: "welcome every new lead", purpose: "concierge_draft" });
+    expect(recordSyntheticUsage).toHaveBeenLastCalledWith(
+      { orgId: "o1", purpose: "concierge_draft" },
+      "welcome every new lead",
+      expect.any(String)
+    );
+    await draftStarterSet({ orgId: "o1", purpose: "concierge_draft" });
+    expect(recordSyntheticUsage).toHaveBeenLastCalledWith(
+      { orgId: "o1", purpose: "concierge_draft" },
+      "starter set",
+      expect.any(String)
+    );
+  });
 });
 
 const VALID_SINGLE = {
@@ -192,6 +209,16 @@ describe("draft with a key (model path)", () => {
     for (const [call] of generate.mock.calls) {
       expect(call.attribution).toEqual({ orgId: "o1", purpose: "followup_draft" });
     }
+  });
+
+  it("carries the caller's purpose into the model call's attribution", async () => {
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads", purpose: "concierge_draft" });
+    expect(generate.mock.calls[0][0].attribution).toEqual({ orgId: "o1", purpose: "concierge_draft" });
+
+    generate.mockResolvedValueOnce(JSON.stringify({ followUps: [VALID_SINGLE, VALID_BOOKED] }));
+    await draftStarterSet({ orgId: "o1", purpose: "concierge_draft" });
+    expect(generate.mock.calls[1][0].attribution).toEqual({ orgId: "o1", purpose: "concierge_draft" });
   });
 
   it("grounds the system prompt in the business, its active knowledge and the rules", async () => {

@@ -13,6 +13,7 @@ const m = vi.hoisted(() => ({
   stepCreateMany: vi.fn(),
   runUpdateMany: vi.fn(),
   configUpsert: vi.fn(),
+  configFindUnique: vi.fn(),
   tx: vi.fn(),
   sendMode: vi.fn(),
   submit: vi.fn(),
@@ -27,7 +28,7 @@ vi.mock("@/lib/db", () => ({
     automation: { findFirst: m.automationFindFirst, findMany: m.automationFindMany, create: m.automationCreate, update: m.automationUpdate },
     automationStep: { deleteMany: m.stepDeleteMany, createMany: m.stepCreateMany },
     automationRun: { updateMany: m.runUpdateMany },
-    followUpConfig: { upsert: m.configUpsert },
+    followUpConfig: { upsert: m.configUpsert, findUnique: m.configFindUnique },
     $transaction: m.tx,
   },
 }));
@@ -70,6 +71,7 @@ beforeEach(() => {
   m.stepCreateMany.mockImplementation(async () => { m.calls.push("step.createMany"); return { count: 0 }; });
   m.runUpdateMany.mockResolvedValue({ count: 0 });
   m.configUpsert.mockResolvedValue({});
+  m.configFindUnique.mockResolvedValue(null);
   m.templateFindMany.mockResolvedValue([]);
 });
 
@@ -240,6 +242,28 @@ describe("installRevenueRecoveryPack", () => {
     expect(m.templateCreate.mock.calls.map((c) => c[0].data.name).some((n: string) => n.startsWith("lead_nudge"))).toBe(false);
   });
 
+  /**
+   * A re-install is not a resume. The founder's "write starter set" and the
+   * client's own first open both call this, and neither may start real
+   * outbound sends a paused client switched off — only
+   * `toggleRevenueRecoveryAction`'s explicit `setFollowUpEnabled(true)` does.
+   */
+  it("switches a fresh install on, and leaves a paused client's config alone", async () => {
+    m.automationFindFirst.mockResolvedValue({ id: "nudge", spec });
+    await installRevenueRecoveryPack("o1");
+    const args = m.configUpsert.mock.calls[0][0];
+    expect(args.where).toEqual({ orgId: "o1" });
+    expect(args.create).toMatchObject({ orgId: "o1", enabled: true });
+    expect(args.update).toEqual({});
+  });
+
+  it("re-creates a deleted nudge off when the client's follow-ups are paused", async () => {
+    m.configFindUnique.mockResolvedValue({ enabled: false });
+    m.automationFindFirst.mockResolvedValueOnce(null);
+    await installRevenueRecoveryPack("o1");
+    expect(m.automationCreate.mock.calls[0][0].data).toMatchObject({ enabled: false });
+  });
+
   it("upgrades a legacy campaign-reply install (no spec) in place, keeping its id and switch", async () => {
     const legacy = {
       id: "legacy",
@@ -323,6 +347,12 @@ describe("writeStarterSet", () => {
     expect(createdNames()).toEqual(["Quiet-lead chase", "Welcome"]);
     expect(m.automationCreate.mock.calls.every((c) => c[0].data.enabled === false)).toBe(true);
     expect(m.automationCreate.mock.calls.every((c) => c[0].data.source === "ai")).toBe(true);
+  });
+
+  it("forwards the caller's metering purpose to the drafter", async () => {
+    m.draftStarterSet.mockResolvedValue([]);
+    await writeStarterSet("o1", "concierge_draft");
+    expect(m.draftStarterSet).toHaveBeenCalledWith({ orgId: "o1", purpose: "concierge_draft" });
   });
 
   it("skips a name the org already has, whatever its casing", async () => {

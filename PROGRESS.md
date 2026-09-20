@@ -34,7 +34,12 @@
   card are gone. **Founder panel**: the same drafting per org from
   `/admin/orgs/[id]/agent`, not flagship-gated (we set a client up before they
   are billed) but never silent — a below-plan draft says so in the toast and in
-  the audit detail.
+  the audit detail. Concierge drafting is metered as `concierge_draft`, which
+  the ledger **absorbs** (like ingest/distill): Nudge pays, it is never
+  preflighted, so a trial or zero-credit client can still be set up. "Write
+  starter set" switches the ready-made pack on for a client who does not have
+  it yet and never un-pauses one who switched follow-ups off — a re-install
+  leaves an existing config's `enabled` alone.
 
 **Two founder decisions recorded along the way (2026-09-20)**
 

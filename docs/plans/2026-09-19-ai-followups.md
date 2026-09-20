@@ -4902,8 +4902,20 @@ the end of this document — see **Deferred**.)
 - The starter-set sequence is the lifted `writeStarterSet`, not a copy.
 - `founderDraftFollowUps` is **not** flagship-gated: the founder sets a client
   up before they are billed. It is not silent either — a below-plan draft says
-  "This workspace is below the AI Front Desk plan, so the drafting ran on us."
-  in the toast, and " below the AI Front Desk plan" in the audit detail.
+  so in the toast and in the audit detail.
+- **Concierge drafting is absorbed** (review fix): a new `concierge_draft`
+  `UsagePurpose` joins ingest/distill in `isAbsorbedPurpose`, so the founder's
+  drafting is never preflighted and never debited to the client — a trial or
+  zero-credit org (what onboarding starts from) can still be set up, and the
+  toast's "the drafting ran on us" is true. `draftFollowUp` / `draftStarterSet`
+  / `writeStarterSet` take an optional `purpose` (default `followup_draft`, so
+  the client still pays for their own drafting).
+- **A re-install is not a resume** (review fix): `installRevenueRecoveryPack`'s
+  config upsert is `update: {}`, and a re-created nudge inherits the pack's
+  current `enabled`. A first install is still switched on — that is what the
+  client buys — so the card and its confirm dialog say exactly that.
+- The sentence path checks `checkAutomationLimit` before spending AI, and the
+  audit row's `target` is the automation's name.
 - The founder draft parses the spec (`parseFollowUpSpec` → `specErrorMessage`)
   before saving, like the client's create action, and passes the drafter's own
   failure sentence through instead of the generic founder-action message.

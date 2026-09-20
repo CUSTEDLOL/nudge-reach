@@ -17,6 +17,7 @@ const m = vi.hoisted(() => ({
   writeStarterSet: vi.fn(),
   founderAudit: vi.fn(),
   checkAiFrontDesk: vi.fn(),
+  checkAutomationLimit: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: { org: { findUnique: m.orgFindUnique } } }));
@@ -27,13 +28,17 @@ vi.mock("@/modules/followup/install", () => ({
   installRevenueRecoveryPack: vi.fn(),
   setFollowUpEnabled: vi.fn(),
 }));
-vi.mock("@/modules/billing/limits", () => ({ checkAiFrontDesk: m.checkAiFrontDesk }));
+vi.mock("@/modules/billing/limits", () => ({
+  checkAiFrontDesk: m.checkAiFrontDesk,
+  checkAutomationLimit: m.checkAutomationLimit,
+}));
 vi.mock("@/modules/admin/audit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/admin/audit")>()),
   founderAudit: m.founderAudit,
 }));
 
 import { founderDraftFollowUps } from "@/modules/admin/concierge";
+import { isAbsorbedPurpose } from "@/modules/billing/credits";
 
 const spec = (over: Record<string, unknown> = {}) => ({
   name: "Quiet-lead chase",
@@ -56,6 +61,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.orgFindUnique.mockResolvedValue({ id: "org1" });
   m.checkAiFrontDesk.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
+  m.checkAutomationLimit.mockResolvedValue({ allowed: true, message: "", used: 0, limit: null });
   m.draftFollowUp.mockResolvedValue(spec());
   m.saveFollowUpFromSpec.mockResolvedValue({ id: "auto1" });
   m.writeStarterSet.mockResolvedValue(outcome());
@@ -73,6 +79,8 @@ describe("founderDraftFollowUps — a sentence", () => {
     expect(m.draftFollowUp).toHaveBeenCalledWith({
       orgId: "org1",
       request: "chase anyone who asked about pricing but didn't book, after 2 days",
+      // Absorbed: concierge work is never charged to the client's credits.
+      purpose: "concierge_draft",
     });
     const saved = m.saveFollowUpFromSpec.mock.calls[0][0];
     expect(saved).toMatchObject({ orgId: "org1", source: "ai" });
@@ -95,7 +103,8 @@ describe("founderDraftFollowUps — a sentence", () => {
       "org1",
       "founder@nudge.test",
       "admin.followups_drafted",
-      null,
+      // The client's audit log names the automation that appeared.
+      "Quiet-lead chase",
       "1 drafted — reason: onboarding call"
     );
   });
@@ -104,6 +113,20 @@ describe("founderDraftFollowUps — a sentence", () => {
     m.draftFollowUp.mockRejectedValue(new Error("We couldn't write that follow-up just now — try rephrasing."));
     const res = await founderDraftFollowUps("org1", "chase quiet leads", "founder@nudge.test");
     expect(res).toEqual({ ok: false, error: "We couldn't write that follow-up just now — try rephrasing." });
+    expect(m.saveFollowUpFromSpec).not.toHaveBeenCalled();
+    expect(m.founderAudit).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the plan's automation limit is already reached, before drafting", async () => {
+    m.checkAutomationLimit.mockResolvedValue({
+      allowed: false,
+      message: "You've reached the Starter plan's limit of 3 automations.",
+      used: 3,
+      limit: 3,
+    });
+    const res = await founderDraftFollowUps("org1", "chase quiet leads", "founder@nudge.test");
+    expect(res).toEqual({ ok: false, error: "You've reached the Starter plan's limit of 3 automations." });
+    expect(m.draftFollowUp).not.toHaveBeenCalled();
     expect(m.saveFollowUpFromSpec).not.toHaveBeenCalled();
     expect(m.founderAudit).not.toHaveBeenCalled();
   });
@@ -123,7 +146,7 @@ describe("founderDraftFollowUps — the starter set", () => {
   it("writes the client's starter set when the box is empty", async () => {
     m.writeStarterSet.mockResolvedValue(outcome({ created: 3 }));
     const res = await founderDraftFollowUps("org1", "   ", "founder@nudge.test", "onboarding call");
-    expect(m.writeStarterSet).toHaveBeenCalledWith("org1");
+    expect(m.writeStarterSet).toHaveBeenCalledWith("org1", "concierge_draft");
     expect(m.draftFollowUp).not.toHaveBeenCalled();
     expect(res.ok && res.message).toContain("3 follow-ups");
     expect(res.ok && res.message).toMatch(/off/i);
@@ -132,7 +155,9 @@ describe("founderDraftFollowUps — the starter set", () => {
       "founder@nudge.test",
       "admin.followups_drafted",
       null,
-      "3 drafted — reason: onboarding call"
+      // The pack is the part that goes live for a new client — say so where the
+      // client can read it.
+      "3 drafted, ready-made pack installed — reason: onboarding call"
     );
   });
 
@@ -166,6 +191,14 @@ describe("founderDraftFollowUps — the starter set", () => {
 });
 
 describe("founderDraftFollowUps — guards", () => {
+  // The toast says "the drafting ran on us". This is the line that makes it
+  // true: an absorbed purpose is never preflighted, so a zero-credit or trial
+  // org — exactly what concierge onboarding starts from — can still be set up.
+  it("meters concierge drafting as absorbed, never against the client's credits", () => {
+    expect(isAbsorbedPurpose("concierge_draft")).toBe(true);
+    expect(isAbsorbedPurpose("followup_draft")).toBe(false);
+  });
+
   it("refuses an org that doesn't exist, before anything costs AI", async () => {
     m.orgFindUnique.mockResolvedValue(null);
     const res = await founderDraftFollowUps("nope", "chase quiet leads", "founder@nudge.test");
@@ -181,6 +214,7 @@ describe("founderDraftFollowUps — guards", () => {
     expect(res.ok).toBe(true);
     expect(m.saveFollowUpFromSpec).toHaveBeenCalled();
     expect(res.ok && res.message).toMatch(/below the AI Front Desk plan/i);
+    expect(res.ok && res.message).toMatch(/ran on us/i);
     expect(m.founderAudit.mock.calls[0][4]).toContain("below the AI Front Desk plan");
   });
 });

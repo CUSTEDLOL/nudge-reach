@@ -35,6 +35,9 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
     }),
   ]);
   const H = { orgId: id };
+  // The pack and any drafted set are what "write starter set" would create; only
+  // hand-built automations leave it available (and it must not be paid for twice).
+  const hasStarterSet = followUps.some((a) => a.source !== "builder");
   const p = d.profile;
 
   return (
@@ -136,8 +139,10 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
         <CardHeader>
           <CardTitle>Follow-ups ({followUps.length})</CardTitle>
           <CardDescription>
-            The same drafting the client gets on their Follow-ups page, run for them. Everything lands off — the
-            client switches it on from /automations.
+            The same drafting the client gets on their Follow-ups page, run for them. Drafted follow-ups land
+            <strong> off</strong>; the ready-made pack is switched <strong>on</strong> for a client who does not
+            have it yet, so its reminders and chases start sending. Nothing here un-pauses a client who switched
+            follow-ups off.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -154,22 +159,33 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
             {followUps.length === 0 && <li className="py-1.5 text-neutral-400">None yet.</li>}
           </ul>
           <div className="grid items-end gap-4 sm:grid-cols-2">
-            <ActionForm
-              action={draftFollowUpsAction}
-              hidden={H}
-              submitLabel="Write starter set"
-              confirm={{
-                title: `Write the starter set for ${org?.name ?? "this client"}?`,
-                description:
-                  "Installs the ready-made pack, then drafts a tailored set from what the agent knows. The drafted ones land off.",
-              }}
-              askReason
-            />
+            <div className="space-y-2">
+              <ActionForm
+                action={draftFollowUpsAction}
+                hidden={H}
+                submitLabel="Write starter set"
+                disabled={hasStarterSet}
+                confirm={{
+                  title: `Write the starter set for ${org?.name ?? "this client"}?`,
+                  description:
+                    "Installs the ready-made pack and switches it ON for a client who doesn't have it yet — reminders, no-show rebooks and the quiet-lead chase start sending. A client who already has it keeps their switches exactly as they are. The tailored follow-ups it then drafts land off.",
+                }}
+                askReason
+              />
+              {hasStarterSet && (
+                <p className="text-xs text-neutral-400">
+                  Already set up — use the sentence box for anything more.
+                </p>
+              )}
+            </div>
             <ActionForm
               action={draftFollowUpsAction}
               hidden={H}
               submitLabel="Draft from a sentence"
-              confirm={{ title: "Draft this follow-up?", description: "It lands off, for the client to switch on." }}
+              confirm={{
+                title: "Draft this follow-up?",
+                description: "One follow-up, off until the client switches it on. Nothing else changes.",
+              }}
               askReason
               className="space-y-2"
             >

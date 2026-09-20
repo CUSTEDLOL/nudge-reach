@@ -17,6 +17,8 @@ export type UsagePurpose =
   | "ingest"
   | "campaign_copy"
   | "followup_draft"
+  /** Founder-side concierge setup work — absorbed, never charged to the client. */
+  | "concierge_draft"
   | "summary";
 
 export interface Attribution {
