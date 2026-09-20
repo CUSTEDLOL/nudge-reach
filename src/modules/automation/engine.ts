@@ -185,17 +185,26 @@ export async function cancelWaitingRuns(
   try {
     const waiting = await prisma.automationRun.findMany({
       where: { orgId, contactId, status: "WAITING" },
-      select: { id: true, log: true, automation: { select: { spec: true } } },
+      select: { id: true, currentStep: true, log: true, automation: { select: { spec: true } } },
     });
     let cancelled = 0;
     for (const run of waiting) {
       if (!shouldCancelOnSignal(run.automation.spec, signal)) continue;
-      const log = [...normalizeLogEntries(run.log), logEntry(0, "cancel", true, CANCEL_DETAIL[signal])];
-      await prisma.automationRun.update({
-        where: { id: run.id },
-        data: { status: "CANCELLED", resumeAt: null, log: toJson(log) },
-      });
-      cancelled++;
+      const log = [
+        ...normalizeLogEntries(run.log),
+        logEntry(run.currentStep + 1, "cancel", true, CANCEL_DETAIL[signal]),
+      ];
+      try {
+        // Claim atomically, mirroring the tick: a run the tick has already
+        // moved to RUNNING is past cancelling and must not be overwritten.
+        const claimed = await prisma.automationRun.updateMany({
+          where: { id: run.id, status: "WAITING" },
+          data: { status: "CANCELLED", resumeAt: null, log: toJson(log) },
+        });
+        if (claimed.count === 1) cancelled++;
+      } catch (error) {
+        console.error(`[automations] cancelWaitingRuns: run ${run.id} not cancelled`, error);
+      }
     }
     return cancelled;
   } catch (error) {

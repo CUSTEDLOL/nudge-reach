@@ -123,7 +123,10 @@ const STEP_DETAILS: Record<StepKind, { description: string; icon: LucideIcon }> 
     description: "Move the contact along your pipeline.",
     icon: TrendingUp,
   },
-  wait: { description: "Pause the run for a number of minutes.", icon: Clock },
+  wait: {
+    description: "Pause the run. Cancelled if the customer replies, books or pays first.",
+    icon: Clock,
+  },
   resolve_conversation: {
     description: "Mark the conversation resolved.",
     icon: CheckCircle2,

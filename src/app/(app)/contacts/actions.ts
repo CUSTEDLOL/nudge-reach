@@ -17,6 +17,7 @@ import { checkContactLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { fireContactCreated, fireTagAdded } from "@/modules/automation/triggers";
+import { cancelWaitingRuns } from "@/modules/automation/engine";
 
 export interface ActionResult {
   ok: boolean;
@@ -322,6 +323,8 @@ export async function optOutContact(
       contactId: id,
       props: { source: "manual" },
     });
+    // Nothing may keep chasing an opted-out contact (rule 2).
+    await cancelWaitingRuns(ctx.org.id, id, "opt_out");
   }
   revalidateContact(id);
   return res.count > 0
