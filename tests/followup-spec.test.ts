@@ -46,9 +46,9 @@ describe("parseFollowUpSpec", () => {
     expect(r.ok && r.spec.messages[0].footer).toBe("");
   });
 
-  it("a booked spec with no stopOn defaults to booking + payment — a reply must not end it", () => {
+  it("a booked spec with no stopOn defaults to booking only — neither a reply nor a payment ends it", () => {
     const r = parseFollowUpSpec(booked);
-    expect(r.ok && r.spec.stopOn).toEqual(["booking", "payment"]);
+    expect(r.ok && r.spec.stopOn).toEqual(["booking"]);
   });
 
   it("a booked spec that names stopOn keeps it", () => {
@@ -129,8 +129,16 @@ describe("plain-English descriptions", () => {
 
 describe("shouldCancelOnSignal", () => {
   const chase = { situation: { kind: "went_quiet", afterDays: 2 } };
-  const afterBooking = { situation: { kind: "booked" }, stopOn: ["booking", "payment"] };
+  const afterBooking = { situation: { kind: "booked" }, stopOn: ["booking"] };
 
+  it("a payment cancels a chase on its default stopOn, but not a booked follow-up on its default", () => {
+    const b = parseFollowUpSpec(booked);
+    const q = parseFollowUpSpec(quiet);
+    expect(b.ok && q.ok).toBe(true);
+    if (!b.ok || !q.ok) return;
+    expect(shouldCancelOnSignal(b.spec, "payment")).toBe(false);
+    expect(shouldCancelOnSignal(q.spec, "payment")).toBe(true);
+  });
   it("an opt-out always cancels, whatever the spec says", () => {
     expect(shouldCancelOnSignal({ stopOn: [] }, "opt_out")).toBe(true);
     expect(shouldCancelOnSignal(afterBooking, "opt_out")).toBe(true);

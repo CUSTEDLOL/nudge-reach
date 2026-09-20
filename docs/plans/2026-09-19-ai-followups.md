@@ -126,9 +126,9 @@ describe("parseFollowUpSpec", () => {
     expect(r.ok && r.spec.messages[0].footer).toBe("");
   });
 
-  it("a booked spec with no stopOn defaults to booking + payment — a reply must not end it", () => {
+  it("a booked spec with no stopOn defaults to booking only — neither a reply nor a payment ends it", () => {
     const r = parseFollowUpSpec(booked);
-    expect(r.ok && r.spec.stopOn).toEqual(["booking", "payment"]);
+    expect(r.ok && r.spec.stopOn).toEqual(["booking"]);
   });
 
   it("a booked spec that names stopOn keeps it", () => {
@@ -209,8 +209,16 @@ describe("plain-English descriptions", () => {
 
 describe("shouldCancelOnSignal", () => {
   const chase = { situation: { kind: "went_quiet", afterDays: 2 } };
-  const afterBooking = { situation: { kind: "booked" }, stopOn: ["booking", "payment"] };
+  const afterBooking = { situation: { kind: "booked" }, stopOn: ["booking"] };
 
+  it("a payment cancels a chase on its default stopOn, but not a booked follow-up on its default", () => {
+    const b = parseFollowUpSpec(booked);
+    const q = parseFollowUpSpec(quiet);
+    expect(b.ok && q.ok).toBe(true);
+    if (!b.ok || !q.ok) return;
+    expect(shouldCancelOnSignal(b.spec, "payment")).toBe(false);
+    expect(shouldCancelOnSignal(q.spec, "payment")).toBe(true);
+  });
   it("an opt-out always cancels, whatever the spec says", () => {
     expect(shouldCancelOnSignal({ stopOn: [] }, "opt_out")).toBe(true);
     expect(shouldCancelOnSignal(afterBooking, "opt_out")).toBe(true);
@@ -313,8 +321,10 @@ export type SpecParseResult =
  * over-long body is rejected with a clear error instead.
  * A went_quiet spec's first message always sends the moment the trigger
  * fires — the delay already lives in `afterDays` on the situation.
- * A booked spec that arrives without `stopOn` defaults to booking + payment,
- * not the schema's all-three: a booked customer is expected to reply.
+ * A booked spec that arrives without `stopOn` defaults to `["booking"]`, not
+ * the schema's all-three: a booked customer is expected to reply and to pay a
+ * deposit, and neither may end the reminder or review ask that follows — only
+ * a new booking supersedes the old one's follow-up.
  */
 export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   const candidate =
@@ -352,7 +362,7 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   if (spec.situation.kind === "went_quiet" && spec.messages[0].afterDays !== 0) {
     spec.messages[0] = { ...spec.messages[0], afterDays: 0 };
   }
-  if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking", "payment"];
+  if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking"];
   return { ok: true, spec };
 }
 
@@ -393,8 +403,10 @@ const cancelPolicySchema = followUpSpecSchema.pick({ situation: true, stopOn: tr
  * with one exception: a follow-up built on the `booked` situation keeps going
  * unless its stopOn names `reply` — a booked customer is expected to reply,
  * and that must not cancel the reminder or review ask. Booking and payment
- * are the owner's choice via stopOn. An automation with no spec (hand-built)
- * takes the safe default and cancels on everything.
+ * are the owner's choice via stopOn; a booked spec's default stopOn is
+ * `["booking"]` alone, so paying a deposit does not end it either. An
+ * automation with no spec (hand-built) takes the safe default and cancels on
+ * everything.
  */
 export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): boolean {
   if (signal === "opt_out") return true;
@@ -408,12 +420,12 @@ export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): bo
 }
 ```
 
-Cancel policy (founder decision 2026-09-20, after Task 6 shipped): a reply cancels every chase situation whatever `stopOn` says, but NOT a follow-up on the `booked` situation unless its `stopOn` names `reply` — "thanks, see you then" after booking was cancelling the reminder and the review ask. `shouldCancelOnSignal` therefore parses `situation` as well as `stopOn` (`cancelPolicySchema`), and `parseFollowUpSpec` defaults a booked spec that arrives without `stopOn` to `["booking", "payment"]` rather than the schema's all-three. A spec with no parseable situation (a hand-built automation) still cancels on everything.
+Cancel policy (founder decision 2026-09-20, after Task 6 shipped): a reply cancels every chase situation whatever `stopOn` says, but NOT a follow-up on the `booked` situation unless its `stopOn` names `reply` — "thanks, see you then" after booking was cancelling the reminder and the review ask. `shouldCancelOnSignal` therefore parses `situation` as well as `stopOn` (`cancelPolicySchema`), and `parseFollowUpSpec` defaults a booked spec that arrives without `stopOn` to `["booking"]` rather than the schema's all-three — a payment must not end a booked follow-up either (a deposit paid right after booking was killing the review ask; same founder decision), so only a new booking supersedes the old one's follow-up. A spec with no parseable situation (a hand-built automation) still cancels on everything. Task 8's drafter must follow suit: its booked starters carry `stopOn: ["booking"]` and the AI prompt tells the model to omit `stopOn` for booked situations.
 
 **Step 4: Run to verify it passes**
 
 Run: `npx vitest run tests/followup-spec.test.ts`
-Expected: PASS, 17 tests.
+Expected: PASS, 18 tests.
 
 **Step 5: Commit**
 
@@ -1681,7 +1693,8 @@ const CANCEL_DETAIL: Record<CancelSignal, string> = {
 
 /**
  * The customer did something that makes chasing them wrong: end every run
- * that is waiting to message them. A reply or opt-out always cancels; booking
+ * that is waiting to message them. An opt-out always cancels; a reply cancels
+ * every chase but not a booked follow-up (see shouldCancelOnSignal); booking
  * and payment respect the follow-up's stopOn. Never throws — cancellation
  * rides on inbound/booking/payment paths that must not break because of it.
  * Returns how many runs were cancelled.
@@ -2093,6 +2106,7 @@ function systemPrompt(b: BusinessContext): string {
     "- header: under 50 characters. footer: leave empty (we add the opt-out).",
     "- category: MARKETING for anything promotional or a chase; UTILITY only for a transactional message about a booking the customer made.",
     `- afterDays: days after the previous message (0 = immediately), max ${MAX_GAP_DAYS}. For went_quiet the first message is always 0 — the waiting is in the situation.`,
+    "- For booked situations omit stopOn — we default it.",
     `- Tone: ${b.tone}.`,
     b.doNots ? `- Never: ${b.doNots}` : "",
     b.businessInfo ? `\nAbout the business:\n${b.businessInfo}` : "",
@@ -2205,7 +2219,7 @@ export function draftOffline(request: string): FollowUpSpec {
         name: "Review ask",
         situation: { kind: "booked" },
         messages: [{ afterDays: daysIn(r, 1), ...packCopy("review_ask") }],
-        stopOn: ["reply", "booking", "payment"],
+        stopOn: ["booking"],
       };
     }
     if (/book|appointment|confirm/.test(r)) {
@@ -2213,7 +2227,7 @@ export function draftOffline(request: string): FollowUpSpec {
         name: "After booking",
         situation: { kind: "booked" },
         messages: [{ afterDays: 0, ...packCopy("appt_reminder_24h") }],
-        stopOn: ["reply", "booking", "payment"],
+        stopOn: ["booking"],
       };
     }
     if (/new lead|first message|welcome/.test(r)) {
@@ -2257,13 +2271,13 @@ export function starterSetOffline(vertical: string): FollowUpSpec[] {
       name: `Before your ${visit}`,
       situation: { kind: "booked" },
       messages: [{ afterDays: 0, ...packCopy("appt_reminder_24h") }],
-      stopOn: ["reply", "booking", "payment"],
+      stopOn: ["booking"],
     },
     {
       name: "Review ask",
       situation: { kind: "booked" },
       messages: [{ afterDays: 1, ...packCopy("review_ask") }],
-      stopOn: ["reply", "booking", "payment"],
+      stopOn: ["booking"],
     },
     {
       name: "Welcome new leads",

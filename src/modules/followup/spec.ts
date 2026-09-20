@@ -69,8 +69,10 @@ export type SpecParseResult =
  * over-long body is rejected with a clear error instead.
  * A went_quiet spec's first message always sends the moment the trigger
  * fires — the delay already lives in `afterDays` on the situation.
- * A booked spec that arrives without `stopOn` defaults to booking + payment,
- * not the schema's all-three: a booked customer is expected to reply.
+ * A booked spec that arrives without `stopOn` defaults to `["booking"]`, not
+ * the schema's all-three: a booked customer is expected to reply and to pay a
+ * deposit, and neither may end the reminder or review ask that follows — only
+ * a new booking supersedes the old one's follow-up.
  */
 export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   const candidate =
@@ -108,7 +110,7 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   if (spec.situation.kind === "went_quiet" && spec.messages[0].afterDays !== 0) {
     spec.messages[0] = { ...spec.messages[0], afterDays: 0 };
   }
-  if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking", "payment"];
+  if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking"];
   return { ok: true, spec };
 }
 
@@ -149,8 +151,10 @@ const cancelPolicySchema = followUpSpecSchema.pick({ situation: true, stopOn: tr
  * with one exception: a follow-up built on the `booked` situation keeps going
  * unless its stopOn names `reply` — a booked customer is expected to reply,
  * and that must not cancel the reminder or review ask. Booking and payment
- * are the owner's choice via stopOn. An automation with no spec (hand-built)
- * takes the safe default and cancels on everything.
+ * are the owner's choice via stopOn; a booked spec's default stopOn is
+ * `["booking"]` alone, so paying a deposit does not end it either. An
+ * automation with no spec (hand-built) takes the safe default and cancels on
+ * everything.
  */
 export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): boolean {
   if (signal === "opt_out") return true;

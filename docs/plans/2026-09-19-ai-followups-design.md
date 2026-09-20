@@ -52,7 +52,7 @@ FollowUpSpec
      keyword        { keywords[] }           sent a keyword
      new_lead       { }                      first ever message
   messages    — 1..3 of { afterDays, category, header, body, footer, buttons? }
-  stopOn      — subset of reply | booking | payment   (default: all three)
+  stopOn      — subset of reply | booking | payment   (default: all three for chases; [booking] for booked)
 ```
 
 A pure, unit-tested **compiler** (`modules/followup/compile.ts`) turns a spec into
@@ -107,11 +107,13 @@ A reply cancels every chase — `went_quiet`, `campaign_reply`, `keyword`,
 does **not** cancel a follow-up built on the `booked` situation unless its
 `stopOn` names `reply` (founder decision 2026-09-20: a customer saying "thanks,
 see you then" after booking was cancelling the reminder and the post-visit
-review ask). A booked spec that arrives without `stopOn` therefore defaults to
-`["booking", "payment"]`, not all three. Booking and payment cancel runs whose
-`spec.stopOn` includes them; automations without a spec take the default (cancel
-on all). Opt-out always cancels. The pack and every builder-made automation get
-the fix for free.
+review ask). A booked follow-up is not cancelled by a payment either — a deposit
+paid right after booking was killing the review ask — so a booked spec that
+arrives without `stopOn` defaults to `["booking"]`: only a new booking supersedes
+the old one's follow-up (founder decision 2026-09-20). Booking and payment cancel
+runs whose `spec.stopOn` includes them; automations without a spec take the
+default (cancel on all). Opt-out always cancels. The pack and every builder-made
+automation get the fix for free.
 
 **`conversation_quiet` trigger.** Added to `AUTOMATION_TRIGGERS`; config
 `{ hours, stage? }`. Evaluated on the cron tick by `fireQuietConversations(now)`

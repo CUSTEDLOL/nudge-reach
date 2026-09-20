@@ -172,7 +172,8 @@ const CANCEL_DETAIL: Record<CancelSignal, string> = {
 
 /**
  * The customer did something that makes chasing them wrong: end every run
- * that is waiting to message them. A reply or opt-out always cancels; booking
+ * that is waiting to message them. An opt-out always cancels; a reply cancels
+ * every chase but not a booked follow-up (see shouldCancelOnSignal); booking
  * and payment respect the follow-up's stopOn. Never throws — cancellation
  * rides on inbound/booking/payment paths that must not break because of it.
  * Returns how many runs were cancelled.
