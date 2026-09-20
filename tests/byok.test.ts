@@ -86,7 +86,9 @@ describe("guard v2", () => {
 
   it("the BYO allow-list is curated per provider and rejects everything else", () => {
     expect(isByokModelAllowed("openai", "gpt-5-mini")).toBe(true);
-    expect(isByokModelAllowed("google", "gemini-3-flash")).toBe(true);
+    expect(isByokModelAllowed("google", "gemini-3.8-flash")).toBe(true);
+    // The bare alias was never a real Google id — it must stay rejected.
+    expect(isByokModelAllowed("google", "gemini-3-flash")).toBe(false);
     expect(isByokModelAllowed("anthropic", "claude-sonnet-5")).toBe(true);
     expect(isByokModelAllowed("anthropic", "claude-opus-5")).toBe(false);
     expect(isByokModelAllowed("openai", "made-up-model")).toBe(false);
@@ -147,13 +149,16 @@ describe("byokStatus", () => {
     expect((status as { reason: string }).reason).toMatch(/key/i);
   });
 
-  it("resolves an allow-listed-but-nonexistent model as active — the allow-list, not resolution, is what is wrong about gemini-3-pro", async () => {
+  it("an org still saved on the retired gemini-3-pro alias now falls back visibly", async () => {
     prisma.llmAccount.findUnique.mockResolvedValue(
       ACCOUNT({ provider: "google", model: "gemini-3-pro" })
     );
-    // It passes every local check and goes to Google, which rejects the id.
-    // byokStatus cannot catch this; only fixing BYOK_ALLOWED_MODELS can.
-    expect(await byokStatus("org1")).toMatchObject({ state: "active" });
+    // Before the allow-list was corrected this resolved as `active`, went to
+    // Google, and was rejected there — a hard failure with nothing in our own
+    // UI to explain it. Now it is a named fallback the founder panel shows.
+    const status = await byokStatus("org1");
+    expect(status.state).toBe("fallback");
+    expect((status as { reason: string }).reason).toMatch(/allow-list/i);
   });
 
   it("agrees with getByokRuntime: a non-active status always means the platform pays", async () => {

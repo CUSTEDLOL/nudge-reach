@@ -65,10 +65,21 @@ export const MODEL_RATES: Record<string, ModelRate> = {
     cacheWrite: 250_000,
   },
   // --- BYO-Google --------------------------------------------------------
-  // Deliberately absent: `gemini-3-pro` / `gemini-3-flash` (the ids in
-  // BYOK_ALLOWED_MODELS) are not on Google's published price sheet, so there
-  // is no rate to state. They fall to the conservative estimate below rather
-  // than to an invented number. See docs/plans/2026-09-20-ai-cost-accuracy.md.
+  // Context caching is implicit; no write surcharge, as with OpenAI.
+  // NOTE: both Flash rates are PROMOTIONAL through 2026-12-31 and rise to
+  // $1.50 / $7.50 on 2027-01-01 — diarise a re-check.
+  "gemini-3.8-flash": {
+    input: 750_000,
+    output: 3_750_000,
+    cacheRead: 75_000,
+    cacheWrite: 750_000,
+  },
+  "gemini-3.7-flash": {
+    input: 750_000,
+    output: 3_750_000,
+    cacheRead: 75_000,
+    cacheWrite: 750_000,
+  },
 };
 
 export class UnpricedModelError extends Error {
