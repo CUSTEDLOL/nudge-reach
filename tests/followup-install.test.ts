@@ -156,12 +156,43 @@ describe("installRevenueRecoveryPack", () => {
 
     vi.clearAllMocks();
     m.sendMode.mockResolvedValue("simulation");
-    m.automationFindFirst.mockResolvedValueOnce({ id: "existing" });
+    m.automationFindFirst.mockResolvedValueOnce({ id: "existing", spec });
     m.templateFindFirst.mockResolvedValue(null);
     m.templateCreate.mockImplementation(async ({ data }) => ({ id: "t", ...data }));
     m.configUpsert.mockResolvedValue({});
     await installRevenueRecoveryPack("o1");
     expect(m.automationCreate).not.toHaveBeenCalled();
+    expect(m.automationUpdate).not.toHaveBeenCalled();
     expect(m.templateCreate.mock.calls.map((c) => c[0].data.name).some((n: string) => n.startsWith("lead_nudge"))).toBe(false);
+  });
+
+  it("upgrades a legacy campaign-reply install (no spec) in place, keeping its id and switch", async () => {
+    const legacy = {
+      id: "legacy",
+      orgId: "o1",
+      spec: null,
+      steps: [
+        { order: 1, kind: "wait", config: { minutes: 4320 } },
+        { order: 2, kind: "send_template", config: { templateId: "old1" } },
+        { order: 3, kind: "wait", config: { minutes: 4320 } },
+        { order: 4, kind: "send_template", config: { templateId: "old2" } },
+      ],
+    };
+    // Looked up twice: the installer's own check, then saveFollowUpFromSpec's update path.
+    m.automationFindFirst.mockResolvedValueOnce({ id: "legacy", spec: null }).mockResolvedValueOnce(legacy);
+    await installRevenueRecoveryPack("o1");
+    expect(m.automationCreate).not.toHaveBeenCalled();
+    expect(m.templateFindMany).not.toHaveBeenCalled();
+    expect(m.stepDeleteMany).toHaveBeenCalledWith({ where: { automationId: "legacy" } });
+    const update = m.automationUpdate.mock.calls[0][0];
+    expect(update.where).toEqual({ id: "legacy" });
+    expect(update.data).toMatchObject({ trigger: "conversation_quiet", source: "pack", name: "Revenue Recovery — quiet-lead nudge" });
+    expect(update.data).not.toHaveProperty("enabled");
+    const names = m.templateCreate.mock.calls.map((c) => c[0].data.name);
+    expect(names.filter((n: string) => n.startsWith("lead_nudge"))).toEqual(["lead_nudge_1", "lead_nudge_2"]);
+    expect(names.some((n: string) => n.startsWith("fu_"))).toBe(false);
+    const steps = m.stepCreateMany.mock.calls[0][0].data;
+    expect(steps.map((s: { kind: string }) => s.kind)).toEqual(["send_template", "wait", "send_template"]);
+    expect(steps.every((s: { automationId: string }) => s.automationId === "legacy")).toBe(true);
   });
 });

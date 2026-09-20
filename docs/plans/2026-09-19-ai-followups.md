@@ -821,7 +821,7 @@ Four contract decisions, found in review and baked into the code below:
 
 1. **Template identity is per automation, not per name.** The automation row is created FIRST (off, step-less — `matchAutomations` skips step-less automations, so it is inert), template names are keyed on the automation id's last 8 chars, and an update pins names from the templates the automation's existing `send_template` steps already point at — only when the automation has a `spec` (a builder-made automation's steps may reference shared library templates that must not be overwritten). Otherwise a wording edit or a rename would upsert new templates and orphan the approved ones, and two same-named follow-ups would silently overwrite each other's copy.
 2. **`componentsJson` stores Meta's components ARRAY.** `buildTemplatePayload(...)` returns `{ name, language, category, components }`; the old installer stored the whole object and `submitRowToMeta` sends it as `components:` — every live submission would have been rejected (simulation hid it by auto-approving). Fixed here and in the identical line in `src/modules/concierge/index.ts`; `src/modules/demo/seed.ts` is simulation-only and left alone.
-3. **The pack nudge is create-only.** Owners can edit its wording, so re-running the installer (which the starter-set action will do) must not overwrite their edits.
+3. **The pack nudge is create-only.** Owners can edit its wording, so re-running the installer (which the starter-set action will do) must not overwrite their edits. A legacy campaign-reply install (`spec === null` — there was no UI to edit it) is upgraded in place, keeping its id and switch.
 4. **No single transaction across Meta.** Template creation calls Meta, so the ordering is: automation row (off, empty) → templates → steps (one transaction). A Meta failure leaves an off, empty automation rather than orphaned templates. The design doc's "one transaction" sentence is replaced accordingly.
 
 **Files:**
@@ -1030,13 +1030,44 @@ describe("installRevenueRecoveryPack", () => {
 
     vi.clearAllMocks();
     m.sendMode.mockResolvedValue("simulation");
-    m.automationFindFirst.mockResolvedValueOnce({ id: "existing" });
+    m.automationFindFirst.mockResolvedValueOnce({ id: "existing", spec });
     m.templateFindFirst.mockResolvedValue(null);
     m.templateCreate.mockImplementation(async ({ data }) => ({ id: "t", ...data }));
     m.configUpsert.mockResolvedValue({});
     await installRevenueRecoveryPack("o1");
     expect(m.automationCreate).not.toHaveBeenCalled();
+    expect(m.automationUpdate).not.toHaveBeenCalled();
     expect(m.templateCreate.mock.calls.map((c) => c[0].data.name).some((n: string) => n.startsWith("lead_nudge"))).toBe(false);
+  });
+
+  it("upgrades a legacy campaign-reply install (no spec) in place, keeping its id and switch", async () => {
+    const legacy = {
+      id: "legacy",
+      orgId: "o1",
+      spec: null,
+      steps: [
+        { order: 1, kind: "wait", config: { minutes: 4320 } },
+        { order: 2, kind: "send_template", config: { templateId: "old1" } },
+        { order: 3, kind: "wait", config: { minutes: 4320 } },
+        { order: 4, kind: "send_template", config: { templateId: "old2" } },
+      ],
+    };
+    // Looked up twice: the installer's own check, then saveFollowUpFromSpec's update path.
+    m.automationFindFirst.mockResolvedValueOnce({ id: "legacy", spec: null }).mockResolvedValueOnce(legacy);
+    await installRevenueRecoveryPack("o1");
+    expect(m.automationCreate).not.toHaveBeenCalled();
+    expect(m.templateFindMany).not.toHaveBeenCalled();
+    expect(m.stepDeleteMany).toHaveBeenCalledWith({ where: { automationId: "legacy" } });
+    const update = m.automationUpdate.mock.calls[0][0];
+    expect(update.where).toEqual({ id: "legacy" });
+    expect(update.data).toMatchObject({ trigger: "conversation_quiet", source: "pack", name: "Revenue Recovery — quiet-lead nudge" });
+    expect(update.data).not.toHaveProperty("enabled");
+    const names = m.templateCreate.mock.calls.map((c) => c[0].data.name);
+    expect(names.filter((n: string) => n.startsWith("lead_nudge"))).toEqual(["lead_nudge_1", "lead_nudge_2"]);
+    expect(names.some((n: string) => n.startsWith("fu_"))).toBe(false);
+    const steps = m.stepCreateMany.mock.calls[0][0].data;
+    expect(steps.map((s: { kind: string }) => s.kind)).toEqual(["send_template", "wait", "send_template"]);
+    expect(steps.every((s: { automationId: string }) => s.automationId === "legacy")).toBe(true);
   });
 });
 ```
@@ -1251,9 +1282,10 @@ export async function saveFollowUpFromSpec(opts: {
 
 /**
  * One-toggle install of the Revenue-Recovery pack for an org: the tick-driven
- * templates, the quiet-lead nudge as a spec (created once — its wording is the
- * owner's to edit from then on, so re-running never overwrites it), and an
- * enabled FollowUpConfig. Idempotent.
+ * templates, the quiet-lead nudge as a spec, and an enabled FollowUpConfig.
+ * The nudge is created once; a legacy campaign-reply install (no spec) is
+ * upgraded in place; a spec-backed one is the owner's and never overwritten.
+ * Idempotent.
  */
 export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
   await ensureLibraryTemplates(
@@ -1262,18 +1294,19 @@ export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
   );
   const nudge = await prisma.automation.findFirst({
     where: { orgId, name: LEAD_NUDGE_NAME },
-    select: { id: true },
+    select: { id: true, spec: true },
   });
-  if (!nudge) {
-    // The one follow-up that starts ON: it is the moat the plan is sold on and
-    // its copy was written and reviewed by us.
+  // No spec means a legacy install from before there was any UI to edit it, so
+  // upgrading keeps its id and switch. A fresh one starts ON: it is the moat
+  // the plan is sold on and its copy was written and reviewed by us.
+  if (!nudge || nudge.spec === null) {
     await saveFollowUpFromSpec({
       orgId,
       spec: PACK_LEAD_NUDGE_SPEC,
       source: "pack",
       name: LEAD_NUDGE_NAME,
       templateNames: PACK_LEAD_NUDGE_TEMPLATE_NAMES,
-      enabled: true,
+      ...(nudge ? { automationId: nudge.id } : { enabled: true }),
     });
   }
   await prisma.followUpConfig.upsert({

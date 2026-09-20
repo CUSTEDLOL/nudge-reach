@@ -172,9 +172,10 @@ export async function saveFollowUpFromSpec(opts: {
 
 /**
  * One-toggle install of the Revenue-Recovery pack for an org: the tick-driven
- * templates, the quiet-lead nudge as a spec (created once — its wording is the
- * owner's to edit from then on, so re-running never overwrites it), and an
- * enabled FollowUpConfig. Idempotent.
+ * templates, the quiet-lead nudge as a spec, and an enabled FollowUpConfig.
+ * The nudge is created once; a legacy campaign-reply install (no spec) is
+ * upgraded in place; a spec-backed one is the owner's and never overwritten.
+ * Idempotent.
  */
 export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
   await ensureLibraryTemplates(
@@ -183,18 +184,19 @@ export async function installRevenueRecoveryPack(orgId: string): Promise<void> {
   );
   const nudge = await prisma.automation.findFirst({
     where: { orgId, name: LEAD_NUDGE_NAME },
-    select: { id: true },
+    select: { id: true, spec: true },
   });
-  if (!nudge) {
-    // The one follow-up that starts ON: it is the moat the plan is sold on and
-    // its copy was written and reviewed by us.
+  // No spec means a legacy install from before there was any UI to edit it, so
+  // upgrading keeps its id and switch. A fresh one starts ON: it is the moat
+  // the plan is sold on and its copy was written and reviewed by us.
+  if (!nudge || nudge.spec === null) {
     await saveFollowUpFromSpec({
       orgId,
       spec: PACK_LEAD_NUDGE_SPEC,
       source: "pack",
       name: LEAD_NUDGE_NAME,
       templateNames: PACK_LEAD_NUDGE_TEMPLATE_NAMES,
-      enabled: true,
+      ...(nudge ? { automationId: nudge.id } : { enabled: true }),
     });
   }
   await prisma.followUpConfig.upsert({
