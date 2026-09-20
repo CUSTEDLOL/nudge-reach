@@ -3512,10 +3512,11 @@ export async function writeStarterSetAction(): Promise<StarterSetResult> {
 }
 ```
 
-`toggleRevenueRecoveryAction` stays for now, but note `writeStarterSetAction`
-calls `installRevenueRecoveryPack` directly — and Task 10 removes the pack's
-pause/resume card, which leaves the toggle action with no caller (see Task 10,
-Step 6).
+`toggleRevenueRecoveryAction` stays, and note `writeStarterSetAction` calls
+`installRevenueRecoveryPack` directly. Task 10 removes the pack's pause/resume
+card but gives the action a new caller — the **Resume follow-ups** button in
+the paused banner, whose enabling branch is exactly the reinstall + resume the
+owner needs (see Task 10, Step 6).
 
 Why the starter set is shaped this way: the pack is what we promise, the
 drafting is the bonus, so a drafting failure (credits gone, provider down)
@@ -3552,6 +3553,7 @@ git commit -m "feat(followups): draft/create/update/delete actions and the start
 - Create: `src/app/(app)/automations/follow-up-bar.tsx`
 - Create: `src/app/(app)/automations/follow-up-card.tsx`
 - Create: `src/app/(app)/automations/spec-editor.tsx`
+- Create: `src/app/(app)/automations/resume-follow-ups.tsx`
 - Rewrite: `src/app/(app)/automations/page.tsx`
 - Delete: `src/app/(app)/automations/revenue-recovery-card.tsx`, `automations-list.tsx`
 - Modify: `src/app/(app)/automations/follow-up-rows.tsx`, `src/modules/followup/install.ts`,
@@ -3569,6 +3571,10 @@ const page = readFileSync("src/app/(app)/automations/page.tsx", "utf8");
 const bar = readFileSync("src/app/(app)/automations/follow-up-bar.tsx", "utf8");
 const card = readFileSync("src/app/(app)/automations/follow-up-card.tsx", "utf8");
 const rows = readFileSync("src/app/(app)/automations/follow-up-rows.tsx", "utf8");
+const resume = readFileSync(
+  "src/app/(app)/automations/resume-follow-ups.tsx",
+  "utf8"
+);
 
 /**
  * Source assertions, the repo's pattern for pages that need a database and a
@@ -3614,11 +3620,32 @@ describe("follow-ups page", () => {
     expect(rows).toContain("setFollowUpFlagAction");
   });
 
-  it("explains a paused pack and leaves the row switches live to undo it", () => {
+  it("gives the paused state a button that actually resumes it", () => {
     expect(page).toContain("config && !config.enabled");
-    expect(page).toContain(
-      "Your follow-ups are paused. Switch any one back on to resume them."
+    expect(page).toContain("Your follow-ups are paused.");
+    // A pause clears no per-row flag, so "switch any one back on" pointed at
+    // three rows that all still read On. The button is the only way out.
+    expect(page).not.toContain("Switch any one back on");
+    expect(page).toContain("<ResumeFollowUps />");
+    // Flagship-gated action, so the button takes both gates.
+    expect(page).toContain("{canManage && hasFrontDesk && <ResumeFollowUps />}");
+    expect(resume).toContain("toggleRevenueRecoveryAction");
+    expect(resume).toContain("Resume follow-ups");
+    // The resume button is the only paused-state control; the banner must not
+    // render it for a viewer or an unlicensed org.
+    expect(page).not.toMatch(/<ResumeFollowUps \/>\s*\n\s*<ResumeFollowUps/);
+  });
+
+  it("renders no resume button when the pack is running", () => {
+    // One conditional, one call site: the button exists only under the pause.
+    expect(page.match(/<ResumeFollowUps/g)).toHaveLength(1);
+    const banner = page.slice(page.indexOf("config && !config.enabled"));
+    expect(banner.indexOf("<ResumeFollowUps />")).toBeLessThan(
+      banner.indexOf("<FollowUpRows")
     );
+  });
+
+  it("keeps the row switches live so a pause is never a dead end", () => {
     // The switch must not be disabled by `paused` — that was the dead end.
     expect(rows).toContain("disabled={!canManage || pending}");
     // The hour fields stay disabled: they are not a way out.
@@ -3679,9 +3706,12 @@ describe("follow-ups page without AI Front Desk", () => {
     expect(bar).toContain(
       "Describe a follow-up in plain English and the AI writes it."
     );
+    // The plan name comes from billing, not a hardcoded string in the client.
     expect(bar).toContain(
-      "Available from the Growth plan — upgrade in Settings → Billing."
+      "Available from the ${planName} plan — upgrade in Settings → Billing."
     );
+    expect(bar).not.toContain("the Growth plan");
+    expect(page).toContain("planName={AI_FRONT_DESK_PLAN.name}");
     expect(bar).toContain("You can still build one by hand.");
   });
 
@@ -3942,6 +3972,7 @@ export function FollowUpBar({
   vertical,
   canManage,
   hasFrontDesk,
+  planName,
   hasSpecFollowUps,
 }: {
   vertical: string;
@@ -3949,6 +3980,9 @@ export function FollowUpBar({
   /** Drafting is flagship-only. Without it the bar still renders — locked —
    *  because it is the only thing above the empty state. */
   hasFrontDesk: boolean;
+  /** Cheapest plan that includes AI Front Desk, named in the locked copy.
+   *  Passed down: this is a client component, billing/limits is server-side. */
+  planName: string;
   /** Has the org any AI-written follow-up yet? A builder-only org is still
    *  offered the starter set. */
   hasSpecFollowUps: boolean;
@@ -4009,7 +4043,7 @@ export function FollowUpBar({
         </h2>
         <p className="mt-0.5 text-sm text-neutral-500">
           {"Describe a follow-up in plain English and the AI writes it. "}
-          {"Available from the Growth plan — upgrade in Settings → Billing. "}
+          {`Available from the ${planName} plan — upgrade in Settings → Billing. `}
           {"You can still build one by hand."}
         </p>
       </BarFrame>
@@ -4401,7 +4435,10 @@ import {
   TRIGGER_LABELS,
   type AutomationTrigger,
 } from "@/modules/automation/definitions";
-import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import {
+  AI_FRONT_DESK_PLAN,
+  planHasAiFrontDesk,
+} from "@/modules/billing/limits";
 import { getFollowUpConfig, getPackTemplateIds } from "@/modules/followup/install";
 import { FOLLOW_UP_KINDS, normalizeTiming } from "@/modules/followup/pack";
 import { followUpSpecSchema } from "@/modules/followup/spec";
@@ -4410,6 +4447,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { FollowUpBar } from "./follow-up-bar";
 import { FollowUpCard, type FollowUpCardModel } from "./follow-up-card";
 import { FollowUpRows, type FollowUpRow } from "./follow-up-rows";
+import { ResumeFollowUps } from "./resume-follow-ups";
 
 export const metadata: Metadata = { title: "Follow-ups" };
 
@@ -4519,6 +4557,7 @@ export default async function FollowUpsPage() {
         vertical={profile?.vertical || org.vertical || "default"}
         canManage={canManage}
         hasFrontDesk={hasFrontDesk}
+        planName={AI_FRONT_DESK_PLAN.name}
         hasSpecFollowUps={cards.some((c) => c.spec !== null)}
       />
 
@@ -4533,10 +4572,13 @@ export default async function FollowUpsPage() {
       </p>
 
       <section className="mt-6 space-y-3">
+        {/* A pause clears no per-row flag, so the rows below still read On —
+            there is nothing to "switch back on". The button is the way out. */}
         {config && !config.enabled && (
-          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Your follow-ups are paused. Switch any one back on to resume them.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>Your follow-ups are paused.</span>
+            {canManage && hasFrontDesk && <ResumeFollowUps />}
+          </div>
         )}
         {tickRows.length > 0 && (
           <FollowUpRows
@@ -4608,10 +4650,63 @@ and chained `afterDays` waits go through the tick; `contact_created`,
 handoff sentence is scoped to the chase, because the reminder tick does not
 check conversation status.
 
+**The paused banner has to be a control, not an instruction.** `bookingReminders`,
+`noShowRebook` and `postServiceReview` all default true and neither
+`setFollowUpEnabled` nor `founderSetFollowUpsEnabled` clears them, so after a
+pause the three rows still read **On** — "switch any one back on to resume
+them" pointed at nothing, and the only visibly-off control (the quiet-lead
+nudge card) writes `automation.enabled` alone, leaving the tick dead and the
+banner up. So the banner carries a **Resume follow-ups** button
+(`resume-follow-ups.tsx`) wired to `toggleRevenueRecoveryAction`, whose
+enabling branch runs `installRevenueRecoveryPack` + `setFollowUpEnabled(true)`.
+It is gated on `canManage && hasFrontDesk`, because the action is
+flagship-gated. `install.ts`'s `setFollowUpFlag` resume stays as the
+belt-and-braces path.
+
+```tsx
+// src/app/(app)/automations/resume-follow-ups.tsx
+"use client";
+
+import { useTransition } from "react";
+import { Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
+import { toggleRevenueRecoveryAction } from "./followup-actions";
+
+/**
+ * The paused state, with the one control that actually leaves it.
+ *
+ * A pause sets `followUpConfig.enabled = false` but clears no per-row flag, so
+ * the three tick rows still read On — telling the owner to "switch one back on"
+ * pointed at nothing. This calls the pack toggle, whose enabling branch runs
+ * `installRevenueRecoveryPack` + `setFollowUpEnabled(true)`: it reinstalls
+ * anything missing and resumes the quiet-lead nudge with it.
+ */
+export function ResumeFollowUps() {
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+
+  function resume() {
+    start(async () => {
+      const r = await toggleRevenueRecoveryAction();
+      toast({ description: r.message, tone: r.ok ? "success" : "error" });
+    });
+  }
+
+  return (
+    <Button size="sm" onClick={resume} loading={pending}>
+      <Play className="h-3.5 w-3.5" aria-hidden />
+      Resume follow-ups
+    </Button>
+  );
+}
+```
+
 `revenue-recovery-card.tsx` and `automations-list.tsx` are deleted — the page
 was the last importer of both. `toggleRevenueRecoveryAction` in
-`followup-actions.ts` is now **caller-less**; left in place deliberately, Task
-12 decides. `getRecoveryMetrics` is untouched (the dashboard still uses it).
+`followup-actions.ts` **has a caller again** (the resume button), so Task 12 no
+longer has an orphan to decide about. `getRecoveryMetrics` is untouched (the
+dashboard still uses it).
 
 **Step 7: Verify**
 

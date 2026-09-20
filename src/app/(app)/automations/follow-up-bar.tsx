@@ -50,6 +50,7 @@ export function FollowUpBar({
   vertical,
   canManage,
   hasFrontDesk,
+  planName,
   hasSpecFollowUps,
 }: {
   vertical: string;
@@ -57,6 +58,9 @@ export function FollowUpBar({
   /** Drafting is flagship-only. Without it the bar still renders — locked —
    *  because it is the only thing above the empty state. */
   hasFrontDesk: boolean;
+  /** Cheapest plan that includes AI Front Desk, named in the locked copy.
+   *  Passed down: this is a client component, billing/limits is server-side. */
+  planName: string;
   /** Has the org any AI-written follow-up yet? A builder-only org is still
    *  offered the starter set. */
   hasSpecFollowUps: boolean;
@@ -117,7 +121,7 @@ export function FollowUpBar({
         </h2>
         <p className="mt-0.5 text-sm text-neutral-500">
           {"Describe a follow-up in plain English and the AI writes it. "}
-          {"Available from the Growth plan — upgrade in Settings → Billing. "}
+          {`Available from the ${planName} plan — upgrade in Settings → Billing. `}
           {"You can still build one by hand."}
         </p>
       </BarFrame>

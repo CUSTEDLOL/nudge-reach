@@ -7,7 +7,10 @@ import {
   TRIGGER_LABELS,
   type AutomationTrigger,
 } from "@/modules/automation/definitions";
-import { planHasAiFrontDesk } from "@/modules/billing/limits";
+import {
+  AI_FRONT_DESK_PLAN,
+  planHasAiFrontDesk,
+} from "@/modules/billing/limits";
 import { getFollowUpConfig, getPackTemplateIds } from "@/modules/followup/install";
 import { FOLLOW_UP_KINDS, normalizeTiming } from "@/modules/followup/pack";
 import { followUpSpecSchema } from "@/modules/followup/spec";
@@ -16,6 +19,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { FollowUpBar } from "./follow-up-bar";
 import { FollowUpCard, type FollowUpCardModel } from "./follow-up-card";
 import { FollowUpRows, type FollowUpRow } from "./follow-up-rows";
+import { ResumeFollowUps } from "./resume-follow-ups";
 
 export const metadata: Metadata = { title: "Follow-ups" };
 
@@ -125,6 +129,7 @@ export default async function FollowUpsPage() {
         vertical={profile?.vertical || org.vertical || "default"}
         canManage={canManage}
         hasFrontDesk={hasFrontDesk}
+        planName={AI_FRONT_DESK_PLAN.name}
         hasSpecFollowUps={cards.some((c) => c.spec !== null)}
       />
 
@@ -139,10 +144,13 @@ export default async function FollowUpsPage() {
       </p>
 
       <section className="mt-6 space-y-3">
+        {/* A pause clears no per-row flag, so the rows below still read On —
+            there is nothing to "switch back on". The button is the way out. */}
         {config && !config.enabled && (
-          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Your follow-ups are paused. Switch any one back on to resume them.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span>Your follow-ups are paused.</span>
+            {canManage && hasFrontDesk && <ResumeFollowUps />}
+          </div>
         )}
         {tickRows.length > 0 && (
           <FollowUpRows

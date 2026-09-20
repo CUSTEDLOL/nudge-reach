@@ -6,6 +6,10 @@ const page = readFileSync("src/app/(app)/automations/page.tsx", "utf8");
 const bar = readFileSync("src/app/(app)/automations/follow-up-bar.tsx", "utf8");
 const card = readFileSync("src/app/(app)/automations/follow-up-card.tsx", "utf8");
 const rows = readFileSync("src/app/(app)/automations/follow-up-rows.tsx", "utf8");
+const resume = readFileSync(
+  "src/app/(app)/automations/resume-follow-ups.tsx",
+  "utf8"
+);
 
 /**
  * Source assertions, the repo's pattern for pages that need a database and a
@@ -51,11 +55,32 @@ describe("follow-ups page", () => {
     expect(rows).toContain("setFollowUpFlagAction");
   });
 
-  it("explains a paused pack and leaves the row switches live to undo it", () => {
+  it("gives the paused state a button that actually resumes it", () => {
     expect(page).toContain("config && !config.enabled");
-    expect(page).toContain(
-      "Your follow-ups are paused. Switch any one back on to resume them."
+    expect(page).toContain("Your follow-ups are paused.");
+    // A pause clears no per-row flag, so "switch any one back on" pointed at
+    // three rows that all still read On. The button is the only way out.
+    expect(page).not.toContain("Switch any one back on");
+    expect(page).toContain("<ResumeFollowUps />");
+    // Flagship-gated action, so the button takes both gates.
+    expect(page).toContain("{canManage && hasFrontDesk && <ResumeFollowUps />}");
+    expect(resume).toContain("toggleRevenueRecoveryAction");
+    expect(resume).toContain("Resume follow-ups");
+    // The resume button is the only paused-state control; the banner must not
+    // render it for a viewer or an unlicensed org.
+    expect(page).not.toMatch(/<ResumeFollowUps \/>\s*\n\s*<ResumeFollowUps/);
+  });
+
+  it("renders no resume button when the pack is running", () => {
+    // One conditional, one call site: the button exists only under the pause.
+    expect(page.match(/<ResumeFollowUps/g)).toHaveLength(1);
+    const banner = page.slice(page.indexOf("config && !config.enabled"));
+    expect(banner.indexOf("<ResumeFollowUps />")).toBeLessThan(
+      banner.indexOf("<FollowUpRows")
     );
+  });
+
+  it("keeps the row switches live so a pause is never a dead end", () => {
     // The switch must not be disabled by `paused` — that was the dead end.
     expect(rows).toContain("disabled={!canManage || pending}");
     // The hour fields stay disabled: they are not a way out.
@@ -116,9 +141,12 @@ describe("follow-ups page without AI Front Desk", () => {
     expect(bar).toContain(
       "Describe a follow-up in plain English and the AI writes it."
     );
+    // The plan name comes from billing, not a hardcoded string in the client.
     expect(bar).toContain(
-      "Available from the Growth plan — upgrade in Settings → Billing."
+      "Available from the ${planName} plan — upgrade in Settings → Billing."
     );
+    expect(bar).not.toContain("the Growth plan");
+    expect(page).toContain("planName={AI_FRONT_DESK_PLAN.name}");
     expect(bar).toContain("You can still build one by hand.");
   });
 
