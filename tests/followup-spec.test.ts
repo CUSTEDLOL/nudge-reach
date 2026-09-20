@@ -16,6 +16,12 @@ const quiet = {
   ],
 };
 
+const booked = {
+  name: "Booking thanks",
+  situation: { kind: "booked" },
+  messages: [{ afterDays: 0, category: "UTILITY", header: "Booked", body: "Hi {{1}}, you're booked.", footer: "" }],
+};
+
 describe("parseFollowUpSpec", () => {
   it("accepts a valid spec and defaults stopOn to every signal", () => {
     const r = parseFollowUpSpec(quiet);
@@ -36,12 +42,18 @@ describe("parseFollowUpSpec", () => {
   });
 
   it("leaves a UTILITY footer alone", () => {
-    const r = parseFollowUpSpec({
-      name: "Booking thanks",
-      situation: { kind: "booked" },
-      messages: [{ afterDays: 0, category: "UTILITY", header: "Booked", body: "Hi {{1}}, you're booked.", footer: "" }],
-    });
+    const r = parseFollowUpSpec(booked);
     expect(r.ok && r.spec.messages[0].footer).toBe("");
+  });
+
+  it("a booked spec with no stopOn defaults to booking + payment — a reply must not end it", () => {
+    const r = parseFollowUpSpec(booked);
+    expect(r.ok && r.spec.stopOn).toEqual(["booking", "payment"]);
+  });
+
+  it("a booked spec that names stopOn keeps it", () => {
+    const r = parseFollowUpSpec({ ...booked, stopOn: ["reply"] });
+    expect(r.ok && r.spec.stopOn).toEqual(["reply"]);
   });
 
   it("rejects an unknown situation or a gap over 14 days", () => {
@@ -116,13 +128,25 @@ describe("plain-English descriptions", () => {
 });
 
 describe("shouldCancelOnSignal", () => {
-  it("always cancels on a reply or an opt-out, whatever the spec says", () => {
-    expect(shouldCancelOnSignal({ stopOn: ["booking"] }, "reply")).toBe(true);
+  const chase = { situation: { kind: "went_quiet", afterDays: 2 } };
+  const afterBooking = { situation: { kind: "booked" }, stopOn: ["booking", "payment"] };
+
+  it("an opt-out always cancels, whatever the spec says", () => {
     expect(shouldCancelOnSignal({ stopOn: [] }, "opt_out")).toBe(true);
+    expect(shouldCancelOnSignal(afterBooking, "opt_out")).toBe(true);
+  });
+  it("a reply cancels a chase even when stopOn is empty", () => {
+    expect(shouldCancelOnSignal({ ...chase, stopOn: [] }, "reply")).toBe(true);
+    expect(shouldCancelOnSignal({ stopOn: ["booking"] }, "reply")).toBe(true);
+  });
+  it("a reply does not cancel a booked-situation follow-up unless its stopOn says so", () => {
+    expect(shouldCancelOnSignal(afterBooking, "reply")).toBe(false);
+    expect(shouldCancelOnSignal({ ...afterBooking, stopOn: ["reply", "booking"] }, "reply")).toBe(true);
   });
   it("honours stopOn for booking and payment, defaulting to cancel when there is no spec", () => {
-    expect(shouldCancelOnSignal({ stopOn: ["reply"] }, "booking")).toBe(false);
-    expect(shouldCancelOnSignal({ stopOn: ["reply", "payment"] }, "payment")).toBe(true);
+    expect(shouldCancelOnSignal({ ...chase, stopOn: ["reply"] }, "booking")).toBe(false);
+    expect(shouldCancelOnSignal({ ...chase, stopOn: ["reply", "payment"] }, "payment")).toBe(true);
+    expect(shouldCancelOnSignal({ stopOn: ["reply"] }, "booking")).toBe(true);
     expect(shouldCancelOnSignal(null, "booking")).toBe(true);
     expect(shouldCancelOnSignal("garbage", "payment")).toBe(true);
   });

@@ -69,12 +69,15 @@ export type SpecParseResult =
  * over-long body is rejected with a clear error instead.
  * A went_quiet spec's first message always sends the moment the trigger
  * fires — the delay already lives in `afterDays` on the situation.
+ * A booked spec that arrives without `stopOn` defaults to booking + payment,
+ * not the schema's all-three: a booked customer is expected to reply.
  */
 export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   const candidate =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? { ...(raw as Record<string, unknown>) }
       : {};
+  const stopOnGiven = Array.isArray(candidate.stopOn);
   if (Array.isArray(candidate.messages)) {
     candidate.messages = candidate.messages.map((m) => {
       const msg = m && typeof m === "object" ? { ...(m as Record<string, unknown>) } : {};
@@ -105,6 +108,7 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   if (spec.situation.kind === "went_quiet" && spec.messages[0].afterDays !== 0) {
     spec.messages[0] = { ...spec.messages[0], afterDays: 0 };
   }
+  if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking", "payment"];
   return { ok: true, spec };
 }
 
@@ -137,17 +141,24 @@ export function describeMessageTiming(index: number, afterDays: number): string 
 }
 
 /** Built once: the engine checks this per waiting run on every inbound. */
-const stopOnSchema = followUpSpecSchema.pick({ stopOn: true });
+const cancelPolicySchema = followUpSpecSchema.pick({ situation: true, stopOn: true });
 
 /**
- * Does this signal end a pending chase? A reply or an opt-out always does —
- * the customer is talking to us, or told us to stop. Booking and payment are
- * the owner's choice via stopOn; an automation with no spec (hand-built)
+ * Does this signal end a pending chase? An opt-out always does — the customer
+ * told us to stop. A reply ends every chase (the customer is talking to us),
+ * with one exception: a follow-up built on the `booked` situation keeps going
+ * unless its stopOn names `reply` — a booked customer is expected to reply,
+ * and that must not cancel the reminder or review ask. Booking and payment
+ * are the owner's choice via stopOn. An automation with no spec (hand-built)
  * takes the safe default and cancels on everything.
  */
 export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): boolean {
-  if (signal === "reply" || signal === "opt_out") return true;
-  const parsed = stopOnSchema.safeParse(rawSpec);
-  if (!parsed.success) return true;
-  return parsed.data.stopOn.includes(signal);
+  if (signal === "opt_out") return true;
+  const parsed = cancelPolicySchema.safeParse(rawSpec);
+  if (!parsed.success) return true; // hand-built automation: cancel on everything
+  const { situation, stopOn } = parsed.data;
+  // A booked customer is expected to reply ("thanks, see you then"); that must
+  // not cancel the reminder or review ask that follows the booking.
+  if (signal === "reply") return situation.kind !== "booked" || stopOn.includes("reply");
+  return stopOn.includes(signal);
 }

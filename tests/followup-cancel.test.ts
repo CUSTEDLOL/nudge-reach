@@ -18,7 +18,12 @@ const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
 
 // Shaped like the engine's select: the log is whatever Postgres holds.
 const runs = [
-  { id: "r1", currentStep: 1, log: [], automation: { spec: { stopOn: ["reply"] } } },
+  {
+    id: "r1",
+    currentStep: 1,
+    log: [],
+    automation: { spec: { situation: { kind: "went_quiet", afterDays: 2 }, stopOn: ["reply"] } },
+  },
   {
     id: "r2",
     currentStep: 1,

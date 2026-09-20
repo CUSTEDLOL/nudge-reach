@@ -96,6 +96,12 @@ const quiet = {
   ],
 };
 
+const booked = {
+  name: "Booking thanks",
+  situation: { kind: "booked" },
+  messages: [{ afterDays: 0, category: "UTILITY", header: "Booked", body: "Hi {{1}}, you're booked.", footer: "" }],
+};
+
 describe("parseFollowUpSpec", () => {
   it("accepts a valid spec and defaults stopOn to every signal", () => {
     const r = parseFollowUpSpec(quiet);
@@ -116,12 +122,18 @@ describe("parseFollowUpSpec", () => {
   });
 
   it("leaves a UTILITY footer alone", () => {
-    const r = parseFollowUpSpec({
-      name: "Booking thanks",
-      situation: { kind: "booked" },
-      messages: [{ afterDays: 0, category: "UTILITY", header: "Booked", body: "Hi {{1}}, you're booked.", footer: "" }],
-    });
+    const r = parseFollowUpSpec(booked);
     expect(r.ok && r.spec.messages[0].footer).toBe("");
+  });
+
+  it("a booked spec with no stopOn defaults to booking + payment — a reply must not end it", () => {
+    const r = parseFollowUpSpec(booked);
+    expect(r.ok && r.spec.stopOn).toEqual(["booking", "payment"]);
+  });
+
+  it("a booked spec that names stopOn keeps it", () => {
+    const r = parseFollowUpSpec({ ...booked, stopOn: ["reply"] });
+    expect(r.ok && r.spec.stopOn).toEqual(["reply"]);
   });
 
   it("rejects an unknown situation or a gap over 14 days", () => {
@@ -196,13 +208,25 @@ describe("plain-English descriptions", () => {
 });
 
 describe("shouldCancelOnSignal", () => {
-  it("always cancels on a reply or an opt-out, whatever the spec says", () => {
-    expect(shouldCancelOnSignal({ stopOn: ["booking"] }, "reply")).toBe(true);
+  const chase = { situation: { kind: "went_quiet", afterDays: 2 } };
+  const afterBooking = { situation: { kind: "booked" }, stopOn: ["booking", "payment"] };
+
+  it("an opt-out always cancels, whatever the spec says", () => {
     expect(shouldCancelOnSignal({ stopOn: [] }, "opt_out")).toBe(true);
+    expect(shouldCancelOnSignal(afterBooking, "opt_out")).toBe(true);
+  });
+  it("a reply cancels a chase even when stopOn is empty", () => {
+    expect(shouldCancelOnSignal({ ...chase, stopOn: [] }, "reply")).toBe(true);
+    expect(shouldCancelOnSignal({ stopOn: ["booking"] }, "reply")).toBe(true);
+  });
+  it("a reply does not cancel a booked-situation follow-up unless its stopOn says so", () => {
+    expect(shouldCancelOnSignal(afterBooking, "reply")).toBe(false);
+    expect(shouldCancelOnSignal({ ...afterBooking, stopOn: ["reply", "booking"] }, "reply")).toBe(true);
   });
   it("honours stopOn for booking and payment, defaulting to cancel when there is no spec", () => {
-    expect(shouldCancelOnSignal({ stopOn: ["reply"] }, "booking")).toBe(false);
-    expect(shouldCancelOnSignal({ stopOn: ["reply", "payment"] }, "payment")).toBe(true);
+    expect(shouldCancelOnSignal({ ...chase, stopOn: ["reply"] }, "booking")).toBe(false);
+    expect(shouldCancelOnSignal({ ...chase, stopOn: ["reply", "payment"] }, "payment")).toBe(true);
+    expect(shouldCancelOnSignal({ stopOn: ["reply"] }, "booking")).toBe(true);
     expect(shouldCancelOnSignal(null, "booking")).toBe(true);
     expect(shouldCancelOnSignal("garbage", "payment")).toBe(true);
   });
@@ -219,7 +243,7 @@ Expected: FAIL — `Cannot find module '@/modules/followup/spec'`.
 ```ts
 // src/modules/followup/spec.ts
 import { z } from "zod";
-import { LEAD_STAGES } from "@/modules/automation/definitions";
+import { LEAD_STAGES, MAX_QUIET_HOURS } from "@/modules/automation/definitions";
 import { campaignButtonSchema } from "@/modules/campaign/schema";
 import { repairOptOutFooter, repairPersonalization } from "@/modules/campaign/guardrails";
 
@@ -232,8 +256,9 @@ import { repairOptOutFooter, repairPersonalization } from "@/modules/campaign/gu
 
 export const MAX_MESSAGES = 3;
 /** Longest gap between two messages; longer schedules belong to the booking
- *  reminder tick, not chained waits. */
-export const MAX_GAP_DAYS = 14;
+ *  reminder tick, not chained waits. Derived from the quiet trigger's cap so
+ *  the two can never drift apart. */
+export const MAX_GAP_DAYS = MAX_QUIET_HOURS / 24;
 
 export const STOP_SIGNALS = ["reply", "booking", "payment"] as const;
 export type StopSignal = (typeof STOP_SIGNALS)[number];
@@ -288,12 +313,15 @@ export type SpecParseResult =
  * over-long body is rejected with a clear error instead.
  * A went_quiet spec's first message always sends the moment the trigger
  * fires — the delay already lives in `afterDays` on the situation.
+ * A booked spec that arrives without `stopOn` defaults to booking + payment,
+ * not the schema's all-three: a booked customer is expected to reply.
  */
 export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   const candidate =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? { ...(raw as Record<string, unknown>) }
       : {};
+  const stopOnGiven = Array.isArray(candidate.stopOn);
   if (Array.isArray(candidate.messages)) {
     candidate.messages = candidate.messages.map((m) => {
       const msg = m && typeof m === "object" ? { ...(m as Record<string, unknown>) } : {};
@@ -324,6 +352,7 @@ export function parseFollowUpSpec(raw: unknown): SpecParseResult {
   if (spec.situation.kind === "went_quiet" && spec.messages[0].afterDays !== 0) {
     spec.messages[0] = { ...spec.messages[0], afterDays: 0 };
   }
+  if (!stopOnGiven && spec.situation.kind === "booked") spec.stopOn = ["booking", "payment"];
   return { ok: true, spec };
 }
 
@@ -356,26 +385,35 @@ export function describeMessageTiming(index: number, afterDays: number): string 
 }
 
 /** Built once: the engine checks this per waiting run on every inbound. */
-const stopOnSchema = followUpSpecSchema.pick({ stopOn: true });
+const cancelPolicySchema = followUpSpecSchema.pick({ situation: true, stopOn: true });
 
 /**
- * Does this signal end a pending chase? A reply or an opt-out always does —
- * the customer is talking to us, or told us to stop. Booking and payment are
- * the owner's choice via stopOn; an automation with no spec (hand-built)
+ * Does this signal end a pending chase? An opt-out always does — the customer
+ * told us to stop. A reply ends every chase (the customer is talking to us),
+ * with one exception: a follow-up built on the `booked` situation keeps going
+ * unless its stopOn names `reply` — a booked customer is expected to reply,
+ * and that must not cancel the reminder or review ask. Booking and payment
+ * are the owner's choice via stopOn. An automation with no spec (hand-built)
  * takes the safe default and cancels on everything.
  */
 export function shouldCancelOnSignal(rawSpec: unknown, signal: CancelSignal): boolean {
-  if (signal === "reply" || signal === "opt_out") return true;
-  const parsed = stopOnSchema.safeParse(rawSpec);
-  if (!parsed.success) return true;
-  return parsed.data.stopOn.includes(signal);
+  if (signal === "opt_out") return true;
+  const parsed = cancelPolicySchema.safeParse(rawSpec);
+  if (!parsed.success) return true; // hand-built automation: cancel on everything
+  const { situation, stopOn } = parsed.data;
+  // A booked customer is expected to reply ("thanks, see you then"); that must
+  // not cancel the reminder or review ask that follows the booking.
+  if (signal === "reply") return situation.kind !== "booked" || stopOn.includes("reply");
+  return stopOn.includes(signal);
 }
 ```
+
+Cancel policy (founder decision 2026-09-20, after Task 6 shipped): a reply cancels every chase situation whatever `stopOn` says, but NOT a follow-up on the `booked` situation unless its `stopOn` names `reply` — "thanks, see you then" after booking was cancelling the reminder and the review ask. `shouldCancelOnSignal` therefore parses `situation` as well as `stopOn` (`cancelPolicySchema`), and `parseFollowUpSpec` defaults a booked spec that arrives without `stopOn` to `["booking", "payment"]` rather than the schema's all-three. A spec with no parseable situation (a hand-built automation) still cancels on everything.
 
 **Step 4: Run to verify it passes**
 
 Run: `npx vitest run tests/followup-spec.test.ts`
-Expected: PASS, 13 tests.
+Expected: PASS, 17 tests.
 
 **Step 5: Commit**
 
@@ -1540,7 +1578,12 @@ const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
 
 // Shaped like the engine's select: the log is whatever Postgres holds.
 const runs = [
-  { id: "r1", currentStep: 1, log: [], automation: { spec: { stopOn: ["reply"] } } },
+  {
+    id: "r1",
+    currentStep: 1,
+    log: [],
+    automation: { spec: { situation: { kind: "went_quiet", afterDays: 2 }, stopOn: ["reply"] } },
+  },
   {
     id: "r2",
     currentStep: 1,

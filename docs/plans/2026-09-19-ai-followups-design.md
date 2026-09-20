@@ -102,7 +102,13 @@ log line naming the signal. Called from the four places the signal happens:
 - payment paid — `modules/payments/index.ts`;
 - opt-out — the consent path.
 
-A reply cancels everything. Booking and payment cancel runs whose
+A reply cancels every chase — `went_quiet`, `campaign_reply`, `keyword`,
+`new_lead` — whatever its `stopOn` says: the customer is talking to us. A reply
+does **not** cancel a follow-up built on the `booked` situation unless its
+`stopOn` names `reply` (founder decision 2026-09-20: a customer saying "thanks,
+see you then" after booking was cancelling the reminder and the post-visit
+review ask). A booked spec that arrives without `stopOn` therefore defaults to
+`["booking", "payment"]`, not all three. Booking and payment cancel runs whose
 `spec.stopOn` includes them; automations without a spec take the default (cancel
 on all). Opt-out always cancels. The pack and every builder-made automation get
 the fix for free.
