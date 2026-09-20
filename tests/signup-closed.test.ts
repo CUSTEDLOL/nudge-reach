@@ -11,21 +11,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * founder-created workspace.
  */
 
-const { prisma } = vi.hoisted(() => ({
+const { prisma, claimAcquisitionTrial } = vi.hoisted(() => ({
   prisma: {
     membership: { findFirst: vi.fn(), upsert: vi.fn() },
     org: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     invite: { findFirst: vi.fn(), update: vi.fn() },
     creditGrant: { create: vi.fn() },
   },
+  claimAcquisitionTrial: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
+vi.mock("@/modules/trial/claim", () => ({ claimAcquisitionTrial }));
 
 import { NoWorkspaceError, resolveOrgContext } from "@/modules/orgs/org";
 import { PENDING_OWNER_PREFIX } from "@/modules/orgs/pending-owner";
 
 const USER = "user-1";
 const EMAIL = "owner@aster.in";
+const CLAIM = { trialId: "trial_1", claimToken: "a".repeat(43) };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,6 +37,7 @@ beforeEach(() => {
   prisma.org.findUnique.mockResolvedValue(null);
   prisma.invite.findFirst.mockResolvedValue(null);
   prisma.membership.upsert.mockResolvedValue({ id: "m1", role: "OWNER" });
+  claimAcquisitionTrial.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -77,13 +81,38 @@ describe("closed signup", () => {
     });
     prisma.org.update.mockResolvedValue({ id: "org-1", ownerUserId: USER });
 
-    const res = await resolveOrgContext(USER, EMAIL);
+    const res = await resolveOrgContext(USER, EMAIL, { trialClaim: CLAIM });
 
     expect(res.org.ownerUserId).toBe(USER);
     expect(prisma.invite.update).toHaveBeenCalledWith({
       where: { id: "inv-1" },
       data: { status: "accepted" },
     });
+    expect(claimAcquisitionTrial).not.toHaveBeenCalled();
+    expect(prisma.org.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a verified trial claim while global signup stays closed", async () => {
+    claimAcquisitionTrial.mockResolvedValue({
+      org: { id: "org-trial" },
+      membership: { id: "membership-trial", role: "OWNER" },
+    });
+
+    const result = await resolveOrgContext(USER, EMAIL, { trialClaim: CLAIM });
+
+    expect(result.org.id).toBe("org-trial");
+    expect(claimAcquisitionTrial).toHaveBeenCalledWith({
+      userId: USER,
+      email: EMAIL,
+      claim: CLAIM,
+    });
+    expect(prisma.org.create).not.toHaveBeenCalled();
+  });
+
+  it("still rejects an invalid claim when global signup stays closed", async () => {
+    await expect(
+      resolveOrgContext(USER, EMAIL, { trialClaim: CLAIM })
+    ).rejects.toBeInstanceOf(NoWorkspaceError);
     expect(prisma.org.create).not.toHaveBeenCalled();
   });
 
