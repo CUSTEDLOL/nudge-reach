@@ -10,8 +10,8 @@ vi.mock("@supabase/ssr", () => ({ createServerClient }));
 
 import { isPublicPath, updateSession } from "@/lib/supabase/proxy-session";
 
-function request(path: string) {
-  return new NextRequest(`https://nudge.test${path}`);
+function request(path: string, headers?: HeadersInit) {
+  return new NextRequest(`https://nudge.test${path}`, { headers });
 }
 
 describe("updateSession", () => {
@@ -26,7 +26,48 @@ describe("updateSession", () => {
 
   it("keeps trial signup public while protecting trial setup", () => {
     expect(isPublicPath("/api/trials")).toBe(true);
+    expect(isPublicPath("/free-trial")).toBe(true);
     expect(isPublicPath("/trial/setup")).toBe(false);
+  });
+
+  it("overwrites any incoming pathname hint with the trusted request path", async () => {
+    getClaims.mockResolvedValue({
+      data: { claims: { email: "owner@example.com" } },
+    });
+
+    const response = await updateSession(
+      request("/campaigns", { "x-nudge-pathname": "/dashboard" }),
+    );
+
+    expect(response.headers.get("x-middleware-request-x-nudge-pathname")).toBe(
+      "/campaigns",
+    );
+  });
+
+  it("keeps refreshed auth cookies when adding the trusted pathname", async () => {
+    createServerClient.mockImplementation(
+      (_url: string, _key: string, options: { cookies: { setAll: (values: Array<{ name: string; value: string; options: object }>) => void } }) => ({
+        auth: {
+          getClaims: async () => {
+            options.cookies.setAll([
+              { name: "sb-session", value: "fresh-token", options: {} },
+            ]);
+            return { data: { claims: { email: "owner@example.com" } } };
+          },
+        },
+      }),
+    );
+
+    const response = await updateSession(
+      request("/dashboard", { cookie: "existing=value" }),
+    );
+
+    expect(response.headers.get("x-middleware-request-cookie")).toContain(
+      "sb-session=fresh-token",
+    );
+    expect(response.headers.get("x-middleware-request-x-nudge-pathname")).toBe(
+      "/dashboard",
+    );
   });
 
   it.each(["/admin", "/admin/orgs"])(

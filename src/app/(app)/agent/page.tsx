@@ -9,6 +9,8 @@ import { Library, type LibraryFact } from "./library";
 import { ImportPanel } from "./import-panel";
 import { parseWaiting } from "@/modules/knowledge/questions";
 import { AiOffNotice } from "@/components/features/front-desk/ai-off-notice";
+import { TrialTraining } from "@/components/features/trial/trial-training";
+import { getTrialWorkspace } from "@/modules/trial/workspace";
 
 export const metadata: Metadata = { title: "AI Front Desk" };
 
@@ -21,6 +23,29 @@ export const metadata: Metadata = { title: "AI Front Desk" };
 export default async function AgentPage() {
   const ctx = await requireOrgContext();
   const canEdit = hasRole(ctx.role, "ADMIN");
+  const trial = await getTrialWorkspace(ctx.org.id);
+
+  if (trial && !trial.converted) {
+    const facts = await prisma.knowledgeEntry.findMany({
+      where: { orgId: ctx.org.id, status: "active" },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
+    return (
+      <TrialTraining
+        canEdit={canEdit}
+        source={trial.knowledgeSource}
+        setupComplete={trial.setupComplete}
+        facts={facts.map((fact) => ({
+          id: fact.id,
+          category: fact.category,
+          fact: fact.fact,
+          condition: fact.condition,
+          source: fact.source,
+        }))}
+      />
+    );
+  }
 
   const [questions, facts, drafts, profile] = await Promise.all([
     prisma.ownerQuestion.findMany({

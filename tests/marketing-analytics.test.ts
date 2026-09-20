@@ -325,6 +325,28 @@ describe("marketing browser events", () => {
       })
     ).not.toThrow();
   });
+
+  it("copies bounded trial events without contact or claim data", () => {
+    const dataLayer: object[] = [];
+    vi.stubGlobal("window", { dataLayer });
+
+    pushMarketingEvent({
+      event: "trial_signup_failed",
+      surface: "free_trial",
+      reason: "auth",
+    });
+
+    expect(dataLayer).toEqual([
+      {
+        event: "trial_signup_failed",
+        surface: "free_trial",
+        reason: "auth",
+      },
+    ]);
+    expect(JSON.stringify(dataLayer)).not.toMatch(
+      /email|phone|business_name|claim_token/i,
+    );
+  });
 });
 
 describe("demo booking funnel", () => {

@@ -81,7 +81,7 @@ describe("claimAcquisitionTrial", () => {
   });
 
   it.each([
-    ["expired token", { ...TRIAL, claimExpiresAt: new Date("2026-09-19T23:59:59Z") }],
+    ["stale expired token", { ...TRIAL, claimExpiresAt: new Date("2026-09-12T23:59:59Z") }],
     ["wrong email", { ...TRIAL, emailNormalized: "someone-else@aster.in" }],
     ["already claimed token", { ...TRIAL, claimedAt: new Date("2026-09-19T00:00:00Z") }],
   ])("returns no workspace for an %s", async (_reason, candidate) => {
@@ -95,6 +95,20 @@ describe("claimAcquisitionTrial", () => {
     })).resolves.toBeNull();
 
     expect(tx.org.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a short recovery grace after email verification", async () => {
+    resolveCandidate({
+      ...TRIAL,
+      claimExpiresAt: new Date("2026-09-19T23:59:59Z"),
+    });
+
+    await expect(claimAcquisitionTrial({
+      userId: "user_1",
+      email: "OWNER@ASTER.IN",
+      claim: CLAIM,
+      now: NOW,
+    })).resolves.toMatchObject({ org: { id: "org_1" } });
   });
 
   it("creates one simulated free workspace with an owner and expiring 100-credit grant", async () => {
@@ -111,7 +125,7 @@ describe("claimAcquisitionTrial", () => {
         claimTokenHash: hashClaimToken(CLAIM_TOKEN),
         emailNormalized: "owner@aster.in",
         claimedAt: null,
-        claimExpiresAt: { gt: NOW },
+        claimExpiresAt: { gt: new Date("2026-09-13T00:00:00.000Z") },
       },
     });
     expect(tx.org.create).toHaveBeenCalledWith({

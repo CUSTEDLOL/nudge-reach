@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 
-const { create, checkRateLimit } = vi.hoisted(() => ({
+const { create, findFirst, deleteMany, updateMany, checkRateLimit } = vi.hoisted(() => ({
   create: vi.fn(),
+  findFirst: vi.fn(),
+  deleteMany: vi.fn(),
+  updateMany: vi.fn(),
   checkRateLimit: vi.fn(),
 }));
-vi.mock("@/lib/db", () => ({ prisma: { acquisitionTrial: { create } } }));
+vi.mock("@/lib/db", () => ({
+  prisma: { acquisitionTrial: { create, findFirst, deleteMany, updateMany } },
+}));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit,
   RATE_LIMITS: { publicForm: { limit: 5, windowMs: 60_000 } },
@@ -29,6 +34,7 @@ const validSignup = {
 describe("trial signup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    findFirst.mockResolvedValue(null);
     checkRateLimit.mockReturnValue({ allowed: true, retryAfterSeconds: 0 });
   });
 
@@ -140,6 +146,70 @@ describe("trial signup", () => {
       error: "A trial already exists for that email or mobile. Sign in to resume it.",
     });
     expect(JSON.stringify(body)).not.toContain("claimTokenHash");
+  });
+
+  it("resumes the same unclaimed trial only with its HTTP-only resume secret", async () => {
+    const resumeToken = "r".repeat(43);
+    findFirst.mockResolvedValue({
+      id: "trial_1",
+      emailNormalized: validSignup.email,
+      phoneE164: validSignup.phone,
+      claimTokenHash: hashClaimToken(resumeToken),
+      claimExpiresAt: new Date(Date.now() + 60_000),
+      claimedAt: null,
+    });
+
+    const response = await POST(new Request("https://nudge.test/api/trials", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `nudge_trial_resume=${resumeToken}`,
+      },
+      body: JSON.stringify(validSignup),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      claim: {
+        trialId: "trial_1",
+        claimToken: resumeToken,
+        expiresAt: expect.any(String),
+      },
+    });
+    expect(create).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+  });
+
+  it("extends an expired unclaimed trial only for its matching resume secret", async () => {
+    const resumeToken = "r".repeat(43);
+    findFirst.mockResolvedValue({
+      id: "trial_expired",
+      emailNormalized: validSignup.email,
+      phoneE164: validSignup.phone,
+      claimTokenHash: hashClaimToken(resumeToken),
+      claimExpiresAt: new Date("2020-01-01T00:00:00Z"),
+      claimedAt: null,
+    });
+    updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await createPendingTrial(validSignup, new Date(), resumeToken);
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "trial_expired",
+        claimedAt: null,
+        claimTokenHash: hashClaimToken(resumeToken),
+      },
+      data: { claimExpiresAt: expect.any(Date) },
+    });
+    expect(result).toMatchObject({
+      trialId: "trial_expired",
+      claimToken: resumeToken,
+    });
+    expect(create).not.toHaveBeenCalled();
+    expect(deleteMany).not.toHaveBeenCalled();
   });
 
   it("returns the one-time claim token without exposing its stored hash", async () => {

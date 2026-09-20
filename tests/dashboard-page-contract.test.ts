@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  dashboardRedirectFor,
+  onboardingRedirectFor,
+  type TrialWorkspace,
+} from "@/modules/trial/workspace";
 
 describe("Today page hierarchy", () => {
   /**
@@ -52,5 +57,32 @@ describe("Today page hierarchy", () => {
     expect(source).toContain('aria-label="Loading Today workspace"');
     expect(source).not.toContain("Array.from({ length: 8 })");
     expect(source).toContain("grid-cols-1");
+  });
+});
+
+describe("acquisition-trial routing", () => {
+  const trial = {
+    setupComplete: false,
+    converted: false,
+  } as TrialWorkspace;
+
+  it("sends an unfinished acquisition trial to its short setup first", () => {
+    expect(dashboardRedirectFor(trial, true)).toBe("/trial/setup");
+    expect(onboardingRedirectFor(trial)).toBe("/trial/setup");
+  });
+
+  it("preserves paid onboarding and lets a finished trial reach Home", () => {
+    expect(dashboardRedirectFor(null, true)).toBe("/onboarding");
+    expect(dashboardRedirectFor({ ...trial, setupComplete: true }, true)).toBeNull();
+    expect(onboardingRedirectFor(null)).toBeNull();
+  });
+
+  it("wires the pure decisions into both App Router pages", () => {
+    const dashboard = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
+    const onboarding = readFileSync("src/app/(app)/onboarding/page.tsx", "utf8");
+    expect(dashboard).toContain("dashboardRedirectFor");
+    expect(dashboard).toContain("getTrialWorkspace");
+    expect(onboarding).toContain("onboardingRedirectFor");
+    expect(onboarding).toContain("getTrialWorkspace");
   });
 });

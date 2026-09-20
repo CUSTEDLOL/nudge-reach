@@ -23,7 +23,8 @@ const FOCUSABLE =
 export function useOverlay(
   open: boolean,
   onClose: () => void,
-  panelRef: RefObject<HTMLDivElement | null>
+  panelRef: RefObject<HTMLDivElement | null>,
+  extraFocusRoot?: RefObject<HTMLElement | null>,
 ) {
   // Parents recreate `onClose` on every render (typing into a controlled
   // input re-renders the modal's owner). The effect must only run when the
@@ -50,7 +51,12 @@ export function useOverlay(
         return;
       }
       if (e.key !== "Tab" || !panel) return;
-      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      const extra = extraFocusRoot?.current;
+      const focusables = [
+        ...Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)),
+        ...(extra?.matches(FOCUSABLE) ? [extra] : []),
+        ...Array.from(extra?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []),
+      ].filter((element, index, all) => all.indexOf(element) === index);
       if (focusables.length === 0) {
         e.preventDefault();
         return;
@@ -58,13 +64,16 @@ export function useOverlay(
       const firstEl = focusables[0];
       const lastEl = focusables[focusables.length - 1];
       const active = document.activeElement;
-      if (e.shiftKey && (active === firstEl || active === panel)) {
-        e.preventDefault();
-        lastEl.focus();
-      } else if (!e.shiftKey && active === lastEl) {
-        e.preventDefault();
-        firstEl.focus();
+      const currentIndex = focusables.indexOf(active as HTMLElement);
+      e.preventDefault();
+      if (currentIndex < 0 || active === panel) {
+        (e.shiftKey ? lastEl : firstEl).focus();
+        return;
       }
+      const nextIndex = e.shiftKey
+        ? (currentIndex - 1 + focusables.length) % focusables.length
+        : (currentIndex + 1) % focusables.length;
+      focusables[nextIndex].focus();
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -76,5 +85,5 @@ export function useOverlay(
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus();
     };
-  }, [open, panelRef]);
+  }, [open, panelRef, extraFocusRoot]);
 }

@@ -7,6 +7,8 @@ const {
   summarizeConversation,
   handleInboundMessage,
   withTrialReplyReservation,
+  trialFindUnique,
+  trialUpdateMany,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
@@ -14,10 +16,19 @@ const {
   summarizeConversation: vi.fn(),
   handleInboundMessage: vi.fn(),
   withTrialReplyReservation: vi.fn(),
+  trialFindUnique: vi.fn(),
+  trialUpdateMany: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/db", () => ({ prisma: {} }));
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    acquisitionTrial: {
+      findUnique: trialFindUnique,
+      updateMany: trialUpdateMany,
+    },
+  },
+}));
 vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 vi.mock("@/modules/ai/suggest-reply", () => ({
@@ -41,10 +52,19 @@ import {
   toPreview,
 } from "@/modules/inbox/format";
 import {
+  addContactTagAction,
+  addNoteAction,
+  assignConversationAction,
+  removeContactTagAction,
+  sendTemplateAction,
+  sendTextAction,
+  setConversationStatusAction,
+  setLeadStageAction,
   suggestReplyAction,
   simulateInboundAction,
   summarizeConversationAction,
 } from "@/app/(app)/inbox/actions";
+import { trialSandboxAddress } from "@/modules/trial/test-inbox";
 
 const ORG = "org_1";
 const ME = "user_me";
@@ -232,6 +252,22 @@ describe("restricted acquisition-trial inbox actions", () => {
     });
     expect(summarizeConversation).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["send text", sendTextAction],
+    ["send template", sendTemplateAction],
+    ["change status", setConversationStatusAction],
+    ["assign", assignConversationAction],
+    ["change lead stage", setLeadStageAction],
+    ["add tag", addContactTagAction],
+    ["remove tag", removeContactTagAction],
+    ["add note", addNoteAction],
+  ])("blocks the hidden paid mutation: %s", async (_label, action) => {
+    await expect(action(new FormData())).resolves.toEqual({
+      ok: false,
+      message: "This action is available on paid plans.",
+    });
+  });
 });
 
 describe("trial-metered simulated inbound action", () => {
@@ -253,6 +289,9 @@ describe("trial-metered simulated inbound action", () => {
         result: await work(),
       })
     );
+    trialFindUnique.mockResolvedValue({ id: "trial_1" });
+    trialUpdateMany.mockResolvedValue({ count: 1 });
+    isRestrictedAcquisitionTrial.mockResolvedValue(true);
   });
 
   function formData() {
@@ -271,6 +310,16 @@ describe("trial-metered simulated inbound action", () => {
     });
   });
 
+  it("ignores a forged phone and always uses the org's +999 sandbox identity", async () => {
+    await simulateInboundAction(formData());
+
+    expect(handleInboundMessage).toHaveBeenCalledWith(
+      ORG,
+      trialSandboxAddress(ORG),
+      "Are you open tomorrow?",
+    );
+  });
+
   it.each([
     ["STOP", { optedOut: true }],
     ["no profile", { conversationId: "conversation_1", skipped: "no_profile" }],
@@ -279,6 +328,7 @@ describe("trial-metered simulated inbound action", () => {
     withTrialReplyReservation.mockResolvedValue({ kind: "handled", result });
 
     await simulateInboundAction(formData());
+    expect(trialUpdateMany).not.toHaveBeenCalled();
   });
 
   it("keeps the slot for an AI reply and returns the authoritative remainder", async () => {
@@ -297,6 +347,55 @@ describe("trial-metered simulated inbound action", () => {
       conversationId: "conversation_1",
       trial: summary,
     });
+  });
+
+  it("records the first successful reply and preserves the reserved summary", async () => {
+    const freshSummary = {
+      ...summary,
+      repliesUsed: 5,
+      repliesRemaining: 10,
+    };
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "handled",
+      result: {
+        conversationId: "conversation_1",
+        reply: "Yes, we are open.",
+        generatedByAi: true,
+      },
+      trial: freshSummary,
+    });
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: true,
+      conversationId: "conversation_1",
+      trial: freshSummary,
+    });
+    expect(trialUpdateMany).toHaveBeenCalledWith({
+      where: { id: "trial_1", firstReplyAt: null },
+      data: { firstReplyAt: expect.any(Date) },
+    });
+  });
+
+  it("keeps the successful reply when milestone stamping fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "handled",
+      result: {
+        conversationId: "conversation_1",
+        reply: "Yes, we are open.",
+        generatedByAi: true,
+      },
+      trial: summary,
+    });
+    trialUpdateMany.mockRejectedValue(new Error("database unavailable"));
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: true,
+      conversationId: "conversation_1",
+      trial: summary,
+    });
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
   });
 
   it("blocks before the inbound path when the trial is exhausted", async () => {

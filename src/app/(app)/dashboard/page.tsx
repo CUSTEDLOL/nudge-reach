@@ -31,10 +31,21 @@ import {
   parseWorkspaceProfile,
 } from "@/modules/dashboard/workspace-profile";
 import { requireOrgContext } from "@/modules/orgs/auth";
+import {
+  dashboardRedirectFor,
+  getTrialWorkspace,
+} from "@/modules/trial/workspace";
+import { TrialHome } from "@/components/features/trial/trial-home";
 
 export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
   const now = new Date();
+  const trial = await getTrialWorkspace(org.id, now);
+  const trialRedirect = dashboardRedirectFor(trial, false);
+  if (trialRedirect) redirect(trialRedirect);
+  if (trial && !trial.converted) {
+    return <TrialHome businessName={org.name} workspace={trial} />;
+  }
   const isAgent = membership.role === "AGENT";
   const allowedWhatsappAccountIds =
     isAgent && membership.whatsappAccountIds.length > 0
@@ -47,15 +58,13 @@ export default async function DashboardPage() {
     allowedWhatsappAccountIds
   );
 
-  if (
-    shouldRedirectToOnboarding({
+  const onboardingRequired = shouldRedirectToOnboarding({
       role: membership.role,
       onboardedAt: org.onboardedAt,
       contactCount: data.contactCount,
-    })
-  ) {
-    redirect("/onboarding");
-  }
+    });
+  const onboardingRedirect = dashboardRedirectFor(trial, onboardingRequired);
+  if (onboardingRedirect) redirect(onboardingRedirect);
 
   const profile = parseWorkspaceProfile(org.settings);
   const workspaceDefaults = deriveWorkspaceDefaults(profile);

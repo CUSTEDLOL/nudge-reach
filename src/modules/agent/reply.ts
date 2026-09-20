@@ -18,6 +18,8 @@ import { CreditsExhaustedError } from "@/modules/billing/credits";
 export interface AgentReply {
   text: string;
   handoff: boolean;
+  /** Present only when the model returned non-empty customer-facing text. */
+  generatedByAi?: true;
   /**
    * The model call failed (provider outage, timeout, bad key, a BYOK model id
    * the provider rejects): handed off so the customer still hears back.
@@ -82,7 +84,11 @@ export async function generateAgentReply(
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
     return { text: HANDOFF_MESSAGE, handoff: true };
   }
-  return { text: normalizeWhatsAppMarkdown(raw), handoff: false };
+  return {
+    text: normalizeWhatsAppMarkdown(raw),
+    handoff: false,
+    generatedByAi: true,
+  };
 }
 
 export interface AgentActionReply extends AgentReply {
@@ -90,8 +96,6 @@ export interface AgentActionReply extends AgentReply {
   actions: string[];
   /** The org's AI credits are used up: handed off without calling the model. */
   pausedForCredits?: true;
-  /** Present only when the model returned non-empty customer-facing text. */
-  generatedByAi?: true;
 }
 
 /**

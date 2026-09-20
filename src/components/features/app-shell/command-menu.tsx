@@ -8,14 +8,21 @@ import { Search, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMounted, useOverlay } from "@/components/ui/overlay";
 import {
-  commandsForRole,
+  commandsForMode,
   type AppCommand,
   type AppRole,
+  type AppShellMode,
 } from "@/components/features/app-shell/nav";
 
 const GROUPS: readonly AppCommand["group"][] = ["Navigate", "Quick actions"];
 
-export function CommandMenu({ role }: { role: AppRole }) {
+export function CommandMenu({
+  role,
+  mode = "standard",
+}: {
+  role: AppRole;
+  mode?: AppShellMode;
+}) {
   const router = useRouter();
   const mounted = useMounted();
   const [open, setOpen] = useState(false);
@@ -34,7 +41,7 @@ export function CommandMenu({ role }: { role: AppRole }) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const commands = useMemo(() => commandsForRole(role), [role]);
+  const commands = useMemo(() => commandsForMode(mode, role), [mode, role]);
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return commands;
@@ -145,7 +152,7 @@ export function CommandMenu({ role }: { role: AppRole }) {
                   );
                 })}
 
-                {query.trim() && (
+                {mode === "standard" && query.trim() ? (
                   <button
                     type="button"
                     onClick={searchLeads}
@@ -159,16 +166,18 @@ export function CommandMenu({ role }: { role: AppRole }) {
                       Search leads for “{query.trim()}”
                     </span>
                   </button>
-                )}
+                ) : null}
 
-                {filtered.length === 0 && !query.trim() && (
+                {filtered.length === 0 && !query.trim() ? (
                   <p className="px-3 py-10 text-center text-sm text-neutral-500">
                     Start typing to find a page or action.
                   </p>
-                )}
+                ) : null}
               </div>
               <p className="border-t border-neutral-100 px-4 py-2 text-xs text-neutral-400">
-                Navigate Nudge or search your leads. Conversation search stays in Inbox.
+                {mode === "trial"
+                  ? "Navigate your guided trial."
+                  : "Navigate Nudge or search your leads. Conversation search stays in Inbox."}
               </p>
             </div>
           </div>,

@@ -23,6 +23,7 @@ import {
   type TrialReplySummary,
   withTrialReplyReservation,
 } from "@/modules/trial/replies";
+import { trialSandboxAddress } from "@/modules/trial/test-inbox";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -58,12 +59,20 @@ async function findConversation(orgId: string, conversationId: string) {
   });
 }
 
+async function paidInboxMutationBlocked(orgId: string) {
+  return await isRestrictedAcquisitionTrial(orgId)
+    ? { ok: false as const, message: "This action is available on paid plans." }
+    : null;
+}
+
 /** Free-form session reply — only valid inside the 24h service window. */
 export async function sendTextAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const text = String(formData.get("text") ?? "").trim();
     if (!text) return { ok: false, message: "Type a message first." };
@@ -143,6 +152,8 @@ export async function sendTemplateAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const templateId = String(formData.get("templateId") ?? "");
     if (!templateId) return { ok: false, message: "Pick a template first." };
@@ -275,6 +286,8 @@ export async function setConversationStatusAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const status = String(formData.get("status") ?? "");
     if (!(CONVERSATION_STATUSES as readonly string[]).includes(status)) {
@@ -299,6 +312,8 @@ export async function assignConversationAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const userId = String(formData.get("userId") ?? "");
 
@@ -340,6 +355,8 @@ export async function setLeadStageAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const contactId = String(formData.get("contactId") ?? "");
     const conversationId = String(formData.get("conversationId") ?? "");
     const stage = String(formData.get("stage") ?? "") as LeadStage;
@@ -370,6 +387,8 @@ export async function addContactTagAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const contactId = String(formData.get("contactId") ?? "");
     const conversationId = String(formData.get("conversationId") ?? "");
     const tagId = String(formData.get("tagId") ?? "");
@@ -405,6 +424,8 @@ export async function removeContactTagAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const contactId = String(formData.get("contactId") ?? "");
     const conversationId = String(formData.get("conversationId") ?? "");
     const tagId = String(formData.get("tagId") ?? "");
@@ -429,6 +450,8 @@ export async function removeContactTagAction(
 export async function addNoteAction(formData: FormData): Promise<ActionResult> {
   try {
     const ctx = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(ctx.org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const body = String(formData.get("body") ?? "").trim();
     if (!body) return { ok: false, message: "Write the note first." };
@@ -475,14 +498,29 @@ export async function simulateInboundAction(
     const { org } = await requireOrgContext();
     const rawPhone = String(formData.get("phone") ?? "").trim();
     const text = String(formData.get("text") ?? "").trim();
-    if (!rawPhone || !text) {
-      return { ok: false, message: "Enter a phone number and a message." };
+    const restrictedTrial = await isRestrictedAcquisitionTrial(org.id);
+    if (!text || (!restrictedTrial && !rawPhone)) {
+      return { ok: false, message: "Enter a message first." };
+    }
+    if (restrictedTrial) {
+      const rate = checkRateLimit(
+        `trial-simulation:${org.id}`,
+        RATE_LIMITS.outboundTest,
+      );
+      if (!rate.allowed) {
+        return {
+          ok: false,
+          message: `Sending a lot right now — try again in ${rate.retryAfterSeconds}s.`,
+        };
+      }
     }
     // Users type local numbers; the inbound handler expects webhook-shaped
     // (country-code-included) input — normalize with the org's dial code.
-    const phone = isSimulated(org)
-      ? normalizePhoneE164(rawPhone, org.dialCode)
-      : sandboxAddress(rawPhone);
+    const phone = restrictedTrial
+      ? trialSandboxAddress(org.id)
+      : isSimulated(org)
+        ? normalizePhoneE164(rawPhone, org.dialCode)
+        : sandboxAddress(rawPhone);
     if (!phone) {
       return { ok: false, message: "That phone number doesn't look right." };
     }
@@ -502,8 +540,26 @@ export async function simulateInboundAction(
     }
 
     const { result, trial } = outcome;
+    const freshTrial = trial;
+    if (result.generatedByAi && trial) {
+      try {
+        const acquisitionTrial = await prisma.acquisitionTrial.findUnique({
+          where: { orgId: org.id },
+          select: { id: true },
+        });
+        if (acquisitionTrial) {
+          await prisma.acquisitionTrial.updateMany({
+            where: { id: acquisitionTrial.id, firstReplyAt: null },
+            data: { firstReplyAt: new Date() },
+          });
+        }
+      } catch (error) {
+        console.error("[trial] first reply milestone failed", error);
+      }
+    }
 
     revalidateInbox(result.conversationId);
+    revalidatePath("/inbox/try");
 
     const conversationId = result.conversationId;
     if (result.optedOut) {
@@ -526,7 +582,7 @@ export async function simulateInboundAction(
         message:
           "The AI couldn't answer just now, so the chat was handed to a person — exactly what a customer would get. Try again in a minute.",
         conversationId,
-        ...(trial ? { trial } : {}),
+        ...(freshTrial ? { trial: freshTrial } : {}),
       };
     }
     if (result.handoff) {
@@ -534,14 +590,14 @@ export async function simulateInboundAction(
         ok: true,
         message: "Message received — the agent handed off to a human.",
         conversationId,
-        ...(trial ? { trial } : {}),
+        ...(freshTrial ? { trial: freshTrial } : {}),
       };
     }
     return {
       ok: true,
       message: "Message received — the agent replied.",
       conversationId,
-      ...(trial ? { trial } : {}),
+      ...(freshTrial ? { trial: freshTrial } : {}),
     };
   } catch {
     return { ok: false, message: "The simulated message failed — try again." };

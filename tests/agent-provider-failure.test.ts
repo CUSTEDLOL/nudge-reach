@@ -98,4 +98,16 @@ describe("the agent never leaves a customer unanswered", () => {
     expect(reply.handoff).toBe(false);
     expect(reply.generatedByAi).toBe(true);
   });
+
+  it("marks a healthy tool-less reply for trial metering", async () => {
+    chat.mockResolvedValue("We are open Monday to Saturday.");
+
+    const reply = await generateAgentReply(PROFILE, HISTORY, CTX);
+
+    expect(reply).toMatchObject({
+      text: "We are open Monday to Saturday.",
+      handoff: false,
+      generatedByAi: true,
+    });
+  });
 });

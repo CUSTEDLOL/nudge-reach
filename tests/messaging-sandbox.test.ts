@@ -7,9 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * for a paying client to try the AI before (and after) their number is live.
  */
 
-const { liveSend, simSend } = vi.hoisted(() => ({
+const { liveSend, simSend, dispatchWebhook } = vi.hoisted(() => ({
   liveSend: vi.fn(async () => ({ ok: true, providerMessageId: "wamid.live" })),
   simSend: vi.fn(async () => ({ ok: true, providerMessageId: "sim-1" })),
+  dispatchWebhook: vi.fn(),
 }));
 vi.mock("@/modules/messaging/drivers/whatsapp-live", () => ({
   WhatsappLiveDriver: class { send = liveSend; },
@@ -25,7 +26,7 @@ vi.mock("@/modules/orgs/mode", () => ({
 vi.mock("@/modules/whatsapp/accounts", () => ({
   getWhatsappCredentials: vi.fn(async () => ({ phoneNumberId: "p1", accessToken: "t" })),
 }));
-vi.mock("@/modules/integrations/outbound-webhooks", () => ({ dispatchWebhook: vi.fn() }));
+vi.mock("@/modules/integrations/outbound-webhooks", () => ({ dispatchWebhook }));
 
 import { sendMessage } from "@/modules/messaging";
 import { isSandboxAddress, sandboxAddress } from "@/modules/messaging/sandbox";
@@ -55,5 +56,17 @@ describe("sandbox addresses", () => {
     expect(r.ok).toBe(true);
     expect(simSend).toHaveBeenCalledTimes(1);
     expect(liveSend).not.toHaveBeenCalled();
+  });
+
+  it("can suppress integration webhooks for a private acquisition-trial reply", async () => {
+    await sendMessage(
+      "whatsapp",
+      { address: "+9999876500001", optedIn: true, optedOutAt: null },
+      text,
+      { orgId: "o1", suppressWebhook: true },
+    );
+
+    expect(simSend).toHaveBeenCalledTimes(1);
+    expect(dispatchWebhook).not.toHaveBeenCalled();
   });
 });

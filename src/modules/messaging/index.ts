@@ -35,6 +35,8 @@ export interface SendOptions {
    * A stale id falls back to the default inside credential resolution.
    */
   whatsappAccountId?: string | null;
+  /** Private simulations must not fan out into client integrations. */
+  suppressWebhook?: boolean;
 }
 
 /**
@@ -98,7 +100,7 @@ export async function sendMessage(
 
   // E1: message.sent goes to integrators' webhooks. Fire-and-forget after the
   // send so a slow endpoint never delays a customer-facing message.
-  if (result.ok && options.orgId) {
+  if (result.ok && options.orgId && !options.suppressWebhook) {
     void dispatchWebhook(options.orgId, "message.sent", {
       to: recipient.address,
       kind: payload.kind,

@@ -174,4 +174,57 @@ describe("trial reply allowance", () => {
     });
     expect(prisma.acquisitionTrial.updateMany).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps a successful reply and its reserved counter when summary refresh fails", async () => {
+    prisma.acquisitionTrial.findUnique
+      .mockResolvedValueOnce(ACTIVE_TRIAL)
+      .mockRejectedValueOnce(new Error("summary unavailable"));
+    const result = {
+      conversationId: "conversation_1",
+      reply: "We are open tomorrow.",
+      generatedByAi: true as const,
+    };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      withTrialReplyReservation(
+        "org_1",
+        vi.fn().mockResolvedValue(result),
+        NOW,
+      ),
+    ).resolves.toEqual({
+      kind: "handled",
+      result,
+      trial: {
+        status: "exhausted",
+        repliesUsed: 15,
+        replyLimit: 15,
+        repliesRemaining: 0,
+      },
+    });
+    expect(prisma.acquisitionTrial.updateMany).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it("uses the completion time when a reply crosses the trial expiry", async () => {
+    vi.useFakeTimers();
+    prisma.acquisitionTrial.findUnique
+      .mockResolvedValueOnce(ACTIVE_TRIAL)
+      .mockResolvedValueOnce({ ...ACTIVE_TRIAL, repliesUsed: 15 });
+    vi.setSystemTime(new Date("2026-09-28T00:00:00Z"));
+
+    await expect(
+      withTrialReplyReservation(
+        "org_1",
+        vi.fn().mockResolvedValue({ generatedByAi: true as const }),
+        NOW,
+      ),
+    ).resolves.toMatchObject({
+      kind: "handled",
+      trial: { status: "expired" },
+    });
+
+    vi.useRealTimers();
+  });
 });

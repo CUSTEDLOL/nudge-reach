@@ -95,6 +95,7 @@ describe("SEO page registry", () => {
       ),
     );
     expect(urls).toContain("https://nudgeagent.app/whatsapp-ai-automation");
+    expect(urls).toContain("https://nudgeagent.app/free-trial");
     expect(urls).toContain(
       "https://nudgeagent.app/tools/whatsapp-lead-leakage-calculator",
     );
