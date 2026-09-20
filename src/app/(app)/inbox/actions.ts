@@ -21,6 +21,7 @@ import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 import {
   type TrialReplySummary,
+  trialReplySummary,
   withTrialReplyReservation,
 } from "@/modules/trial/replies";
 
@@ -502,6 +503,20 @@ export async function simulateInboundAction(
     }
 
     const { result, trial } = outcome;
+    let freshTrial = trial;
+    if (result.generatedByAi && trial) {
+      const acquisitionTrial = await prisma.acquisitionTrial.findUnique({
+        where: { orgId: org.id },
+        select: { id: true },
+      });
+      if (acquisitionTrial) {
+        await prisma.acquisitionTrial.updateMany({
+          where: { id: acquisitionTrial.id, firstReplyAt: null },
+          data: { firstReplyAt: new Date() },
+        });
+      }
+      freshTrial = await trialReplySummary(org.id) ?? trial;
+    }
 
     revalidateInbox(result.conversationId);
 
@@ -526,7 +541,7 @@ export async function simulateInboundAction(
         message:
           "The AI couldn't answer just now, so the chat was handed to a person — exactly what a customer would get. Try again in a minute.",
         conversationId,
-        ...(trial ? { trial } : {}),
+        ...(freshTrial ? { trial: freshTrial } : {}),
       };
     }
     if (result.handoff) {
@@ -534,14 +549,14 @@ export async function simulateInboundAction(
         ok: true,
         message: "Message received — the agent handed off to a human.",
         conversationId,
-        ...(trial ? { trial } : {}),
+        ...(freshTrial ? { trial: freshTrial } : {}),
       };
     }
     return {
       ok: true,
       message: "Message received — the agent replied.",
       conversationId,
-      ...(trial ? { trial } : {}),
+      ...(freshTrial ? { trial: freshTrial } : {}),
     };
   } catch {
     return { ok: false, message: "The simulated message failed — try again." };

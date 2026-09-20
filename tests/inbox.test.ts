@@ -7,6 +7,9 @@ const {
   summarizeConversation,
   handleInboundMessage,
   withTrialReplyReservation,
+  trialReplySummary,
+  trialFindUnique,
+  trialUpdateMany,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
@@ -14,10 +17,20 @@ const {
   summarizeConversation: vi.fn(),
   handleInboundMessage: vi.fn(),
   withTrialReplyReservation: vi.fn(),
+  trialReplySummary: vi.fn(),
+  trialFindUnique: vi.fn(),
+  trialUpdateMany: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/db", () => ({ prisma: {} }));
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    acquisitionTrial: {
+      findUnique: trialFindUnique,
+      updateMany: trialUpdateMany,
+    },
+  },
+}));
 vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 vi.mock("@/modules/ai/suggest-reply", () => ({
@@ -28,6 +41,7 @@ vi.mock("@/modules/ai/summarize", () => ({ summarizeConversation }));
 vi.mock("@/modules/agent/inbound", () => ({ handleInboundMessage }));
 vi.mock("@/modules/trial/replies", () => ({
   withTrialReplyReservation,
+  trialReplySummary,
 }));
 import {
   buildConversationWhere,
@@ -253,6 +267,9 @@ describe("trial-metered simulated inbound action", () => {
         result: await work(),
       })
     );
+    trialFindUnique.mockResolvedValue({ id: "trial_1" });
+    trialUpdateMany.mockResolvedValue({ count: 1 });
+    trialReplySummary.mockResolvedValue(summary);
   });
 
   function formData() {
@@ -279,6 +296,7 @@ describe("trial-metered simulated inbound action", () => {
     withTrialReplyReservation.mockResolvedValue({ kind: "handled", result });
 
     await simulateInboundAction(formData());
+    expect(trialUpdateMany).not.toHaveBeenCalled();
   });
 
   it("keeps the slot for an AI reply and returns the authoritative remainder", async () => {
@@ -296,6 +314,34 @@ describe("trial-metered simulated inbound action", () => {
       ok: true,
       conversationId: "conversation_1",
       trial: summary,
+    });
+  });
+
+  it("records the first successful reply and returns a fresh trial summary", async () => {
+    const freshSummary = {
+      ...summary,
+      repliesUsed: 5,
+      repliesRemaining: 10,
+    };
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "handled",
+      result: {
+        conversationId: "conversation_1",
+        reply: "Yes, we are open.",
+        generatedByAi: true,
+      },
+      trial: summary,
+    });
+    trialReplySummary.mockResolvedValue(freshSummary);
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: true,
+      conversationId: "conversation_1",
+      trial: freshSummary,
+    });
+    expect(trialUpdateMany).toHaveBeenCalledWith({
+      where: { id: "trial_1", firstReplyAt: null },
+      data: { firstReplyAt: expect.any(Date) },
     });
   });
 
