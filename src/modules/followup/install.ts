@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { orgSendMode } from "@/modules/orgs/mode";
 import { submitRowToMeta } from "@/modules/whatsapp/library";
 import { buildTemplatePayload } from "@/modules/whatsapp/template";
+import type { CampaignContent } from "@/modules/campaign/schema";
 import {
   PACK_TEMPLATES,
   PACK_LEAD_NUDGE_SPEC,
@@ -25,10 +26,26 @@ export type FollowUpSource = "ai" | "pack" | "builder";
  *  so the tail is already Meta-safe. */
 const templateKey = (automationId: string) => automationId.slice(-8);
 
+/** What Meta reviews, independent of key order — jsonb reorders object keys,
+ *  so a raw JSON.stringify of the stored row never equals a fresh one. */
+function templateFingerprint(category: string, content: unknown): string {
+  const c = (content ?? {}) as Partial<CampaignContent>;
+  return JSON.stringify([
+    category,
+    c.header ?? "",
+    c.body ?? "",
+    c.footer ?? "",
+    (c.buttons ?? []).map((b) => [b.type, b.text, "url" in b ? b.url : ""]),
+  ]);
+}
+
 /**
  * Create/refresh library templates by name. Test mode approves them
- * immediately (so the demo works); live keeps an unchanged row's approval and
- * sends changed copy back to Meta, recording a refusal on the row so the owner
+ * immediately (so the demo works). Live: an unchanged row keeps its approval;
+ * changed copy is marked PENDING and resubmitted — note submitRowToMeta
+ * currently only creates, so for an existing name Meta re-syncs the OLD
+ * template's status and the new copy does not reach Meta until edit-in-place
+ * lands (see plan: Deferred). A refusal is recorded on the row so the owner
  * can fix and resubmit.
  */
 export async function ensureLibraryTemplates(
@@ -46,7 +63,9 @@ export async function ensureLibraryTemplates(
       where: { orgId, name: t.name, campaignId: null },
     });
     const unchanged =
-      existing !== null && JSON.stringify(existing.content) === JSON.stringify(t.content);
+      existing !== null &&
+      templateFingerprint(existing.category, existing.content) ===
+        templateFingerprint(t.category, t.content);
     const data = {
       language: "en",
       category: t.category,
@@ -57,11 +76,8 @@ export async function ensureLibraryTemplates(
         : unchanged
           ? existing.metaStatus
           : ("PENDING" as const),
-      metaTemplateId: approve
-        ? `sim-tpl-${t.name}`
-        : unchanged
-          ? existing.metaTemplateId
-          : null,
+      // Kept across a copy change: Meta's edit endpoint will need it.
+      metaTemplateId: approve ? `sim-tpl-${t.name}` : (existing?.metaTemplateId ?? null),
     };
     const row = existing
       ? await prisma.template.update({ where: { id: existing.id }, data })
@@ -85,6 +101,7 @@ export async function ensureLibraryTemplates(
 /** The template names a spec-backed automation already sends, in step order,
  *  so an edit re-uses (and re-approves) those rows instead of orphaning them. */
 async function pinnedTemplateNames(
+  orgId: string,
   steps: Array<{ kind: string; config: unknown }>
 ): Promise<string[]> {
   const ids = steps
@@ -93,7 +110,7 @@ async function pinnedTemplateNames(
     .filter(Boolean);
   if (!ids.length) return [];
   const rows = await prisma.template.findMany({
-    where: { id: { in: ids } },
+    where: { orgId, id: { in: ids } },
     select: { id: true, name: true },
   });
   const nameById = new Map(rows.map((r) => [r.id, r.name]));
@@ -117,7 +134,7 @@ export async function saveFollowUpFromSpec(opts: {
   enabled?: boolean;
 }): Promise<{ id: string }> {
   const n = opts.spec.messages.length;
-  const base = {
+  const automationFields = {
     name: opts.name ?? opts.spec.name,
     description: `${n} message${n === 1 ? "" : "s"}`,
     spec: opts.spec as unknown as Prisma.InputJsonValue,
@@ -132,7 +149,9 @@ export async function saveFollowUpFromSpec(opts: {
       include: { steps: { orderBy: { order: "asc" } } },
     });
     if (!existing) throw new Error("Follow-up not found.");
-    if (!pinned.length && existing.spec !== null) pinned = await pinnedTemplateNames(existing.steps);
+    if (!pinned.length && existing.spec !== null) {
+      pinned = await pinnedTemplateNames(opts.orgId, existing.steps);
+    }
   } else {
     const { trigger, triggerConfig } = compileFollowUp(opts.spec);
     const created = await prisma.automation.create({
@@ -141,7 +160,7 @@ export async function saveFollowUpFromSpec(opts: {
         enabled: opts.enabled ?? false,
         trigger,
         triggerConfig: triggerConfig as Prisma.InputJsonValue,
-        ...base,
+        ...automationFields,
       },
       select: { id: true },
     });
@@ -159,11 +178,25 @@ export async function saveFollowUpFromSpec(opts: {
       ? { templateId: ids.get(s.config.templateName) }
       : s.config) as Prisma.InputJsonValue,
   }));
+  // A run waiting on the old steps would resume against the new list.
+  const cancelWaiting = opts.automationId
+    ? [
+        prisma.automationRun.updateMany({
+          where: { automationId, status: "WAITING" },
+          data: { status: "CANCELLED", resumeAt: null },
+        }),
+      ]
+    : [];
   await prisma.$transaction([
+    ...cancelWaiting,
     prisma.automationStep.deleteMany({ where: { automationId } }),
     prisma.automation.update({
       where: { id: automationId },
-      data: { ...base, trigger: compiled.trigger, triggerConfig: compiled.triggerConfig as Prisma.InputJsonValue },
+      data: {
+        ...automationFields,
+        trigger: compiled.trigger,
+        triggerConfig: compiled.triggerConfig as Prisma.InputJsonValue,
+      },
     }),
     prisma.automationStep.createMany({ data: steps }),
   ]);
@@ -173,6 +206,7 @@ export async function saveFollowUpFromSpec(opts: {
 /**
  * One-toggle install of the Revenue-Recovery pack for an org: the tick-driven
  * templates, the quiet-lead nudge as a spec, and an enabled FollowUpConfig.
+ * The tick-driven templates are re-written from PACK_TEMPLATES on every run.
  * The nudge is created once; a legacy campaign-reply install (no spec) is
  * upgraded in place; a spec-backed one is the owner's and never overwritten.
  * Idempotent.

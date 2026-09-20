@@ -10,6 +10,7 @@ const m = vi.hoisted(() => ({
   automationUpdate: vi.fn(),
   stepDeleteMany: vi.fn(),
   stepCreateMany: vi.fn(),
+  runUpdateMany: vi.fn(),
   configUpsert: vi.fn(),
   tx: vi.fn(),
   sendMode: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("@/lib/db", () => ({
     template: { findFirst: m.templateFindFirst, findMany: m.templateFindMany, create: m.templateCreate, update: m.templateUpdate },
     automation: { findFirst: m.automationFindFirst, create: m.automationCreate, update: m.automationUpdate },
     automationStep: { deleteMany: m.stepDeleteMany, createMany: m.stepCreateMany },
+    automationRun: { updateMany: m.runUpdateMany },
     followUpConfig: { upsert: m.configUpsert },
     $transaction: m.tx,
   },
@@ -56,6 +58,7 @@ beforeEach(() => {
   m.automationUpdate.mockImplementation(async () => { m.calls.push("automation.update"); return {}; });
   m.stepDeleteMany.mockResolvedValue({ count: 0 });
   m.stepCreateMany.mockImplementation(async () => { m.calls.push("step.createMany"); return { count: 0 }; });
+  m.runUpdateMany.mockResolvedValue({ count: 0 });
   m.configUpsert.mockResolvedValue({});
   m.templateFindMany.mockResolvedValue([]);
 });
@@ -71,6 +74,8 @@ describe("saveFollowUpFromSpec — create", () => {
     expect(created.spec).toEqual(spec);
     const names = m.templateCreate.mock.calls.map((c) => c[0].data.name);
     expect(names).toEqual(["fu_pricing_chase_abcdefgh_1", "fu_pricing_chase_abcdefgh_2"]);
+    // Nothing can be waiting on a brand-new automation.
+    expect(m.runUpdateMany).not.toHaveBeenCalled();
   });
 
   it("stores the Meta components ARRAY, not the whole payload, and resolves templateId into the steps", async () => {
@@ -111,6 +116,28 @@ describe("saveFollowUpFromSpec — update", () => {
     expect(m.automationCreate).not.toHaveBeenCalled();
     expect(m.stepDeleteMany).toHaveBeenCalledWith({ where: { automationId: existing.id } });
     expect(m.automationUpdate.mock.calls[0][0].data).toMatchObject({ name: "Renamed chase", source: "ai" });
+    // A run waiting on the old steps would otherwise resume against the new list.
+    expect(m.runUpdateMany).toHaveBeenCalledWith({
+      where: { automationId: existing.id, status: "WAITING" },
+      data: { status: "CANCELLED", resumeAt: null },
+    });
+    expect(m.calls.indexOf("template.update")).toBeLessThan(m.calls.indexOf("step.createMany"));
+  });
+
+  it("pins only what it can: a shorter templateNames list derives the rest from the key", async () => {
+    m.automationFindFirst.mockResolvedValue(existing);
+    const three = { ...spec, messages: [...spec.messages, { ...spec.messages[1], header: "Last call" }] };
+    await saveFollowUpFromSpec({ orgId: "o1", spec: three, source: "ai", automationId: existing.id, templateNames: ["lead_nudge_1", "lead_nudge_2"] });
+    expect(m.templateFindMany).not.toHaveBeenCalled();
+    expect(m.templateCreate.mock.calls.map((c) => c[0].data.name)).toEqual(["lead_nudge_1", "lead_nudge_2", "fu_pricing_chase_abcdefgh_3"]);
+  });
+
+  it("falls back to the derived name for a pinned step whose template row is gone", async () => {
+    m.automationFindFirst.mockResolvedValue(existing);
+    m.templateFindMany.mockResolvedValue([{ id: "old1", name: "lead_nudge_1" }]);
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai", automationId: existing.id });
+    expect(m.templateFindMany.mock.calls[0][0].where).toMatchObject({ orgId: "o1", id: { in: ["old1", "old2"] } });
+    expect(m.templateCreate.mock.calls.map((c) => c[0].data.name)).toEqual(["lead_nudge_1", "fu_pricing_chase_abcdefgh_2"]);
   });
 
   it("never pins onto a builder-made automation's steps (they may be shared library templates)", async () => {
@@ -132,15 +159,52 @@ describe("live mode template handling", () => {
     const unchangedContent = { productName: "Pricing chase — message 1", campaignAngle: "Follow-up.", header: "Still deciding?", body: "Hi {{1}}, any questions?", footer: "Reply STOP to unsubscribe", buttons: [], sampleName: "Priya", imageTreatment: "", notes: "Created from a follow-up." };
     m.templateFindFirst.mockImplementation(async ({ where }) =>
       where.name.endsWith("_1")
-        ? { id: "k1", name: where.name, content: unchangedContent, metaStatus: "APPROVED", metaTemplateId: "meta-1" }
-        : { id: "k2", name: where.name, content: { stale: true }, metaStatus: "APPROVED", metaTemplateId: "meta-2" }
+        ? { id: "k1", name: where.name, category: "MARKETING", content: unchangedContent, metaStatus: "APPROVED", metaTemplateId: "meta-1" }
+        : { id: "k2", name: where.name, category: "MARKETING", content: { stale: true }, metaStatus: "APPROVED", metaTemplateId: "meta-2" }
     );
     m.submit.mockResolvedValue({});
     await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai" });
     const [first, second] = m.templateUpdate.mock.calls.map((c) => c[0].data);
     expect(first).toMatchObject({ metaStatus: "APPROVED", metaTemplateId: "meta-1" });
-    expect(second).toMatchObject({ metaStatus: "PENDING", metaTemplateId: null });
+    // The Meta id survives a copy change: the edit endpoint will need it.
+    expect(second).toMatchObject({ metaStatus: "PENDING", metaTemplateId: "meta-2" });
     expect(m.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a jsonb-reordered row with the same copy as unchanged (metadata differences ignored)", async () => {
+    m.sendMode.mockResolvedValue("live");
+    // Keys as Postgres jsonb stores them (by length, then bytes), with different
+    // productName/notes — what Meta reviews is identical.
+    const stored = {
+      body: "Hi {{1}}, any questions?",
+      notes: "Edited in the library.",
+      footer: "Reply STOP to unsubscribe",
+      header: "Still deciding?",
+      buttons: [],
+      sampleName: "Priya",
+      productName: "Old name",
+      campaignAngle: "Follow-up.",
+      imageTreatment: "",
+    };
+    m.templateFindFirst.mockResolvedValue({ id: "k1", name: "fu_pricing_chase_abcdefgh_1", category: "MARKETING", content: stored, metaStatus: "APPROVED", metaTemplateId: "meta-1" });
+    await saveFollowUpFromSpec({ orgId: "o1", spec: { ...spec, messages: [spec.messages[0]] }, source: "ai" });
+    expect(m.templateUpdate).toHaveBeenCalledTimes(1);
+    expect(m.templateUpdate.mock.calls[0][0].data).toMatchObject({ metaStatus: "APPROVED", metaTemplateId: "meta-1" });
+    expect(m.submit).not.toHaveBeenCalled();
+  });
+
+  it("records a Meta refusal on the row, keeps going, and still wires the step", async () => {
+    m.sendMode.mockResolvedValue("live");
+    m.submit.mockRejectedValue(new Error("Meta said no"));
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai" });
+    expect(m.submit).toHaveBeenCalledTimes(2);
+    expect(m.templateUpdate.mock.calls.map((c) => c[0])).toEqual([
+      { where: { id: "t1" }, data: { metaStatus: "REJECTED", rejectionReason: "Meta said no" } },
+      { where: { id: "t2" }, data: { metaStatus: "REJECTED", rejectionReason: "Meta said no" } },
+    ]);
+    const steps = m.stepCreateMany.mock.calls[0][0].data;
+    expect(steps[0].config).toEqual({ templateId: "t1" });
+    expect(steps[2].config).toEqual({ templateId: "t2" });
   });
 });
 
@@ -183,6 +247,10 @@ describe("installRevenueRecoveryPack", () => {
     await installRevenueRecoveryPack("o1");
     expect(m.automationCreate).not.toHaveBeenCalled();
     expect(m.templateFindMany).not.toHaveBeenCalled();
+    expect(m.runUpdateMany).toHaveBeenCalledWith({
+      where: { automationId: "legacy", status: "WAITING" },
+      data: { status: "CANCELLED", resumeAt: null },
+    });
     expect(m.stepDeleteMany).toHaveBeenCalledWith({ where: { automationId: "legacy" } });
     const update = m.automationUpdate.mock.calls[0][0];
     expect(update.where).toEqual({ id: "legacy" });

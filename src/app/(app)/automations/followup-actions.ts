@@ -39,7 +39,9 @@ export async function toggleRevenueRecoveryAction(): Promise<ActionResult> {
     const enabling = !cfg?.enabled;
 
     if (enabling) {
-      await installRevenueRecoveryPack(ctx.org.id); // idempotent; enables
+      // Installs anything missing, then resumes the nudge that pause switched off.
+      await installRevenueRecoveryPack(ctx.org.id);
+      await setFollowUpEnabled(ctx.org.id, true);
     } else {
       await setFollowUpEnabled(ctx.org.id, false);
     }
