@@ -13,6 +13,7 @@ import {
   dismissOwnerQuestion,
 } from "@/modules/knowledge/questions";
 import { distillAnswer } from "@/modules/knowledge/distill";
+import { storeKnowledgeFacts } from "@/modules/knowledge/store";
 import {
   FILE_MEDIA_TYPES,
   MAX_FILE_BYTES,
@@ -100,16 +101,31 @@ export async function addFactAction(input: {
     if (fact.length < 3) return { ok: false, message: "Fact is too short." };
     if (!isCategory(input.category))
       return { ok: false, message: "Pick a valid category." };
-    await prisma.knowledgeEntry.create({
-      data: {
-        orgId: ctx.org.id,
+    const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    const condition = input.condition?.trim().slice(0, 120);
+    const stored = await storeKnowledgeFacts(
+      ctx.org.id,
+      [{
         category: input.category,
         fact: fact.slice(0, 300),
-        condition: input.condition?.trim().slice(0, 120) || null,
+        ...(condition ? { condition } : {}),
+      }],
+      {
         source: "manual",
+        status: "active",
+        activeDraftCap: restricted ? 50 : undefined,
       },
-    });
+    );
+    if (stored.created === 0) {
+      return stored.capacityReached
+        ? {
+            ok: false,
+            message: "Your free trial can store up to 50 facts. Archive a fact before adding another.",
+          }
+        : { ok: false, message: "That fact is already in your knowledge." };
+    }
     revalidatePath("/agent");
+    revalidatePath("/dashboard");
     return { ok: true, message: "Fact added." };
   } catch (err) {
     return fail(err);
@@ -205,12 +221,16 @@ export async function importWebsiteAction(url: string): Promise<ActionResult> {
       ctx.org.id,
       "website",
       () => restricted
-        ? ingestWebsite(ctx.org.id, trimmed, TRIAL_INGEST_BUDGET)
+        ? ingestWebsite(ctx.org.id, trimmed, {
+            ...TRIAL_INGEST_BUDGET,
+            activeDraftCap: 50,
+          })
         : ingestWebsite(ctx.org.id, trimmed),
       (value) => value.drafts > 0
     );
     recordAudit(ctx, "knowledge.website_imported", trimmed);
     revalidatePath("/agent");
+    revalidatePath("/dashboard");
     if (result.drafts === 0) {
       return {
         ok: true,
@@ -250,12 +270,16 @@ export async function importGbpAction(query: string): Promise<ActionResult> {
       ctx.org.id,
       "gbp",
       () => restricted
-        ? ingestGbp(ctx.org.id, trimmed, TRIAL_INGEST_BUDGET)
+        ? ingestGbp(ctx.org.id, trimmed, {
+            ...TRIAL_INGEST_BUDGET,
+            activeDraftCap: 50,
+          })
         : ingestGbp(ctx.org.id, trimmed),
       (value) => value.drafts > 0
     );
     recordAudit(ctx, "knowledge.gbp_imported", trimmed);
     revalidatePath("/agent");
+    revalidatePath("/dashboard");
     if (result.drafts === 0) {
       return {
         ok: true,
@@ -307,13 +331,17 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
           mediaType: file.type as FileMediaType,
         };
         return restricted
-          ? ingestFile(ctx.org.id, input, TRIAL_INGEST_BUDGET.maxDrafts)
+          ? ingestFile(ctx.org.id, input, {
+              maxDrafts: TRIAL_INGEST_BUDGET.maxDrafts,
+              activeDraftCap: 50,
+            })
           : ingestFile(ctx.org.id, input);
       },
       (value) => value.drafts > 0
     );
     recordAudit(ctx, "knowledge.file_imported", file.name);
     revalidatePath("/agent");
+    revalidatePath("/dashboard");
     if (result.drafts === 0) {
       return { ok: true, message: "Read the file but found nothing new to import." };
     }

@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  *    against existing facts
  */
 
-const { prisma, assertPublicHttpsUrl } = vi.hoisted(() => ({
+const { prisma, assertPublicHttpsUrl, storeKnowledgeFacts } = vi.hoisted(() => ({
   prisma: {
     knowledgeEntry: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -18,6 +18,7 @@ const { prisma, assertPublicHttpsUrl } = vi.hoisted(() => ({
     },
   },
   assertPublicHttpsUrl: vi.fn().mockResolvedValue(undefined),
+  storeKnowledgeFacts: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -25,6 +26,7 @@ vi.mock("@/lib/env", () => ({ env: { ANTHROPIC_API_KEY: undefined } }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({
   assertPublicHttpsUrl,
 }));
+vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 
 import {
   stripHtml,
@@ -98,6 +100,10 @@ describe("ingestWebsite", () => {
     prisma.knowledgeEntry.findMany.mockResolvedValue([]);
     prisma.knowledgeEntry.create.mockResolvedValue({});
     assertPublicHttpsUrl.mockResolvedValue(undefined);
+    storeKnowledgeFacts.mockResolvedValue({
+      created: 3,
+      capacityReached: false,
+    });
   });
 
   const PAGE = `<html><body>
@@ -115,18 +121,26 @@ describe("ingestWebsite", () => {
     );
     const result = await ingestWebsite("org1", "glow.example.com");
     expect(result.drafts).toBe(3);
-    for (const call of prisma.knowledgeEntry.create.mock.calls) {
-      expect(call[0].data.orgId).toBe("org1");
-      expect(call[0].data.status).toBe("draft");
-      expect(call[0].data.source).toBe("import");
-    }
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org1",
+      expect.arrayContaining([
+        expect.objectContaining({ category: "pricing", fact: "Haircut ₹500" }),
+      ]),
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: undefined,
+        maxCreated: 60,
+      },
+    );
     vi.unstubAllGlobals();
   });
 
-  it("dedupes against existing facts (case-insensitive)", async () => {
-    prisma.knowledgeEntry.findMany.mockResolvedValue([
-      { fact: "haircut ₹500" },
-    ]);
+  it("returns the shared store's deduped count", async () => {
+    storeKnowledgeFacts.mockResolvedValue({
+      created: 2,
+      capacityReached: false,
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -134,11 +148,15 @@ describe("ingestWebsite", () => {
       )
     );
     const result = await ingestWebsite("org1", "https://glow.example.com");
-    expect(result.drafts).toBe(2); // the haircut line is already known
+    expect(result.drafts).toBe(2);
     vi.unstubAllGlobals();
   });
 
   it("honours a smaller draft budget without changing the paid default", async () => {
+    storeKnowledgeFacts.mockResolvedValue({
+      created: 1,
+      capacityReached: false,
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -150,10 +168,20 @@ describe("ingestWebsite", () => {
       maxSubpages: 0,
       maxChunksPerPage: 1,
       maxDrafts: 1,
+      activeDraftCap: 50,
     });
 
     expect(result.drafts).toBe(1);
-    expect(prisma.knowledgeEntry.create).toHaveBeenCalledOnce();
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org1",
+      expect.any(Array),
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: 50,
+        maxCreated: 1,
+      },
+    );
     vi.unstubAllGlobals();
   });
 

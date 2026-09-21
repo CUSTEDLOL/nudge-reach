@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  *    call shape here; the router's own guard covers the Haiku-only rule)
  */
 
-const { prisma, generate, envState } = vi.hoisted(() => ({
+const { prisma, generate, envState, storeKnowledgeFacts } = vi.hoisted(() => ({
   prisma: {
     knowledgeEntry: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -18,6 +18,7 @@ const { prisma, generate, envState } = vi.hoisted(() => ({
   },
   generate: vi.fn(),
   envState: { ANTHROPIC_API_KEY: undefined as string | undefined },
+  storeKnowledgeFacts: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -26,6 +27,7 @@ vi.mock("@/lib/model-router", () => ({ generate, chat: vi.fn() }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({
   assertPublicHttpsUrl: vi.fn(),
 }));
+vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 
 import { ingestFile } from "@/modules/knowledge/ingest";
 
@@ -39,6 +41,10 @@ beforeEach(() => {
   envState.ANTHROPIC_API_KEY = "key";
   prisma.knowledgeEntry.findMany.mockResolvedValue([]);
   generate.mockResolvedValue(FACTS_JSON);
+  storeKnowledgeFacts.mockImplementation(async (_orgId, facts, options) => ({
+    created: Math.min(facts.length, options.maxCreated ?? facts.length),
+    capacityReached: false,
+  }));
 });
 
 describe("ingestFile", () => {
@@ -70,27 +76,39 @@ describe("ingestFile", () => {
       mediaType: "image/png",
     });
     expect(result.drafts).toBe(2);
-    for (const call of prisma.knowledgeEntry.create.mock.calls) {
-      expect(call[0].data.orgId).toBe("org1");
-      expect(call[0].data.status).toBe("draft");
-      expect(call[0].data.source).toBe("import");
-    }
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org1",
+      expect.any(Array),
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: undefined,
+        maxCreated: 60,
+      },
+    );
   });
 
   it("accepts a smaller draft cap for acquisition trials", async () => {
     const result = await ingestFile("org1", {
       base64: "IMGDATA",
       mediaType: "image/png",
-    }, 1);
+    }, { maxDrafts: 1, activeDraftCap: 50 });
 
     expect(result.drafts).toBe(1);
-    expect(prisma.knowledgeEntry.create).toHaveBeenCalledOnce();
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org1",
+      expect.any(Array),
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: 50,
+        maxCreated: 1,
+      },
+    );
   });
 
-  it("dedupes against existing facts", async () => {
-    prisma.knowledgeEntry.findMany.mockResolvedValue([
-      { fact: "classic facial ₹1,800 for 50 minutes" },
-    ]);
+  it("returns the shared store's deduped count", async () => {
+    storeKnowledgeFacts.mockResolvedValue({ created: 1, capacityReached: false });
     const result = await ingestFile("org1", {
       base64: "IMGDATA",
       mediaType: "image/webp",

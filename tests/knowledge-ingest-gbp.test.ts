@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  *    never sinks the GBP facts
  */
 
-const { prisma, envState, assertPublicHttpsUrl } = vi.hoisted(() => ({
+const { prisma, envState, assertPublicHttpsUrl, storeKnowledgeFacts } = vi.hoisted(() => ({
   prisma: {
     knowledgeEntry: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -23,6 +23,7 @@ const { prisma, envState, assertPublicHttpsUrl } = vi.hoisted(() => ({
     GOOGLE_MAPS_API_KEY: undefined as string | undefined,
   },
   assertPublicHttpsUrl: vi.fn().mockResolvedValue(undefined),
+  storeKnowledgeFacts: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -31,6 +32,7 @@ vi.mock("@/lib/model-router", () => ({ chat: vi.fn(), generate: vi.fn() }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({
   assertPublicHttpsUrl,
 }));
+vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 
 import { gbpFacts, ingestGbp, type GbpPlace } from "@/modules/knowledge/ingest";
 
@@ -39,6 +41,7 @@ beforeEach(() => {
   envState.GOOGLE_MAPS_API_KEY = undefined;
   envState.ANTHROPIC_API_KEY = undefined;
   prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+  storeKnowledgeFacts.mockResolvedValue({ created: 4, capacityReached: false });
 });
 
 describe("gbpFacts", () => {
@@ -87,15 +90,22 @@ describe("ingestGbp", () => {
     expect(result.drafts).toBeGreaterThan(0);
     expect(result.name).toContain("demo");
     expect(fetchSpy).not.toHaveBeenCalled();
-    for (const call of prisma.knowledgeEntry.create.mock.calls) {
-      expect(call[0].data.status).toBe("draft");
-      expect(call[0].data.orgId).toBe("org1");
-    }
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org1",
+      expect.any(Array),
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: undefined,
+        maxCreated: 60,
+      },
+    );
     vi.unstubAllGlobals();
   });
 
   it("live mode parses the Places response", async () => {
     envState.GOOGLE_MAPS_API_KEY = "maps-key";
+    storeKnowledgeFacts.mockResolvedValue({ created: 1, capacityReached: false });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -120,6 +130,7 @@ describe("ingestGbp", () => {
 
   it("chains into the website crawl and survives its failure", async () => {
     envState.GOOGLE_MAPS_API_KEY = "maps-key";
+    storeKnowledgeFacts.mockResolvedValue({ created: 1, capacityReached: false });
     vi.stubGlobal(
       "fetch",
       vi

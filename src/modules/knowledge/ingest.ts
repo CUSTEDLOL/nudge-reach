@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { chat, generate } from "@/lib/model-router";
 import { assertPublicHttpsUrl } from "@/modules/integrations/outbound-webhooks";
 import { factSchema, type DistilledFact } from "./distill";
+import { storeKnowledgeFacts } from "./store";
 
 /**
  * Import-first onboarding, source #1: the business website. Crawl the given
@@ -27,6 +27,7 @@ export interface IngestBudget {
   maxSubpages: number;
   maxChunksPerPage: number;
   maxDrafts: number;
+  activeDraftCap?: number;
 }
 
 const DEFAULT_INGEST_BUDGET: IngestBudget = {
@@ -182,42 +183,6 @@ async function modelFacts(
   return facts;
 }
 
-/**
- * Dedupe against the org's existing facts and store as drafts. Shared by
- * every ingestion source (website, PDF, photo, GBP…). Returns stored count.
- */
-async function storeDraftFacts(
-  orgId: string,
-  facts: DistilledFact[],
-  cap = MAX_DRAFTS_PER_RUN
-): Promise<number> {
-  if (!facts.length) return 0;
-  const existing = await prisma.knowledgeEntry.findMany({
-    where: { orgId },
-    select: { fact: true },
-  });
-  const known = new Set(existing.map((e) => e.fact.trim().toLowerCase()));
-
-  let stored = 0;
-  for (const fact of facts) {
-    const key = fact.fact.trim().toLowerCase();
-    if (known.has(key) || stored >= cap) continue;
-    known.add(key);
-    await prisma.knowledgeEntry.create({
-      data: {
-        orgId,
-        category: fact.category,
-        fact: fact.fact.trim(),
-        condition: fact.condition?.trim() || null,
-        source: "import",
-        status: "draft",
-      },
-    });
-    stored += 1;
-  }
-  return stored;
-}
-
 /* ------------------------------------------------------------------ */
 /* Fetch + orchestrate                                                 */
 /* ------------------------------------------------------------------ */
@@ -284,9 +249,14 @@ export async function ingestWebsite(
         : heuristicFacts(text))
     );
   }
-  const drafts = await storeDraftFacts(orgId, collected, budget.maxDrafts);
+  const stored = await storeKnowledgeFacts(orgId, collected, {
+    source: "import",
+    status: "draft",
+    activeDraftCap: budget.activeDraftCap,
+    maxCreated: budget.maxDrafts,
+  });
 
-  return { pages: htmls.size, drafts };
+  return { pages: htmls.size, drafts: stored.created };
 }
 
 /* ------------------------------------------------------------------ */
@@ -408,7 +378,13 @@ export async function ingestGbp(
     );
   }
 
-  let drafts = await storeDraftFacts(orgId, gbpFacts(place), budget.maxDrafts);
+  const stored = await storeKnowledgeFacts(orgId, gbpFacts(place), {
+    source: "import",
+    status: "draft",
+    activeDraftCap: budget.activeDraftCap,
+    maxCreated: budget.maxDrafts,
+  });
+  let drafts = stored.created;
 
   // Bonus: the listing knows the website — crawl it in the same run.
   let websiteCrawled = false;
@@ -449,10 +425,19 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024; // stays inside the 6mb action ca
 const FILE_PROMPT =
   "Extract knowledge-base facts about the business from this file (a menu, price list, rate card, brochure or similar). Follow the system instructions.";
 
+export interface FileIngestBudget {
+  maxDrafts: number;
+  activeDraftCap?: number;
+}
+
+const DEFAULT_FILE_INGEST_BUDGET: FileIngestBudget = {
+  maxDrafts: MAX_DRAFTS_PER_RUN,
+};
+
 export async function ingestFile(
   orgId: string,
   input: { base64: string; mediaType: FileMediaType },
-  maxDrafts = MAX_DRAFTS_PER_RUN
+  budget: FileIngestBudget = DEFAULT_FILE_INGEST_BUDGET,
 ): Promise<{ drafts: number }> {
   if (!env.ANTHROPIC_API_KEY) {
     throw new Error(
@@ -472,6 +457,11 @@ export async function ingestFile(
     attribution: { orgId, purpose: "ingest" },
   });
 
-  const drafts = await storeDraftFacts(orgId, parseFactsArray(raw), maxDrafts);
-  return { drafts };
+  const stored = await storeKnowledgeFacts(orgId, parseFactsArray(raw), {
+    source: "import",
+    status: "draft",
+    activeDraftCap: budget.activeDraftCap,
+    maxCreated: budget.maxDrafts,
+  });
+  return { drafts: stored.created };
 }
