@@ -67,6 +67,7 @@ export function TrialTraining({
             showStructureButton={false}
             factCount={workspace.factCount}
             factLimit={workspace.factLimit}
+            factPlaceholder="e.g. Standard setup costs $120"
           />
         </section>
       </div>

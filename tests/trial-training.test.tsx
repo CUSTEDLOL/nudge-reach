@@ -29,6 +29,7 @@ vi.mock("@/app/(app)/agent/training-actions", () => actions);
 
 import { TrialTraining } from "@/components/features/trial/trial-training";
 import { uploadTrialPdfFiles } from "@/components/features/trial/trial-knowledge-sources";
+import { Library } from "@/app/(app)/agent/library";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 const workspace: TrialWorkspace = {
@@ -113,6 +114,8 @@ describe("continuous trial training page", () => {
     expect(html).toContain("Approved facts");
     expect(html).toContain("Add fact");
     expect(html).toContain("Facts 0/50");
+    expect(html).toContain('placeholder="e.g. Standard setup costs $120"');
+    expect(html).not.toContain("Bridal mehendi");
     expect(html).not.toContain("Test in Inbox");
     expect(html).not.toContain("data-source-card");
     expect(html).not.toMatch(/step 1|progress/i);
@@ -163,6 +166,24 @@ describe("continuous trial training page", () => {
     expect(html).toContain("Test in Inbox");
   });
 
+  it("preserves the paid Library placeholder when no trial override is passed", () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(Library, {
+          facts: [],
+          canEdit: true,
+          showStructureButton: false,
+        }),
+      ),
+    );
+
+    expect(html).toContain(
+      'placeholder="e.g. Bridal mehendi package is ₹5,000"',
+    );
+  });
+
   it("loads active and draft facts into the trial branch and never pushes after imports", () => {
     const agentPage = readFileSync("src/app/(app)/agent/page.tsx", "utf8");
     const sources = readFileSync(
@@ -203,10 +224,33 @@ describe("sequential PDF uploads", () => {
     await expect(result).resolves.toEqual({
       ok: true,
       message: "Uploaded 2 PDFs. Review the facts below.",
+      uploaded: 2,
     });
     expect(upload).toHaveBeenCalledTimes(2);
     expect(
       upload.mock.calls.map(([form]) => (form as FormData).get("file")),
     ).toEqual(files.slice(0, 2));
+  });
+
+  it("refreshes the allowance after a persisted upload even when the next PDF fails", async () => {
+    const files = [
+      new File(["one"], "one.pdf", { type: "application/pdf" }),
+      new File(["two"], "two.pdf", { type: "application/pdf" }),
+    ];
+    const upload = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, message: "First uploaded." })
+      .mockResolvedValueOnce({ ok: false, message: "Second PDF could not be read." });
+    const refreshAllowance = vi.fn();
+
+    await expect(
+      uploadTrialPdfFiles(files, 3, upload, refreshAllowance),
+    ).resolves.toEqual({
+      ok: false,
+      message: "Uploaded 1 PDF, then stopped: Second PDF could not be read.",
+      uploaded: 1,
+    });
+    expect(refreshAllowance).toHaveBeenCalledOnce();
+    expect(refreshAllowance).toHaveBeenCalledWith(1);
   });
 });

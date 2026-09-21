@@ -14,51 +14,60 @@ import {
 
 const MAX_TRIAL_PDF_BYTES = 4 * 1024 * 1024;
 
+export interface TrialPdfUploadResult extends ActionResult {
+  uploaded: number;
+}
+
 export async function uploadTrialPdfFiles(
   files: readonly File[],
   remaining: number,
   upload: (formData: FormData) => Promise<ActionResult> = importFileAction,
-): Promise<ActionResult> {
+  onUploaded?: (uploaded: number) => void,
+): Promise<TrialPdfUploadResult> {
+  let uploaded = 0;
+  function finish(ok: boolean, message: string): TrialPdfUploadResult {
+    if (uploaded > 0) onUploaded?.(uploaded);
+    return { ok, message, uploaded };
+  }
+  function stop(message: string): TrialPdfUploadResult {
+    if (uploaded === 0) return finish(false, message);
+    return finish(
+      false,
+      `Uploaded ${uploaded} PDF${uploaded === 1 ? "" : "s"}, then stopped: ${message}`,
+    );
+  }
+
   const allowed = Math.max(0, Math.floor(remaining));
   if (allowed === 0) {
-    return {
-      ok: false,
-      message: "Your free trial includes three text PDF imports.",
-    };
+    return stop("Your free trial includes three text PDF imports.");
   }
 
   const selected = files.slice(0, allowed);
   if (selected.length === 0) {
-    return { ok: false, message: "Choose at least one text PDF." };
+    return stop("Choose at least one text PDF.");
   }
 
-  let uploaded = 0;
   for (const file of selected) {
     if (file.type !== "application/pdf") {
-      return { ok: false, message: "Choose text PDFs only." };
+      return stop("Choose text PDFs only.");
     }
     if (file.size > MAX_TRIAL_PDF_BYTES) {
-      return { ok: false, message: `${file.name} is too large. Text PDFs must be 4 MB or smaller.` };
+      return stop(`${file.name} is too large. Text PDFs must be 4 MB or smaller.`);
     }
 
     const formData = new FormData();
     formData.set("file", file);
     const result = await upload(formData);
     if (!result.ok) {
-      return uploaded === 0
-        ? result
-        : {
-            ok: false,
-            message: `Uploaded ${uploaded}, then stopped: ${result.message}`,
-          };
+      return stop(result.message);
     }
     uploaded += 1;
   }
 
-  return {
-    ok: true,
-    message: `Uploaded ${uploaded} PDF${uploaded === 1 ? "" : "s"}. Review the facts below.`,
-  };
+  return finish(
+    true,
+    `Uploaded ${uploaded} PDF${uploaded === 1 ? "" : "s"}. Review the facts below.`,
+  );
 }
 
 export function TrialKnowledgeSources({
@@ -87,6 +96,18 @@ export function TrialKnowledgeSources({
       const result = await work();
       setMessage(result.message);
       if (result.ok) router.refresh();
+    });
+  }
+
+  function runPdfImport(files: File[]) {
+    startTransition(async () => {
+      const result = await uploadTrialPdfFiles(
+        files,
+        Math.max(0, fileImportLimit - fileImportsUsed),
+        importFileAction,
+        () => router.refresh(),
+      );
+      setMessage(result.message);
     });
   }
 
@@ -205,12 +226,7 @@ export function TrialKnowledgeSources({
               onChange={(event) => {
                 const files = Array.from(event.currentTarget.files ?? []);
                 event.currentTarget.value = "";
-                runImport(() =>
-                  uploadTrialPdfFiles(
-                    files,
-                    Math.max(0, fileImportLimit - fileImportsUsed),
-                  ),
-                );
+                runPdfImport(files);
               }}
             />
           </Field>

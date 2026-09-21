@@ -180,9 +180,11 @@ function FactRow({
 function AddFactForm({
   factCount,
   factLimit,
+  factPlaceholder = "e.g. Bridal mehendi package is ₹5,000",
 }: {
   factCount?: number;
   factLimit?: number;
+  factPlaceholder?: string;
 }) {
   const [category, setCategory] = useState("menu_services");
   const [fact, setFact] = useState("");
@@ -216,7 +218,7 @@ function AddFactForm({
             id="kf-fact"
             value={fact}
             onChange={(e) => setFact(e.target.value)}
-            placeholder="e.g. Standard setup costs $120"
+            placeholder={factPlaceholder}
             disabled={atLimit}
           />
         </Field>
@@ -276,12 +278,14 @@ export function Library({
   showStructureButton,
   factCount,
   factLimit,
+  factPlaceholder,
 }: {
   facts: LibraryFact[];
   canEdit: boolean;
   showStructureButton: boolean;
   factCount?: number;
   factLimit?: number;
+  factPlaceholder?: string;
 }) {
   const { toast } = useToast();
   const [message, setMessage] = useState<string | null>(null);
@@ -436,7 +440,13 @@ export function Library({
         </div>
       )}
 
-      {canEdit && <AddFactForm factCount={factCount} factLimit={factLimit} />}
+      {canEdit && (
+        <AddFactForm
+          factCount={factCount}
+          factLimit={factLimit}
+          factPlaceholder={factPlaceholder}
+        />
+      )}
 
       {canEdit && showStructureButton && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
