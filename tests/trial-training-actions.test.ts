@@ -43,7 +43,7 @@ vi.mock("@/modules/knowledge/distill", () => ({ distillAnswer }));
 vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 vi.mock("@/modules/knowledge/ingest", () => ({
   FILE_MEDIA_TYPES: ["application/pdf"],
-  MAX_FILE_BYTES: 5 * 1024 * 1024,
+  MAX_FILE_BYTES: 4 * 1024 * 1024,
   ingestFile,
   ingestGbp,
   ingestWebsite,
@@ -235,6 +235,25 @@ describe("restricted trial model-backed training actions", () => {
     );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("rejects files over 4 MB before reserving quota or reading bytes", async () => {
+    const formData = new FormData();
+    const file = new File(
+      [new Uint8Array(4 * 1024 * 1024 + 1)],
+      "too-large.pdf",
+      { type: "application/pdf" },
+    );
+    const readFile = vi.spyOn(file, "arrayBuffer");
+    formData.set("file", file);
+
+    await expect(importFileAction(formData)).resolves.toEqual({
+      ok: false,
+      message: "That file is too large — 4 MB max.",
+    });
+    expect(withTrialKnowledgeImport).not.toHaveBeenCalled();
+    expect(readFile).not.toHaveBeenCalled();
+    expect(ingestFile).not.toHaveBeenCalled();
   });
 
   it("explains when a file import is blocked by the 50-fact limit", async () => {

@@ -336,7 +336,7 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
       return { ok: false, message: "Choose a file to import." };
     }
     if (file.size > MAX_FILE_BYTES) {
-      return { ok: false, message: "That file is too large — 5 MB max." };
+      return { ok: false, message: "That file is too large — 4 MB max." };
     }
     if (!(FILE_MEDIA_TYPES as readonly string[]).includes(file.type)) {
       return {

@@ -36,7 +36,7 @@ vi.mock("@/modules/knowledge/pdf", async (importOriginal) => {
   return { ...actual, extractPdfText };
 });
 
-import { ingestFile } from "@/modules/knowledge/ingest";
+import { ingestFile, MAX_FILE_BYTES } from "@/modules/knowledge/ingest";
 
 const FACTS_JSON = JSON.stringify([
   { category: "pricing", fact: "Document setup package costs $120" },
@@ -63,6 +63,10 @@ beforeEach(() => {
 });
 
 describe("ingestFile", () => {
+  it("keeps uploads below Vercel's multipart request ceiling", () => {
+    expect(MAX_FILE_BYTES).toBe(4 * 1024 * 1024);
+  });
+
   it("parses keyless text PDFs locally, stores bounded drafts, and returns capacity", async () => {
     envState.ANTHROPIC_API_KEY = undefined;
     storeKnowledgeFacts.mockResolvedValue({ created: 3, capacityReached: true });
@@ -79,9 +83,9 @@ describe("ingestFile", () => {
     ).resolves.toEqual({ drafts: 3, capacityReached: true });
 
     expect(generate).not.toHaveBeenCalled();
-    expect(extractPdfText).toHaveBeenCalledWith(
-      new Uint8Array(Buffer.from("pdf bytes")),
-    );
+    const [decodedPdf] = extractPdfText.mock.calls[0] ?? [];
+    expect(Buffer.isBuffer(decodedPdf)).toBe(true);
+    expect(decodedPdf).toEqual(Buffer.from("pdf bytes"));
     expect(storeKnowledgeFacts).toHaveBeenCalledWith(
       "org1",
       [

@@ -430,7 +430,8 @@ export const FILE_MEDIA_TYPES = [
 ] as const;
 export type FileMediaType = (typeof FILE_MEDIA_TYPES)[number];
 
-export const MAX_FILE_BYTES = 5 * 1024 * 1024; // stays inside the 6mb action cap
+// Leaves headroom under Vercel's 4.5 MB multipart request-body limit.
+export const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 const FILE_PROMPT =
   "Extract knowledge-base facts about the business from this file (a menu, price list, rate card, brochure or similar). Follow the system instructions.";
@@ -456,9 +457,7 @@ export async function ingestFile(
       );
     }
 
-    const text = await extractPdfText(
-      new Uint8Array(Buffer.from(input.base64, "base64")),
-    );
+    const text = await extractPdfText(Buffer.from(input.base64, "base64"));
     const stored = await storeKnowledgeFacts(
       orgId,
       deterministicDocumentFacts(text),
