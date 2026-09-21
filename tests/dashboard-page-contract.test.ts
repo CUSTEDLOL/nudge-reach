@@ -63,23 +63,33 @@ describe("Today page hierarchy", () => {
 describe("acquisition-trial routing", () => {
   const trial = {
     setupComplete: false,
+    knowledgeReady: false,
     converted: false,
   } as TrialWorkspace;
 
-  it("sends an unfinished acquisition trial to its short setup first", () => {
-    expect(dashboardRedirectFor(trial, true)).toBe("/trial/setup");
+  it("lets an active acquisition trial reach its Inbox before knowledge is ready", () => {
+    expect(dashboardRedirectFor(trial, true)).toBeNull();
     expect(onboardingRedirectFor(trial)).toBe("/trial/setup");
   });
 
-  it("preserves paid onboarding and lets a finished trial reach Home", () => {
+  it("preserves paid onboarding and lets a trained trial reach its Inbox", () => {
     expect(dashboardRedirectFor(null, true)).toBe("/onboarding");
     expect(dashboardRedirectFor({ ...trial, setupComplete: true }, true)).toBeNull();
     expect(onboardingRedirectFor(null)).toBeNull();
   });
 
-  it("wires the pure decisions into both App Router pages", () => {
+  it("branches to the trial Inbox before loading paid dashboard analytics", () => {
     const dashboard = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
     const onboarding = readFileSync("src/app/(app)/onboarding/page.tsx", "utf8");
+    const trialInbox = dashboard.indexOf("<TrialInbox");
+    const paidDashboardQuery = dashboard.indexOf(
+      "const data = await getDashboardData",
+    );
+
+    expect(trialInbox).toBeGreaterThan(-1);
+    expect(paidDashboardQuery).toBeGreaterThan(-1);
+    expect(trialInbox).toBeLessThan(paidDashboardQuery);
+    expect(dashboard).not.toContain("<TrialHome");
     expect(dashboard).toContain("dashboardRedirectFor");
     expect(dashboard).toContain("getTrialWorkspace");
     expect(onboarding).toContain("onboardingRedirectFor");

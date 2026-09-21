@@ -560,6 +560,7 @@ export async function simulateInboundAction(
 
     revalidateInbox(result.conversationId);
     revalidatePath("/inbox/try");
+    revalidatePath("/dashboard");
 
     const conversationId = result.conversationId;
     if (result.optedOut) {

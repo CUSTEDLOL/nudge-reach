@@ -18,7 +18,7 @@ import {
   trialConversationDestination,
 } from "@/modules/trial/test-inbox";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
-import { simulateInboundAction } from "../actions";
+import { simulateInboundAction } from "@/app/(app)/inbox/actions";
 
 const STARTERS = [
   "What are your timings?",
@@ -34,7 +34,6 @@ export function TryYourAi({
   trial,
   testIdentity,
   initialMessages = [],
-  initialConversationId = null,
 }: {
   simulation: boolean;
   dialCode: string;
@@ -42,14 +41,12 @@ export function TryYourAi({
   trial: TrialWorkspace | null;
   testIdentity: { label: string } | null;
   initialMessages?: ThreadSnapshot["messages"];
-  initialConversationId?: string | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [phone, setPhone] = useState("9876500001");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [conversationId, setConversationId] = useState(initialConversationId);
   const initialTrial = trial ?? {
       status: "active" as const,
       repliesUsed: 0,
@@ -107,7 +104,6 @@ export function TryYourAi({
       router.refresh();
       if (result.skipped) toast({ tone: "error", description: result.message });
       if (result.conversationId) {
-        setConversationId(result.conversationId);
         const destination = trialConversationDestination(
           Boolean(trial),
           result.conversationId,
@@ -162,7 +158,6 @@ export function TryYourAi({
           state={trialState}
           identityLabel={testIdentity.label}
           replyFocusRef={replyFocusRef}
-          conversationId={conversationId}
         />
       )}
       <Card className="p-4 sm:p-6" data-tour="test-composer">

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -142,7 +143,6 @@ describe("trial test conversation", () => {
       createElement(TestConversation, {
         state,
         identityLabel: "Test customer · private simulation",
-        conversationId: "conversation_1",
       }),
     );
 
@@ -151,13 +151,26 @@ describe("trial test conversation", () => {
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain("Book a free demo");
     expect(html).toContain('href="/pricing"');
-    expect(html).toContain('href="/inbox/conversation_1"');
-    expect(html).toContain("Open in shared inbox");
+    expect(html).not.toContain('href="/inbox/conversation_1"');
+    expect(html).not.toContain("Open in shared inbox");
     expect(html).toContain("Ask your first customer question");
     expect(html).toContain("business facts you approved");
     expect(html.toLowerCase()).not.toMatch(/\b(?:clinics?|patients?)\b/);
     expect(html.indexOf("Book a free demo")).toBeLessThan(
       html.indexOf("See paid plans"),
     );
+  });
+
+  it("keeps the paid tester at its alias and redirects an active trial to the Inbox", () => {
+    const source = readFileSync("src/app/(app)/inbox/try/page.tsx", "utf8");
+
+    expect(source).toContain('redirect("/dashboard")');
+    expect(source).toContain(
+      'from "@/components/features/trial/try-your-ai"',
+    );
+    expect(source.indexOf("await getTrialWorkspace(org.id)")).toBeLessThan(
+      source.indexOf("getWhatsappAccount(org.id)"),
+    );
+    expect(source).toContain("<TryYourAi");
   });
 });

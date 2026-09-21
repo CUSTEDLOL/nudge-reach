@@ -138,7 +138,7 @@ describe("active trial workspace copy", () => {
   it("does not assume the business is a clinic or medical practice", () => {
     const source = [
       "../src/app/(app)/inbox/try/page.tsx",
-      "../src/app/(app)/inbox/try/try-your-ai.tsx",
+      "../src/components/features/trial/try-your-ai.tsx",
       "../src/components/features/trial/test-conversation.tsx",
       "../src/components/features/trial/trial-training.tsx",
       "../src/components/features/trial/upgrade-dialog.tsx",

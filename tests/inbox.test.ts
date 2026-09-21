@@ -9,6 +9,7 @@ const {
   withTrialReplyReservation,
   trialFindUnique,
   trialUpdateMany,
+  revalidatePath,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
@@ -18,9 +19,10 @@ const {
   withTrialReplyReservation: vi.fn(),
   trialFindUnique: vi.fn(),
   trialUpdateMany: vi.fn(),
+  revalidatePath: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/db", () => ({
   prisma: {
     acquisitionTrial: {
@@ -347,6 +349,8 @@ describe("trial-metered simulated inbound action", () => {
       conversationId: "conversation_1",
       trial: summary,
     });
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+    expect(revalidatePath).toHaveBeenCalledWith("/inbox");
   });
 
   it("records the first successful reply and preserves the reserved summary", async () => {

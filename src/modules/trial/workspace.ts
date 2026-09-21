@@ -139,7 +139,7 @@ export function dashboardRedirectFor(
   genericOnboardingRequired: boolean,
 ) {
   if (trial && !trial.converted) {
-    return trial.setupComplete ? null : "/trial/setup";
+    return null;
   }
   return genericOnboardingRequired ? "/onboarding" : null;
 }

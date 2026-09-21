@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Ref } from "react";
-import { Bot, ExternalLink, LockKeyhole, UserRound } from "lucide-react";
+import { Bot, LockKeyhole, UserRound } from "lucide-react";
 import { BookDemoButton } from "@/components/marketing/book-demo";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,12 +18,10 @@ export function TestConversation({
   state,
   identityLabel,
   replyFocusRef,
-  conversationId,
 }: {
   state: TrialTestInboxState;
   identityLabel: string;
   replyFocusRef?: Ref<HTMLLIElement>;
-  conversationId?: string | null;
 }) {
   const lastNudgeIndex = state.messages.findLastIndex(
     (message) => message.speaker === "nudge",
@@ -43,15 +41,6 @@ export function TestConversation({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
-          {conversationId && (
-            <Link
-              href={`/inbox/${conversationId}`}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800"
-            >
-              Open in shared inbox
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          )}
           <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-brand-800">
             {state.repliesRemaining} repl{state.repliesRemaining === 1 ? "y" : "ies"} left
           </span>

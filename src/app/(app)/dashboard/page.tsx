@@ -35,16 +35,22 @@ import {
   dashboardRedirectFor,
   getTrialWorkspace,
 } from "@/modules/trial/workspace";
-import { TrialHome } from "@/components/features/trial/trial-home";
+import { TrialInbox } from "@/components/features/trial/trial-inbox";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgrade?: string | string[] }>;
+}) {
   const { org, membership, email } = await requireOrgContext();
   const now = new Date();
   const trial = await getTrialWorkspace(org.id, now);
-  const trialRedirect = dashboardRedirectFor(trial, false);
-  if (trialRedirect) redirect(trialRedirect);
   if (trial && !trial.converted) {
-    return <TrialHome businessName={org.name} workspace={trial} />;
+    const requestedUpgrade = (await searchParams).upgrade;
+    const upgrade = Array.isArray(requestedUpgrade)
+      ? (requestedUpgrade[0] ?? null)
+      : (requestedUpgrade ?? null);
+    return <TrialInbox org={org} workspace={trial} upgrade={upgrade} />;
   }
   const isAgent = membership.role === "AGENT";
   const allowedWhatsappAccountIds =
