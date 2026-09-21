@@ -285,7 +285,7 @@ export function TrialSignupForm() {
         ) : null}
       </div>
 
-      <p className="text-xs leading-5 text-ink/45">
+      <p className="text-xs leading-5 text-ink/60">
         Your password goes directly to secure account creation.
       </p>
     </form>
@@ -307,7 +307,7 @@ function Field({
         {...props}
         name={name}
         required
-        className="mt-1.5 h-12 w-full rounded-md border border-ink/20 bg-white px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10"
+        className="mt-1.5 h-12 w-full rounded-md border border-ink/20 bg-white px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/60 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10"
       />
     </label>
   );

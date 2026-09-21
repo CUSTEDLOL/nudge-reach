@@ -91,6 +91,11 @@ describe("free trial acquisition page", () => {
     expect(html).not.toContain("<details");
   });
 
+  it("keeps normal text and placeholders on AA contrast tokens", () => {
+    expect(html).not.toMatch(/\btext-ink\/(?:35|45|55)\b/);
+    expect(html).not.toMatch(/\bplaceholder:text-ink\/(?:35|45|55)\b/);
+  });
+
   it("renders safe, accessible signup defaults", () => {
     const consent = html.match(/<input[^>]*name="contactConsent"[^>]*>/)?.[0] ?? "";
     const password = html.match(/<input[^>]*name="password"[^>]*>/)?.[0] ?? "";

@@ -52,7 +52,7 @@ export default function FreeTrialPage() {
             <h2 className="text-2xl font-bold tracking-[-0.025em] text-ink">
               Create your private workspace
             </h2>
-            <p className="mt-2 max-w-md text-sm leading-6 text-ink/55">
+            <p className="mt-2 max-w-md text-sm leading-6 text-ink/65">
               Add your details now. You will train and test Nudge after signing
               in.
             </p>
@@ -66,7 +66,7 @@ export default function FreeTrialPage() {
       <FreeTrialSections />
 
       <footer className="border-t border-ink/10 bg-white py-7">
-        <Container className="flex flex-col gap-4 text-sm text-ink/55 sm:flex-row sm:items-center sm:justify-between">
+        <Container className="flex flex-col gap-4 text-sm text-ink/60 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Nudge</p>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2">
             <Link className="hover:text-ink hover:underline" href="/privacy">
