@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -132,5 +133,25 @@ describe("trial app shell", () => {
     expect(html).toContain(reason);
     expect(html).toContain("Book a free demo");
     expect(html).toContain('href="/pricing"');
+  });
+});
+
+describe("active trial workspace copy", () => {
+  it("does not assume the business is a clinic or medical practice", () => {
+    const source = [
+      "../src/app/(app)/inbox/try/page.tsx",
+      "../src/app/(app)/inbox/try/try-your-ai.tsx",
+      "../src/components/features/trial/test-conversation.tsx",
+      "../src/components/features/trial/trial-training.tsx",
+      "../src/components/features/trial/upgrade-dialog.tsx",
+    ]
+      .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+      .join("\n");
+
+    expect(source).toContain("customer");
+    expect(source).toContain("business");
+    expect(source.toLowerCase()).not.toMatch(
+      /\b(?:clinics?|patients?|practice)\b/,
+    );
   });
 });

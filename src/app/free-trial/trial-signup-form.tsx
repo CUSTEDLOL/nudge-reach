@@ -162,7 +162,7 @@ export function TrialSignupForm() {
         <h2 className="text-xl font-bold">Check your email</h2>
         <p className="mt-2 text-sm leading-6 text-ink/65">
           We sent a secure confirmation link to <strong>{confirmationEmail}</strong>.
-          Open it to continue your clinic setup.
+          Open it to continue your business setup.
         </p>
         <p className="mt-3 text-sm text-ink/60">
           Already confirmed or created the account?{" "}
@@ -183,16 +183,16 @@ export function TrialSignupForm() {
           value={values.ownerName}
           onChange={update}
           autoComplete="name"
-          placeholder="Dr Asha Mehta"
+          placeholder="Asha Mehta"
           disabled={Boolean(pendingClaim)}
         />
         <Field
-          label="Clinic name"
+          label="Business name"
           name="businessName"
           value={values.businessName}
           onChange={update}
           autoComplete="organization"
-          placeholder="Aster Clinic"
+          placeholder="Cedar Studio"
           disabled={Boolean(pendingClaim)}
         />
       </div>
@@ -203,7 +203,7 @@ export function TrialSignupForm() {
         onChange={update}
         type="email"
         autoComplete="email"
-        placeholder="you@clinic.com"
+        placeholder="you@business.com"
         disabled={Boolean(pendingClaim)}
       />
       <div className="grid gap-4 sm:grid-cols-2">

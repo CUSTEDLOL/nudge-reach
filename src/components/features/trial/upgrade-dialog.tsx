@@ -38,7 +38,7 @@ export function UpgradeDialog({
       footer={<UpgradeDialogActions featureName={featureName} />}
     >
       <p className="text-sm leading-6 text-neutral-600">
-        Book a free demo and we will show you how this fits your clinic, or compare the paid plans first.
+        Book a free demo and we will show you how this fits your business, or compare the paid plans first.
       </p>
     </Modal>
   );

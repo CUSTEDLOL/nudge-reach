@@ -39,7 +39,7 @@ export async function completeTrialSetupAction(): Promise<CompleteTrialSetupResu
       });
       if (facts < 1) {
         throw new TrialSetupError(
-          "Approve at least one clinic fact before opening your trial.",
+          "Approve at least one business fact before opening your trial.",
         );
       }
 
@@ -48,7 +48,7 @@ export async function completeTrialSetupAction(): Promise<CompleteTrialSetupResu
         create: {
           orgId: ctx.org.id,
           enabled: true,
-          vertical: ctx.org.vertical ?? "clinic",
+          vertical: ctx.org.vertical ?? "other",
           businessName: ctx.org.name,
         },
         update: { enabled: true },

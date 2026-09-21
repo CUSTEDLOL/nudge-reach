@@ -6,12 +6,12 @@ const steps = [
   [
     "1",
     "Train",
-    "Add your clinic website, a useful document, or the facts patients need most.",
+    "Add your business website, a useful document, or the facts customers need most.",
   ],
   [
     "2",
     "Test",
-    "Ask real patient questions in a private inbox and review grounded replies.",
+    "Ask real customer questions in a private inbox and review grounded replies.",
   ],
   [
     "3",
@@ -23,7 +23,7 @@ const steps = [
 const outcomes = [
   [
     "Real actions",
-    "The paid AI Front Desk books into your real calendar, collects payments, and updates the systems your clinic already uses.",
+    "The paid AI Front Desk books into your real calendar, collects payments, and updates the systems your business already uses.",
   ],
   [
     "Compliant follow-up",
@@ -46,7 +46,7 @@ const faqs = [
   ],
   [
     "What happens when the trial ends?",
-    "AI replies pause. Your clinic information stays available while you book a demo or choose a paid plan.",
+    "AI replies pause. Your business information stays available while you book a demo or choose a paid plan.",
   ],
 ] as const;
 
@@ -56,7 +56,7 @@ export function FreeTrialSections() {
       <section className="py-16 sm:py-20">
         <Container>
           <h2 className="max-w-xl text-3xl font-bold tracking-[-0.035em] text-ink sm:text-4xl">
-            From clinic facts to a useful answer.
+            From business facts to a useful answer.
           </h2>
           <ol className="mt-10 border-y border-ink/10">
             {steps.map(([number, title, body]) => (

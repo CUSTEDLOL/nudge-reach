@@ -14,20 +14,20 @@ export const TRIAL_TOUR_STEPS = [
     route: "/dashboard",
     target: "trial-home",
     title: "Your trial starts here",
-    body: "Use this short checklist to train your Front Desk, test a patient question, and preview the paid setup.",
+    body: "Use this short checklist to train your Front Desk, test a customer question, and preview the paid setup.",
   },
   {
     id: "train",
     route: "/agent",
     target: "training-source",
     title: "Keep every reply grounded",
-    body: "These approved clinic facts are all your AI can use. Edit them here whenever something changes.",
+    body: "These approved business facts are all your AI can use. Edit them here whenever something changes.",
   },
   {
     id: "test",
     route: "/inbox/try",
     target: "test-composer",
-    title: "Ask a real patient question",
+    title: "Ask a real customer question",
     body: "Choose a starter or type your own question. This runs through the same agent path as a real WhatsApp message.",
   },
   {

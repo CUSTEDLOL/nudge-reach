@@ -65,10 +65,10 @@ export function TestConversation({
               <Bot className="h-5 w-5" aria-hidden />
             </div>
             <p className="mt-4 text-sm font-semibold text-neutral-900">
-              Ask your first patient question
+              Ask your first customer question
             </p>
             <p className="mt-1 text-xs leading-5 text-neutral-500">
-              Nudge will answer only from the clinic facts you approved.
+              Nudge will answer only from the business facts you approved.
             </p>
           </div>
         ) : (

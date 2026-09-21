@@ -26,7 +26,7 @@ export default async function TrialSetupPage() {
     },
   });
   const allowed = new Set<string>(TRIAL_INTERVIEW_IDS);
-  const questions = questionnaireScript(ctx.org.vertical ?? "clinic")
+  const questions = questionnaireScript(ctx.org.vertical ?? "other")
     .filter((question) => allowed.has(question.id))
     .map(({ id, prompt, placeholder }) => ({ id, prompt, placeholder }));
 

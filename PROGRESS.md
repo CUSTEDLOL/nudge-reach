@@ -2925,3 +2925,10 @@ id can be withdrawn, which would recreate this bug.
 - Delayed the guided tour until setup is complete, suppressed integration webhooks for the private simulation, and made quota state authoritative across failed snapshot refreshes and replies that cross expiry.
 - Added an “Open in shared inbox” step backed by an org-scoped, deterministic-sandbox query and a read-only thread view. Trial users cannot open a normal org conversation or reach its composer, assignments, notes, or status mutations.
 - Full verification passed: 224 test files passed (1 skipped), 1,613 tests passed (3 skipped), lint passed, and the production build passed. The responsive visual walkthrough remains pending because no browser is attached. Demo correlation and paid conversion stamping remain in the separate free-trial conversion plan.
+
+## 2026-09-22 — Business-neutral shared trial and complete lead capture
+
+- Generalized the shared `/free-trial` funnel and active trial workspace from clinic/patient language to business/customer language while keeping the dedicated clinics page unchanged.
+- Changed the missing-vertical trial fallback from `clinic` to the existing generic `other` profile.
+- Added free-trial signups to Admin Leads directly from `AcquisitionTrial`, including unclaimed records, phone/email search, pipeline counts, status/notes editing, and WhatsApp links for stored mobile numbers.
+- Verification passed: the 82-test focused suite, 1,641 full-suite tests passed (3 skipped), and touched-file lint.

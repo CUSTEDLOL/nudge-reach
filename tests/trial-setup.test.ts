@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -133,11 +134,31 @@ describe("complete trial setup", () => {
 
     await expect(completeTrialSetupAction()).resolves.toEqual({
       ok: false,
-      message: "Approve at least one clinic fact before opening your trial.",
+      message: "Approve at least one business fact before opening your trial.",
     });
     expect(agentProfileUpsert).not.toHaveBeenCalled();
     expect(orgUpdate).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("uses the generic business vertical when signup has no vertical", async () => {
+    requireOrgContext.mockResolvedValue({
+      ...ctx,
+      org: { ...ctx.org, vertical: null },
+    });
+
+    await expect(completeTrialSetupAction()).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(agentProfileUpsert).toHaveBeenCalledWith({
+      where: { orgId: "org_1" },
+      create: {
+        orgId: "org_1",
+        enabled: true,
+        vertical: "other",
+        businessName: "Aster Clinic",
+      },
+      update: { enabled: true },
+    });
   });
 
   it("does not complete converted or non-trial workspaces", async () => {
@@ -209,5 +230,17 @@ describe("three-screen trial setup", () => {
     expect(html).toContain("5 approved facts");
     expect(html).toContain("Open my trial");
     expect(trialSetupStage(ready, 0)).toBe("ready");
+  });
+});
+
+describe("trial setup defaults", () => {
+  it("uses the generic questionnaire when an organization has no vertical", () => {
+    const source = readFileSync(
+      new URL("../src/app/(app)/trial/setup/page.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain('ctx.org.vertical ?? "other"');
+    expect(source).not.toContain('ctx.org.vertical ?? "clinic"');
   });
 });

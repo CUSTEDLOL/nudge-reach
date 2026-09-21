@@ -50,6 +50,15 @@ describe("SEO page registry", () => {
   it("uses reviewed dates instead of the current clock", () => {
     expect(seoPage("/").modifiedAt).toBe("2026-09-17");
     expect(seoPage("/industries/clinics").modifiedAt).toBe("2026-09-15");
+    expect(seoPage("/free-trial")).toMatchObject({
+      title: "Free AI Front Desk Trial | Nudge",
+      description:
+        "Teach Nudge about your business and test up to 15 grounded AI replies in a safe workspace. No card required, and no live WhatsApp connection needed.",
+      modifiedAt: "2026-09-22",
+    });
+    expect(JSON.stringify(seoPage("/free-trial")).toLowerCase()).not.toMatch(
+      /\b(?:clinics?|patients?)\b/,
+    );
     expect(seoPage("/whatsapp-ai-automation")).toMatchObject({
       title: "WhatsApp AI Automation: From Reply to Qualified Lead",
       modifiedAt: "2026-09-17",

@@ -65,6 +65,15 @@ describe("free trial acquisition page", () => {
     expect(text.toLowerCase()).not.toContain("blast");
   });
 
+  it("is business-neutral instead of assuming a clinic", () => {
+    const publicCopy = `${text} ${metadata.title} ${metadata.description}`;
+
+    expect(publicCopy).toContain("business information");
+    expect(publicCopy).toContain("customer questions");
+    expect(publicCopy.toLowerCase()).not.toMatch(/\bclinics?\b/);
+    expect(publicCopy.toLowerCase()).not.toMatch(/\bpatients?\b/);
+  });
+
   it("explains the full paid AI Front Desk outcome without a product mockup", () => {
     expect(text).toContain("The paid AI Front Desk");
     expect(text).toContain("books into your real calendar");
@@ -122,9 +131,9 @@ describe("free trial acquisition page", () => {
 
   it("publishes focused canonical metadata", () => {
     expect(metadata).toMatchObject({
-      title: "Free AI Front Desk Trial for Clinics | Nudge",
+      title: "Free AI Front Desk Trial | Nudge",
       description:
-        "Teach Nudge about your clinic and test up to 15 grounded AI replies in a safe workspace. No card required.",
+        "Teach Nudge about your business and test up to 15 grounded AI replies in a safe workspace. No card required.",
       alternates: { canonical: "/free-trial" },
       openGraph: { url: "/free-trial", type: "website" },
     });

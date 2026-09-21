@@ -153,6 +153,9 @@ describe("trial test conversation", () => {
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="/inbox/conversation_1"');
     expect(html).toContain("Open in shared inbox");
+    expect(html).toContain("Ask your first customer question");
+    expect(html).toContain("business facts you approved");
+    expect(html.toLowerCase()).not.toMatch(/\b(?:clinics?|patients?)\b/);
     expect(html.indexOf("Book a free demo")).toBeLessThan(
       html.indexOf("See paid plans"),
     );

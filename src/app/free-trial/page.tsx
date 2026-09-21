@@ -6,9 +6,9 @@ import { Container } from "@/components/marketing/section";
 import { TrialSignupForm } from "./trial-signup-form";
 
 export const metadata: Metadata = {
-  title: "Free AI Front Desk Trial for Clinics | Nudge",
+  title: "Free AI Front Desk Trial | Nudge",
   description:
-    "Teach Nudge about your clinic and test up to 15 grounded AI replies in a safe workspace. No card required.",
+    "Teach Nudge about your business and test up to 15 grounded AI replies in a safe workspace. No card required.",
   alternates: { canonical: "/free-trial" },
   openGraph: { url: "/free-trial", type: "website" },
 };
@@ -35,7 +35,7 @@ export default function FreeTrialPage() {
               A front desk that answers before the lead goes cold.
             </h1>
             <p className="mt-7 max-w-xl text-pretty text-lg leading-8 text-ink/65">
-              Teach Nudge with real clinic information, test grounded answers
+              Teach Nudge with real business information, test grounded answers
               across 15 private replies, and then connect the full AI Front
               Desk through a paid setup.
             </p>

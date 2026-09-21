@@ -37,6 +37,16 @@ describe("trial tour definition", () => {
     expect(trialTourPresentation(768)).toBe("popover");
     expect(trialTourPresentation(1440)).toBe("popover");
   });
+
+  it("uses business-neutral guidance", () => {
+    const copy = TRIAL_TOUR_STEPS
+      .flatMap((step) => [step.title, step.body])
+      .join(" ");
+
+    expect(copy).toContain("customer question");
+    expect(copy).toContain("business facts");
+    expect(copy.toLowerCase()).not.toMatch(/\b(?:clinics?|patients?)\b/);
+  });
 });
 
 describe("trial tour accessibility contract", () => {

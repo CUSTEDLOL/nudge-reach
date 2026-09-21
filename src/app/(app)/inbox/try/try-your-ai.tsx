@@ -22,7 +22,7 @@ import { simulateInboundAction } from "../actions";
 
 const STARTERS = [
   "What are your timings?",
-  "How much does a consultation cost?",
+  "How much does your service cost?",
   "Can I book for tomorrow at 5pm?",
   "Do you have parking?",
 ];
@@ -173,7 +173,7 @@ export function TryYourAi({
               aria-hidden
             />
             <span>
-              This tester uses a private practice number, so nothing is sent to
+              This tester uses a private test number, so nothing is sent to
               a real phone.
               {connectedName
                 ? ` To test on a real phone, message “${connectedName}” from WhatsApp.`

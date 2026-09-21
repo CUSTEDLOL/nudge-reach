@@ -56,9 +56,9 @@ export const SEO_PAGES = [
   },
   {
     path: "/free-trial",
-    title: "Free AI Front Desk Trial for Clinics | Nudge",
-    description: "Teach Nudge about your clinic and test up to 15 grounded AI replies in a safe workspace. No card required, and no live WhatsApp connection needed.",
-    modifiedAt: "2026-09-21",
+    title: "Free AI Front Desk Trial | Nudge",
+    description: "Teach Nudge about your business and test up to 15 grounded AI replies in a safe workspace. No card required, and no live WhatsApp connection needed.",
+    modifiedAt: "2026-09-22",
     changeFrequency: "weekly",
     priority: 0.9,
     index: true,

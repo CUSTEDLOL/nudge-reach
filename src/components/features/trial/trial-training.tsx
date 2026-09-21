@@ -28,7 +28,7 @@ export function TrialTraining({
     <section>
       <PageHeader
         title="Train AI"
-        description="Review and edit the clinic facts that ground every trial reply."
+        description="Review and edit the business facts that ground every trial reply."
         actions={
           <Link
             href={setupComplete ? "/inbox/try" : "/trial/setup"}

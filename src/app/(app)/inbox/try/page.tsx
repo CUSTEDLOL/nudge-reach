@@ -34,7 +34,7 @@ export default async function TryYourAiPage() {
       <PageHeader
         title={trial ? "Test Inbox" : "Try your AI"}
         description={trial
-          ? "Ask a patient question and watch your AI Front Desk answer from the facts you approved."
+          ? "Ask a customer question and watch your AI Front Desk answer from the facts you approved."
           : "Message your business the way a customer would. The reply comes from your AI Front Desk, using only what you've taught it."}
       />
       {profile && !profile.enabled && (
