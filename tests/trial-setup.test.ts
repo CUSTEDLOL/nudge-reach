@@ -62,6 +62,14 @@ const workspace: TrialWorkspace = {
   knowledgeSource: null,
   knowledgeReady: false,
   knowledgeCount: 0,
+  approvedFactCount: 0,
+  draftFactCount: 0,
+  factCount: 0,
+  factLimit: 50,
+  webImportsUsed: 0,
+  webImportLimit: 1,
+  fileImportsUsed: 0,
+  fileImportLimit: 3,
   firstReplyAt: null,
   exploreViewed: false,
   tourStep: "welcome",
@@ -221,7 +229,14 @@ describe("three-screen trial setup", () => {
   });
 
   it("ends with one clear handoff into the workspace", () => {
-    const ready = { ...workspace, knowledgeSource: "interview" as const, knowledgeReady: true, knowledgeCount: 5 };
+    const ready = {
+      ...workspace,
+      knowledgeSource: "interview" as const,
+      knowledgeReady: true,
+      knowledgeCount: 5,
+      approvedFactCount: 5,
+      factCount: 5,
+    };
     const html = renderToStaticMarkup(
       createElement(ToastProvider, null, createElement(TrialSetup, { workspace: ready, drafts: [], questions })),
     );

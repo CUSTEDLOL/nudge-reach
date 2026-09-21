@@ -765,6 +765,8 @@ model AcquisitionTrial {
   repliesUsed           Int                     @default(0)
   knowledgeSource       String?
   knowledgeSourceUsedAt DateTime?
+  knowledgeWebImportsUsed  Int                     @default(0)
+  knowledgeFileImportsUsed Int                     @default(0)
   tourStep              String                  @default("welcome")
   tourCompletedAt       DateTime?
   tourDismissedAt       DateTime?

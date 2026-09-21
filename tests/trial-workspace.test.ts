@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { trialFindUnique, knowledgeCount, notFound } = vi.hoisted(() => ({
+const { trialFindUnique, knowledgeGroupBy, notFound } = vi.hoisted(() => ({
   trialFindUnique: vi.fn(),
-  knowledgeCount: vi.fn(),
+  knowledgeGroupBy: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
@@ -30,7 +30,7 @@ vi.mock("react", () => ({
 vi.mock("@/lib/db", () => ({
   prisma: {
     acquisitionTrial: { findUnique: trialFindUnique },
-    knowledgeEntry: { count: knowledgeCount },
+    knowledgeEntry: { groupBy: knowledgeGroupBy },
   },
 }));
 
@@ -51,6 +51,8 @@ function trialRow(overrides: Record<string, unknown> = {}) {
     repliesUsed: 0,
     replyLimit: 15,
     knowledgeSource: null,
+    knowledgeWebImportsUsed: 0,
+    knowledgeFileImportsUsed: 0,
     tourStep: "welcome",
     tourCompletedAt: null,
     tourDismissedAt: null,
@@ -66,9 +68,9 @@ function trialRow(overrides: Record<string, unknown> = {}) {
 describe("trial workspace projection", () => {
   beforeEach(() => {
     trialFindUnique.mockReset();
-    knowledgeCount.mockReset();
+    knowledgeGroupBy.mockReset();
     notFound.mockClear();
-    knowledgeCount.mockResolvedValue(0);
+    knowledgeGroupBy.mockResolvedValue([]);
   });
 
   it("returns only server-derived workspace state", async () => {
@@ -85,6 +87,14 @@ describe("trial workspace projection", () => {
       knowledgeSource: null,
       knowledgeReady: false,
       knowledgeCount: 0,
+      approvedFactCount: 0,
+      draftFactCount: 0,
+      factCount: 0,
+      factLimit: 50,
+      webImportsUsed: 0,
+      webImportLimit: 1,
+      fileImportsUsed: 0,
+      fileImportLimit: 3,
       firstReplyAt: null,
       exploreViewed: false,
       tourStep: "welcome",
@@ -93,14 +103,18 @@ describe("trial workspace projection", () => {
       demoBooked: false,
       converted: false,
     });
-    expect(knowledgeCount).toHaveBeenCalledWith({
-      where: { orgId: "org_1", status: "active" },
+    expect(knowledgeGroupBy).toHaveBeenCalledWith({
+      by: ["status"],
+      where: { orgId: "org_1", status: { in: ["active", "draft"] } },
+      _count: { _all: true },
     });
   });
 
   it("reuses the implicit request-time projection for the same organization", async () => {
     trialFindUnique.mockResolvedValue(trialRow());
-    knowledgeCount.mockResolvedValue(2);
+    knowledgeGroupBy.mockResolvedValue([
+      { status: "active", _count: { _all: 2 } },
+    ]);
 
     const [first, second] = await Promise.all([
       getTrialWorkspace("org_cached"),
@@ -109,7 +123,39 @@ describe("trial workspace projection", () => {
 
     expect(first).toBe(second);
     expect(trialFindUnique).toHaveBeenCalledOnce();
-    expect(knowledgeCount).toHaveBeenCalledOnce();
+    expect(knowledgeGroupBy).toHaveBeenCalledOnce();
+  });
+
+  it("projects approved and draft facts plus bounded source allowances", async () => {
+    trialFindUnique.mockResolvedValue(
+      trialRow({
+        knowledgeSource: "website",
+        knowledgeWebImportsUsed: 1,
+        knowledgeFileImportsUsed: 2,
+      }),
+    );
+    knowledgeGroupBy.mockResolvedValue([
+      { status: "active", _count: { _all: 12 } },
+      { status: "draft", _count: { _all: 5 } },
+    ]);
+
+    await expect(getTrialWorkspace("org_1", now)).resolves.toMatchObject({
+      knowledgeReady: true,
+      knowledgeCount: 12,
+      approvedFactCount: 12,
+      draftFactCount: 5,
+      factCount: 17,
+      factLimit: 50,
+      webImportsUsed: 1,
+      webImportLimit: 1,
+      fileImportsUsed: 2,
+      fileImportLimit: 3,
+    });
+    expect(knowledgeGroupBy).toHaveBeenCalledWith({
+      by: ["status"],
+      where: { orgId: "org_1", status: { in: ["active", "draft"] } },
+      _count: { _all: true },
+    });
   });
 
   it("clamps the visible allowance and normalizes persisted UI state", async () => {
@@ -123,7 +169,9 @@ describe("trial workspace projection", () => {
         exploreViewedAt: new Date("2026-09-21T09:10:00.000Z"),
       }),
     );
-    knowledgeCount.mockResolvedValue(4);
+    knowledgeGroupBy.mockResolvedValue([
+      { status: "active", _count: { _all: 4 } },
+    ]);
 
     await expect(getTrialWorkspace("org_1", now)).resolves.toMatchObject({
       status: "exhausted",
@@ -140,7 +188,7 @@ describe("trial workspace projection", () => {
   it("returns null for normal workspaces and 404s converted trial routes", async () => {
     trialFindUnique.mockResolvedValueOnce(null);
     await expect(getTrialWorkspace("org_1", now)).resolves.toBeNull();
-    expect(knowledgeCount).not.toHaveBeenCalled();
+    expect(knowledgeGroupBy).not.toHaveBeenCalled();
 
     trialFindUnique.mockResolvedValueOnce(
       trialRow({ convertedAt: new Date("2026-09-21T09:00:00.000Z") }),

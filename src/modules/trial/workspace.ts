@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db";
 import { deriveTrialStatus, type TrialStatus } from "./state";
 
 export type TrialKnowledgeSource = "website" | "gbp" | "file" | "interview";
+export const TRIAL_FACT_LIMIT = 50;
+export const TRIAL_WEB_IMPORT_LIMIT = 1;
+export const TRIAL_FILE_IMPORT_LIMIT = 3;
+
 export type TrialTourStep =
   | "welcome"
   | "train"
@@ -22,6 +26,15 @@ export interface TrialWorkspace {
   setupComplete: boolean;
   knowledgeSource: TrialKnowledgeSource | null;
   knowledgeReady: boolean;
+  approvedFactCount: number;
+  draftFactCount: number;
+  factCount: number;
+  factLimit: number;
+  webImportsUsed: number;
+  webImportLimit: number;
+  fileImportsUsed: number;
+  fileImportLimit: number;
+  /** Temporary compatibility alias for approvedFactCount. */
   knowledgeCount: number;
   firstReplyAt: string | null;
   exploreViewed: boolean;
@@ -79,6 +92,8 @@ async function loadTrialWorkspace(
       repliesUsed: true,
       replyLimit: true,
       knowledgeSource: true,
+      knowledgeWebImportsUsed: true,
+      knowledgeFileImportsUsed: true,
       tourStep: true,
       tourCompletedAt: true,
       tourDismissedAt: true,
@@ -91,9 +106,15 @@ async function loadTrialWorkspace(
   });
   if (!trial) return null;
 
-  const activeKnowledge = await prisma.knowledgeEntry.count({
-    where: { orgId, status: "active" },
+  const factGroups = await prisma.knowledgeEntry.groupBy({
+    by: ["status"],
+    where: { orgId, status: { in: ["active", "draft"] } },
+    _count: { _all: true },
   });
+  const approvedFactCount =
+    factGroups.find((group) => group.status === "active")?._count._all ?? 0;
+  const draftFactCount =
+    factGroups.find((group) => group.status === "draft")?._count._all ?? 0;
   const status = deriveTrialStatus(
     {
       orgId: trial.orgId,
@@ -117,8 +138,16 @@ async function loadTrialWorkspace(
     repliesRemaining: Math.max(0, trial.replyLimit - trial.repliesUsed),
     setupComplete: Boolean(trial.org?.onboardedAt),
     knowledgeSource: knowledgeSource(trial.knowledgeSource),
-    knowledgeReady: activeKnowledge > 0,
-    knowledgeCount: activeKnowledge,
+    knowledgeReady: approvedFactCount > 0,
+    approvedFactCount,
+    draftFactCount,
+    factCount: approvedFactCount + draftFactCount,
+    factLimit: TRIAL_FACT_LIMIT,
+    webImportsUsed: Math.max(0, trial.knowledgeWebImportsUsed),
+    webImportLimit: TRIAL_WEB_IMPORT_LIMIT,
+    fileImportsUsed: Math.max(0, trial.knowledgeFileImportsUsed),
+    fileImportLimit: TRIAL_FILE_IMPORT_LIMIT,
+    knowledgeCount: approvedFactCount,
     firstReplyAt: iso(trial.firstReplyAt),
     exploreViewed: Boolean(trial.exploreViewedAt),
     tourStep: tourStep(trial.tourStep),
