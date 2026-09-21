@@ -34,7 +34,7 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-neutral-200 bg-white px-4 sm:px-6">
       <BrandMark compact className="lg:hidden" />
-      <CommandMenu role={role} mode={mode} />
+      {mode === "standard" ? <CommandMenu role={role} mode={mode} /> : null}
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <span className="hidden max-w-48 truncate text-sm font-medium text-neutral-800 md:block">

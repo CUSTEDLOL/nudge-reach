@@ -1,35 +1,45 @@
 import { readFileSync } from "node:fs";
+import { BookOpen, Inbox } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import {
   activeNavChildKey,
   activeNavKey,
   commandsForRole,
   commandsForMode,
+  isNavItemActive,
   mobilePrimaryItemsForRole,
   mobilePrimaryItemsForMode,
   navGroupsForRole,
   navItemsForMode,
 } from "@/components/features/app-shell/nav";
-import { isThreadRoute } from "@/components/features/app-shell/bottom-nav";
+import {
+  bottomNavGridClass,
+  isThreadRoute,
+} from "@/components/features/app-shell/bottom-nav";
 
 describe("adaptive app navigation", () => {
-  it("gives acquisition trials exactly four honest destinations", () => {
-    expect(navItemsForMode("trial", "OWNER").map((item) => [item.label, item.href])).toEqual([
-      ["Home", "/dashboard"],
+  it("gives acquisition trials exactly two honest destinations", () => {
+    const items = navItemsForMode("trial", "OWNER");
+
+    expect(items.map((item) => [item.label, item.href])).toEqual([
+      ["Inbox", "/dashboard"],
       ["Train AI", "/agent"],
-      ["Test Inbox", "/inbox/try"],
-      ["Explore", "/explore"],
     ]);
-    expect(
-      navItemsForMode("trial", "OWNER").some((item) => item.href === "/campaigns"),
-    ).toBe(false);
-    expect(mobilePrimaryItemsForMode("trial", "OWNER")).toHaveLength(4);
-    expect(commandsForMode("trial", "OWNER").map((command) => command.href)).toEqual([
+    expect(items.map((item) => item.icon)).toEqual([Inbox, BookOpen]);
+    expect(isNavItemActive("/dashboard", items[0])).toBe(true);
+    expect(isNavItemActive("/agent", items[1])).toBe(true);
+    expect(mobilePrimaryItemsForMode("trial", "OWNER").map((item) => item.href)).toEqual([
       "/dashboard",
       "/agent",
-      "/inbox/try",
-      "/explore",
     ]);
+    expect(commandsForMode("trial", "OWNER").map((command) => [command.label, command.href])).toEqual([
+      ["Inbox", "/dashboard"],
+      ["Train AI", "/agent"],
+    ]);
+  });
+
+  it("uses a real two-column grid for the two trial destinations", () => {
+    expect(bottomNavGridClass(2)).toBe("grid-cols-2");
   });
 
   it("keeps standard role navigation unchanged", () => {

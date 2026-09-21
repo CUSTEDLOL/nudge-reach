@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   isTrialWorkspacePath,
-  trialExploreRedirect,
+  trialWorkspaceRedirect,
 } from "@/modules/trial/routes";
 
 describe("trial workspace routes", () => {
@@ -11,9 +11,9 @@ describe("trial workspace routes", () => {
     ["/trial/setup", true],
     ["/agent", true],
     ["/inbox/try", true],
-    ["/inbox/conversation_1", true],
-    ["/explore", true],
     ["/settings/billing", true],
+    ["/inbox/conversation_1", false],
+    ["/explore", false],
     ["/campaigns", false],
     ["/inbox", false],
     ["/inbox/conversation_1/edit", false],
@@ -23,12 +23,18 @@ describe("trial workspace routes", () => {
     expect(isTrialWorkspacePath(pathname)).toBe(allowed);
   });
 
-  it("turns a paid direct route into an encoded Explore preview", () => {
-    expect(trialExploreRedirect("/campaigns/new")).toBe(
-      "/explore?feature=campaigns",
+  it("turns unsupported routes into an encoded Inbox upgrade notice", () => {
+    expect(trialWorkspaceRedirect("/explore")).toBe(
+      "/dashboard?upgrade=explore",
     );
-    expect(trialExploreRedirect("/settings/whatsapp")).toBe(
-      "/explore?feature=settings",
+    expect(trialWorkspaceRedirect("/campaigns/new")).toBe(
+      "/dashboard?upgrade=campaigns",
+    );
+    expect(trialWorkspaceRedirect("/settings/whatsapp?next=/explore")).toBe(
+      "/dashboard?upgrade=settings",
+    );
+    expect(trialWorkspaceRedirect("/%2Funsafe")).toBe(
+      "/dashboard?upgrade=%252Funsafe",
     );
   });
 
@@ -36,6 +42,7 @@ describe("trial workspace routes", () => {
     const layout = readFileSync("src/app/(app)/layout.tsx", "utf8");
     expect(layout).toContain('get("x-nudge-pathname")');
     expect(layout).toContain("isTrialWorkspacePath");
-    expect(layout).toContain("trialExploreRedirect");
+    expect(layout).toContain("trialWorkspaceRedirect");
+    expect(layout).not.toContain("trialExploreRedirect");
   });
 });

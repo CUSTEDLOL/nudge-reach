@@ -10,7 +10,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { getTrialWorkspace } from "@/modules/trial/workspace";
 import {
   isTrialWorkspacePath,
-  trialExploreRedirect,
+  trialWorkspaceRedirect,
 } from "@/modules/trial/routes";
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const activeTrial = trial && !trial.converted ? trial : null;
   const pathname = requestHeaders.get("x-nudge-pathname");
   if (activeTrial && pathname && !isTrialWorkspacePath(pathname)) {
-    redirect(trialExploreRedirect(pathname));
+    redirect(trialWorkspaceRedirect(pathname));
   }
   const uiPreferences = parseUiPreferences(membership.uiPreferences);
 

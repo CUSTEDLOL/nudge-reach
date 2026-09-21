@@ -23,6 +23,11 @@ export function isThreadRoute(pathname: string): boolean {
   return /^\/inbox\/[^/?#]+/.test(pathname);
 }
 
+export function bottomNavGridClass(destinationCount: number): string {
+  if (destinationCount === 2) return "grid-cols-2";
+  return destinationCount === 5 ? "grid-cols-5" : "grid-cols-4";
+}
+
 /**
  * Mobile-only (< lg) fixed bottom navigation: Today, Inbox, Front Desk, Leads,
  * and a grouped More sheet. Desktop uses the adaptive sidebar.
@@ -62,7 +67,9 @@ export function BottomNav({
         <div
           className={cn(
             "mx-auto grid h-16 max-w-lg",
-            secondaryGroups.length > 0 ? "grid-cols-5" : "grid-cols-4",
+            bottomNavGridClass(
+              primary.length + (secondaryGroups.length > 0 ? 1 : 0),
+            ),
           )}
         >
           {primary.map((item) => {

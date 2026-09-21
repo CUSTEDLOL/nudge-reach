@@ -212,11 +212,11 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 
 export const TRIAL_NAV_ITEMS = [
   {
-    key: "today",
-    label: "Home",
-    mobileLabel: "Home",
+    key: "inbox",
+    label: "Inbox",
+    mobileLabel: "Inbox",
     href: "/dashboard",
-    icon: House,
+    icon: Inbox,
     activePrefixes: ["/dashboard"],
     tourTarget: "nav-home",
   },
@@ -225,27 +225,9 @@ export const TRIAL_NAV_ITEMS = [
     label: "Train AI",
     mobileLabel: "Train",
     href: "/agent",
-    icon: Bot,
-    activePrefixes: ["/agent", "/knowledge"],
+    icon: BookOpen,
+    activePrefixes: ["/agent"],
     tourTarget: "nav-train",
-  },
-  {
-    key: "inbox",
-    label: "Test Inbox",
-    mobileLabel: "Test",
-    href: "/inbox/try",
-    icon: Inbox,
-    activePrefixes: ["/inbox/try"],
-    tourTarget: "nav-test",
-  },
-  {
-    key: "integrations",
-    label: "Explore",
-    mobileLabel: "Explore",
-    href: "/explore",
-    icon: Blocks,
-    activePrefixes: ["/explore"],
-    tourTarget: "nav-explore",
   },
 ] satisfies readonly NavItem[];
 

@@ -15,6 +15,7 @@ import {
   AppShell,
   shouldShowTrialTour,
 } from "@/components/features/app-shell/shell";
+import { Topbar } from "@/components/features/app-shell/topbar";
 import {
   TrialStatusStrip,
   trialStatusText,
@@ -42,7 +43,7 @@ const trial: TrialWorkspace = {
 };
 
 describe("trial app shell", () => {
-  it("renders one shared shell with four real coach-mark links", () => {
+  it("renders one shared shell with only Inbox and Train AI destinations", () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
@@ -61,11 +62,36 @@ describe("trial app shell", () => {
     expect(html).toContain("Safe test workspace");
     expect(html).toContain("12 of 15 replies left");
     expect(html).toContain("Ends 27 Sep");
-    for (const target of ["nav-home", "nav-train", "nav-test", "nav-explore"]) {
-      expect(html).toContain(`data-tour="${target}"`);
-    }
+    expect(html).toContain('href="/dashboard"');
+    expect(html).toContain('href="/agent"');
+    expect(html).toContain("grid-cols-2");
+    expect(html).not.toContain('href="/inbox/try"');
+    expect(html).not.toContain('href="/explore"');
     expect(html).not.toContain('href="/campaigns"');
     expect(html).not.toContain('href="/settings"');
+    expect(html).not.toContain("Search or jump to...");
+  });
+
+  it("keeps command search in the standard workspace only", () => {
+    const trialTopbar = renderToStaticMarkup(
+      createElement(Topbar, {
+        orgName: "Aster Clinic",
+        user: { name: "Asha", email: "asha@aster.in" },
+        role: "OWNER",
+        mode: "trial",
+      }),
+    );
+    const standardTopbar = renderToStaticMarkup(
+      createElement(Topbar, {
+        orgName: "Aster Clinic",
+        user: { name: "Asha", email: "asha@aster.in" },
+        role: "OWNER",
+        mode: "standard",
+      }),
+    );
+
+    expect(trialTopbar).not.toContain("Search or jump to...");
+    expect(standardTopbar).toContain("Search or jump to...");
   });
 
   it("keeps the active usage string authoritative and polite", () => {
