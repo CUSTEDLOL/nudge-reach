@@ -86,7 +86,7 @@ describe("trial knowledge budget", () => {
   });
 
   it("lets paid and non-trial work bypass the allowance", async () => {
-    const work = vi.fn().mockResolvedValue({ drafts: 3 });
+    const work = vi.fn(async () => ({ drafts: 3 }));
     prisma.acquisitionTrial.findUnique.mockResolvedValue(null);
 
     await expect(withTrialKnowledgeSource(
@@ -101,7 +101,7 @@ describe("trial knowledge budget", () => {
   });
 
   it("bypasses the allowance after a paid subscription activates", async () => {
-    const work = vi.fn().mockResolvedValue({ drafts: 3 });
+    const work = vi.fn(async () => ({ drafts: 3 }));
     prisma.acquisitionTrial.findUnique.mockResolvedValue({
       ...TRIAL,
       org: { subscriptionStatus: "active" },
