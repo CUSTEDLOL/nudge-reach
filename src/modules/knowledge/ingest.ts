@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { Buffer } from "node:buffer";
 import { env } from "@/lib/env";
 import { chat, generate } from "@/lib/model-router";
 import { assertPublicHttpsUrl } from "@/modules/integrations/outbound-webhooks";
 import { factSchema, type DistilledFact } from "./distill";
+import { deterministicDocumentFacts, extractPdfText } from "./pdf";
 import { storeKnowledgeFacts } from "./store";
 
 /**
@@ -415,10 +417,9 @@ export async function ingestGbp(
 }
 
 /* ------------------------------------------------------------------ */
-/* File ingestion — PDFs (document blocks) + menu/rate-card photos     */
-/* (vision), both through the Haiku router. Requires the AI key: with  */
-/* zero keys the caller gets a friendly pointer at the website import, */
-/* which stays fully keyless (invariant #4).                           */
+/* File ingestion — keyed PDFs/images retain their guarded router      */
+/* shapes. Keyless text PDFs are parsed locally; images need OCR and   */
+/* therefore require a configured AI key.                              */
 /* ------------------------------------------------------------------ */
 
 export const FILE_MEDIA_TYPES = [
@@ -449,9 +450,29 @@ export async function ingestFile(
   budget: FileIngestBudget = DEFAULT_FILE_INGEST_BUDGET,
 ): Promise<{ drafts: number; capacityReached: boolean }> {
   if (!env.ANTHROPIC_API_KEY) {
-    throw new Error(
-      "Reading files needs the AI key. In demo mode, import from your website instead — that works without keys."
+    if (input.mediaType !== "application/pdf") {
+      throw new Error(
+        "Reading images needs OCR through an AI key. Upload a text-based PDF instead, or configure an AI key.",
+      );
+    }
+
+    const text = await extractPdfText(
+      new Uint8Array(Buffer.from(input.base64, "base64")),
     );
+    const stored = await storeKnowledgeFacts(
+      orgId,
+      deterministicDocumentFacts(text),
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: budget.activeDraftCap,
+        maxCreated: budget.maxDrafts,
+      },
+    );
+    return {
+      drafts: stored.created,
+      capacityReached: stored.capacityReached,
+    };
   }
 
   const raw = await generate({

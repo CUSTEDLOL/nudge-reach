@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
  * PDF / menu-photo ingestion. Invariants under test:
- *  - keyless mode fails with the friendly website-import pointer (never a crash)
+ *  - keyless text PDFs are parsed locally; keyless images explain the OCR/key boundary
  *  - PDFs go to the router as document blocks, images as vision blocks
  *  - extracted facts land as org-scoped DRAFTS via the shared store (deduped)
  *  - the runtime model stays whatever the router enforces (we only assert the
  *    call shape here; the router's own guard covers the Haiku-only rule)
  */
 
-const { prisma, generate, envState, storeKnowledgeFacts } = vi.hoisted(() => ({
+const { prisma, generate, envState, storeKnowledgeFacts, extractPdfText } = vi.hoisted(() => ({
   prisma: {
     knowledgeEntry: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -19,6 +19,7 @@ const { prisma, generate, envState, storeKnowledgeFacts } = vi.hoisted(() => ({
   generate: vi.fn(),
   envState: { ANTHROPIC_API_KEY: undefined as string | undefined },
   storeKnowledgeFacts: vi.fn(),
+  extractPdfText: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma }));
@@ -28,19 +29,33 @@ vi.mock("@/modules/integrations/outbound-webhooks", () => ({
   assertPublicHttpsUrl: vi.fn(),
 }));
 vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
+vi.mock("@/modules/knowledge/pdf", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/modules/knowledge/pdf")
+  >();
+  return { ...actual, extractPdfText };
+});
 
 import { ingestFile } from "@/modules/knowledge/ingest";
 
 const FACTS_JSON = JSON.stringify([
-  { category: "pricing", fact: "Classic facial ₹1,800 for 50 minutes" },
-  { category: "menu_services", fact: "Bridal packages available on request" },
+  { category: "pricing", fact: "Document setup package costs $120" },
+  { category: "menu_services", fact: "Workspace planning is available" },
 ]);
+
+const PDF_TEXT = [
+  "Services: Workspace planning consultation",
+  "Document setup package - $120",
+  "Hours: Monday-Friday 9:00 AM-5:00 PM",
+  "Contact: hello@northstar.example",
+].join("\n");
 
 beforeEach(() => {
   vi.clearAllMocks();
   envState.ANTHROPIC_API_KEY = "key";
   prisma.knowledgeEntry.findMany.mockResolvedValue([]);
   generate.mockResolvedValue(FACTS_JSON);
+  extractPdfText.mockResolvedValue(PDF_TEXT);
   storeKnowledgeFacts.mockImplementation(async (_orgId, facts, options) => ({
     created: Math.min(facts.length, options.maxCreated ?? facts.length),
     capacityReached: false,
@@ -48,12 +63,57 @@ beforeEach(() => {
 });
 
 describe("ingestFile", () => {
-  it("keyless → friendly error pointing at the keyless website import", async () => {
+  it("parses keyless text PDFs locally, stores bounded drafts, and returns capacity", async () => {
     envState.ANTHROPIC_API_KEY = undefined;
+    storeKnowledgeFacts.mockResolvedValue({ created: 3, capacityReached: true });
+
     await expect(
-      ingestFile("org1", { base64: "AAAA", mediaType: "application/pdf" })
-    ).rejects.toThrow(/website/i);
+      ingestFile(
+        "org1",
+        {
+          base64: Buffer.from("pdf bytes").toString("base64"),
+          mediaType: "application/pdf",
+        },
+        { maxDrafts: 4, activeDraftCap: 50 },
+      ),
+    ).resolves.toEqual({ drafts: 3, capacityReached: true });
+
     expect(generate).not.toHaveBeenCalled();
+    expect(extractPdfText).toHaveBeenCalledWith(
+      new Uint8Array(Buffer.from("pdf bytes")),
+    );
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org1",
+      [
+        {
+          category: "menu_services",
+          fact: "Services: Workspace planning consultation",
+        },
+        { category: "pricing", fact: "Document setup package - $120" },
+        {
+          category: "hours",
+          fact: "Hours: Monday-Friday 9:00 AM-5:00 PM",
+        },
+        { category: "other", fact: "Contact: hello@northstar.example" },
+      ],
+      {
+        source: "import",
+        status: "draft",
+        activeDraftCap: 50,
+        maxCreated: 4,
+      },
+    );
+  });
+
+  it("explains that keyless images need OCR through an AI key", async () => {
+    envState.ANTHROPIC_API_KEY = undefined;
+
+    await expect(
+      ingestFile("org1", { base64: "IMGDATA", mediaType: "image/jpeg" }),
+    ).rejects.toThrow(/OCR.*AI key|AI key.*OCR/i);
+
+    expect(generate).not.toHaveBeenCalled();
+    expect(extractPdfText).not.toHaveBeenCalled();
   });
 
   it("sends PDFs as document blocks", async () => {
@@ -61,6 +121,7 @@ describe("ingestFile", () => {
     const call = generate.mock.calls[0][0];
     expect(call.document).toEqual({ data: "PDFDATA" });
     expect(call.image).toBeUndefined();
+    expect(extractPdfText).not.toHaveBeenCalled();
   });
 
   it("sends photos as vision blocks", async () => {
@@ -68,6 +129,7 @@ describe("ingestFile", () => {
     const call = generate.mock.calls[0][0];
     expect(call.image).toEqual({ data: "IMGDATA", mediaType: "image/jpeg" });
     expect(call.document).toBeUndefined();
+    expect(extractPdfText).not.toHaveBeenCalled();
   });
 
   it("stores extracted facts as org-scoped drafts", async () => {
