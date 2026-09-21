@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { FlaskConical } from "lucide-react";
 import { BookDemoButton } from "@/components/marketing/book-demo";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
@@ -40,35 +39,42 @@ export function TrialStatusStrip({ trial }: { trial: TrialWorkspace }) {
 
   return (
     <div className="border-b border-brand-100 bg-brand-50/85 px-4 py-2.5 sm:px-6">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700">
-            <FlaskConical className="h-3.5 w-3.5" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-brand-900">Safe test workspace</p>
-            <p aria-live="polite" className="text-xs leading-5 text-brand-900/65">
-              {trialStatusText(trial)}
-            </p>
-          </div>
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-brand-900">Safe test workspace</p>
+          <p aria-live="polite" className="text-xs leading-5 text-brand-900/65">
+            {trialStatusText(trial)}
+          </p>
         </div>
-        {stopped ? (
-          <div className="flex items-center gap-3 pl-9 sm:pl-0">
-            <BookDemoButton
-              surface="trial-workspace"
-              variant="primary"
-              size="sm"
-            >
-              Book a free demo
-            </BookDemoButton>
-            <Link
-              href="/pricing"
-              className="text-xs font-semibold text-brand-800 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            >
-              See paid plans
-            </Link>
-          </div>
-        ) : null}
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <details className="text-xs text-brand-900">
+            <summary className="cursor-pointer font-semibold underline decoration-brand-300 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+              How to use this trial
+            </summary>
+            <ol className="mt-2 space-y-1.5 border-l border-brand-200 pl-3 leading-5 text-brand-900/70">
+              <li>1. Add business information in Train AI.</li>
+              <li>2. Ask a customer question in Inbox.</li>
+              <li>3. Review the reply and update your information if needed.</li>
+            </ol>
+          </details>
+          {stopped ? (
+            <div className="flex items-center gap-3">
+              <BookDemoButton
+                surface="trial-workspace"
+                variant="primary"
+                size="sm"
+              >
+                Book a free demo
+              </BookDemoButton>
+              <Link
+                href="/pricing"
+                className="text-xs font-semibold text-brand-800 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+              >
+                See paid plans
+              </Link>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

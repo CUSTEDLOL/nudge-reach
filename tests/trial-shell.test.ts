@@ -12,10 +12,7 @@ vi.mock("@/app/(app)/shell-actions", () => ({
   saveSidebarCollapsedAction: vi.fn(),
 }));
 
-import {
-  AppShell,
-  shouldShowTrialTour,
-} from "@/components/features/app-shell/shell";
+import { AppShell } from "@/components/features/app-shell/shell";
 import { Topbar } from "@/components/features/app-shell/topbar";
 import {
   TrialStatusStrip,
@@ -103,7 +100,7 @@ describe("trial app shell", () => {
     expect(html).toContain('aria-live="polite"');
   });
 
-  it("does not start the product tour until setup is complete", () => {
+  it("shows quiet inline guidance before setup without mounting a tour", () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
@@ -118,9 +115,10 @@ describe("trial app shell", () => {
     );
 
     expect(html).toContain("Manual fact editor");
-    expect(html).not.toContain("Skip guided tour");
-    expect(shouldShowTrialTour("trial", { ...trial, setupComplete: false })).toBe(false);
-    expect(shouldShowTrialTour("trial", trial)).toBe(true);
+    expect(html).toContain("How to use this trial");
+    expect(html).toContain("<details");
+    expect(html).not.toContain('role="dialog"');
+    expect(html).not.toContain("Skip tour");
   });
 
   it.each([
