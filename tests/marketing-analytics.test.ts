@@ -433,6 +433,7 @@ describe("demo booking funnel", () => {
   });
 
   it.each([
+    "free-trial",
     "whatsapp-ai-automation",
     "whatsapp-lead-leakage-calculator",
   ])("preserves the %s content surface", (surface) => {

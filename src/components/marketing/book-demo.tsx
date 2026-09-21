@@ -33,6 +33,7 @@ const SAFE_SURFACES = new Set([
   "pricing",
   "clinic",
   "resource",
+  "free-trial",
   "whatsapp-ai-automation",
   "whatsapp-lead-leakage-calculator",
   "footer",

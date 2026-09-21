@@ -23,6 +23,10 @@ function plainText(markup: string) {
     .trim();
 }
 
+function count(markup: string, pattern: RegExp) {
+  return markup.match(pattern)?.length ?? 0;
+}
+
 const form = {
   ownerName: "Dr Asha Mehta",
   businessName: "Aster Clinic",
@@ -37,13 +41,54 @@ describe("free trial acquisition page", () => {
   const html = renderToStaticMarkup(createElement(FreeTrialPage));
   const text = plainText(html);
 
-  it("makes the clinic trial offer and next step unambiguous", () => {
-    expect(text).toContain("Try Nudge on your clinic's real questions");
-    expect(text).toContain("7 days or 15 AI replies");
+  it("offers one focused path into the trial", () => {
+    expect(count(html, /<h1\b/g)).toBe(1);
+    expect(count(html, /<form\b/g)).toBe(1);
+    expect(count(html, /<button[^>]*type="submit"/g)).toBe(1);
+    expect(count(html, /data-cal-link=/g)).toBe(1);
+
+    expect(text).toContain(
+      "A front desk that answers before the lead goes cold.",
+    );
+    expect(text).toContain("7 days");
+    expect(text).toContain("15 replies");
     expect(text).toContain("No card required");
+    expect(text).toContain("No live WhatsApp connection");
     expect(text).toContain("Official WhatsApp API");
+    expect(text).toContain("Train");
+    expect(text).toContain("Test");
+    expect(text).toContain("Go live");
     expect(text).toContain("Book a free demo");
+    expect(html).toContain('href="/login"');
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain('href="/terms"');
     expect(text.toLowerCase()).not.toContain("blast");
+  });
+
+  it("explains the full paid AI Front Desk outcome without a product mockup", () => {
+    expect(text).toContain("The paid AI Front Desk");
+    expect(text).toContain("books into your real calendar");
+    expect(text).toContain("follows up opted-in leads");
+    expect(text).toContain("collects payments");
+    expect(text).toContain("set it up with you");
+
+    for (const removed of [
+      "A safe, guided trial",
+      "START FREE",
+      "Aster Clinic AI",
+      "Inside your trial",
+      "TRAIN AI",
+      "Explore",
+    ]) {
+      expect(text).not.toContain(removed);
+    }
+  });
+
+  it("keeps all three trial FAQs visible", () => {
+    expect(count(html, /<dl\b/g)).toBe(1);
+    expect(count(html, /<dt\b/g)).toBe(3);
+    expect(count(html, /<dd\b/g)).toBe(3);
+    expect(html).not.toContain("<details");
   });
 
   it("renders safe, accessible signup defaults", () => {
@@ -57,6 +102,17 @@ describe("free trial acquisition page", () => {
     expect(honeypot).toContain('aria-hidden="true"');
     expect(honeypot).toContain('tabindex="-1"');
     expect(html).toContain('aria-live="polite"');
+    for (const name of [
+      "ownerName",
+      "businessName",
+      "email",
+      "phone",
+      "password",
+      "contactConsent",
+      "honeypot",
+    ]) {
+      expect(count(html, new RegExp(`name="${name}"`, "g"))).toBe(1);
+    }
   });
 
   it("publishes focused canonical metadata", () => {

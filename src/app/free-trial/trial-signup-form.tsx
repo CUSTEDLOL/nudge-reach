@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { ArrowRight, Check, LoaderCircle, LockKeyhole } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   captureAttribution,
@@ -155,11 +155,11 @@ export function TrialSignupForm() {
 
   if (confirmationEmail) {
     return (
-      <div className="rounded-2xl border border-brand-200 bg-brand-50 p-6 text-ink" aria-live="polite">
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-500 text-white">
-          <Check className="h-5 w-5" aria-hidden />
-        </span>
-        <h2 className="mt-4 text-xl font-bold">Check your email</h2>
+      <div
+        className="border-l-2 border-brand-500 py-1 pl-5 text-ink"
+        aria-live="polite"
+      >
+        <h2 className="text-xl font-bold">Check your email</h2>
         <p className="mt-2 text-sm leading-6 text-ink/65">
           We sent a secure confirmation link to <strong>{confirmationEmail}</strong>.
           Open it to continue your clinic setup.
@@ -261,18 +261,16 @@ export function TrialSignupForm() {
       <button
         type="submit"
         disabled={busy}
-        className="group flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 text-[15px] font-bold text-white shadow-[0_4px_0_#047f48] transition hover:-translate-y-0.5 hover:bg-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60 motion-reduce:transform-none"
+        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-700 px-5 py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60"
       >
         {busy ? (
           <LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
-        ) : (
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" aria-hidden />
-        )}
+        ) : null}
         {busy
           ? "Creating your workspace…"
           : pendingClaim
             ? "Retry secure account creation"
-            : "Start my free trial"}
+            : "Create my workspace"}
       </button>
 
       <div aria-live="polite" className="min-h-6 text-sm text-red-700">
@@ -287,9 +285,8 @@ export function TrialSignupForm() {
         ) : null}
       </div>
 
-      <p className="flex items-center justify-center gap-2 text-xs text-ink/45">
-        <LockKeyhole className="h-3.5 w-3.5" aria-hidden />
-        Password goes directly to secure account creation.
+      <p className="text-xs leading-5 text-ink/45">
+        Your password goes directly to secure account creation.
       </p>
     </form>
   );
@@ -310,7 +307,7 @@ function Field({
         {...props}
         name={name}
         required
-        className="mt-1.5 h-12 w-full rounded-xl border border-ink/15 bg-white px-3.5 text-[15px] text-ink outline-none transition placeholder:text-ink/35 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+        className="mt-1.5 h-12 w-full rounded-md border border-ink/20 bg-white px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10"
       />
     </label>
   );
