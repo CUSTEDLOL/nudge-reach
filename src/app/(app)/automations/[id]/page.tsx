@@ -5,9 +5,10 @@ import { ArrowLeft, History } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { hasRole, requireOrgContext } from "@/modules/orgs/auth";
 import {
+  AUTOMATION_TRIGGERS,
   parseKeywordConfig,
+  parseQuietConfig,
   STEP_KINDS,
-  type AutomationTrigger,
   type StepKind,
 } from "@/modules/automation/definitions";
 import { PageHeader } from "@/components/ui/page-header";
@@ -38,9 +39,7 @@ export default async function EditAutomationPage({
 
   const options = await loadBuilderOptions(org.id, { includeContacts: true });
 
-  const trigger = (
-    ["message_received", "keyword", "contact_created", "tag_added", "campaign_reply"] as const
-  ).find((t) => t === automation.trigger) as AutomationTrigger | undefined;
+  const trigger = AUTOMATION_TRIGGERS.find((t) => t === automation.trigger);
   const keywordConfig = parseKeywordConfig(automation.triggerConfig);
   const triggerConfig =
     automation.triggerConfig &&
@@ -93,6 +92,10 @@ export default async function EditAutomationPage({
             automation.trigger === "tag_added" &&
             typeof triggerConfig.tagName === "string"
               ? triggerConfig.tagName
+              : undefined,
+          preservedQuiet:
+            automation.trigger === "conversation_quiet"
+              ? parseQuietConfig(automation.triggerConfig)
               : undefined,
           steps: automation.steps.map((step) => ({
             kind: (STEP_KINDS.find((k) => k === step.kind) ??

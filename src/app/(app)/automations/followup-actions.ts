@@ -1,16 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
-import { checkAiFrontDesk } from "@/modules/billing/limits";
+import { checkAiFrontDesk, checkAutomationLimit } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
+import { draftFollowUp } from "@/modules/followup/draft";
 import {
   getFollowUpConfig,
   installRevenueRecoveryPack,
+  saveFollowUpFromSpec,
   setFollowUpEnabled,
   setFollowUpFlag,
   setFollowUpTiming,
+  writeStarterSet,
 } from "@/modules/followup/install";
+import {
+  parseFollowUpSpec,
+  specErrorMessage,
+  type FollowUpSpec,
+} from "@/modules/followup/spec";
 import {
   FOLLOW_UP_FLAGS,
   FOLLOW_UP_KINDS,
@@ -39,7 +48,9 @@ export async function toggleRevenueRecoveryAction(): Promise<ActionResult> {
     const enabling = !cfg?.enabled;
 
     if (enabling) {
-      await installRevenueRecoveryPack(ctx.org.id); // idempotent; enables
+      // Installs anything missing, then resumes the nudge that pause switched off.
+      await installRevenueRecoveryPack(ctx.org.id);
+      await setFollowUpEnabled(ctx.org.id, true);
     } else {
       await setFollowUpEnabled(ctx.org.id, false);
     }
@@ -128,6 +139,203 @@ export async function setFollowUpFlagAction(
       ok: false,
       message:
         err instanceof Error ? err.message : "Couldn't update that follow-up.",
+    };
+  }
+}
+
+export interface DraftResult extends ActionResult {
+  /** The unsaved draft the owner reviews before it is created. */
+  spec?: FollowUpSpec;
+}
+
+/** Sentence → reviewable spec. Nothing is saved. ADMIN + AI Front Desk. */
+export async function draftFollowUpAction(request: string): Promise<DraftResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const gate = await checkAiFrontDesk(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
+
+    const spec = await draftFollowUp({
+      orgId: ctx.org.id,
+      request: String(request ?? "").slice(0, 500),
+    });
+    return { ok: true, message: "Here's a draft — edit anything, then create it.", spec };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't draft that follow-up.",
+    };
+  }
+}
+
+export interface CreateResult extends ActionResult {
+  id?: string;
+  /** What was actually stored — parse repairs the draft ({{1}}, the STOP
+   *  footer, a quiet chase's first message), so the card renders this, not
+   *  the version the owner submitted. */
+  spec?: FollowUpSpec;
+}
+
+/** Save a reviewed spec as a new follow-up. Lands OFF. */
+export async function createFollowUpAction(raw: unknown): Promise<CreateResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const gate = await checkAiFrontDesk(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
+    // Plan limit: automations (creates only, exactly like the builder's save).
+    const limit = await checkAutomationLimit(ctx.org.id);
+    if (!limit.allowed) return { ok: false, message: limit.message };
+
+    const parsed = parseFollowUpSpec(raw);
+    if (!parsed.ok) return { ok: false, message: specErrorMessage(parsed.error) };
+
+    const { id } = await saveFollowUpFromSpec({
+      orgId: ctx.org.id,
+      spec: parsed.spec,
+      source: "ai",
+    });
+    recordAudit(ctx, "followup.created", parsed.spec.name);
+    revalidatePath("/automations");
+    return {
+      ok: true,
+      message: "Created — it's off until you switch it on.",
+      id,
+      spec: parsed.spec,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't create that follow-up.",
+    };
+  }
+}
+
+export interface UpdateResult extends ActionResult {
+  /** The stored spec after parse's repairs — the card re-renders from this. */
+  spec?: FollowUpSpec;
+}
+
+/** Re-save an edited spec over an existing follow-up (org-scoped). */
+export async function updateFollowUpAction(
+  id: string,
+  raw: unknown
+): Promise<UpdateResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { id: true, source: true },
+    });
+    if (!existing) return { ok: false, message: "Follow-up not found." };
+
+    const parsed = parseFollowUpSpec(raw);
+    if (!parsed.ok) return { ok: false, message: specErrorMessage(parsed.error) };
+
+    await saveFollowUpFromSpec({
+      orgId: ctx.org.id,
+      spec: parsed.spec,
+      // A pack follow-up stays the pack's (its templates are pinned by name);
+      // anything else edited here is now spec-backed.
+      source: existing.source === "pack" ? "pack" : "ai",
+      automationId: id,
+    });
+    recordAudit(ctx, "followup.updated", parsed.spec.name);
+    revalidatePath("/automations");
+    revalidatePath(`/automations/${id}`);
+    return {
+      ok: true,
+      message: "Saved. Changed wording goes back to Meta for approval.",
+      spec: parsed.spec,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't save that follow-up.",
+    };
+  }
+}
+
+export async function deleteFollowUpAction(id: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const existing = await prisma.automation.findFirst({
+      where: { id, orgId: ctx.org.id },
+      select: { name: true },
+    });
+    if (!existing) return { ok: false, message: "Follow-up not found." };
+
+    // deleteMany keeps the org scope on the write, and a row that vanished
+    // between the read and the write is a message, not a raw Prisma P2025.
+    const { count } = await prisma.automation.deleteMany({
+      where: { id, orgId: ctx.org.id },
+    });
+    if (!count) return { ok: false, message: "Follow-up not found." };
+
+    recordAudit(ctx, "followup.deleted", existing.name);
+    revalidatePath("/automations");
+    return { ok: true, message: "Deleted. Its templates stay in your library." };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't delete that follow-up.",
+    };
+  }
+}
+
+export interface StarterSetResult extends ActionResult {
+  /** How many drafted follow-ups were actually saved. */
+  created?: number;
+}
+
+/** First-open: install the tick-driven pack (its quiet-lead nudge starts ON,
+ *  as the installer has always done) AND draft a tailored set, which lands OFF. */
+export async function writeStarterSetAction(): Promise<StarterSetResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const gate = await checkAiFrontDesk(ctx.org.id);
+    if (!gate.allowed) return { ok: false, message: gate.message };
+
+    const { created, stopped, draftFailed, failed } = await writeStarterSet(ctx.org.id);
+    if (draftFailed) {
+      revalidatePath("/automations");
+      return {
+        ok: true,
+        created: 0,
+        message:
+          "Installed the ready-made follow-ups, but couldn't draft the extra ones just now — try the bar above.",
+      };
+    }
+
+    recordAudit(ctx, "followup.drafted", `${created} drafted`);
+    revalidatePath("/automations");
+    const message = created
+      ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} for you — read them, then switch on the ones you want.`
+      : stopped || failed
+        ? "Installed the ready-made follow-ups."
+        : "Your starter set is already here.";
+    return {
+      ok: true,
+      created,
+      message: stopped
+        ? `${message} We stopped there — that's as many automations as your plan allows.`
+        : failed
+          ? `${message} Something went wrong after that, so we couldn't finish the rest.`
+          : message,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't write your starter set.",
     };
   }
 }

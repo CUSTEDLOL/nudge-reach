@@ -58,6 +58,7 @@ vi.mock("@/modules/contacts/events", () => ({ recordContactEvent: vi.fn() }));
 vi.mock("@/modules/scoring/compute", () => ({ scoreContactSoon: vi.fn() }));
 vi.mock("@/modules/automation/engine", () => ({
   runInboundAutomations: vi.fn().mockResolvedValue({ replied: false }),
+  cancelWaitingRuns: vi.fn().mockResolvedValue(0),
 }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({ dispatchWebhook: vi.fn() }));
 vi.mock("@/modules/orgs/auth", () => ({
@@ -75,6 +76,7 @@ import { encryptSecret } from "@/lib/crypto";
 import { wizardFromPhotoAction } from "@/app/(app)/campaigns/actions";
 import { handleInboundMessage } from "@/modules/agent/inbound";
 import { generateAgentActionReply } from "@/modules/agent/reply";
+import { cancelWaitingRuns, runInboundAutomations } from "@/modules/automation/engine";
 import { suggestReply } from "@/modules/ai/suggest-reply";
 import { summarizeConversation } from "@/modules/ai/summarize";
 import {
@@ -187,6 +189,35 @@ describe("agent reply", () => {
       where: { id: "cv1" },
       data: { status: "handoff" },
     });
+  });
+});
+
+describe("inbound cancels pending chases", () => {
+  beforeEach(() => {
+    prisma.contact.findUnique.mockResolvedValue({ id: "c1" });
+    prisma.contact.upsert.mockResolvedValue({ id: "c1", name: "Priya", optedIn: true, optedOutAt: null });
+  });
+
+  it("a reply cancels BEFORE automations dispatch, so it can never cancel the run it starts", async () => {
+    prisma.conversation.upsert.mockResolvedValue({ id: "cv1", whatsappAccountId: null });
+    prisma.conversationMessage.create.mockResolvedValue({});
+    ensureAgentProfile.mockResolvedValue(null); // stop before the model
+
+    await handleInboundMessage("org1", "919876543210", "still interested");
+
+    expect(cancelWaitingRuns).toHaveBeenCalledWith("org1", "c1", "reply");
+    expect(vi.mocked(cancelWaitingRuns).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(runInboundAutomations).mock.invocationCallOrder[0]
+    );
+  });
+
+  it("STOP cancels as opt_out and never dispatches automations", async () => {
+    prisma.contact.update.mockResolvedValue({});
+
+    await expect(handleInboundMessage("org1", "919876543210", "STOP")).resolves.toEqual({ optedOut: true });
+
+    expect(cancelWaitingRuns).toHaveBeenCalledWith("org1", "c1", "opt_out");
+    expect(runInboundAutomations).not.toHaveBeenCalled();
   });
 });
 

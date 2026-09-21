@@ -21,6 +21,10 @@ const { prisma } = vi.hoisted(() => ({
       findMany: vi.fn(),
     },
     note: { create: vi.fn().mockResolvedValue({}) },
+    automationRun: {
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
   },
 }));
 
@@ -118,6 +122,10 @@ describe("markPaymentPaid", () => {
       contactId: "c1",
       props: { paymentRequestId: "pr_1", amountMinor: 50_000, currency: "INR" },
     });
+    // Paying ends any chase still waiting on this contact (cancel-on-signal).
+    expect(prisma.automationRun.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { orgId: "org1", contactId: "c1", status: "WAITING" } })
+    );
 
     // Second delivery of the same webhook: status no longer "created".
     prisma.paymentRequest.updateMany.mockResolvedValueOnce({ count: 0 });

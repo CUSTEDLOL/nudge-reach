@@ -113,9 +113,9 @@ export async function installVerticalPack(
   const pack = verticalPackFor(vertical);
   const approve = (await orgSendMode(orgId)) !== "live";
   for (const t of pack) {
-    const componentsJson = buildTemplatePayload(t.content, {
-      name: t.name,
-    }) as Prisma.InputJsonValue;
+    // Meta takes the components array; name/language/category travel beside it.
+    const componentsJson = buildTemplatePayload(t.content, { name: t.name })
+      .components as Prisma.InputJsonValue;
     const data = {
       language: "en",
       category: t.category,

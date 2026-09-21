@@ -8,6 +8,8 @@ const {
   resendInvite,
   rotateOwnerSetupLink,
   founderConnectWhatsapp,
+  founderDraftFollowUps,
+  revalidatePath,
 } = vi.hoisted(() => ({
   requireFounder: vi.fn(),
   setOrgPlan: vi.fn(),
@@ -16,6 +18,8 @@ const {
   resendInvite: vi.fn(),
   rotateOwnerSetupLink: vi.fn(),
   founderConnectWhatsapp: vi.fn(),
+  founderDraftFollowUps: vi.fn(),
+  revalidatePath: vi.fn(),
 }));
 
 vi.mock("@/modules/admin/auth", () => ({ requireFounder }));
@@ -42,11 +46,20 @@ vi.mock("@/modules/admin/integrations", () => ({
   founderSetVoiceNumberEnabled: vi.fn(),
   founderSetWebhookEnabled: vi.fn(),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath }));
+// The concierge module talks to Prisma and the model router; the action's own
+// job is the founder gate, the reason, and handing the result to done().
+vi.mock("@/modules/admin/concierge", () => ({
+  founderDraftFollowUps,
+  founderSetAgentEnabled: vi.fn(),
+  founderSetFollowUpsEnabled: vi.fn(),
+  founderSetupClient: vi.fn(),
+}));
 
 import { runFounderAction } from "@/modules/admin/actions";
 import {
   connectWhatsappAction,
+  draftFollowUpsAction,
   inviteMemberAction,
   resendInviteAction,
   rotateOwnerSetupLinkAction,
@@ -62,6 +75,7 @@ beforeEach(() => {
     ok: true,
     message: "Clinic WhatsApp connected. Sending mode was not changed.",
   });
+  founderDraftFollowUps.mockResolvedValue({ ok: true, message: "Drafted 1 follow-up." });
 });
 
 describe("admin route actions", () => {
@@ -192,6 +206,53 @@ describe("admin route actions", () => {
       "founder@nudge.test",
       "Assisted onboarding with owner approval"
     );
+  });
+
+  it("writes the client's starter set when the founder leaves the sentence empty", async () => {
+    const form = new FormData();
+    form.set("orgId", "org_123");
+    form.set("request", "  ");
+    form.set("reason", "Concierge onboarding call");
+
+    await expect(draftFollowUpsAction(form)).resolves.toEqual({
+      ok: true,
+      message: "Drafted 1 follow-up.",
+    });
+    expect(founderDraftFollowUps).toHaveBeenCalledWith(
+      "org_123",
+      "",
+      "founder@nudge.test",
+      "Concierge onboarding call"
+    );
+    // done(): the org's admin pages re-read after a write.
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/orgs/org_123", "layout");
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/orgs");
+  });
+
+  it("passes a typed sentence through to the concierge module", async () => {
+    const form = new FormData();
+    form.set("orgId", "org_123");
+    form.set("request", "  Chase anyone who asked about pricing  ");
+    form.set("reason", "Concierge onboarding call");
+
+    await draftFollowUpsAction(form);
+    expect(founderDraftFollowUps).toHaveBeenCalledWith(
+      "org_123",
+      "Chase anyone who asked about pricing",
+      "founder@nudge.test",
+      "Concierge onboarding call"
+    );
+  });
+
+  it("requires a reason before drafting into a client's workspace", async () => {
+    const form = new FormData();
+    form.set("orgId", "org_123");
+    form.set("request", "chase quiet leads");
+
+    const result = await draftFollowUpsAction(form);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("reason");
+    expect(founderDraftFollowUps).not.toHaveBeenCalled();
   });
 
   it("normalizes unexpected lead action failures", async () => {

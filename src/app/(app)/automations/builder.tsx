@@ -62,6 +62,8 @@ export interface BuilderInitial {
   match: "contains" | "exact";
   /** A seeded tag_added scope we preserve on save (no UI to edit it). */
   preservedTagName?: string;
+  /** A conversation_quiet timing, shown as a hint (edited from the follow-up card). */
+  preservedQuiet?: { hours: number; stage?: string };
   steps: { kind: StepKind; config: Record<string, unknown> }[];
 }
 
@@ -379,6 +381,20 @@ export function AutomationBuilder({
                     “{initial.preservedTagName}”
                   </span>{" "}
                   — this scope is kept when you save.
+                </p>
+              )}
+
+              {trigger === "conversation_quiet" && initial.preservedQuiet && (
+                <p className="text-xs text-neutral-500">
+                  Chases contacts who have been quiet for{" "}
+                  <span className="font-medium text-neutral-700">
+                    {initial.preservedQuiet.hours}{" "}
+                    {initial.preservedQuiet.hours === 1 ? "hour" : "hours"}
+                  </span>
+                  {initial.preservedQuiet.stage
+                    ? ` at stage ${STAGE_LABELS[initial.preservedQuiet.stage] ?? initial.preservedQuiet.stage}`
+                    : ""}{" "}
+                  — change the timing from the follow-up card.
                 </p>
               )}
             </CardContent>

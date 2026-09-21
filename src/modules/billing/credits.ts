@@ -314,13 +314,14 @@ export class CreditsExhaustedError extends Error {
  * - metered: preflighted, then debited against the org's grants;
  * - unmetered: legacy plan — recorded as absorbed, never paused (decision 5);
  * - shadow: SEND_MODE=simulation, no provider was paid — recorded, no grant;
- * - absorbed: concierge ingest/distill — Nudge pays, never preflighted.
+ * - absorbed: concierge work (ingest/distill, founder drafting) — Nudge pays,
+ *   never preflighted, so a zero-credit or trial org can still be set up.
  */
 export type MeteringClass = "metered" | "unmetered" | "shadow" | "absorbed";
 
 /** Plan decision 8: concierge setup work is never charged to the customer. */
 export function isAbsorbedPurpose(purpose: string): boolean {
-  return purpose === "ingest" || purpose === "distill";
+  return purpose === "ingest" || purpose === "distill" || purpose === "concierge_draft";
 }
 
 /**

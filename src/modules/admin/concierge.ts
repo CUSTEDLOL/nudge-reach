@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { checkAiFrontDesk } from "@/modules/billing/limits";
+import { checkAiFrontDesk, checkAutomationLimit } from "@/modules/billing/limits";
 import {
   buildBusinessInfo,
   getConciergeStatus,
@@ -7,7 +7,14 @@ import {
   VERTICAL_PACKS,
   type KnowledgeBaseInput,
 } from "@/modules/concierge";
-import { installRevenueRecoveryPack } from "@/modules/followup/install";
+import {
+  installRevenueRecoveryPack,
+  saveFollowUpFromSpec,
+  setFollowUpEnabled,
+  writeStarterSet,
+} from "@/modules/followup/install";
+import { draftFollowUp } from "@/modules/followup/draft";
+import { parseFollowUpSpec, specErrorMessage } from "@/modules/followup/spec";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
 
 /**
@@ -28,7 +35,9 @@ export async function frontDeskOverview(orgId: string) {
     prisma.ownerQuestion.count({ where: { orgId, status: "pending" } }),
     prisma.followUpConfig.findUnique({
       where: { orgId },
-      select: { enabled: true, bookingReminders: true, noShowRebook: true, postServiceReview: true, leadNudge: true, reminderCalls: true },
+      // No leadNudge: the quiet-lead nudge is an automation now (it shows in
+      // the Follow-ups card), not a flag on this config.
+      select: { enabled: true, bookingReminders: true, noShowRebook: true, postServiceReview: true, reminderCalls: true },
     }),
     prisma.template.findMany({
       where: { orgId, campaignId: null },
@@ -110,7 +119,95 @@ export async function founderSetFollowUpsEnabled(orgId: string, enabled: boolean
   const cfg = await prisma.followUpConfig.findUnique({ where: { orgId }, select: { enabled: true } });
   if (!cfg) return { ok: false, error: "No follow-up config yet — run client setup first." };
   if (cfg.enabled === enabled) return { ok: false, error: `Already ${enabled ? "on" : "off"}.` };
-  await prisma.followUpConfig.update({ where: { orgId }, data: { enabled } });
+  // Not a raw config write: the quiet-lead nudge is its own automation, and a
+  // founder pause that left it enabled kept sending while the client's page
+  // showed dead switches.
+  await setFollowUpEnabled(orgId, enabled);
   await founderAudit(orgId, founderEmail, "admin.followups_toggled", null, withReason(enabled ? "on" : "off", reason));
   return { ok: true, message: `Follow-ups ${enabled ? "on" : "off"}.` };
+}
+
+/**
+ * Concierge drafting: one follow-up from a sentence, or the whole starter set
+ * when `request` is empty — the same path the client's Follow-ups page uses,
+ * so onboarding produces exactly what they will later see. Drafted follow-ups
+ * land OFF; the ready-made pack is switched on only on a FIRST install (a
+ * re-run never un-pauses a client — see `installRevenueRecoveryPack`).
+ *
+ * Deliberately NOT flagship-gated: the founder sets a client up before they
+ * are billed, and `founderSetupClient`'s gate already covers going live. The
+ * drafting is metered as `concierge_draft`, which the ledger absorbs — Nudge
+ * pays, and a trial or zero-credit org (what onboarding starts from) is never
+ * refused. A below-plan draft still says so, in the toast and in the org's
+ * audit row.
+ */
+export async function founderDraftFollowUps(
+  orgId: string,
+  request: string,
+  founderEmail: string,
+  reason?: string
+): Promise<FounderResult> {
+  const org = await prisma.org.findUnique({ where: { id: orgId }, select: { id: true } });
+  if (!org) return { ok: false, error: "Org not found." };
+  const gate = await checkAiFrontDesk(orgId);
+  const offPlan = gate.allowed ? "" : "below the AI Front Desk plan";
+
+  let created = 0;
+  let target: string | null = null;
+  const lines: string[] = [];
+  const detail: string[] = [];
+  const sentence = request.trim();
+  if (sentence) {
+    // Same plan limit the client's own create honours — checked before we
+    // spend AI on a follow-up that could not be saved.
+    const limit = await checkAutomationLimit(orgId);
+    if (!limit.allowed) return { ok: false, error: limit.message };
+    let spec;
+    try {
+      spec = await draftFollowUp({ orgId, request: sentence.slice(0, 500), purpose: "concierge_draft" });
+    } catch (err) {
+      // The drafter's own message is the useful one ("try rephrasing").
+      return { ok: false, error: err instanceof Error ? err.message : "Couldn't draft that follow-up." };
+    }
+    // Defence in depth, exactly like the client's create action.
+    const parsed = parseFollowUpSpec(spec);
+    if (!parsed.ok) return { ok: false, error: specErrorMessage(parsed.error) };
+    await saveFollowUpFromSpec({ orgId, spec: parsed.spec, source: "ai" });
+    created = 1;
+    target = parsed.spec.name;
+  } else {
+    const outcome = await writeStarterSet(orgId, "concierge_draft");
+    created = outcome.created;
+    if (outcome.draftFailed) lines.push("Couldn't draft the extra ones just now.");
+    else if (outcome.stopped) lines.push("Stopped there — that's as many automations as this plan allows.");
+    else if (outcome.failed) lines.push("Something went wrong after that, so the rest weren't written.");
+    lines.push(
+      "Ready-made pack installed — switched on for a new client, left as it is for one already set up."
+    );
+    detail.push("ready-made pack installed");
+  }
+
+  await founderAudit(
+    orgId,
+    founderEmail,
+    "admin.followups_drafted",
+    target,
+    withReason([`${created} drafted`, ...detail, offPlan].filter(Boolean).join(", "), reason)
+  );
+  const headline = created
+    ? `Drafted ${created} follow-up${created === 1 ? "" : "s"} — off until the client switches them on.`
+    : lines.length
+      ? ""
+      : "Nothing new — this client already has these follow-ups.";
+  return {
+    ok: true,
+    message: [
+      headline,
+      ...lines,
+      offPlan &&
+        `This workspace is ${offPlan} — the drafting ran on us, and these won't run until the plan changes.`,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  };
 }

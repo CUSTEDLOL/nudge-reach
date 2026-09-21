@@ -19,7 +19,8 @@ export function RunLog({ entries }: { entries: RunLogEntry[] }) {
   return (
     <ol className="flex flex-col gap-2">
       {entries.map((entry, index) => {
-        const meta = stepMeta(entry.kind);
+        // "cancel" is an engine event, not a step kind — label it directly.
+        const label = entry.kind === "cancel" ? "Cancelled" : stepMeta(entry.kind).label;
         return (
           <li key={index} className="flex items-start gap-2.5 text-sm">
             {entry.ok ? (
@@ -36,7 +37,7 @@ export function RunLog({ entries }: { entries: RunLogEntry[] }) {
             <div className="min-w-0">
               <p className="text-sm text-neutral-900">
                 <span className="font-medium">
-                  Step {entry.step} · {meta.label}
+                  Step {entry.step} · {label}
                 </span>
                 {entry.at && (
                   <span className="ml-2 text-xs text-neutral-400">

@@ -5,6 +5,7 @@ import { recordContactEvent } from "@/modules/contacts/events";
 import { defineTool } from "@/modules/agent/tools/types";
 import { bookAppointment, type CalendarSlot } from "@/modules/calendar";
 import { fireBookingCreated } from "@/modules/automation/triggers";
+import { cancelWaitingRuns } from "@/modules/automation/engine";
 import { formatInTimezone } from "@/lib/timezone";
 
 export const captureBookingTool = defineTool({
@@ -115,6 +116,9 @@ export const captureBookingTool = defineTool({
     });
 
     if (booked) {
+      // They booked — stop chasing them. Cancel BEFORE firing the booked
+      // trigger so the signal can never cancel the run it is about to start.
+      await cancelWaitingRuns(ctx.orgId, ctx.contactId, "booking");
       // A confirmed booking with a real time drives the reminder / no-show
       // follow-ups (5.2). Fire-and-forget; never re-enters inbound.
       await fireBookingCreated(ctx.orgId, ctx.contactId, booking.id);

@@ -9,6 +9,7 @@ const {
   crmContactCreated,
   scoreContactSoon,
   runInboundAutomations,
+  cancelWaitingRuns,
   dispatchWebhook,
 } = vi.hoisted(() => ({
   prisma: {
@@ -25,6 +26,7 @@ const {
   crmContactCreated: vi.fn(),
   scoreContactSoon: vi.fn(),
   runInboundAutomations: vi.fn(),
+  cancelWaitingRuns: vi.fn().mockResolvedValue(0),
   dispatchWebhook: vi.fn(),
 }));
 
@@ -43,7 +45,7 @@ vi.mock("@/modules/messaging", () => ({ sendMessage }));
 vi.mock("@/modules/crm/events", () => ({ crmContactCreated }));
 vi.mock("@/modules/contacts/events", () => ({ recordContactEvent: vi.fn() }));
 vi.mock("@/modules/scoring/compute", () => ({ scoreContactSoon }));
-vi.mock("@/modules/automation/engine", () => ({ runInboundAutomations }));
+vi.mock("@/modules/automation/engine", () => ({ runInboundAutomations, cancelWaitingRuns }));
 vi.mock("@/modules/integrations/outbound-webhooks", () => ({ dispatchWebhook }));
 vi.mock("@/modules/agent/profile", () => ({
   ensureAgentProfile: vi.fn().mockResolvedValue({

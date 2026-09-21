@@ -10,6 +10,7 @@ import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { sendMessage } from "@/modules/messaging";
 import { isWithinServiceWindow } from "@/modules/agent/window";
 import { campaignContentSchema } from "@/modules/campaign/schema";
+import { shouldCancelOnSignal, type CancelSignal } from "@/modules/followup/spec";
 import {
   MAX_AUTOMATIONS_PER_EVENT,
   automationMatchesEvent,
@@ -160,6 +161,57 @@ export async function tickAutomationRuns(now: Date = new Date()): Promise<number
     resumed++;
   }
   return resumed;
+}
+
+const CANCEL_DETAIL: Record<CancelSignal, string> = {
+  reply: "Cancelled — the customer replied.",
+  booking: "Cancelled — the customer booked.",
+  payment: "Cancelled — the customer paid.",
+  opt_out: "Cancelled — the customer opted out.",
+};
+
+/**
+ * The customer did something that makes chasing them wrong: end every run
+ * that is waiting to message them. An opt-out always cancels; a reply cancels
+ * every chase but not a booked follow-up (see shouldCancelOnSignal); booking
+ * and payment respect the follow-up's stopOn. Never throws — cancellation
+ * rides on inbound/booking/payment paths that must not break because of it.
+ * Returns how many runs were cancelled.
+ */
+export async function cancelWaitingRuns(
+  orgId: string,
+  contactId: string,
+  signal: CancelSignal
+): Promise<number> {
+  try {
+    const waiting = await prisma.automationRun.findMany({
+      where: { orgId, contactId, status: "WAITING" },
+      select: { id: true, currentStep: true, log: true, automation: { select: { spec: true } } },
+    });
+    let cancelled = 0;
+    for (const run of waiting) {
+      if (!shouldCancelOnSignal(run.automation.spec, signal)) continue;
+      const log = [
+        ...normalizeLogEntries(run.log),
+        logEntry(run.currentStep + 1, "cancel", true, CANCEL_DETAIL[signal]),
+      ];
+      try {
+        // Claim atomically, mirroring the tick: a run the tick has already
+        // moved to RUNNING is past cancelling and must not be overwritten.
+        const claimed = await prisma.automationRun.updateMany({
+          where: { id: run.id, status: "WAITING" },
+          data: { status: "CANCELLED", resumeAt: null, log: toJson(log) },
+        });
+        if (claimed.count === 1) cancelled++;
+      } catch (error) {
+        console.error(`[automations] cancelWaitingRuns: run ${run.id} not cancelled`, error);
+      }
+    }
+    return cancelled;
+  } catch (error) {
+    console.error("[automations] cancelWaitingRuns failed", error);
+    return 0;
+  }
 }
 
 /** How long after a campaign message an inbound counts as a campaign reply. */
