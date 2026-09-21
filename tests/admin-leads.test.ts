@@ -25,6 +25,12 @@ const { prisma, requireFounder, revalidatePath, sendGa4LeadEvent } = vi.hoisted(
         count: vi.fn(),
         groupBy: vi.fn(),
       },
+      acquisitionTrial: {
+        update: vi.fn(),
+        findMany: vi.fn(),
+        count: vi.fn(),
+        groupBy: vi.fn(),
+      },
     },
     requireFounder: vi.fn(),
     revalidatePath: vi.fn(),
@@ -54,6 +60,9 @@ beforeEach(() => {
   prisma.waitlistSignup.update.mockResolvedValue({});
   prisma.demoBooking.update.mockResolvedValue({});
   prisma.demoBooking.updateMany.mockResolvedValue({ count: 1 });
+  prisma.acquisitionTrial.update.mockResolvedValue({});
+  prisma.acquisitionTrial.findMany.mockResolvedValue([]);
+  prisma.acquisitionTrial.groupBy.mockResolvedValue([]);
   requireFounder.mockResolvedValue({ email: "founder@nudge.test" });
   sendGa4LeadEvent.mockResolvedValue("sent");
 });
@@ -121,6 +130,21 @@ describe("updateLead", () => {
     });
     await updateLead("access", "a1", { notes: "   " });
     expect(prisma.accessRequest.update).toHaveBeenCalledWith({ where: { id: "a1" }, data: { notes: null } });
+  });
+
+  it("maps trial pipeline fields to leadStatus and founderNotes", async () => {
+    await updateLead("trial", "t1", {
+      status: "qualified",
+      notes: "  wants a demo Tuesday  ",
+    });
+
+    expect(prisma.acquisitionTrial.update).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: {
+        leadStatus: "qualified",
+        founderNotes: "wants a demo Tuesday",
+      },
+    });
   });
 
   it("reports a missing row instead of throwing", async () => {
@@ -220,6 +244,72 @@ describe("leadsList / newLeadsCount", () => {
     expect(prisma.waitlistSignup.findMany).not.toHaveBeenCalled();
   });
 
+  it("shows and accepts the free-trial source filter", async () => {
+    prisma.acquisitionTrial.findMany.mockResolvedValue([]);
+    prisma.accessRequest.groupBy.mockResolvedValue([]);
+    prisma.waitlistSignup.groupBy.mockResolvedValue([]);
+    prisma.demoBooking.groupBy.mockResolvedValue([]);
+    prisma.acquisitionTrial.groupBy.mockResolvedValue([]);
+
+    const page = await AdminLeadsPage({
+      searchParams: Promise.resolve({ kind: "trial", status: "all" }),
+    });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("Free trials");
+    expect(html).toContain("free-trial signups");
+    expect(html).toContain("kind=trial");
+    expect(prisma.acquisitionTrial.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accessRequest.findMany).not.toHaveBeenCalled();
+    expect(prisma.waitlistSignup.findMany).not.toHaveBeenCalled();
+    expect(prisma.demoBooking.findMany).not.toHaveBeenCalled();
+  });
+
+  it("lists unclaimed free trials with their phone and renders a WhatsApp link", async () => {
+    prisma.acquisitionTrial.findMany.mockResolvedValue([
+      {
+        id: "t1",
+        orgId: null,
+        claimedAt: null,
+        ownerName: "Riya Shah",
+        businessName: "Cedar Studio",
+        email: "riya@example.com",
+        phoneE164: "+91 98765 43210",
+        source: "free-trial",
+        leadStatus: "contacted",
+        founderNotes: "Requested a callback",
+        createdAt: new Date("2026-09-22T08:00:00Z"),
+      },
+    ]);
+
+    const { rows } = await leadsList({ kind: "trial" });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: "t1",
+      kind: "trial",
+      name: "Riya Shah",
+      secondary: "Cedar Studio",
+      email: "riya@example.com",
+      phoneE164: "+91 98765 43210",
+      status: "contacted",
+      notes: "Requested a callback",
+      orgId: null,
+      claimedAt: null,
+    });
+
+    const html = renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(LeadRowItem, { lead: rows[0] })
+      )
+    );
+    expect(html).toContain("free trial");
+    expect(html).toContain("Cedar Studio");
+    expect(html).toContain('href="https://wa.me/919876543210"');
+  });
+
   it("merges all three tables newest-first with a normalised shape", async () => {
     prisma.accessRequest.findMany.mockResolvedValue([
       { id: "a1", name: "Dr Rao", email: "rao@clinic.in", phoneE164: "+919900000001", source: "hero", status: "new", notes: null, createdAt: new Date("2026-09-01") },
@@ -264,10 +354,12 @@ describe("leadsList / newLeadsCount", () => {
     prisma.accessRequest.findMany.mockResolvedValue([]);
     prisma.waitlistSignup.findMany.mockResolvedValue([]);
     prisma.demoBooking.findMany.mockResolvedValue([]);
+    prisma.acquisitionTrial.findMany.mockResolvedValue([]);
     await leadsList({ status: "contacted", kind: "all", search: "  PuNe  " });
     const accessArgs = prisma.accessRequest.findMany.mock.calls[0][0];
     const waitlistArgs = prisma.waitlistSignup.findMany.mock.calls[0][0];
     const bookingArgs = prisma.demoBooking.findMany.mock.calls[0][0];
+    const trialArgs = prisma.acquisitionTrial.findMany.mock.calls[0][0];
     expect(JSON.stringify(accessArgs.where)).toContain("contacted");
     expect(JSON.stringify(accessArgs.where)).toContain("PuNe");
     expect(JSON.stringify(accessArgs.where)).toContain("email");
@@ -275,9 +367,31 @@ describe("leadsList / newLeadsCount", () => {
     expect(JSON.stringify(bookingArgs.where)).toContain("attendeeName");
     expect(JSON.stringify(bookingArgs.where)).toContain("attendeeEmail");
     expect(JSON.stringify(bookingArgs.where)).toContain("attendeePhoneE164");
+    expect(JSON.stringify(trialArgs.where)).toContain("leadStatus");
+    expect(JSON.stringify(trialArgs.where)).toContain("ownerName");
+    expect(JSON.stringify(trialArgs.where)).toContain("businessName");
+    expect(JSON.stringify(trialArgs.where)).toContain("email");
+    expect(JSON.stringify(trialArgs.where)).toContain("phoneE164");
     expect(accessArgs.take).toBe(500);
     expect(waitlistArgs.take).toBe(500);
     expect(bookingArgs.take).toBe(500);
+    expect(trialArgs.take).toBe(500);
+  });
+
+  it("searches free-trial phones directly without requiring an org", async () => {
+    prisma.acquisitionTrial.findMany.mockResolvedValue([]);
+
+    await leadsList({ kind: "trial", search: "+9198765" });
+
+    expect(prisma.acquisitionTrial.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: expect.arrayContaining([
+            { phoneE164: { contains: "+9198765", mode: "insensitive" } },
+          ]),
+        },
+      })
+    );
   });
 
   it("filters by kind by skipping the other table", async () => {
@@ -384,10 +498,11 @@ describe("leadsList / newLeadsCount", () => {
     expect((await leadsList({ page: 999 })).page).toBe(2);
   });
 
-  it("sums the new count and pipeline counts across all three tables", async () => {
+  it("sums the new count and pipeline counts across all four tables", async () => {
     prisma.accessRequest.count.mockResolvedValue(3);
     prisma.waitlistSignup.count.mockResolvedValue(1);
     prisma.demoBooking.count.mockResolvedValue(2);
+    prisma.acquisitionTrial.count.mockResolvedValue(4);
     prisma.accessRequest.groupBy.mockResolvedValue([
       { status: "new", _count: 3 },
     ]);
@@ -397,13 +512,17 @@ describe("leadsList / newLeadsCount", () => {
     prisma.demoBooking.groupBy.mockResolvedValue([
       { status: "converted", _count: 2 },
     ]);
+    prisma.acquisitionTrial.groupBy.mockResolvedValue([
+      { leadStatus: "new", _count: 2 },
+      { leadStatus: "contacted", _count: 2 },
+    ]);
 
-    expect(await newLeadsCount()).toBe(6);
+    expect(await newLeadsCount()).toBe(10);
     expect(await leadCounts()).toEqual({
-      total: 6,
+      total: 10,
       byStatus: {
-        new: 3,
-        contacted: 0,
+        new: 5,
+        contacted: 2,
         qualified: 1,
         converted: 2,
         dismissed: 0,

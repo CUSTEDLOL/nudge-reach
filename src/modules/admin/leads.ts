@@ -4,10 +4,10 @@ import { env } from "@/lib/env";
 import { paginate } from "@/modules/admin/queries";
 
 /**
- * Founder leads desk: landing-page access requests, waitlist signups, and
- * signed demo bookings normalised into one pipeline with a status the founders
- * move by hand. Cross-org module rules apply (see queries.ts) — these tables
- * are platform-level, not tenant data.
+ * Founder leads desk: landing-page access requests, waitlist signups, free
+ * trials, and signed demo bookings normalised into one pipeline with a status
+ * the founders move by hand. Cross-org module rules apply (see queries.ts) —
+ * these tables are platform-level, not tenant data.
  */
 
 export const LEAD_STATUSES = [
@@ -23,7 +23,7 @@ export function isLeadStatus(s: string): s is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(s);
 }
 
-export const LEAD_KINDS = ["access", "waitlist", "booking"] as const;
+export const LEAD_KINDS = ["access", "waitlist", "booking", "trial"] as const;
 export type LeadKind = (typeof LEAD_KINDS)[number];
 
 export function isLeadKind(value: string): value is LeadKind {
@@ -62,6 +62,9 @@ export interface LeadRow {
   source: string;
   status: LeadStatus;
   notes: string | null;
+  /** Trial workspace ownership context; null for unclaimed trials and legacy leads. */
+  orgId: string | null;
+  claimedAt: Date | null;
   /** Other matching submissions, deduplicated across shared phone/email keys. */
   duplicateCount: number;
   duplicateBy: ("phone" | "email")[];
@@ -87,12 +90,13 @@ const LEADS_PAGE_SIZE = 50;
 
 /** Badge count for the sidebar: leads nobody has touched yet. */
 export async function newLeadsCount(): Promise<number> {
-  const [a, w, b] = await Promise.all([
+  const [a, w, b, t] = await Promise.all([
     prisma.accessRequest.count({ where: { status: "new" } }),
     prisma.waitlistSignup.count({ where: { status: "new" } }),
     prisma.demoBooking.count({ where: { status: "new" } }),
+    prisma.acquisitionTrial.count({ where: { leadStatus: "new" } }),
   ]);
-  return a + w + b;
+  return a + w + b + t;
 }
 
 function accessWhere(status: LeadStatus | undefined, search: string): Prisma.AccessRequestWhereInput {
@@ -134,6 +138,25 @@ function bookingWhere(status: LeadStatus | undefined, search: string): Prisma.De
         { attendeeName: { contains: search, mode: "insensitive" } },
         { attendeeEmail: { contains: search, mode: "insensitive" } },
         { attendeePhoneE164: { contains: search, mode: "insensitive" } },
+      ],
+    });
+  }
+  return terms.length === 0 ? {} : terms.length === 1 ? terms[0] : { AND: terms };
+}
+
+function trialWhere(
+  status: LeadStatus | undefined,
+  search: string
+): Prisma.AcquisitionTrialWhereInput {
+  const terms: Prisma.AcquisitionTrialWhereInput[] = [];
+  if (status) terms.push({ leadStatus: status });
+  if (search) {
+    terms.push({
+      OR: [
+        { ownerName: { contains: search, mode: "insensitive" } },
+        { businessName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phoneE164: { contains: search, mode: "insensitive" } },
       ],
     });
   }
@@ -185,7 +208,8 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
   const wantAccess = !filter.kind || filter.kind === "all" || filter.kind === "access";
   const wantWaitlist = !filter.kind || filter.kind === "all" || filter.kind === "waitlist";
   const wantBooking = !filter.kind || filter.kind === "all" || filter.kind === "booking";
-  const [access, waitlist, bookings] = await Promise.all([
+  const wantTrial = !filter.kind || filter.kind === "all" || filter.kind === "trial";
+  const [access, waitlist, bookings, trials] = await Promise.all([
     wantAccess
       ? prisma.accessRequest.findMany({
           where: accessWhere(status, search),
@@ -240,6 +264,26 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
           },
         })
       : Promise.resolve([]),
+    wantTrial
+      ? prisma.acquisitionTrial.findMany({
+          where: trialWhere(status, search),
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+          take: LEADS_QUERY_LIMIT,
+          select: {
+            id: true,
+            orgId: true,
+            claimedAt: true,
+            ownerName: true,
+            businessName: true,
+            email: true,
+            phoneE164: true,
+            source: true,
+            leadStatus: true,
+            founderNotes: true,
+            createdAt: true,
+          },
+        })
+      : Promise.resolve([]),
   ]);
   const rows: LeadRow[] = [
     ...access.map((r) => ({
@@ -254,6 +298,8 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
       source: r.source,
       status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
       notes: r.notes,
+      orgId: null,
+      claimedAt: null,
       duplicateCount: 0,
       duplicateBy: [],
       createdAt: r.createdAt,
@@ -270,6 +316,8 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
       source: r.source,
       status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
       notes: r.notes,
+      orgId: null,
+      claimedAt: null,
       duplicateCount: 0,
       duplicateBy: [],
       createdAt: r.createdAt,
@@ -288,11 +336,31 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
         source: r.utmSource ?? r.source,
         status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
         notes: r.notes,
+        orgId: null,
+        claimedAt: null,
         duplicateCount: 0,
         duplicateBy: [],
         createdAt: r.createdAt,
       };
     }),
+    ...trials.map((r) => ({
+      id: r.id,
+      kind: "trial" as const,
+      name: r.ownerName,
+      secondary: r.businessName,
+      email: r.email,
+      phoneE164: r.phoneE164,
+      scheduledFor: null,
+      vertical: null,
+      source: r.source,
+      status: (isLeadStatus(r.leadStatus) ? r.leadStatus : "new") as LeadStatus,
+      notes: r.founderNotes,
+      orgId: r.orgId,
+      claimedAt: r.claimedAt,
+      duplicateCount: 0,
+      duplicateBy: [],
+      createdAt: r.createdAt,
+    })),
   ];
   const sorted = rows.sort(
     (a, b) =>
@@ -308,10 +376,11 @@ export interface LeadCounts {
 }
 
 export async function leadCounts(): Promise<LeadCounts> {
-  const [a, w, b] = await Promise.all([
+  const [a, w, b, t] = await Promise.all([
     prisma.accessRequest.groupBy({ by: ["status"], _count: true }),
     prisma.waitlistSignup.groupBy({ by: ["status"], _count: true }),
     prisma.demoBooking.groupBy({ by: ["status"], _count: true }),
+    prisma.acquisitionTrial.groupBy({ by: ["leadStatus"], _count: true }),
   ]);
   const byStatus: Record<LeadStatus, number> = {
     new: 0,
@@ -322,6 +391,10 @@ export async function leadCounts(): Promise<LeadCounts> {
   };
   for (const row of [...a, ...w, ...b]) {
     const s = isLeadStatus(row.status) ? row.status : "new";
+    byStatus[s] += row._count;
+  }
+  for (const row of t) {
+    const s = isLeadStatus(row.leadStatus) ? row.leadStatus : "new";
     byStatus[s] += row._count;
   }
   return { total: Object.values(byStatus).reduce((x, y) => x + y, 0), byStatus };
@@ -411,8 +484,16 @@ export async function updateLead(
       await prisma.accessRequest.update({ where: { id }, data });
     } else if (kind === "waitlist") {
       await prisma.waitlistSignup.update({ where: { id }, data });
-    } else {
+    } else if (kind === "booking") {
       await prisma.demoBooking.update({ where: { id }, data });
+    } else {
+      await prisma.acquisitionTrial.update({
+        where: { id },
+        data: {
+          ...(data.status !== undefined ? { leadStatus: data.status } : {}),
+          ...(data.notes !== undefined ? { founderNotes: data.notes } : {}),
+        },
+      });
     }
     return { ok: true, transition: null };
   } catch {

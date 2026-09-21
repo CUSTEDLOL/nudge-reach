@@ -19,6 +19,7 @@ const KIND_LABEL = {
   access: "access request",
   waitlist: "waitlist",
   booking: "demo booking",
+  trial: "free trial",
 } as const;
 
 /** One lead: who, how to reach them, where they are in the pipeline, notes. */
@@ -47,7 +48,7 @@ export function LeadRowItem({ lead }: { lead: LeadRow }) {
             )}
           </p>
           <p className="mt-0.5 text-xs text-neutral-500">
-            {lead.kind === "waitlist" && `${lead.secondary} · `}via {lead.source} ·{" "}
+            {(lead.kind === "waitlist" || lead.kind === "trial") && `${lead.secondary} · `}via {lead.source} ·{" "}
             {lead.createdAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium">

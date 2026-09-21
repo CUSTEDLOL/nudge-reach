@@ -12,6 +12,7 @@ const KINDS: { value: LeadKind | "all"; label: string }[] = [
   { value: "access", label: "Access requests" },
   { value: "waitlist", label: "Waitlist" },
   { value: "booking", label: "Demo bookings" },
+  { value: "trial", label: "Free trials" },
 ];
 
 function pick<T extends string>(raw: string | string[] | undefined, allowed: readonly T[], fallback: T): T {
@@ -61,7 +62,7 @@ export default async function AdminLeadsPage({
     <div>
       <PageHeader
         title="Leads"
-        description="Access requests, waitlist signups, and demo bookings from the landing page. Move each one along; the badge in the sidebar counts what's still new."
+        description="Access requests, waitlist signups, free-trial signups, and demo bookings from the landing page. Move each one along; the badge in the sidebar counts what's still new."
       />
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <nav aria-label="Status" className="flex flex-wrap gap-1">
