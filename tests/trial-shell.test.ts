@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
-import { createElement } from "react";
+import {
+  createElement,
+  type ComponentProps,
+  type ComponentType,
+} from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -19,6 +23,9 @@ import {
   trialStatusText,
 } from "@/components/features/trial/trial-status-strip";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
+
+type AppShellElementProps = Omit<ComponentProps<typeof AppShell>, "children">;
+const AppShellElement = AppShell as ComponentType<AppShellElementProps>;
 
 const trial: TrialWorkspace = {
   id: "trial_1",
@@ -52,7 +59,7 @@ describe("trial app shell", () => {
   it("renders one shared shell with only Inbox and Train AI destinations", () => {
     const html = renderToStaticMarkup(
       createElement(
-        AppShell,
+        AppShellElement,
         {
           orgName: "Aster Clinic",
           user: { name: "Asha", email: "asha@aster.in" },
@@ -111,7 +118,7 @@ describe("trial app shell", () => {
   it("shows quiet inline guidance before setup without mounting a tour", () => {
     const html = renderToStaticMarkup(
       createElement(
-        AppShell,
+        AppShellElement,
         {
           orgName: "Aster Clinic",
           user: { name: "Asha", email: "asha@aster.in" },
