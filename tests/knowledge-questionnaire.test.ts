@@ -7,7 +7,7 @@ const {
   distillAnswer,
   storeKnowledgeFacts,
   isRestrictedAcquisitionTrial,
-  withTrialKnowledgeSource,
+  revalidatePath,
 } = vi.hoisted(() => ({
   prisma: {
     agentProfile: { findUnique: vi.fn() },
@@ -19,19 +19,15 @@ const {
   distillAnswer: vi.fn(),
   storeKnowledgeFacts: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
-  withTrialKnowledgeSource: vi.fn(),
+  revalidatePath: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext, requireRole }));
 vi.mock("@/modules/knowledge/distill", () => ({ distillAnswer }));
 vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
-vi.mock("@/modules/trial/knowledge", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/trial/knowledge")>()),
-  withTrialKnowledgeSource,
-}));
 import { questionnaireScript } from "@/modules/knowledge/questionnaire";
 import { KNOWLEDGE_CATEGORIES } from "@/modules/knowledge/digest";
 import {
@@ -93,12 +89,9 @@ describe("acquisition trial questionnaire", () => {
       capacityReached: false,
     });
     isRestrictedAcquisitionTrial.mockResolvedValue(true);
-    withTrialKnowledgeSource.mockImplementation(
-      async (_orgId, _source, work) => work()
-    );
   });
 
-  it("silently accepts only the approved five answers in one reserved batch", async () => {
+  it("accepts the approved five answers without consuming an import quota", async () => {
     const answers = [
       { id: "business_summary", answer: "Aster is an aesthetic clinic." },
       { id: "services_list", answer: "Hair restoration and skin treatments." },
@@ -113,12 +106,6 @@ describe("acquisition trial questionnaire", () => {
 
     expect(result).toMatchObject({ ok: true, facts: 5 });
     expect(distillAnswer).toHaveBeenCalledTimes(5);
-    expect(withTrialKnowledgeSource).toHaveBeenCalledWith(
-      "org_1",
-      "interview",
-      expect.any(Function),
-      expect.any(Function)
-    );
     expect(storeKnowledgeFacts).toHaveBeenCalledTimes(5);
     expect(storeKnowledgeFacts).toHaveBeenCalledWith(
       "org_1",
@@ -130,6 +117,8 @@ describe("acquisition trial questionnaire", () => {
       },
     );
     expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
+    expect(revalidatePath).toHaveBeenCalledWith("/agent");
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
   });
 
   it("stops a restricted questionnaire at the shared 50-fact limit", async () => {

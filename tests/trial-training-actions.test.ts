@@ -12,7 +12,7 @@ const {
   ingestFile,
   ingestGbp,
   ingestWebsite,
-  withTrialKnowledgeSource,
+  withTrialKnowledgeImport,
 } = vi.hoisted(() => ({
   prisma: {
     agentProfile: { findUnique: vi.fn() },
@@ -28,7 +28,7 @@ const {
   ingestFile: vi.fn(),
   ingestGbp: vi.fn(),
   ingestWebsite: vi.fn(),
-  withTrialKnowledgeSource: vi.fn(),
+  withTrialKnowledgeImport: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
@@ -50,7 +50,8 @@ vi.mock("@/modules/knowledge/ingest", () => ({
 }));
 vi.mock("@/modules/trial/knowledge", () => ({
   TRIAL_INGEST_BUDGET: { maxSubpages: 1, maxChunksPerPage: 2, maxDrafts: 25 },
-  withTrialKnowledgeSource,
+  TRIAL_KNOWLEDGE_LIMITS: { webImports: 1, fileImports: 3, facts: 50 },
+  withTrialKnowledgeImport,
 }));
 vi.mock("@/modules/trial/capabilities", () => ({
   isRestrictedAcquisitionTrial,
@@ -97,7 +98,7 @@ describe("restricted trial model-backed training actions", () => {
       websiteCrawled: false,
       capacityReached: false,
     });
-    withTrialKnowledgeSource.mockImplementation(
+    withTrialKnowledgeImport.mockImplementation(
       async (_orgId, _source, work) => work(),
     );
   });
@@ -189,6 +190,12 @@ describe("restricted trial model-backed training actions", () => {
       maxDrafts: 25,
       activeDraftCap: 50,
     });
+    expect(withTrialKnowledgeImport).toHaveBeenCalledWith(
+      "org_1",
+      "website",
+      expect.any(Function),
+      expect.any(Function),
+    );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
   });
@@ -219,6 +226,12 @@ describe("restricted trial model-backed training actions", () => {
       "org_1",
       { base64: "JVBERg==", mediaType: "application/pdf" },
       { maxDrafts: 25, activeDraftCap: 50 },
+    );
+    expect(withTrialKnowledgeImport).toHaveBeenCalledWith(
+      "org_1",
+      "file",
+      expect.any(Function),
+      expect.any(Function),
     );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
@@ -253,6 +266,12 @@ describe("restricted trial model-backed training actions", () => {
         activeDraftCap: 50,
       },
     );
+    expect(withTrialKnowledgeImport).toHaveBeenCalledWith(
+      "org_1",
+      "gbp",
+      expect.any(Function),
+      expect.any(Function),
+    );
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
   });
 
@@ -270,5 +289,36 @@ describe("restricted trial model-backed training actions", () => {
       ok: false,
       message: "Your free trial can store up to 50 facts. Archive a fact before importing more.",
     });
+  });
+
+  it("surfaces the shared web-import quota before crawling again", async () => {
+    withTrialKnowledgeImport.mockRejectedValue(
+      new Error(
+        "Your free trial includes one website or Google Business Profile import.",
+      ),
+    );
+
+    await expect(importWebsiteAction("second.example.com")).resolves.toEqual({
+      ok: false,
+      message: "Your free trial includes one website or Google Business Profile import.",
+    });
+    expect(ingestWebsite).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the three-file quota before reading a fourth file", async () => {
+    withTrialKnowledgeImport.mockRejectedValue(
+      new Error("Your free trial includes three file imports."),
+    );
+    const formData = new FormData();
+    const file = new File(["%PDF"], "fourth.pdf", { type: "application/pdf" });
+    const readFile = vi.spyOn(file, "arrayBuffer");
+    formData.set("file", file);
+
+    await expect(importFileAction(formData)).resolves.toEqual({
+      ok: false,
+      message: "Your free trial includes three file imports.",
+    });
+    expect(readFile).not.toHaveBeenCalled();
+    expect(ingestFile).not.toHaveBeenCalled();
   });
 });

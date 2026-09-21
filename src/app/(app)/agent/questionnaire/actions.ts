@@ -11,7 +11,7 @@ import { settingsWithOpeningHours } from "@/modules/calendar/hours-store";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 import {
   TRIAL_INTERVIEW_IDS,
-  withTrialKnowledgeSource,
+  TRIAL_KNOWLEDGE_LIMITS,
 } from "@/modules/trial/knowledge";
 
 /**
@@ -141,32 +141,26 @@ export async function submitQuestionnaireAction(
           return true;
         })
       : answers.slice(0, 40);
-    const result = await withTrialKnowledgeSource(
-      ctx.org.id,
-      "interview",
-      async () => {
-        const v = await vertical(ctx.org.id);
-        let facts = 0;
-        let capacityReached = false;
-        for (const answer of selected) {
-          const stored = await distillOne(
-            ctx.org.id,
-            v,
-            answer.id,
-            answer.answer,
-            restricted ? 50 : undefined,
-          );
-          facts += stored.facts;
-          if (stored.capacityReached) {
-            capacityReached = true;
-            break;
-          }
-        }
-        return { facts, capacityReached };
-      },
-      (value) => value.facts > 0
-    );
+    const v = await vertical(ctx.org.id);
+    let facts = 0;
+    let capacityReached = false;
+    for (const answer of selected) {
+      const stored = await distillOne(
+        ctx.org.id,
+        v,
+        answer.id,
+        answer.answer,
+        restricted ? TRIAL_KNOWLEDGE_LIMITS.facts : undefined,
+      );
+      facts += stored.facts;
+      if (stored.capacityReached) {
+        capacityReached = true;
+        break;
+      }
+    }
+    const result = { facts, capacityReached };
     revalidatePath("/agent");
+    revalidatePath("/dashboard");
     if (restricted && result.capacityReached && result.facts === 0) {
       return {
         ok: false,

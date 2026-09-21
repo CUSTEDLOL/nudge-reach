@@ -24,7 +24,8 @@ import {
 } from "@/modules/knowledge/ingest";
 import {
   TRIAL_INGEST_BUDGET,
-  withTrialKnowledgeSource,
+  TRIAL_KNOWLEDGE_LIMITS,
+  withTrialKnowledgeImport,
 } from "@/modules/trial/knowledge";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
@@ -130,7 +131,7 @@ export async function addFactAction(input: {
       {
         source: "manual",
         status: "active",
-        activeDraftCap: 50,
+        activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts,
       },
     );
     if (stored.created === 0) {
@@ -234,13 +235,13 @@ export async function importWebsiteAction(url: string): Promise<ActionResult> {
     const trimmed = url.trim();
     if (!trimmed) return { ok: false, message: "Enter your website address." };
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
-    const result = await withTrialKnowledgeSource(
+    const result = await withTrialKnowledgeImport(
       ctx.org.id,
       "website",
       () => restricted
         ? ingestWebsite(ctx.org.id, trimmed, {
             ...TRIAL_INGEST_BUDGET,
-            activeDraftCap: 50,
+            activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts,
           })
         : ingestWebsite(ctx.org.id, trimmed),
       (value) => value.drafts > 0
@@ -286,13 +287,13 @@ export async function importGbpAction(query: string): Promise<ActionResult> {
       return { ok: false, message: "Type your business name and city." };
     }
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
-    const result = await withTrialKnowledgeSource(
+    const result = await withTrialKnowledgeImport(
       ctx.org.id,
       "gbp",
       () => restricted
         ? ingestGbp(ctx.org.id, trimmed, {
             ...TRIAL_INGEST_BUDGET,
-            activeDraftCap: 50,
+            activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts,
           })
         : ingestGbp(ctx.org.id, trimmed),
       (value) => value.drafts > 0
@@ -343,12 +344,12 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
         message: "Upload a PDF or a JPG/PNG/WebP photo of your menu or rate card.",
       };
     }
-    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
-    const result = await withTrialKnowledgeSource(
+    const result = await withTrialKnowledgeImport(
       ctx.org.id,
       "file",
-      () => {
+      async () => {
+        const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
         const input = {
           base64,
           mediaType: file.type as FileMediaType,
@@ -356,7 +357,7 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
         return restricted
           ? ingestFile(ctx.org.id, input, {
               maxDrafts: TRIAL_INGEST_BUDGET.maxDrafts,
-              activeDraftCap: 50,
+              activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts,
             })
           : ingestFile(ctx.org.id, input);
       },
