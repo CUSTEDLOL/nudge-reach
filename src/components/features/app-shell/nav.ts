@@ -217,7 +217,7 @@ export const TRIAL_NAV_ITEMS = [
     mobileLabel: "Inbox",
     href: "/dashboard",
     icon: Inbox,
-    activePrefixes: ["/dashboard"],
+    activePrefixes: ["/dashboard", "/inbox/try"],
     tourTarget: "nav-home",
   },
   {

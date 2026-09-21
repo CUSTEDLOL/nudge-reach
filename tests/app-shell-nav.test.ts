@@ -27,6 +27,7 @@ describe("adaptive app navigation", () => {
     ]);
     expect(items.map((item) => item.icon)).toEqual([Inbox, BookOpen]);
     expect(isNavItemActive("/dashboard", items[0])).toBe(true);
+    expect(isNavItemActive("/inbox/try", items[0])).toBe(true);
     expect(isNavItemActive("/agent", items[1])).toBe(true);
     expect(mobilePrimaryItemsForMode("trial", "OWNER").map((item) => item.href)).toEqual([
       "/dashboard",
@@ -38,8 +39,16 @@ describe("adaptive app navigation", () => {
     ]);
   });
 
-  it("uses a real two-column grid for the two trial destinations", () => {
-    expect(bottomNavGridClass(2)).toBe("grid-cols-2");
+  it.each([
+    [1, "grid-cols-1"],
+    [2, "grid-cols-2"],
+    [3, "grid-cols-3"],
+    [4, "grid-cols-4"],
+    [5, "grid-cols-5"],
+    [0, "grid-cols-1"],
+    [6, "grid-cols-1"],
+  ])("uses an explicit mobile grid for %i destinations", (count, gridClass) => {
+    expect(bottomNavGridClass(count)).toBe(gridClass);
   });
 
   it("keeps standard role navigation unchanged", () => {
