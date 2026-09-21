@@ -39,6 +39,23 @@ function textOf(content: Anthropic.ContentBlock[]): string {
     .join("");
 }
 
+/**
+ * The system prompt (vertical template + the org's knowledge digest) and the
+ * tool schemas are byte-identical across every step of an agent loop and
+ * every message in a conversation — so they are the cache prefix. Anthropic
+ * renders tools → system → messages, so ONE breakpoint on the system block
+ * caches the tool schemas with it.
+ *
+ * Economics: a write costs 1.25x and a read 0.1x, so the second call sharing
+ * the prefix already pays for it — and every agent reply makes at least two,
+ * seconds apart (well inside the 5-minute TTL, which each read refreshes).
+ * Under the model's minimum cacheable prefix nothing is cached and nothing
+ * extra is charged, so this is safe for orgs with a thin knowledge base.
+ */
+function cachedSystem(system: string): Anthropic.TextBlockParam[] {
+  return [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+}
+
 // input_tokens EXCLUDES cached tokens; the cache fields are priced separately.
 function usageOf(u: Anthropic.Usage | undefined): DriverUsage {
   return {
@@ -77,7 +94,7 @@ export const anthropicDriver: LlmDriver = {
     const response = await client(rt.apiKey).messages.create({
       model: rt.model,
       max_tokens: args.maxTokens,
-      system: args.system,
+      system: cachedSystem(args.system),
       messages: [{ role: "user", content }],
     });
     return { text: textOf(response.content), usage: usageOf(response.usage) };
@@ -87,7 +104,7 @@ export const anthropicDriver: LlmDriver = {
     const response = await client(rt.apiKey).messages.create({
       model: rt.model,
       max_tokens: args.maxTokens,
-      system: args.system,
+      system: cachedSystem(args.system),
       messages: args.messages.map((m) => ({ role: m.role, content: m.text })),
     });
     return { text: textOf(response.content).trim(), usage: usageOf(response.usage) };
@@ -121,7 +138,7 @@ export const anthropicDriver: LlmDriver = {
       const response = await client(rt.apiKey).messages.create({
         model: rt.model,
         max_tokens: args.maxTokens,
-        system: args.system,
+        system: cachedSystem(args.system),
         tools,
         messages: convo,
       });
@@ -167,7 +184,7 @@ export const anthropicDriver: LlmDriver = {
     const closing = await client(rt.apiKey).messages.create({
       model: rt.model,
       max_tokens: args.maxTokens,
-      system: args.system,
+      system: cachedSystem(args.system),
       messages: [
         ...convo,
         {

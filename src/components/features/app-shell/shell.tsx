@@ -15,8 +15,14 @@ import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import { Sidebar, type SidebarUser } from "@/components/features/app-shell/sidebar";
 import { Topbar } from "@/components/features/app-shell/topbar";
 import { BottomNav, isThreadRoute } from "@/components/features/app-shell/bottom-nav";
-import type { AppRole } from "@/components/features/app-shell/nav";
+import type {
+  AppRole,
+  AppShellMode,
+} from "@/components/features/app-shell/nav";
 import { saveSidebarCollapsedAction } from "@/app/(app)/shell-actions";
+import { TrialStatusStrip } from "@/components/features/trial/trial-status-strip";
+import { TrialTour } from "@/components/features/trial/trial-tour";
+import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 /**
  * App chrome: white sidebar on desktop (lg+), fixed bottom navigation on
@@ -27,6 +33,8 @@ export function AppShell({
   orgName,
   user,
   role = "OWNER",
+  mode = "standard",
+  trial,
   simulation = false,
   initialSidebarCollapsed = false,
   children,
@@ -34,6 +42,8 @@ export function AppShell({
   orgName: string;
   user: SidebarUser;
   role?: AppRole;
+  mode?: AppShellMode;
+  trial?: TrialWorkspace | null;
   simulation?: boolean;
   initialSidebarCollapsed?: boolean;
   children: ReactNode;
@@ -44,7 +54,7 @@ export function AppShell({
   );
   const previousPathname = useRef(pathname);
   // Reserve space for the bottom bar wherever it is shown (< lg, non-thread).
-  const hasBottomNav = !isThreadRoute(pathname);
+  const hasBottomNav = mode === "trial" || !isThreadRoute(pathname);
 
   useEffect(() => {
     if (previousPathname.current === pathname) return;
@@ -59,7 +69,7 @@ export function AppShell({
     });
   }
 
-  if (pathname === "/onboarding") {
+  if (pathname === "/onboarding" || pathname === "/trial/setup") {
     return (
       <div className="min-h-dvh overflow-x-clip bg-[#f7f8f7]">
         <SkipLink />
@@ -101,6 +111,7 @@ export function AppShell({
       <SkipLink />
       <Sidebar
         role={role}
+        mode={mode}
         user={user}
         collapsed={sidebarCollapsed}
         onCollapsedChange={updateSidebar}
@@ -111,7 +122,14 @@ export function AppShell({
           sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[232px]"
         )}
       >
-        <Topbar orgName={orgName} user={user} role={role} simulation={simulation} />
+        <Topbar
+          orgName={orgName}
+          user={user}
+          role={role}
+          mode={mode}
+          simulation={simulation}
+        />
+        {mode === "trial" && trial ? <TrialStatusStrip trial={trial} /> : null}
         <main
           id="main-content"
           tabIndex={-1}
@@ -124,9 +142,17 @@ export function AppShell({
           {children}
         </main>
       </div>
-      <BottomNav role={role} user={user} simulation={simulation} />
+      <BottomNav role={role} mode={mode} user={user} simulation={simulation} />
+      {shouldShowTrialTour(mode, trial) ? <TrialTour trial={trial!} /> : null}
     </div>
   );
+}
+
+export function shouldShowTrialTour(
+  mode: AppShellMode,
+  trial: TrialWorkspace | null | undefined,
+) {
+  return mode === "trial" && Boolean(trial?.setupComplete);
 }
 
 function SkipLink() {

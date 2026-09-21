@@ -8,6 +8,8 @@ import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import type { OpeningHours } from "@/modules/calendar/hours";
+import { HoursEditor } from "./hours-editor";
 import { saveAgentProfileAction, type ActionResult } from "./setup-actions";
 
 export interface AgentFormValues {
@@ -17,6 +19,7 @@ export interface AgentFormValues {
   businessInfo: string;
   tone: string;
   doNots: string;
+  openingHours: OpeningHours | null;
 }
 
 export function AgentForm({ initial }: { initial: AgentFormValues }) {
@@ -68,6 +71,7 @@ export function AgentForm({ initial }: { initial: AgentFormValues }) {
           <option value="retail">Shop / Retail</option>
           <option value="clinic">Clinic / Salon</option>
           <option value="real_estate">Real estate</option>
+          <option value="software">Software / B2B services</option>
         </Select>
       </Field>
 
@@ -103,6 +107,13 @@ export function AgentForm({ initial }: { initial: AgentFormValues }) {
           defaultValue={initial.tone}
           placeholder="Warm, friendly, and concise"
         />
+      </Field>
+
+      <Field
+        label="Opening hours"
+        hint="Bookings are only offered inside these. Filled in from your questionnaire answer when we could read it."
+      >
+        <HoursEditor initial={initial.openingHours} />
       </Field>
 
       <Field

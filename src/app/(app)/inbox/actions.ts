@@ -12,11 +12,18 @@ import { fireTagAdded } from "@/modules/automation/triggers";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import { firstName, toPreview } from "@/modules/inbox/format";
 import { normalizePhoneE164 } from "@/lib/phone";
+import { sandboxAddress } from "@/modules/messaging/sandbox";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isSuggestTone, suggestReply } from "@/modules/ai/suggest-reply";
 import { recordContactEvent } from "@/modules/contacts/events";
 import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
+import {
+  type TrialReplySummary,
+  withTrialReplyReservation,
+} from "@/modules/trial/replies";
+import { trialSandboxAddress } from "@/modules/trial/test-inbox";
 
 /**
  * Inbox mutations (spec §M2). Deliberately NOT role-gated — AGENT teammates
@@ -29,7 +36,9 @@ export interface ActionResult {
   /** Set by the simulation tester so the caller can open the thread. */
   conversationId?: string;
   /** The tester's message landed but no AI reply was sent, and why. */
-  skipped?: "no_profile" | "disabled";
+  skipped?: "no_profile" | "disabled" | "trial_limit";
+  /** Present only for a restricted acquisition trial. */
+  trial?: TrialReplySummary;
 }
 
 export interface SuggestActionResult extends ActionResult {
@@ -50,12 +59,20 @@ async function findConversation(orgId: string, conversationId: string) {
   });
 }
 
+async function paidInboxMutationBlocked(orgId: string) {
+  return await isRestrictedAcquisitionTrial(orgId)
+    ? { ok: false as const, message: "This action is available on paid plans." }
+    : null;
+}
+
 /** Free-form session reply — only valid inside the 24h service window. */
 export async function sendTextAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const text = String(formData.get("text") ?? "").trim();
     if (!text) return { ok: false, message: "Type a message first." };
@@ -135,6 +152,8 @@ export async function sendTemplateAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const templateId = String(formData.get("templateId") ?? "");
     if (!templateId) return { ok: false, message: "Pick a template first." };
@@ -225,6 +244,9 @@ export async function suggestReplyAction(
 ): Promise<SuggestActionResult> {
   try {
     const { org } = await requireOrgContext();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return { ok: false, message: "This AI tool is available on paid plans." };
+    }
     const conversationId = String(formData.get("conversationId") ?? "");
     const tone = String(formData.get("tone") ?? "friendly");
     if (!isSuggestTone(tone)) {
@@ -264,6 +286,8 @@ export async function setConversationStatusAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const status = String(formData.get("status") ?? "");
     if (!(CONVERSATION_STATUSES as readonly string[]).includes(status)) {
@@ -288,6 +312,8 @@ export async function assignConversationAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const userId = String(formData.get("userId") ?? "");
 
@@ -329,6 +355,8 @@ export async function setLeadStageAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const contactId = String(formData.get("contactId") ?? "");
     const conversationId = String(formData.get("conversationId") ?? "");
     const stage = String(formData.get("stage") ?? "") as LeadStage;
@@ -359,6 +387,8 @@ export async function addContactTagAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const contactId = String(formData.get("contactId") ?? "");
     const conversationId = String(formData.get("conversationId") ?? "");
     const tagId = String(formData.get("tagId") ?? "");
@@ -394,6 +424,8 @@ export async function removeContactTagAction(
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(org.id);
+    if (blocked) return blocked;
     const contactId = String(formData.get("contactId") ?? "");
     const conversationId = String(formData.get("conversationId") ?? "");
     const tagId = String(formData.get("tagId") ?? "");
@@ -418,6 +450,8 @@ export async function removeContactTagAction(
 export async function addNoteAction(formData: FormData): Promise<ActionResult> {
   try {
     const ctx = await requireOrgContext();
+    const blocked = await paidInboxMutationBlocked(ctx.org.id);
+    if (blocked) return blocked;
     const conversationId = String(formData.get("conversationId") ?? "");
     const body = String(formData.get("body") ?? "").trim();
     if (!body) return { ok: false, message: "Write the note first." };
@@ -451,37 +485,81 @@ export async function addNoteAction(formData: FormData): Promise<ActionResult> {
 }
 
 /**
- * Simulation-only tester: pretend the customer sent a message, routed through
- * the exact handler the live webhook uses (lib/agent/inbound.ts).
+ * "Try your AI": pretend the customer sent a message, routed through the
+ * exact handler the live webhook uses (lib/agent/inbound.ts). Works in every
+ * workspace. In a LIVE workspace the pretend customer gets a sandbox number
+ * (+999…, unassignable), so the AI's reply is mocked and can never reach a
+ * real phone — a client can try the AI before their number is connected.
  */
 export async function simulateInboundAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
     const { org } = await requireOrgContext();
-    if (!isSimulated(org)) {
-      return {
-        ok: false,
-        message: "Your number is live — message it from your phone instead.",
-      };
-    }
     const rawPhone = String(formData.get("phone") ?? "").trim();
     const text = String(formData.get("text") ?? "").trim();
-    if (!rawPhone || !text) {
-      return { ok: false, message: "Enter a phone number and a message." };
+    const restrictedTrial = await isRestrictedAcquisitionTrial(org.id);
+    if (!text || (!restrictedTrial && !rawPhone)) {
+      return { ok: false, message: "Enter a message first." };
+    }
+    if (restrictedTrial) {
+      const rate = checkRateLimit(
+        `trial-simulation:${org.id}`,
+        RATE_LIMITS.outboundTest,
+      );
+      if (!rate.allowed) {
+        return {
+          ok: false,
+          message: `Sending a lot right now — try again in ${rate.retryAfterSeconds}s.`,
+        };
+      }
     }
     // Users type local numbers; the inbound handler expects webhook-shaped
     // (country-code-included) input — normalize with the org's dial code.
-    const phone = normalizePhoneE164(rawPhone, org.dialCode);
+    const phone = restrictedTrial
+      ? trialSandboxAddress(org.id)
+      : isSimulated(org)
+        ? normalizePhoneE164(rawPhone, org.dialCode)
+        : sandboxAddress(rawPhone);
     if (!phone) {
       return { ok: false, message: "That phone number doesn't look right." };
     }
 
-    // handleInboundMessage maintains the denormalized inbox-list fields
-    // (lastMessageAt / preview / unread) itself — same path as the webhook.
-    const result = await handleInboundMessage(org.id, phone, text);
+    const outcome = await withTrialReplyReservation(org.id, () =>
+      handleInboundMessage(org.id, phone, text)
+    );
+    if (outcome.kind === "blocked") {
+      return {
+        ok: false,
+        message: outcome.status === "expired"
+          ? "Your seven-day trial has ended. Book your free setup demo to continue."
+          : "You've used all 15 test replies. Book your free setup demo to continue.",
+        skipped: "trial_limit",
+        ...(outcome.trial ? { trial: outcome.trial } : {}),
+      };
+    }
+
+    const { result, trial } = outcome;
+    const freshTrial = trial;
+    if (result.generatedByAi && trial) {
+      try {
+        const acquisitionTrial = await prisma.acquisitionTrial.findUnique({
+          where: { orgId: org.id },
+          select: { id: true },
+        });
+        if (acquisitionTrial) {
+          await prisma.acquisitionTrial.updateMany({
+            where: { id: acquisitionTrial.id, firstReplyAt: null },
+            data: { firstReplyAt: new Date() },
+          });
+        }
+      } catch (error) {
+        console.error("[trial] first reply milestone failed", error);
+      }
+    }
 
     revalidateInbox(result.conversationId);
+    revalidatePath("/inbox/try");
 
     const conversationId = result.conversationId;
     if (result.optedOut) {
@@ -498,10 +576,29 @@ export async function simulateInboundAction(
         skipped: result.skipped,
       };
     }
-    if (result.handoff) {
-      return { ok: true, message: "Message received — the agent handed off to a human.", conversationId };
+    if (result.aiFailed) {
+      return {
+        ok: true,
+        message:
+          "The AI couldn't answer just now, so the chat was handed to a person — exactly what a customer would get. Try again in a minute.",
+        conversationId,
+        ...(freshTrial ? { trial: freshTrial } : {}),
+      };
     }
-    return { ok: true, message: "Message received — the agent replied.", conversationId };
+    if (result.handoff) {
+      return {
+        ok: true,
+        message: "Message received — the agent handed off to a human.",
+        conversationId,
+        ...(freshTrial ? { trial: freshTrial } : {}),
+      };
+    }
+    return {
+      ok: true,
+      message: "Message received — the agent replied.",
+      conversationId,
+      ...(freshTrial ? { trial: freshTrial } : {}),
+    };
   } catch {
     return { ok: false, message: "The simulated message failed — try again." };
   }
@@ -518,6 +615,9 @@ export async function summarizeConversationAction(
 ): Promise<SummarizeActionResult> {
   try {
     const { org } = await requireOrgContext();
+    if (await isRestrictedAcquisitionTrial(org.id)) {
+      return { ok: false, message: "This AI tool is available on paid plans." };
+    }
     const conversationId = String(formData.get("conversationId") ?? "");
     const rate = checkRateLimit(`summarize:${org.id}`, RATE_LIMITS.aiSuggest);
     if (!rate.allowed) {

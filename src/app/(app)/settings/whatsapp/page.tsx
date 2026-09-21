@@ -61,6 +61,27 @@ export default async function WhatsappSettingsPage() {
         description="Your AI Front Desk answers from your own WhatsApp Business number. We connect it with you."
       />
 
+      {account && simulation && (
+        <Card className="p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="info">Test mode</Badge>
+            <p className="text-sm font-semibold text-neutral-900">
+              Your number is connected, but you&apos;re not live yet
+            </p>
+          </div>
+          <p className="mt-2 text-sm text-neutral-500">
+            Nothing you send reaches a real customer while this says Test mode.
+            We&apos;ll switch you live once we&apos;ve checked the setup with
+            you — you don&apos;t need to do anything here.
+          </p>
+          <p className="mt-2 text-sm text-neutral-500">
+            Want the AI to stop replying for a while? Switch it off under{" "}
+            <b>AI Agent → Setup</b>. Messages still arrive in your inbox for
+            your team to answer by hand.
+          </p>
+        </Card>
+      )}
+
       {account ? (
         <NumbersList
           numbers={accounts.map((a) => ({

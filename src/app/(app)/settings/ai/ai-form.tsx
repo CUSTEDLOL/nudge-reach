@@ -12,33 +12,11 @@ import {
   disconnectLlmAccountAction,
   testLlmAccountAction,
 } from "./actions";
+import { BYOK_CATALOGUE } from "@/lib/model-router/guard";
 
-const PROVIDERS: { id: string; label: string; models: { id: string; label: string }[] }[] = [
-  {
-    id: "anthropic",
-    label: "Anthropic (Claude)",
-    models: [
-      { id: "claude-sonnet-5", label: "Claude Sonnet (recommended)" },
-      { id: "claude-haiku-4-5", label: "Claude Haiku (fastest)" },
-    ],
-  },
-  {
-    id: "openai",
-    label: "OpenAI (GPT)",
-    models: [
-      { id: "gpt-5.2", label: "GPT-5.2" },
-      { id: "gpt-5-mini", label: "GPT-5 mini (fastest)" },
-    ],
-  },
-  {
-    id: "google",
-    label: "Google (Gemini)",
-    models: [
-      { id: "gemini-3-pro", label: "Gemini 3 Pro" },
-      { id: "gemini-3-flash", label: "Gemini 3 Flash (fastest)" },
-    ],
-  },
-];
+// Rendered from the single BYOK catalogue — see lib/model-router/guard.ts.
+// Duplicating the model ids here is what let gemini-3-pro ship broken.
+const PROVIDERS = BYOK_CATALOGUE;
 
 export function AiModelForm({
   connected,

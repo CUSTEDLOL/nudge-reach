@@ -11,6 +11,7 @@ import {
 } from "@/components/features/dashboard/quick-actions";
 import { RecentActivity } from "@/components/features/dashboard/recent-activity";
 import { SetupProgress } from "@/components/features/dashboard/setup-progress";
+import { AiOffNotice } from "@/components/features/front-desk/ai-off-notice";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { getPlan } from "@/modules/billing/plans";
@@ -30,10 +31,21 @@ import {
   parseWorkspaceProfile,
 } from "@/modules/dashboard/workspace-profile";
 import { requireOrgContext } from "@/modules/orgs/auth";
+import {
+  dashboardRedirectFor,
+  getTrialWorkspace,
+} from "@/modules/trial/workspace";
+import { TrialHome } from "@/components/features/trial/trial-home";
 
 export default async function DashboardPage() {
   const { org, membership, email } = await requireOrgContext();
   const now = new Date();
+  const trial = await getTrialWorkspace(org.id, now);
+  const trialRedirect = dashboardRedirectFor(trial, false);
+  if (trialRedirect) redirect(trialRedirect);
+  if (trial && !trial.converted) {
+    return <TrialHome businessName={org.name} workspace={trial} />;
+  }
   const isAgent = membership.role === "AGENT";
   const allowedWhatsappAccountIds =
     isAgent && membership.whatsappAccountIds.length > 0
@@ -46,15 +58,13 @@ export default async function DashboardPage() {
     allowedWhatsappAccountIds
   );
 
-  if (
-    shouldRedirectToOnboarding({
+  const onboardingRequired = shouldRedirectToOnboarding({
       role: membership.role,
       onboardedAt: org.onboardedAt,
       contactCount: data.contactCount,
-    })
-  ) {
-    redirect("/onboarding");
-  }
+    });
+  const onboardingRedirect = dashboardRedirectFor(trial, onboardingRequired);
+  if (onboardingRedirect) redirect(onboardingRedirect);
 
   const profile = parseWorkspaceProfile(org.settings);
   const workspaceDefaults = deriveWorkspaceDefaults(profile);
@@ -130,6 +140,8 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </header>
+
+      {!data.agentEnabled && <AiOffNotice canEdit={!isAgent} />}
 
       {!isAgent && settingUp && (
         <SetupProgress checklist={data.checklist} orgName={org.name} />

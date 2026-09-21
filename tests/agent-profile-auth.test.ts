@@ -8,14 +8,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * direct form POST.
  */
 
-const { requireOrgContext, upsert, revalidatePath } = vi.hoisted(() => ({
+const { requireOrgContext, upsert, orgUpdate, revalidatePath } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
   upsert: vi.fn().mockResolvedValue({}),
+  // Opening hours are saved on the org alongside the persona (2026-09-17).
+  orgUpdate: vi.fn().mockResolvedValue({}),
   revalidatePath: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
-vi.mock("@/lib/db", () => ({ prisma: { agentProfile: { upsert } } }));
+vi.mock("@/lib/db", () => ({
+  prisma: { agentProfile: { upsert }, org: { update: orgUpdate } },
+}));
 vi.mock("@/modules/orgs/auth", () => {
   // Faithful stand-in for the pure role gate (the real one is covered by
   // roles.test.ts); the point here is that the ACTION calls it at all.
@@ -39,7 +43,7 @@ const form = (fields: Record<string, string>) => {
 };
 const ctx = (role: "OWNER" | "ADMIN" | "AGENT") => ({
   role,
-  org: { id: "org1" },
+  org: { id: "org1", settings: {} },
   userId: "u1",
   email: "e@x.com",
   membership: {},
@@ -59,6 +63,23 @@ describe("saveAgentProfileAction — H1 role gate", () => {
     expect(r.ok).toBe(false);
     expect(r.message).toMatch(/admin/i);
     expect(upsert).not.toHaveBeenCalled();
+    expect(orgUpdate).not.toHaveBeenCalled();
+  });
+
+  it("stores valid opening hours on the org and rejects broken ones", async () => {
+    requireOrgContext.mockResolvedValue(ctx("ADMIN"));
+    const hours = { sun: [], mon: [["10:00", "20:00"]], tue: [], wed: [], thu: [], fri: [], sat: [] };
+    const ok = await saveAgentProfileAction(
+      form({ businessName: "X", openingHours: JSON.stringify(hours) })
+    );
+    expect(ok.ok).toBe(true);
+    expect(orgUpdate.mock.calls[0][0].data.settings).toEqual({ openingHours: hours });
+
+    const bad = await saveAgentProfileAction(
+      form({ businessName: "X", openingHours: JSON.stringify({ ...hours, mon: [["20:00", "10:00"]] }) })
+    );
+    expect(bad.ok).toBe(false);
+    expect(bad.message).toMatch(/closes after it opens/);
   });
 
   it("allows an ADMIN and writes scoped to the caller's own org", async () => {

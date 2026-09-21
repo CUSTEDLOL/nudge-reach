@@ -12,6 +12,7 @@ import {
   MODEL_RATES,
   RATE_CARD_VERSION,
   UnpricedModelError,
+  estimateCostMicroUsd,
   microUsdToCredits,
   priceCall,
 } from "@/modules/billing/credit-rates";
@@ -27,7 +28,7 @@ const ONE_MILLION_EACH = {
 
 describe("credit rate card", () => {
   it("is versioned and defines the credit unit", () => {
-    expect(RATE_CARD_VERSION).toBe("2026-09-15");
+    expect(RATE_CARD_VERSION).toBe("2026-09-20");
     expect(MICRO_USD_PER_CREDIT).toBe(5_000);
     expect(microUsdToCredits(5_000)).toBe(1);
     expect(microUsdToCredits(7_000)).toBe(1.4);
@@ -79,5 +80,89 @@ describe("credit rate card", () => {
       expect(MODEL_RATES[model], `${model} has no rate`).toBeDefined();
       expect(() => priceCall(model, { inputTokens: 1, outputTokens: 1 })).not.toThrow();
     }
+  });
+});
+
+/**
+ * BYO-key models (E3) are the customer's cost, but the dashboard must still
+ * show it honestly — so they live in the SAME exact-id card as the platform
+ * models. Prices confirmed against the providers' own pricing pages
+ * (developers.openai.com/api/docs/pricing) on 2026-09-20.
+ */
+describe("BYO-key models are on the one rate card", () => {
+  const ONE_M = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
+
+  it("prices gpt-5.2 at its own rate, not gpt-5's", () => {
+    // $1.75 in + $14.00 out = $15.75
+    expect(priceCall("gpt-5.2", ONE_M)).toBe(15_750_000);
+    // The old substring table matched "gpt-5" and undercharged by $3.50/MTok.
+    expect(priceCall("gpt-5.2", ONE_M)).toBeGreaterThan(11_250_000);
+  });
+
+  it("prices gpt-5-mini exactly ($0.25 in + $2.00 out)", () => {
+    expect(priceCall("gpt-5-mini", ONE_M)).toBe(2_250_000);
+  });
+
+  it("prices cached input on BYO models too", () => {
+    // gpt-5.2 cached input is $0.175/MTok — a tenth of the $1.75 input rate.
+    expect(
+      priceCall("gpt-5.2", { inputTokens: 0, outputTokens: 0, cacheReadTokens: 1_000_000 })
+    ).toBe(175_000);
+  });
+
+  it("every allow-listed BYOK model with a published price is on the card", () => {
+    for (const model of [...BYOK_ALLOWED_MODELS.anthropic, ...BYOK_ALLOWED_MODELS.openai]) {
+      expect(MODEL_RATES[model], `${model} has no rate`).toBeDefined();
+    }
+  });
+});
+
+/**
+ * The analytics/dashboard path must never throw — metering a call must not be
+ * able to break the call it measures — but it must also never silently price
+ * an unknown model at zero, and must count cache tokens (the old
+ * usage.ts table ignored them entirely, so enabling prompt caching would have
+ * made the dashboard under-report).
+ */
+describe("estimateCostMicroUsd (never-throw dashboard pricing)", () => {
+  it("agrees with priceCall for a known model", () => {
+    const usage = { inputTokens: 1_000, outputTokens: 500, cacheReadTokens: 9_000 };
+    expect(estimateCostMicroUsd("claude-sonnet-5", usage)).toBe(
+      priceCall("claude-sonnet-5", usage)
+    );
+  });
+
+  it("counts cache read and write tokens", () => {
+    const withCache = estimateCostMicroUsd("claude-sonnet-5", {
+      inputTokens: 100,
+      outputTokens: 0,
+      cacheReadTokens: 100_000,
+      cacheWriteTokens: 100_000,
+    });
+    const withoutCache = estimateCostMicroUsd("claude-sonnet-5", {
+      inputTokens: 100,
+      outputTokens: 0,
+    });
+    expect(withCache).toBeGreaterThan(withoutCache);
+  });
+
+  it("never throws on an unknown model, and prices it at no less than the dearest known one", () => {
+    const usage = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
+    let estimate = 0;
+    expect(() => {
+      estimate = estimateCostMicroUsd("some-model-we-have-never-seen", usage);
+    }).not.toThrow();
+    const dearest = Math.max(
+      ...Object.keys(MODEL_RATES).map((m) => priceCall(m, usage))
+    );
+    expect(estimate).toBeGreaterThanOrEqual(dearest);
+  });
+
+  it("does not substring-match an unknown model onto a cheap rate", () => {
+    const usage = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
+    // "gpt-5-mini-2099" is NOT gpt-5-mini; it must not inherit the cheap rate.
+    expect(estimateCostMicroUsd("gpt-5-mini-2099", usage)).toBeGreaterThan(
+      priceCall("gpt-5-mini", usage)
+    );
   });
 });

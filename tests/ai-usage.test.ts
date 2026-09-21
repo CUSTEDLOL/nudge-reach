@@ -31,7 +31,6 @@ vi.mock("@/lib/env", () => ({
 }));
 
 import {
-  computeCostMicroUsd,
   estimateTokens,
   recordSyntheticUsage,
   recordUsage,
@@ -41,27 +40,6 @@ import { chat, runAgent } from "@/lib/model-router";
 beforeEach(() => {
   vi.clearAllMocks();
   prisma.aiUsage.create.mockResolvedValue({ id: "usage_1" });
-});
-
-describe("computeCostMicroUsd", () => {
-  it("prices Sonnet at $3/MTok in, $15/MTok out", () => {
-    // 1M in + 1M out = $18 = 18_000_000 micro-USD
-    expect(computeCostMicroUsd("claude-sonnet-5", 1_000_000, 1_000_000)).toBe(
-      18_000_000
-    );
-  });
-
-  it("prices Haiku cheaper than Sonnet", () => {
-    expect(
-      computeCostMicroUsd("claude-haiku-4-5", 1_000_000, 1_000_000)
-    ).toBeLessThan(computeCostMicroUsd("claude-sonnet-5", 1_000_000, 1_000_000));
-  });
-
-  it("prices an unknown model as Sonnet (conservative)", () => {
-    expect(computeCostMicroUsd("mystery-model", 1000, 1000)).toBe(
-      computeCostMicroUsd("claude-sonnet-5", 1000, 1000)
-    );
-  });
 });
 
 describe("router usage recording", () => {

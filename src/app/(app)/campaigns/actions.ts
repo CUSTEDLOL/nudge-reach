@@ -35,6 +35,7 @@ import {
   parseScheduledAt,
   segmentAudienceName,
 } from "./wizard-helpers";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
 export interface ActionResult {
   ok: boolean;
@@ -48,6 +49,13 @@ const IMAGE_TYPES = new Set([
   "image/gif",
 ]);
 const MAX_IMAGE_BYTES = 4.5 * 1024 * 1024;
+
+async function restrictedTrialCampaignMessage(
+  orgId: string
+): Promise<{ ok: false; message: string } | undefined> {
+  if (!(await isRestrictedAcquisitionTrial(orgId))) return undefined;
+  return { ok: false, message: "Campaigns are available on paid plans." };
+}
 
 // ---------------------------------------------------------------------------
 // Step 1 — content (three tabs; each creates the campaign row)
@@ -69,6 +77,9 @@ async function createCampaignFromPhoto(
   | { ok: true; campaignId: string; content: CampaignContent; photoUrl: string | null }
   | { ok: false; message: string }
 > {
+  const restricted = await restrictedTrialCampaignMessage(orgId);
+  if (restricted) return restricted;
+
   const description = String(formData.get("description") ?? "").trim();
   const photo = formData.get("photo");
   const hasPhoto = photo instanceof File && photo.size > 0;
@@ -198,6 +209,8 @@ export async function wizardFromTemplateAction(
   formData: FormData
 ): Promise<WizardContentResult> {
   const org = await requireOrg();
+  const restricted = await restrictedTrialCampaignMessage(org.id);
+  if (restricted) return restricted;
   const templateId = String(formData.get("templateId") ?? "");
   if (!templateId) {
     return { ok: false, message: "Pick a template first." };
@@ -262,6 +275,8 @@ export async function wizardBlankAction(
   formData: FormData
 ): Promise<WizardContentResult> {
   const org = await requireOrg();
+  const restricted = await restrictedTrialCampaignMessage(org.id);
+  if (restricted) return restricted;
   const name = String(formData.get("name") ?? "").trim();
 
   let content: CampaignContent;

@@ -125,11 +125,11 @@ describe("saveWhatsappAccount", () => {
     expect(prisma.org.findUnique).not.toHaveBeenCalled(); // no gate consulted
   });
 
-  it("can save assisted-setup credentials without changing the org's send mode", async () => {
+  it("never changes the org's send mode, on any path", async () => {
     prisma.whatsappAccount.findUnique.mockResolvedValue(null);
     prisma.whatsappAccount.count.mockResolvedValue(0);
 
-    const r = await saveWhatsappAccount(INPUT, { activateOrg: false });
+    const r = await saveWhatsappAccount(INPUT);
 
     expect(r.ok).toBe(true);
     expect(prisma.whatsappAccount.upsert).toHaveBeenCalledOnce();
@@ -140,10 +140,7 @@ describe("saveWhatsappAccount", () => {
     transactionDb.whatsappAccount.findUnique.mockResolvedValue(null);
     transactionDb.whatsappAccount.count.mockResolvedValue(0);
 
-    const r = await saveWhatsappAccount(INPUT, {
-      activateOrg: false,
-      db: transactionDb,
-    });
+    const r = await saveWhatsappAccount(INPUT, { db: transactionDb });
 
     expect(r.ok).toBe(true);
     expect(transactionDb.whatsappAccount.upsert).toHaveBeenCalledOnce();
@@ -190,5 +187,78 @@ describe("disconnectWhatsappAccount", () => {
       where: { id: "wa2" },
       data: { isDefault: true },
     });
+  });
+});
+
+/**
+ * Send mode is a founder control (admin → Controls). Connecting a number used
+ * to flip the workspace live as a side effect when the OWNER used the
+ * Settings → WhatsApp form, while the founder-assisted path deliberately left
+ * it alone. That left the boundary incoherent: an owner could put themselves
+ * live by accident but had no way back, because there is no live/test control
+ * in the workspace at all.
+ *
+ * The rule is now single and symmetric: connecting never changes mode, and
+ * losing the last number returns the workspace to test — so a "live" workspace
+ * can never be left with nothing to send from.
+ */
+describe("connecting a number never changes send mode", () => {
+  const INPUT_ = {
+    orgId: "org1",
+    wabaId: "1",
+    phoneNumberId: "2",
+    displayName: "Main",
+    accessToken: "tok",
+  };
+
+  it("does not flip the workspace live on a first connection", async () => {
+    prisma.whatsappAccount.findUnique.mockResolvedValue(null);
+    prisma.whatsappAccount.count.mockResolvedValue(0);
+    prisma.org.findUnique.mockResolvedValue({ plan: "pro", featureOverrides: {} });
+
+    const r = await saveWhatsappAccount(INPUT_);
+
+    expect(r.ok).toBe(true);
+    expect(prisma.whatsappAccount.upsert).toHaveBeenCalledOnce();
+    // The founder flips the switch, not the connect form.
+    expect(prisma.org.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("disconnecting the last number returns the workspace to test", () => {
+  it("reverts to test mode when no numbers remain", async () => {
+    prisma.whatsappAccount.findFirst.mockResolvedValueOnce({
+      id: "wa1",
+      orgId: "org1",
+      isDefault: true,
+    });
+    // No survivor.
+    prisma.whatsappAccount.findFirst.mockResolvedValueOnce(null);
+    prisma.whatsappAccount.count.mockResolvedValue(0);
+
+    const ok = await disconnectWhatsappAccount("org1", "wa1");
+
+    expect(ok).toBe(true);
+    // A live workspace with no number cannot send at all — production has no
+    // fallback sender credentials — so it must not be left claiming "Live".
+    expect(prisma.org.update).toHaveBeenCalledWith({
+      where: { id: "org1" },
+      data: { simulated: true },
+    });
+  });
+
+  it("leaves mode alone while another number survives", async () => {
+    prisma.whatsappAccount.findFirst.mockResolvedValueOnce({
+      id: "wa1",
+      orgId: "org1",
+      isDefault: true,
+    });
+    prisma.whatsappAccount.findFirst.mockResolvedValueOnce({ id: "wa2", orgId: "org1" });
+    prisma.whatsappAccount.count.mockResolvedValue(1);
+
+    const ok = await disconnectWhatsappAccount("org1", "wa1");
+
+    expect(ok).toBe(true);
+    expect(prisma.org.update).not.toHaveBeenCalled();
   });
 });

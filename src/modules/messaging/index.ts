@@ -3,6 +3,7 @@ import { canSendMarketing } from "@/modules/consent";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { isOrgSuspended, orgSendMode, type SendMode } from "@/modules/orgs/mode";
 import { getWhatsappCredentials } from "@/modules/whatsapp/accounts";
+import { isSandboxAddress } from "@/modules/messaging/sandbox";
 import { WhatsappLiveDriver } from "@/modules/messaging/drivers/whatsapp-live";
 import { WhatsappSimulationDriver } from "@/modules/messaging/drivers/whatsapp-simulation";
 import type {
@@ -34,6 +35,8 @@ export interface SendOptions {
    * A stale id falls back to the default inside credential resolution.
    */
   whatsappAccountId?: string | null;
+  /** Private simulations must not fan out into client integrations. */
+  suppressWebhook?: boolean;
 }
 
 /**
@@ -71,10 +74,13 @@ export async function sendMessage(
     };
   }
   // Per-org test mode: an org without a connected number stays mocked even in
-  // a live deployment. Sends with no org fall back to the global mode.
-  const mode: SendMode = options.orgId
-    ? await orgSendMode(options.orgId)
-    : env.SEND_MODE;
+  // a live deployment. Sends with no org fall back to the global mode. A
+  // sandbox address ("Try your AI" in a live workspace) is always mocked.
+  const mode: SendMode = isSandboxAddress(recipient.address)
+    ? "simulation"
+    : options.orgId
+      ? await orgSendMode(options.orgId)
+      : env.SEND_MODE;
 
   // Resolve this org's own WhatsApp credentials (multi-tenant). Falls back to
   // the env single-number credentials inside the driver when none are stored.
@@ -94,7 +100,7 @@ export async function sendMessage(
 
   // E1: message.sent goes to integrators' webhooks. Fire-and-forget after the
   // send so a slow endpoint never delays a customer-facing message.
-  if (result.ok && options.orgId) {
+  if (result.ok && options.orgId && !options.suppressWebhook) {
     void dispatchWebhook(options.orgId, "message.sent", {
       to: recipient.address,
       kind: payload.kind,

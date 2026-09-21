@@ -49,7 +49,8 @@ function templateFingerprint(category: string, content: unknown): string {
  * currently only creates, so for an existing name Meta re-syncs the OLD
  * template's status and the new copy does not reach Meta until edit-in-place
  * lands (see plan: Deferred). A refusal is recorded on the row so the owner
- * can fix and resubmit.
+ * can fix and resubmit. A live workspace with no number yet submits nothing and
+ * leaves the rows PENDING for prepareWorkspaceForLive to pick up.
  */
 export async function ensureLibraryTemplates(
   orgId: string,
@@ -57,6 +58,12 @@ export async function ensureLibraryTemplates(
 ): Promise<Map<string, string>> {
   const byName = new Map<string, string>();
   const approve = (await orgSendMode(orgId)) !== "live";
+  // A live workspace with no number yet cannot reach Meta. Leave the rows
+  // PENDING; prepareWorkspaceForLive submits them the moment a number connects.
+  // (They used to be marked REJECTED with "Connect your WhatsApp…", and then
+  // nothing ever resubmitted them.)
+  const canSubmit =
+    approve || (await prisma.whatsappAccount.count({ where: { orgId } })) > 0;
   for (const t of templates) {
     // Meta takes the components array; name/language/category travel beside it.
     const componentsJson = buildTemplatePayload(t.content, { name: t.name })
@@ -85,7 +92,7 @@ export async function ensureLibraryTemplates(
     const row = existing
       ? await prisma.template.update({ where: { id: existing.id }, data })
       : await prisma.template.create({ data: { orgId, campaignId: null, name: t.name, ...data } });
-    if (!approve && row.metaStatus !== "APPROVED") {
+    if (!approve && canSubmit && row.metaStatus !== "APPROVED") {
       await submitRowToMeta(orgId, row).catch((err: unknown) =>
         prisma.template.update({
           where: { id: row.id },

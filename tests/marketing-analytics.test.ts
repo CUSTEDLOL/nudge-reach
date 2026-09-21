@@ -325,6 +325,28 @@ describe("marketing browser events", () => {
       })
     ).not.toThrow();
   });
+
+  it("copies bounded trial events without contact or claim data", () => {
+    const dataLayer: object[] = [];
+    vi.stubGlobal("window", { dataLayer });
+
+    pushMarketingEvent({
+      event: "trial_signup_failed",
+      surface: "free_trial",
+      reason: "auth",
+    });
+
+    expect(dataLayer).toEqual([
+      {
+        event: "trial_signup_failed",
+        surface: "free_trial",
+        reason: "auth",
+      },
+    ]);
+    expect(JSON.stringify(dataLayer)).not.toMatch(
+      /email|phone|business_name|claim_token/i,
+    );
+  });
 });
 
 describe("demo booking funnel", () => {
@@ -406,6 +428,39 @@ describe("demo booking funnel", () => {
         event: "demo_cta_click",
         surface: "hero",
         landing_path: "/industries/clinics",
+      },
+    ]);
+  });
+
+  it.each([
+    "whatsapp-ai-automation",
+    "whatsapp-lead-leakage-calculator",
+  ])("preserves the %s content surface", (surface) => {
+    const dataLayer: object[] = [];
+    vi.stubGlobal("window", { dataLayer });
+
+    trackDemoCta(surface, { pathname: "/content-page" });
+
+    expect(dataLayer).toEqual([
+      {
+        event: "demo_cta_click",
+        surface,
+        landing_path: "/content-page",
+      },
+    ]);
+  });
+
+  it("sanitizes an unknown CTA surface", () => {
+    const dataLayer: object[] = [];
+    vi.stubGlobal("window", { dataLayer });
+
+    trackDemoCta("untrusted-surface", { pathname: "/content-page" });
+
+    expect(dataLayer).toEqual([
+      {
+        event: "demo_cta_click",
+        surface: "unknown",
+        landing_path: "/content-page",
       },
     ]);
   });

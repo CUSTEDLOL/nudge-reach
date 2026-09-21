@@ -21,6 +21,11 @@ import {
   ingestWebsite,
   type FileMediaType,
 } from "@/modules/knowledge/ingest";
+import {
+  TRIAL_INGEST_BUDGET,
+  withTrialKnowledgeSource,
+} from "@/modules/trial/knowledge";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
 export interface ActionResult {
   ok: boolean;
@@ -44,6 +49,13 @@ export async function answerQuestionAction(
 ): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
+    requireRole(ctx, "ADMIN");
+    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
+      return {
+        ok: false,
+        message: "This AI knowledge tool is available on paid plans.",
+      };
+    }
     const r = await answerOwnerQuestion(ctx, questionId, answerText);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
@@ -188,7 +200,15 @@ export async function importWebsiteAction(url: string): Promise<ActionResult> {
     requireRole(ctx, "ADMIN");
     const trimmed = url.trim();
     if (!trimmed) return { ok: false, message: "Enter your website address." };
-    const result = await ingestWebsite(ctx.org.id, trimmed);
+    const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    const result = await withTrialKnowledgeSource(
+      ctx.org.id,
+      "website",
+      () => restricted
+        ? ingestWebsite(ctx.org.id, trimmed, TRIAL_INGEST_BUDGET)
+        : ingestWebsite(ctx.org.id, trimmed),
+      (value) => value.drafts > 0
+    );
     recordAudit(ctx, "knowledge.website_imported", trimmed);
     revalidatePath("/agent");
     if (result.drafts === 0) {
@@ -225,7 +245,15 @@ export async function importGbpAction(query: string): Promise<ActionResult> {
     if (!trimmed) {
       return { ok: false, message: "Type your business name and city." };
     }
-    const result = await ingestGbp(ctx.org.id, trimmed);
+    const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    const result = await withTrialKnowledgeSource(
+      ctx.org.id,
+      "gbp",
+      () => restricted
+        ? ingestGbp(ctx.org.id, trimmed, TRIAL_INGEST_BUDGET)
+        : ingestGbp(ctx.org.id, trimmed),
+      (value) => value.drafts > 0
+    );
     recordAudit(ctx, "knowledge.gbp_imported", trimmed);
     revalidatePath("/agent");
     if (result.drafts === 0) {
@@ -269,10 +297,21 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
       };
     }
     const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-    const result = await ingestFile(ctx.org.id, {
-      base64,
-      mediaType: file.type as FileMediaType,
-    });
+    const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    const result = await withTrialKnowledgeSource(
+      ctx.org.id,
+      "file",
+      () => {
+        const input = {
+          base64,
+          mediaType: file.type as FileMediaType,
+        };
+        return restricted
+          ? ingestFile(ctx.org.id, input, TRIAL_INGEST_BUDGET.maxDrafts)
+          : ingestFile(ctx.org.id, input);
+      },
+      (value) => value.drafts > 0
+    );
     recordAudit(ctx, "knowledge.file_imported", file.name);
     revalidatePath("/agent");
     if (result.drafts === 0) {
@@ -372,6 +411,12 @@ export async function structureExistingInfoAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
+    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
+      return {
+        ok: false,
+        message: "This AI knowledge tool is available on paid plans.",
+      };
+    }
     const profile = await prisma.agentProfile.findUnique({
       where: { orgId: ctx.org.id },
       select: { businessInfo: true },

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prepareWorkspaceForLive } from "@/modules/orgs/go-live";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { recordAudit } from "@/modules/orgs/audit";
 import {
@@ -8,6 +9,7 @@ import {
   setDefaultWhatsappAccount,
   disconnectWhatsappAccount,
 } from "@/modules/whatsapp/accounts";
+import { validateWhatsappConnection } from "@/modules/whatsapp/connection-validator";
 
 /** E4: make one of the org's numbers the default sender. */
 export async function setDefaultNumberAction(
@@ -68,13 +70,19 @@ export async function connectWhatsappAction(
 
   try {
     requireRole(ctx, "ADMIN");
-    const saved = await saveWhatsappAccount({
-      orgId: ctx.org.id,
+    // Ask Meta before saving anything. Connecting a number makes the workspace
+    // live, so a mistyped Phone Number ID or an expired token must never earn
+    // a green "Connected": inbound messages route by that id, and with a wrong
+    // one the AI would simply never hear a customer. (The founder-assisted
+    // path in admin always checked; this form did not until 2026-09-19.)
+    const checked = await validateWhatsappConnection({
+      displayName,
       wabaId,
       phoneNumberId,
-      displayName,
       accessToken,
     });
+    if (!checked.ok) return { ok: false, message: checked.message };
+    const saved = await saveWhatsappAccount({ orgId: ctx.org.id, ...checked.value });
     if (!saved.ok) return { ok: false, message: saved.message };
   } catch (err) {
     return {
@@ -84,6 +92,18 @@ export async function connectWhatsappAction(
     };
   }
   recordAudit(ctx, "whatsapp.connected", displayName, `phone ${phoneNumberId}`);
-  revalidatePath("/settings/whatsapp");
-  return { ok: true, message: "WhatsApp connected. Token stored encrypted." };
+  // The workspace can now send for real: drop the test calendar and put the
+  // follow-up templates in front of Meta (test mode only mock-approved them).
+  const live = await prepareWorkspaceForLive(ctx.org.id);
+  revalidatePath("/", "layout");
+  const extras = [
+    live.templatesSubmitted
+      ? `${live.templatesSubmitted} message template${live.templatesSubmitted === 1 ? "" : "s"} sent to Meta for approval`
+      : "",
+    live.testCalendarRemoved ? "test calendar removed — connect your Google Calendar in Apps" : "",
+  ].filter(Boolean);
+  return {
+    ok: true,
+    message: `WhatsApp connected. Token stored encrypted.${extras.length ? ` Also: ${extras.join("; ")}.` : ""}`,
+  };
 }

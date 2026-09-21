@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { DriverUsage } from "@/lib/model-router/types";
+import { estimateCostMicroUsd } from "@/modules/billing/credit-rates";
 
 /**
  * AI usage metering (PLAN.md WS2). Every routed LLM call records model,
@@ -27,34 +28,6 @@ export interface Attribution {
   purpose: UsagePurpose;
 }
 
-/**
- * Micro-USD per million tokens, hand-set from the public price sheets.
- * Matched by substring against the model id (E3: multi-provider). BYO usage
- * is still priced for visibility — the customer pays their provider, but the
- * dashboard should show what their AI costs.
- */
-const PRICES_MICRO_USD_PER_MTOK: [match: string, price: { input: number; output: number }][] = [
-  ["haiku", { input: 1_000_000, output: 5_000_000 }],
-  ["sonnet", { input: 3_000_000, output: 15_000_000 }],
-  ["gpt-5-mini", { input: 250_000, output: 2_000_000 }],
-  ["gpt-5", { input: 1_250_000, output: 10_000_000 }],
-  ["gemini-3-flash", { input: 300_000, output: 2_500_000 }],
-  ["gemini-3-pro", { input: 2_000_000, output: 12_000_000 }],
-];
-
-/** Unknown models are priced as Sonnet — overcounting beats undercounting. */
-export function computeCostMicroUsd(
-  model: string,
-  inputTokens: number,
-  outputTokens: number
-): number {
-  const entry = PRICES_MICRO_USD_PER_MTOK.find(([match]) => model.includes(match));
-  const price = entry?.[1] ?? PRICES_MICRO_USD_PER_MTOK.find(([m]) => m === "sonnet")![1];
-  return Math.round(
-    (inputTokens * price.input + outputTokens * price.output) / 1_000_000
-  );
-}
-
 /** Rough chars→tokens estimate for synthetic rows; floor 1 so rows are visible. */
 export function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
@@ -78,7 +51,9 @@ export async function recordUsage(
         outputTokens: usage.outputTokens,
         cacheReadTokens: usage.cacheReadTokens ?? 0,
         cacheWriteTokens: usage.cacheWriteTokens ?? 0,
-        costMicroUsd: computeCostMicroUsd(model, usage.inputTokens, usage.outputTokens),
+        // Priced off the one rate card, cache tokens included — never throws,
+        // and an unpriced model over-states rather than showing $0.
+        costMicroUsd: estimateCostMicroUsd(model, usage),
         synthetic: opts.synthetic ?? false,
         byok: opts.byok ?? false,
       },

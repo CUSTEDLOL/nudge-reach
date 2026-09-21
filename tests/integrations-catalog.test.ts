@@ -88,6 +88,14 @@ describe("app catalog", () => {
     expect(tile.detail).toMatch(/mocked/i);
   });
 
+  it("never offers a live workspace practice payment links", () => {
+    const live = byId(state({ simulation: false, paymentsLive: false }), "razorpay");
+    expect(live.statusLabel).toBe("Not switched on yet");
+    expect(live.detail).toMatch(/No links are sent/);
+    const test = byId(state({ simulation: true, paymentsLive: false }), "razorpay");
+    expect(test.statusLabel).toBe("Test links");
+  });
+
   it("marks a simulated calendar honestly", () => {
     const tile = byId(
       state({ calendarConnected: true, calendarSimulated: true }),

@@ -35,12 +35,14 @@ describe("createWorkspaceAction", () => {
     form.set("country", "IN");
     form.set("plan", "growth");
     form.set("ownerEmail", "owner@aster.test");
+    form.set("mode", "client");
 
     await expect(createWorkspaceAction(form)).resolves.toEqual({
       ok: true,
       message: "Created Aster Clinic.",
       setupLink,
     });
+    expect(createWorkspace.mock.calls[0][0].mode).toBe("client");
     expect(requireFounder).toHaveBeenCalledOnce();
     expect(revalidatePath).toHaveBeenCalledWith("/admin/orgs");
   });

@@ -26,8 +26,30 @@ function client(apiKey: string): OpenAI {
 
 type Message = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
-function usageOf(u: { prompt_tokens?: number; completion_tokens?: number } | undefined | null): DriverUsage {
-  return { inputTokens: u?.prompt_tokens ?? 0, outputTokens: u?.completion_tokens ?? 0 };
+/**
+ * OpenAI's `prompt_tokens` INCLUDES the cached portion — the opposite of
+ * Anthropic, where `input_tokens` excludes it. `DriverUsage.inputTokens`
+ * means uncached input on every provider so the rate card can price it
+ * uniformly, so subtract here. Caching is automatic on OpenAI and carries no
+ * write surcharge, hence no `cacheWriteTokens`.
+ */
+function usageOf(
+  u:
+    | {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        prompt_tokens_details?: { cached_tokens?: number } | null;
+      }
+    | undefined
+    | null
+): DriverUsage {
+  const prompt = u?.prompt_tokens ?? 0;
+  const cached = u?.prompt_tokens_details?.cached_tokens ?? 0;
+  return {
+    inputTokens: Math.max(0, prompt - cached),
+    outputTokens: u?.completion_tokens ?? 0,
+    cacheReadTokens: cached,
+  };
 }
 
 function toTools(args: DriverAgentArgs): OpenAI.Chat.Completions.ChatCompletionTool[] {
@@ -93,9 +115,13 @@ export const openaiDriver: LlmDriver = {
     const toolCalls: ToolInvocation[] = [];
     let inputTokens = 0;
     let outputTokens = 0;
-    const tally = (u: { prompt_tokens?: number; completion_tokens?: number } | undefined | null) => {
-      inputTokens += u?.prompt_tokens ?? 0;
-      outputTokens += u?.completion_tokens ?? 0;
+    let cacheReadTokens = 0;
+    // Reuse usageOf so the cached-token split is defined in exactly one place.
+    const tally = (u: Parameters<typeof usageOf>[0]) => {
+      const one = usageOf(u);
+      inputTokens += one.inputTokens;
+      outputTokens += one.outputTokens;
+      cacheReadTokens += one.cacheReadTokens ?? 0;
     };
 
     for (let step = 0; step < args.maxSteps; step++) {
@@ -114,7 +140,7 @@ export const openaiDriver: LlmDriver = {
           text: (message?.content ?? "").trim(),
           toolCalls,
           cappedOut: false,
-          usage: { inputTokens, outputTokens },
+          usage: { inputTokens, outputTokens, cacheReadTokens },
         };
       }
 
@@ -154,7 +180,7 @@ export const openaiDriver: LlmDriver = {
       text: (closing.choices[0]?.message?.content ?? "").trim(),
       toolCalls,
       cappedOut: true,
-      usage: { inputTokens, outputTokens },
+      usage: { inputTokens, outputTokens, cacheReadTokens },
     };
   },
 };

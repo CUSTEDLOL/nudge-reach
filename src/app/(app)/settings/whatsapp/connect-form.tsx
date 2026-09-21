@@ -9,7 +9,7 @@ import { connectWhatsappAction, type ActionResult } from "./actions";
 
 export function ConnectForm() {
   const { toast } = useToast();
-  const [, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, formData: FormData) => {
       const result = await connectWhatsappAction(formData);
       toast({
@@ -73,6 +73,20 @@ export function ConnectForm() {
           Save connection
         </Button>
       </div>
+      {/* The toast fades in seconds. What Meta said has to stay on screen:
+          "token rejected" is the difference between a typo and being live. */}
+      {state && !pending && (
+        <p
+          role={state.ok ? "status" : "alert"}
+          className={
+            state.ok
+              ? "rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+              : "rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"
+          }
+        >
+          {state.message}
+        </p>
+      )}
     </form>
   );
 }

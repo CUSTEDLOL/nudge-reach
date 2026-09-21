@@ -14,6 +14,7 @@ const m = vi.hoisted(() => ({
   runUpdateMany: vi.fn(),
   configUpsert: vi.fn(),
   configFindUnique: vi.fn(),
+  accountCount: vi.fn(),
   tx: vi.fn(),
   sendMode: vi.fn(),
   submit: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("@/lib/db", () => ({
     automationStep: { deleteMany: m.stepDeleteMany, createMany: m.stepCreateMany },
     automationRun: { updateMany: m.runUpdateMany },
     followUpConfig: { upsert: m.configUpsert, findUnique: m.configFindUnique },
+    whatsappAccount: { count: m.accountCount },
     $transaction: m.tx,
   },
 }));
@@ -73,6 +75,9 @@ beforeEach(() => {
   m.configUpsert.mockResolvedValue({});
   m.configFindUnique.mockResolvedValue(null);
   m.templateFindMany.mockResolvedValue([]);
+  // A connected number, so the live-mode cases still reach Meta. With none,
+  // ensureLibraryTemplates deliberately leaves the rows PENDING instead.
+  m.accountCount.mockResolvedValue(1);
 });
 
 describe("saveFollowUpFromSpec — create", () => {
@@ -217,6 +222,17 @@ describe("live mode template handling", () => {
     const steps = m.stepCreateMany.mock.calls[0][0].data;
     expect(steps[0].config).toEqual({ templateId: "t1" });
     expect(steps[2].config).toEqual({ templateId: "t2" });
+  });
+
+  it("leaves rows PENDING when a live workspace has no number yet, rather than rejecting them", async () => {
+    m.sendMode.mockResolvedValue("live");
+    m.accountCount.mockResolvedValue(0);
+    await saveFollowUpFromSpec({ orgId: "o1", spec, source: "ai" });
+    // Nothing can reach Meta without a number; prepareWorkspaceForLive submits
+    // these the moment one connects, so they must not be marked REJECTED.
+    expect(m.submit).not.toHaveBeenCalled();
+    const created = m.templateCreate.mock.calls.map((c) => c[0].data);
+    expect(created.map((d) => d.metaStatus)).toEqual(["PENDING", "PENDING"]);
   });
 });
 

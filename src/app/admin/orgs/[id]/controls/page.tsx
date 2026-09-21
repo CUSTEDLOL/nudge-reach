@@ -66,6 +66,7 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
       suspendedAt: true,
       trialEndsAt: true,
       subscriptionStatus: true,
+      currentPeriodEnd: true,
       voiceMinutesOverride: true,
       includedCreditsOverride: true,
       featureOverrides: true,
@@ -80,6 +81,9 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
   const overrides = sanitizeFeatureOverrides(org.featureOverrides) as Record<string, unknown>;
   const trialLeft = trialDaysLeft(org.trialEndsAt);
   const hidden = { orgId: org.id };
+  // Going LIVE needs a connected number (org-controls.ts refuses otherwise);
+  // going back to test mode never does, so don't over-block the button.
+  const blockedFromLive = org.simulated && org._count.whatsappAccounts === 0;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -150,7 +154,12 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
         <CardHeader>
           <CardTitle>Subscription status</CardTitle>
           <CardDescription>
-            Currently <span className="font-medium text-neutral-900">{org.subscriptionStatus.replace("_", " ")}</span>.
+            Currently <span className="font-medium text-neutral-900">{org.subscriptionStatus.replace("_", " ")}</span>
+            {org.currentPeriodEnd
+              ? org.currentPeriodEnd > new Date()
+                ? `, paid to ${org.currentPeriodEnd.toISOString().slice(0, 10)}.`
+                : `. The paid month ended ${org.currentPeriodEnd.toISOString().slice(0, 10)}, so the AI has no credits: choose "active" again to start the next month.`
+              : ". No paid period yet, so the AI has no credits: choose \"active\" to start a month."}{" "}
             Razorpay/Stripe webhooks set this automatically; override for comped, offline-paid or cancelled deals.
           </CardDescription>
         </CardHeader>
@@ -181,26 +190,46 @@ export default async function AdminOrgControlsPage({ params }: { params: Promise
             {org.simulated
               ? "In test mode: every send is simulated, nothing reaches Meta."
               : "Live: sends go through the org's connected WhatsApp number."}{" "}
-            {org._count.whatsappAccounts === 0 && "No number connected yet, so going live is blocked."}
+            {blockedFromLive
+              ? "Connect this workspace’s WhatsApp number on the Integrations tab first — going live is blocked until then. Switching back to test mode never is."
+              : "You can switch back and forth; only going live needs a connected number."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ActionForm
-            action={setLiveModeAction}
-            hidden={{ ...hidden, live: org.simulated ? "true" : "false" }}
-            submitLabel={org.simulated ? "Switch to live" : "Back to test mode"}
-            variant={org.simulated ? "primary" : "secondary"}
-            disabled={org.simulated && org._count.whatsappAccounts === 0}
-            confirm={{
-              title: org.simulated ? "Take this workspace live?" : "Put this workspace back in test mode?",
-              description: org.simulated
-                ? "Real messages will be sent to real customers from now on."
-                : "Sends will be simulated until it is switched back.",
-              danger: org.simulated,
-            }}
-            askReason
-            confirmText={{ expected: org.name, label: `Type “${org.name}” to confirm` }}
-          />
+          {/*
+            The button is disabled, and a disabled control swallows pointer
+            events — so a `title` on it would never fire. The explanation hangs
+            off a wrapper instead, and is repeated as plain text above for
+            anyone who never hovers (keyboard, touch, screen reader).
+          */}
+          <span className="group relative inline-block">
+            {blockedFromLive && (
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-72 rounded-lg bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+              >
+                No WhatsApp number connected. A live workspace needs credentials
+                to send, so connect the number on the <b>Integrations</b> tab —
+                then this button turns on.
+              </span>
+            )}
+            <ActionForm
+              action={setLiveModeAction}
+              hidden={{ ...hidden, live: org.simulated ? "true" : "false" }}
+              submitLabel={org.simulated ? "Switch to live" : "Back to test mode"}
+              variant={org.simulated ? "primary" : "secondary"}
+              disabled={blockedFromLive}
+              confirm={{
+                title: org.simulated ? "Take this workspace live?" : "Put this workspace back in test mode?",
+                description: org.simulated
+                  ? "Real messages will be sent to real customers from now on."
+                  : "Sends will be simulated until it is switched back.",
+                danger: org.simulated,
+              }}
+              askReason
+              confirmText={{ expected: org.name, label: `Type “${org.name}” to confirm` }}
+            />
+          </span>
         </CardContent>
       </Card>
 

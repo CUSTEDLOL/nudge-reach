@@ -45,7 +45,7 @@ export async function saveWhatsappAccount(
     displayName: string;
     accessToken: string;
   },
-  options: { activateOrg?: boolean; db?: WhatsappAccountDb } = {}
+  options: { db?: WhatsappAccountDb } = {}
 ): Promise<
   | { ok: true; account: Awaited<ReturnType<typeof getDefaultWhatsappAccount>> }
   | { ok: false; message: string }
@@ -68,14 +68,9 @@ export async function saveWhatsappAccount(
     if (!gate.allowed) return { ok: false, message: gate.message };
   }
 
-  // Client self-service keeps its existing behaviour. Founder-assisted setup
-  // can preserve mode so a separate, explicit control enables live sending.
-  if (options.activateOrg !== false) {
-    await db.org.update({
-      where: { id: input.orgId },
-      data: { simulated: false },
-    });
-  }
+  // Connecting a number NEVER changes send mode. Live/test is a founder
+  // control (admin → Controls) and there is no such switch in the workspace,
+  // so an owner who flipped themselves live here had no way back.
   const account = await db.whatsappAccount.upsert({
     where: { phoneNumberId: input.phoneNumberId },
     create: {
@@ -115,17 +110,23 @@ export async function disconnectWhatsappAccount(orgId: string, accountId: string
   });
   if (!target) return false;
   await prisma.whatsappAccount.delete({ where: { id: accountId } });
-  if (target.isDefault) {
-    const survivor = await prisma.whatsappAccount.findFirst({
-      where: { orgId },
-      orderBy: { createdAt: "asc" },
-    });
-    if (survivor) {
+  const survivor = await prisma.whatsappAccount.findFirst({
+    where: { orgId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (survivor) {
+    if (target.isDefault) {
       await prisma.whatsappAccount.update({
         where: { id: survivor.id },
         data: { isDefault: true },
       });
     }
+  } else {
+    // Last number gone. A workspace left marked live with nothing to send
+    // from cannot send at all (there are no fallback sender credentials in
+    // production), while every badge still reads "Live" — the silent-but-
+    // normal-looking failure this product exists to prevent.
+    await prisma.org.update({ where: { id: orgId }, data: { simulated: true } });
   }
   return true;
 }

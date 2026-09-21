@@ -146,6 +146,31 @@
 - 1,273 tests green (+6); tsc, lint, build clean. **Not verified in a browser** —
   the credentials in `scripts/fetch-as-user.js` no longer authenticate and the
   only two orgs in the dev database belong to real accounts.
+## WhatsApp AI search-content release (2026-09-18) ✅ PRODUCTION
+
+- Built the first broad WhatsApp AI content cluster: the pillar at
+  `/whatsapp-ai-automation`, build guide at
+  `/resources/how-to-build-whatsapp-ai-automation`, lead-operations guide at
+  `/resources/how-to-stop-losing-leads-on-whatsapp`, and transparent tool at
+  `/tools/whatsapp-lead-leakage-calculator`. Homepage, pillar, guides, tool and
+  Resources index now link the cluster together so visitors and crawlers can
+  move between the relevant pages.
+- The pages explain Nudge's AI Front Desk and the official Meta Cloud API; they
+  do not invent customer results, case studies or testimonials. The combined
+  release passed the full local verification gates and was verified live in
+  production with HTTP 200 responses, apex canonicals, one H1 per page, social
+  preview metadata, sitemap membership and permanent `www` redirects.
+- The calculator shows its formulas and boundary assumptions. Its inputs stay
+  in the visitor's browser and are never submitted, stored or tracked.
+- Added a 16-week follow-on content and Reddit operating calendar. Later topics
+  remain planned, not published. Reddit work is founder-led and manual only:
+  check each community's rules before participating, make the useful answer
+  native to Reddit, disclose affiliation, and never automate posts, send
+  unsolicited DMs, manipulate votes, amplify with alternate accounts or mass
+  cross-post.
+- Search Console metrics are the available baseline. Calculator/page
+  engagement, attribution and Reddit referral quality remain `UNKNOWN` until
+  the documented privacy and analytics activation gates are approved.
 
 ## Canonical hostname consolidation (2026-09-17) ✅
 
@@ -195,6 +220,55 @@
   ramping, old-vendor removal and a 30-day outcome review.
 - Documentation only. It does not enable live sending, alter Meta assets, import
   client data, change billing, or add a product feature.
+
+## 2026-09-17 — Booking is real: timezone, opening hours, Bookings page, client workspaces
+
+The founder onboarded a fresh workspace as a client would and booked a demo.
+What it exposed, and what shipped in one pass (`a4fb1c9` → `8115092`; the
+full record with decisions is `docs/ONBOARDING_NOTES.md`):
+
+**Bug that would have hit every client outside UTC.** "Friday 4 PM" on an
+India workspace was stored as 16:00 UTC (9:30 PM IST): `parseWhen` used the
+server's clock, and the tool's own formatting made the same mistake in
+reverse so the confirmation read "4:00 pm". New `src/lib/timezone.ts`
+(`zonedParts`, `zonedTimeToUtc`, `formatInTimezone`), `parseWhen(text, now,
+timezone)`, and `BookOutcome` carries the timezone. Tests in IST and SGT,
+including "tomorrow" said after local midnight.
+
+**Calendar.** Test calendar only for test workspaces, labelled honestly. A
+live workspace gets real Google or an honest "not switched on yet" — never a
+mock behind a green badge. `calendarModeFor` is the one rule. Opening hours
+are structured (`Org.settings.openingHours`, no schema change), read
+deterministically from the questionnaire's weekly-hours answer
+(`hours-text.ts`), editable on Setup, and enforced: the AI refuses a time the
+business is shut and offers the next open slots. Alternatives come from a
+freeBusy sweep, not "+1h". Events are read back from Google before a
+reminder and on the Bookings page (moved → new time, deleted → cancelled).
+The Google driver has tests for the first time.
+
+**Bookings page** (`/bookings`): upcoming / needs confirming / past, on the
+business's clock, with confirm / cancel / no-show / done and a link to the
+chat. Home's booking counts open it.
+
+**Onboarding.** Finishing onboarding switches the AI on (it used to stay
+off, silently). A one-click "Your AI is switched off — Turn it on" notice on
+Home, Training and Try. The questionnaire ends on a finish screen with the
+facts count and next steps. Training leads with what the AI knows. Home
+checklist is plan-aware, never ticked by test mode, and has no campaign step.
+
+**Client workspaces are production from the first sign-in.** Admin New
+workspace has a required Client / Test choice. "Try your AI" works in a live
+workspace: the pretend customer gets a +999 sandbox number and `sendMessage`
+routes any sandbox address through the simulation driver, so nothing typed
+there can reach a real phone.
+
+**Still the founder's to do:** `SEND_MODE=live` in Vercel (the platform
+switch overrides every workspace until then), Google OAuth keys + redirect
+URI, one real Google booking on a live test workspace, delete the empty
+duplicate "Goldmine Infotech" workspace. `prisma db push` was not needed:
+hours live in the existing settings JSON.
+
+1316 tests green, lint clean, production build clean.
 
 ## 2026-09-16 — One place to set up the AI employee (nav restructure)
 
@@ -2830,3 +2904,118 @@ Two commits (`aea838c` foundation, `0635833` modules), built per
 - **Phase 1 — Platform modules**: model-router, channel-agnostic messaging
   interface, contacts/opt-in with consent gate (unit-tested), billing stub.
 - Needs from founder: `ANTHROPIC_API_KEY` for the live model-router check.
+
+## 2026-09-20 — AI cost accuracy: prompt caching + one rate card
+
+Anthropic prompt caching was priced in the rate card and read back off every
+response, but no call ever set `cache_control` — so the cache columns had
+recorded `0` since launch and every prompt token was billed at full input
+price. The system prompt (vertical template + up to 6,000 chars of knowledge
+digest) and the tool schemas are re-sent unchanged on every step of the agent
+loop, so a two-tool reply paid for that prefix three times.
+
+- One `cache_control: {type: "ephemeral"}` breakpoint on the system block in
+  all four Anthropic call sites (`generate`, `chat`, the `runAgent` loop, the
+  cap-out closing call). Tools render before system, so one breakpoint covers
+  both. ≈60% off a tool-using reply; no-op below the model's 1,024-token
+  minimum prefix.
+- Deleted the second, substring-matched price table in
+  `lib/model-router/usage.ts`. Everything now prices off `MODEL_RATES`
+  (`RATE_CARD_VERSION` → `2026-09-20`). It had Sonnet at a stale $3/$15 and
+  matched `gpt-5.2` onto `gpt-5`'s cheaper rate, and it ignored cache tokens
+  entirely — which would have made the dashboard under-report once caching
+  was on.
+- `priceCall` still throws on an unknown model (the ledger never moves money
+  at a guessed rate); new `estimateCostMicroUsd` is the never-throw display
+  path, counts cache tokens, and falls back to the dearest row on the card.
+- BYO-key models are on the same card now, at rates verified against the
+  providers' own pricing pages.
+- Their `cacheRead` rates turned out to be dead code: neither BYO driver
+  reported cached tokens, and OpenAI/Google *include* them in the prompt
+  count while Anthropic excludes them. `DriverUsage.inputTokens` now means
+  uncached input on every provider, and the OpenAI/Gemini drivers subtract
+  their cached portion. Before this, a BYO-OpenAI org's dashboard billed
+  cached tokens at the full input rate — overstating, where Anthropic was
+  understating.
+
+Also: `getByokRuntime` returned `null` for every failure, so "no BYO key"
+and "BYO key configured but broken" were indistinguishable — an org could
+believe it was paying its own provider while every call ran on the platform
+key and our credits, with the founder panel showing a healthy "key present".
+New `byokStatus(orgId)` reports `none` / `simulated` / `active` / `fallback`
+with a reason, shared with `getByokRuntime` through one `resolve()` so they
+cannot drift, and the org's Integrations tab now shows the fallback in red.
+
+**Found, not fixed — webhook resilience.** The WhatsApp webhook has no
+try/catch around `handleInboundMessage`, and `reply.ts` only catches
+`CreditsExhaustedError`. Any provider error (bad BYOK model id, revoked key,
+provider outage) 500s the route, leaves `webhookEvent.processedAt` unset,
+makes Meta retry, and the customer gets no reply. Needs a deliberate call on
+swallow-and-fallback vs dead-letter vs 200-and-queue.
+
+**Open for the founder:** `BYOK_ALLOWED_MODELS.google` lists `gemini-3-pro`
+and `gemini-3-flash`, neither of which is on Google's published price sheet —
+left off the card rather than mapped to a guess. They are still ON the
+allow-list, so they resolve as `active` and fail at Google instead of falling
+back; `byokStatus` cannot catch that, only fixing the allow-list can. Also unresolved: the
+cold-start "≈ n more AI replies" estimate still assumes a 2,000-token reply
+when reality looks closer to 12,000. Detail and evidence in
+`docs/plans/2026-09-20-ai-cost-accuracy.md`.
+
+## 2026-09-20 — never leave a customer in silence; real Gemini ids
+
+Founder-approved follow-ups to the AI cost work above.
+
+**Silence on provider failure.** `reply.ts` caught only
+`CreditsExhaustedError`, and the WhatsApp webhook had no guard around
+`handleInboundMessage` — so a revoked key, a provider outage or a BYOK model
+id the provider rejects propagated out of `POST`, 500'd the route, left
+`webhookEvent.processedAt` unset, made Meta retry, and left the customer with
+**no reply at all**. Silent, on exactly the leads we are paid to catch.
+
+- Any non-credits error now returns the existing handoff line with a new
+  `degraded: true` flag and a loud log, so the lead stays warm and a human
+  picks it up. Distinct from `pausedForCredits` (a billing state, not a fault).
+- `handleInboundMessage` is wrapped per message, so one customer's failure no
+  longer drops the rest of Meta's batch or forces a redelivery.
+- Still 200 in both cases: a non-200 just makes Meta repeat the failure.
+
+**Google BYOK never worked.** `gemini-3-pro` / `gemini-3-flash` are not
+Google API ids (checked against ai.google.dev) — real ones are versioned.
+Root cause was duplication: the model list lived in `guard.ts` AND in the
+customer's picker, with nothing tying either to the rate card. The picker now
+renders from a single `BYOK_CATALOGUE`, `BYOK_ALLOWED_MODELS` derives from it,
+and a test holds the last seam (every offered model must be priced; no bare
+Google version alias). Now offering `gemini-3.8-flash` and `gemini-3.7-flash`,
+both priced. Gemini 3 Pro is deliberately absent — preview-only, and a preview
+id can be withdrawn, which would recreate this bug.
+
+**Note:** both Flash rates are promotional through 2026-12-31 and double on
+2027-01-01.
+
+## 2026-09-20 — Free-trial foundation
+
+- Added pending acquisition trials with secure one-use claims while global signup remains closed.
+- Added server-side restricted capabilities, one bounded training source, and an atomic seven-day/15-reply allowance.
+- Centralized simulated-inbound metering across both tester entry points; only successful AI-generated replies consume the allowance, while provider fallbacks and automations refund it.
+- Locked campaign creation and extra model-backed training actions for restricted trials, and hardened signup referrer/error handling.
+- Trial workspaces remain tenant-isolated and simulated; paid checkout can later activate the same org.
+- New `AcquisitionTrial` and `AcquisitionTrialEvent` tables require `npm run db:rls` immediately after `npm run db:push` in every environment.
+- Verification passed for Prisma schema validation, the focused foundation suite, the full 1,512-test suite, lint, and the production build. The three real-database credit-concurrency tests remained skipped because `TEST_DATABASE_URL` is not configured; no shared or production database was used.
+
+## 2026-09-20 — Guided free-trial experience
+
+- Added the clinic-focused `/free-trial` acquisition page and Supabase claim handoff.
+- Added a short one-source setup, four-destination trial workspace, inline simulated test inbox, persistent checklist, and route-aware coach-mark tour.
+- Paid capabilities remain locked behind server gates and are previewed through demo-first cards in Explore.
+- The public route returned 200 and authenticated trial routes correctly redirected signed-out requests to login in local HTTP smoke checks. Automated tests cover both responsive presentation modes, but the 390 px/1440 px visual and keyboard walkthrough remains browser-unverified because no browser was attached to this session.
+
+## 2026-09-21 — Guided free-trial review hardening
+
+- Made interrupted signup recoverable without exposing the stored claim hash: the browser receives an HTTP-only resume secret, retries reuse and renew the same pending trial, and delayed verified-email callbacks receive a bounded recovery window without replacing an identity-linked claim.
+- Restricted acquisition-trial replies to grounded, tool-free AI. Trial messages no longer run booking/payment/custom tools, automations, CRM sync, scoring, or outbound webhooks; direct paid inbox mutations and the hidden contact tester are server-blocked.
+- Made the Test Inbox tenant-stable and non-routable with a server-derived `+999` identity, added abuse damping, restored persisted chat history after refresh/expiry, and kept successful messages visible through milestone/snapshot failures.
+- Added a manual-fact recovery path when all imported drafts are discarded and fixed guided-tour keyboard focus across route changes, including the highlighted control.
+- Delayed the guided tour until setup is complete, suppressed integration webhooks for the private simulation, and made quota state authoritative across failed snapshot refreshes and replies that cross expiry.
+- Added an “Open in shared inbox” step backed by an org-scoped, deterministic-sandbox query and a read-only thread view. Trial users cannot open a normal org conversation or reach its composer, assignments, notes, or status mutations.
+- Full verification passed: 224 test files passed (1 skipped), 1,613 tests passed (3 skipped), lint passed, and the production build passed. The responsive visual walkthrough remains pending because no browser is attached. Demo correlation and paid conversion stamping remain in the separate free-trial conversion plan.

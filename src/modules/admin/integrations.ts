@@ -10,6 +10,7 @@ import {
 } from "@/modules/whatsapp/connection-validator";
 import { disconnectCalendar } from "@/modules/calendar/accounts";
 import { deleteLlmAccount, getLlmAccount } from "@/modules/ai/llm-account";
+import { byokStatus } from "@/lib/model-router/byok";
 import { disconnect as disconnectCrm } from "@/modules/crm/connections";
 import type { CrmProviderKey } from "@/modules/crm/types";
 import { revokeApiKey } from "@/modules/integrations/api-keys";
@@ -25,7 +26,7 @@ import { confirmationMatches, requireReason } from "@/modules/admin/confirmation
  */
 export async function integrationsOverview(orgId: string) {
   const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const [whatsapp, calendar, llm, voiceNumbers, voice, crm, deadJobs, apiKeys, webhooks, customActions] =
+  const [whatsapp, calendar, llm, byok, voiceNumbers, voice, crm, deadJobs, apiKeys, webhooks, customActions] =
     await Promise.all([
       prisma.whatsappAccount.findMany({
         where: { orgId },
@@ -37,6 +38,7 @@ export async function integrationsOverview(orgId: string) {
         select: { provider: true, accountEmail: true, calendarId: true, status: true, simulated: true, updatedAt: true },
       }),
       getLlmAccount(orgId),
+      byokStatus(orgId),
       prisma.voiceNumber.findMany({
         where: { orgId },
         select: { id: true, phoneE164: true, provider: true, label: true, language: true, enabled: true, transferTo: true },
@@ -73,7 +75,7 @@ export async function integrationsOverview(orgId: string) {
     ]);
   const dead: Record<string, number> = {};
   for (const row of deadJobs) dead[row.provider] = row._count;
-  return { whatsapp, calendar, llm, voiceNumbers, voice, crm, deadJobsByProvider: dead, apiKeys, webhooks, customActions };
+  return { whatsapp, calendar, llm, byok, voiceNumbers, voice, crm, deadJobsByProvider: dead, apiKeys, webhooks, customActions };
 }
 export type IntegrationsOverview = Awaited<ReturnType<typeof integrationsOverview>>;
 
@@ -99,7 +101,7 @@ export async function founderConnectWhatsapp(
   return prisma.$transaction(async (tx) => {
     const saved = await saveWhatsappAccount(
       { orgId, ...validation.value },
-      { activateOrg: false, db: tx }
+      { db: tx }
     );
     if (!saved.ok) return { ok: false, error: saved.message };
 

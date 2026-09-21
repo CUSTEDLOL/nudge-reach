@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { prepareWorkspaceForLive } from "@/modules/orgs/go-live";
 import { topUpIncludedGrant, trialGrant } from "@/modules/billing/credits";
 import { MAX_FOUNDER_CREDITS, founderGrantError, grantFounderCredits } from "@/modules/billing/credit-admin";
 import { sanitizeFeatureOverrides, type FeatureOverrides } from "@/modules/billing/limits";
@@ -109,13 +110,20 @@ export async function setSubscriptionStatus(
   if (!isSubscriptionStatus(status)) return { ok: false, error: `Unknown status "${status}".` };
   const org = await loadOrg(orgId);
   if (!org) return { ok: false, error: "Org not found." };
-  if (org.subscriptionStatus === status) return { ok: false, error: `Already ${status}.` };
+  const now = new Date();
+  // An offline-paid client has no checkout to renew it: when its month runs
+  // out the AI pauses for want of credits. Re-marking it "active" is how the
+  // founder starts the next paid month, so that is not a no-op.
+  const lapsed = !org.currentPeriodEnd || org.currentPeriodEnd <= now;
+  const renewing = status === "active" && org.subscriptionStatus === "active" && lapsed;
+  if (org.subscriptionStatus === status && !renewing) {
+    return { ok: false, error: `Already ${status}.` };
+  }
   const data: { subscriptionStatus: string; currentPeriodEnd?: Date } = { subscriptionStatus: status };
   // A comped org never went through checkout, so nothing set its period; the
   // included credit grant is keyed on currentPeriodEnd (billing/credits.ts)
   // and can't be issued without one. Marking it active starts a month now.
-  const now = new Date();
-  if (status === "active" && (!org.currentPeriodEnd || org.currentPeriodEnd <= now)) {
+  if (status === "active" && lapsed) {
     const periodEnd = new Date(now);
     periodEnd.setMonth(periodEnd.getMonth() + 1);
     data.currentPeriodEnd = periodEnd;
@@ -135,7 +143,12 @@ export async function setSubscriptionStatus(
       tx
     );
   });
-  return { ok: true, message: `Subscription marked ${status.replace("_", " ")}.` };
+  return {
+    ok: true,
+    message: renewing
+      ? `Renewed. The paid month now runs to ${fmt(data.currentPeriodEnd ?? null)}.`
+      : `Subscription marked ${status.replace("_", " ")}.`,
+  };
 }
 
 /**
@@ -172,7 +185,14 @@ export async function setLiveMode(
       tx
     );
   });
-  return { ok: true, message: live ? "Workspace is live." : "Workspace back in test mode." };
+  if (!live) return { ok: true, message: "Workspace back in test mode." };
+  // Same clean-up an owner's own connect does: no test calendar, and the
+  // follow-up templates go to Meta for real.
+  const prepared = await prepareWorkspaceForLive(org.id);
+  return {
+    ok: true,
+    message: `Workspace is live.${prepared.templatesSubmitted ? ` ${prepared.templatesSubmitted} templates sent to Meta for approval.` : ""}${prepared.testCalendarRemoved ? " Test calendar removed." : ""}`,
+  };
 }
 
 /** Bespoke monthly call minutes; null clears the override (plan applies). */

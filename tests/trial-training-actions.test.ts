@@ -1,0 +1,83 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const {
+  prisma,
+  requireOrgContext,
+  requireRole,
+  isRestrictedAcquisitionTrial,
+  answerOwnerQuestion,
+  distillAnswer,
+} = vi.hoisted(() => ({
+  prisma: {
+    agentProfile: { findUnique: vi.fn() },
+    knowledgeEntry: { createMany: vi.fn() },
+  },
+  requireOrgContext: vi.fn(),
+  requireRole: vi.fn(),
+  isRestrictedAcquisitionTrial: vi.fn(),
+  answerOwnerQuestion: vi.fn(),
+  distillAnswer: vi.fn(),
+}));
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/db", () => ({ prisma }));
+vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext, requireRole }));
+vi.mock("@/modules/orgs/audit", () => ({ recordAudit: vi.fn() }));
+vi.mock("@/modules/knowledge/questions", () => ({
+  answerOwnerQuestion,
+  dismissOwnerQuestion: vi.fn(),
+}));
+vi.mock("@/modules/knowledge/distill", () => ({ distillAnswer }));
+vi.mock("@/modules/knowledge/ingest", () => ({
+  FILE_MEDIA_TYPES: ["application/pdf"],
+  MAX_FILE_BYTES: 5 * 1024 * 1024,
+  ingestFile: vi.fn(),
+  ingestGbp: vi.fn(),
+  ingestWebsite: vi.fn(),
+}));
+vi.mock("@/modules/trial/knowledge", () => ({
+  TRIAL_INGEST_BUDGET: { maxSubpages: 1, maxChunksPerPage: 2, maxDrafts: 25 },
+  withTrialKnowledgeSource: vi.fn(),
+}));
+vi.mock("@/modules/trial/capabilities", () => ({
+  isRestrictedAcquisitionTrial,
+}));
+
+import {
+  answerQuestionAction,
+  structureExistingInfoAction,
+} from "@/app/(app)/agent/training-actions";
+
+describe("restricted trial model-backed training actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireOrgContext.mockResolvedValue({
+      org: { id: "org_1" },
+      role: "OWNER",
+    });
+    isRestrictedAcquisitionTrial.mockResolvedValue(true);
+    prisma.agentProfile.findUnique.mockResolvedValue({
+      businessInfo: "We are open Monday to Saturday.",
+    });
+    answerOwnerQuestion.mockResolvedValue({ facts: 1, followUpsSent: 0 });
+    distillAnswer.mockResolvedValue([
+      { category: "hours", fact: "Open Monday to Saturday." },
+    ]);
+  });
+
+  it("blocks owner-question distillation before the model-backed service", async () => {
+    await expect(
+      answerQuestionAction("question_1", "Yes, until 7pm.")
+    ).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/paid/i) });
+    expect(answerOwnerQuestion).not.toHaveBeenCalled();
+  });
+
+  it("blocks legacy-info structuring before distillation", async () => {
+    await expect(structureExistingInfoAction()).resolves.toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/paid/i),
+    });
+    expect(prisma.agentProfile.findUnique).not.toHaveBeenCalled();
+    expect(distillAnswer).not.toHaveBeenCalled();
+  });
+});

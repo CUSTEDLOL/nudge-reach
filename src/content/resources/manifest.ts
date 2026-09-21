@@ -7,6 +7,10 @@ export interface ResourceRecord {
   modifiedAt: `${number}-${number}-${number}`;
   authorName: string;
   parentPath: string;
+  audienceLabel: string;
+  eyebrow: string;
+  ctaTitle: string;
+  ctaBody: string;
   draft: boolean;
 }
 
@@ -19,6 +23,42 @@ const RESOURCE_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
 
 export const RESOURCE_MANIFEST = [
   {
+    slug: "how-to-build-whatsapp-ai-automation",
+    title: "How to Build WhatsApp AI Automation with the Official Cloud API",
+    description:
+      "Learn the architecture behind a reliable WhatsApp AI automation: Cloud API webhooks, business knowledge, AI replies, actions, follow-ups and human handoff.",
+    excerpt:
+      "A practical system map for moving from an inbound WhatsApp message to a grounded reply, business action, compliant follow-up and human handoff.",
+    publishedAt: "2026-09-17",
+    modifiedAt: "2026-09-17",
+    authorName: "Nudge team",
+    parentPath: "/whatsapp-ai-automation",
+    audienceLabel: "Build guide",
+    eyebrow: "WhatsApp AI build guide",
+    ctaTitle: "Prefer a working AI Front Desk to a build project?",
+    ctaBody:
+      "Nudge connects the official WhatsApp Cloud API to your business knowledge, calendars, follow-ups, payments and human team, then helps you set it up.",
+    draft: false,
+  },
+  {
+    slug: "how-to-stop-losing-leads-on-whatsapp",
+    title: "How to Stop Losing Leads on WhatsApp",
+    description:
+      "Use a clear WhatsApp lead-response and follow-up workflow so every opted-in enquiry has an owner, status, next action and safe human handoff.",
+    excerpt:
+      "A five-state operating workflow for answering, qualifying and following up with WhatsApp leads without relying on memory or sending unwanted messages.",
+    publishedAt: "2026-09-17",
+    modifiedAt: "2026-09-17",
+    authorName: "Nudge team",
+    parentPath: "/whatsapp-ai-automation",
+    audienceLabel: "Lead operations",
+    eyebrow: "WhatsApp lead operations",
+    ctaTitle: "Give every WhatsApp lead a next action",
+    ctaBody:
+      "See how Nudge answers from your business knowledge, keeps lead context, follows up with consent and hands important conversations to your team.",
+    draft: false,
+  },
+  {
     slug: "whatsapp-appointment-booking-for-clinics",
     title: "WhatsApp Appointment Booking for Clinics: An Operational Guide",
     description:
@@ -29,6 +69,11 @@ export const RESOURCE_MANIFEST = [
     modifiedAt: "2026-09-14",
     authorName: "Nudge team",
     parentPath: "/industries/clinics",
+    audienceLabel: "For clinics",
+    eyebrow: "Clinic operations guide",
+    ctaTitle: "See the complete clinic workflow",
+    ctaBody:
+      "Walk through real availability, a confirmed booking, compliant follow-up and human handoff in one practical Nudge demo.",
     draft: false,
   },
 ] as const satisfies readonly ResourceRecord[];

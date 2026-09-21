@@ -66,6 +66,9 @@ vi.mock("@/modules/orgs/auth", () => ({
   requireOrgContext: vi.fn(),
   requireRole: vi.fn(),
 }));
+vi.mock("@/modules/trial/capabilities", () => ({
+  isRestrictedAcquisitionTrial: vi.fn().mockResolvedValue(false),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
@@ -135,11 +138,18 @@ describe("agent reply", () => {
     });
   });
 
-  it("any other error still propagates", async () => {
+  // Changed 2026-09-19 (pre-launch check): this used to re-throw. On the live
+  // webhook that meant permanent silence for the customer, because the inbound
+  // message is stored first and Meta's redelivery is then skipped as a duplicate.
+  it("any other error hands off too, so the customer still hears back", async () => {
     runAgent.mockRejectedValue(new Error("provider down"));
-    await expect(
-      generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx)
-    ).rejects.toThrow("provider down");
+    const r = await generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx);
+    expect(r).toEqual({
+      text: expect.stringContaining("One of our team will get back to you"),
+      handoff: true,
+      actions: [],
+      aiFailed: true,
+    });
   });
 
   it("inbound path still answers the customer with the handoff line and flags the conversation", async () => {
@@ -165,6 +175,7 @@ describe("agent reply", () => {
 
     expect(r.handoff).toBe(true);
     expect(r.reply).toContain("One of our team will get back to you");
+    expect(r.generatedByAi).toBeFalsy();
     expect(sendMessage).toHaveBeenCalledWith(
       "whatsapp",
       expect.objectContaining({ address: "+919876543210" }),

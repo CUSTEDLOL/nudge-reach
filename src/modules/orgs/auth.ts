@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Membership, Org, OrgRole } from "@prisma/client";
 import { createClient } from "@/lib/supabase/server";
 import { NoWorkspaceError, resolveOrgContext } from "@/modules/orgs/org";
+import { parseTrialClaimMetadata } from "@/modules/trial/claim";
 
 /** Everything a role-aware page/action needs about the caller (spec §3.1). */
 export interface OrgContext {
@@ -26,9 +27,10 @@ export const requireOrgContext = cache(async (): Promise<OrgContext> => {
     redirect("/login");
   }
   const email = claims.email as string | undefined;
+  const trialClaim = parseTrialClaimMetadata(claims.user_metadata);
   let resolved;
   try {
-    resolved = await resolveOrgContext(claims.sub, email);
+    resolved = await resolveOrgContext(claims.sub, email, { trialClaim });
   } catch (err) {
     // Signed in, but nobody invited them and signup is closed.
     if (err instanceof NoWorkspaceError) redirect("/no-workspace");

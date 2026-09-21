@@ -19,11 +19,53 @@ describe("SEO page registry", () => {
     }
   });
 
+  it.each([
+    "/whatsapp-ai-automation",
+    "/tools/whatsapp-lead-leakage-calculator",
+    "/resources",
+    "/resources/how-to-build-whatsapp-ai-automation",
+    "/pricing",
+  ] as const)("uses page-specific social metadata for %s", (path) => {
+    const page = seoPage(path);
+
+    expect(metadataFor(path)).toMatchObject({
+      alternates: { canonical: path },
+      openGraph: {
+        title: page.title,
+        description: page.description,
+        siteName: "Nudge",
+        type: "website",
+        locale: "en_IN",
+        images: ["/opengraph-image"],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: page.title,
+        description: page.description,
+        images: ["/opengraph-image"],
+      },
+    });
+  });
+
   it("uses reviewed dates instead of the current clock", () => {
-    expect(seoPage("/").modifiedAt).toBe("2026-09-12");
+    expect(seoPage("/").modifiedAt).toBe("2026-09-17");
     expect(seoPage("/industries/clinics").modifiedAt).toBe("2026-09-15");
+    expect(seoPage("/whatsapp-ai-automation")).toMatchObject({
+      title: "WhatsApp AI Automation: From Reply to Qualified Lead",
+      modifiedAt: "2026-09-17",
+      changeFrequency: "monthly",
+      priority: 0.9,
+      index: true,
+    });
+    expect(seoPage("/tools/whatsapp-lead-leakage-calculator")).toMatchObject({
+      title: "WhatsApp Lead Leakage Calculator",
+      modifiedAt: "2026-09-17",
+      changeFrequency: "monthly",
+      priority: 0.8,
+      index: true,
+    });
     expect(seoPage("/resources")).toMatchObject({
-      modifiedAt: "2026-09-14",
+      modifiedAt: "2026-09-17",
       changeFrequency: "weekly",
       priority: 0.7,
     });
@@ -45,11 +87,30 @@ describe("SEO page registry", () => {
 
   it("builds the sitemap from every published registry page", () => {
     const entries = sitemap();
-    expect(entries.map((entry) => entry.url)).toEqual(
+    const urls = entries.map((entry) => entry.url);
+
+    expect(urls).toEqual(
       SEO_PAGES.filter((page) => page.index).map(
         (page) => `https://nudgeagent.app${page.path === "/" ? "" : page.path}`,
       ),
     );
+    expect(urls).toContain("https://nudgeagent.app/whatsapp-ai-automation");
+    expect(urls).toContain("https://nudgeagent.app/free-trial");
+    expect(urls).toContain(
+      "https://nudgeagent.app/tools/whatsapp-lead-leakage-calculator",
+    );
+    expect(
+      entries.find((entry) => entry.url === "https://nudgeagent.app"),
+    ).toMatchObject({
+      lastModified: new Date("2026-09-17T00:00:00.000Z"),
+    });
+    expect(
+      entries.find(
+        (entry) => entry.url === "https://nudgeagent.app/resources",
+      ),
+    ).toMatchObject({
+      lastModified: new Date("2026-09-17T00:00:00.000Z"),
+    });
     expect(entries.every((entry) => entry.lastModified instanceof Date)).toBe(true);
   });
 });

@@ -13,23 +13,28 @@ import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/dropdo
 import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import { CommandMenu } from "@/components/features/app-shell/command-menu";
 import type { SidebarUser } from "@/components/features/app-shell/sidebar";
-import type { AppRole } from "@/components/features/app-shell/nav";
+import type {
+  AppRole,
+  AppShellMode,
+} from "@/components/features/app-shell/nav";
 
 export function Topbar({
   orgName,
   user,
   role,
+  mode = "standard",
   simulation = false,
 }: {
   orgName: string;
   user: SidebarUser;
   role: AppRole;
+  mode?: AppShellMode;
   simulation?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-neutral-200 bg-white px-4 sm:px-6">
       <BrandMark compact className="lg:hidden" />
-      <CommandMenu role={role} />
+      <CommandMenu role={role} mode={mode} />
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <span className="hidden max-w-48 truncate text-sm font-medium text-neutral-800 md:block">
@@ -70,17 +75,19 @@ export function Topbar({
             <span className="block truncate">{user.email}</span>
           </MenuLabel>
           <MenuSeparator />
-          <MenuItem href="/settings" icon={<Settings className="h-4 w-4" aria-hidden />}>
-            Settings
-          </MenuItem>
-          {role !== "AGENT" && (
+          {mode === "standard" ? (
+            <MenuItem href="/settings" icon={<Settings className="h-4 w-4" aria-hidden />}>
+              Settings
+            </MenuItem>
+          ) : null}
+          {mode === "standard" && role !== "AGENT" ? (
             <MenuItem
               href="/onboarding?customize=1"
               icon={<SlidersHorizontal className="h-4 w-4" aria-hidden />}
             >
               Customize workspace
             </MenuItem>
-          )}
+          ) : null}
           <MenuItem
             href="mailto:support@nudgeagent.app"
             icon={<CircleHelp className="h-4 w-4" aria-hidden />}

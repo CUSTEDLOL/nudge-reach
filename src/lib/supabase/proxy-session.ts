@@ -27,6 +27,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/cron",
   "/api/waitlist",
   "/api/access",
+  "/api/trials",
+  "/free-trial",
   // customer-facing hosted payment page
   "/pay",
   // public marketing pages split off the landing page
@@ -36,6 +38,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/terms",
   "/industries",
   "/resources",
+  "/whatsapp-ai-automation",
+  "/tools",
   "/features",
   "/compare",
   "/how-it-works",
@@ -61,8 +65,13 @@ export function isPublicPath(pathname: string): boolean {
  * getClaims() — the proxy is convenience, not the security boundary.
  */
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
+  const nextResponse = () => {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-nudge-pathname", pathname);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  };
+  let supabaseResponse = nextResponse();
   const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
 
   const supabase = createServerClient(
@@ -78,7 +87,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = nextResponse();
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

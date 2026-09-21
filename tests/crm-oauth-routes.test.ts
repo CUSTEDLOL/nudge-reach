@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/env", () => ({
   env: { SEND_MODE: "live", TOKEN_ENCRYPTION_KEY: "k".repeat(40), NEXT_PUBLIC_APP_URL: "https://nudgeagent.app", ZOHO_CLIENT_ID: "cid", ZOHO_CLIENT_SECRET: "s" },
 }));
@@ -6,7 +6,12 @@ vi.mock("@/modules/orgs/auth", () => ({
   requireOrgContext: vi.fn(async () => ({ org: { id: "org1", simulated: false }, role: "OWNER", userId: "u", email: "e" })),
   requireRole: vi.fn(),
 }));
-const saveConnection = vi.hoisted(() => vi.fn(async () => ({})));
+const { saveConnection, checkAiFrontDesk, exchangeCode } = vi.hoisted(() => ({
+  saveConnection: vi.fn(async () => ({})),
+  checkAiFrontDesk: vi.fn(),
+  exchangeCode: vi.fn(),
+}));
+vi.mock("@/modules/billing/limits", () => ({ checkAiFrontDesk }));
 vi.mock("@/modules/crm/connections", async (orig) => ({
   ...(await orig<typeof import("@/modules/crm/connections")>()),
   saveConnection,
@@ -16,9 +21,7 @@ vi.mock("@/modules/crm/providers/zoho", () => ({
   zohoProvider: {
     key: "zoho",
     authUrl: () => "https://accounts.zoho.in/oauth/v2/auth?x=1",
-    exchangeCode: vi.fn(async () => ({
-      accessToken: "a", refreshToken: "r", expiresInSecs: 3600, apiDomain: "https://www.zohoapis.in", accountsServer: "https://accounts.zoho.in", accountLabel: "Zoho",
-    })),
+    exchangeCode,
   },
 }));
 
@@ -27,6 +30,14 @@ import { GET as callback } from "@/app/api/integrations/crm/[provider]/callback/
 import { signState } from "@/modules/crm/oauth-state";
 
 describe("crm oauth routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    checkAiFrontDesk.mockResolvedValue({ allowed: true });
+    exchangeCode.mockResolvedValue({
+      accessToken: "a", refreshToken: "r", expiresInSecs: 3600, apiDomain: "https://www.zohoapis.in", accountsServer: "https://accounts.zoho.in", accountLabel: "Zoho",
+    });
+  });
+
   it("start redirects to the provider", async () => {
     const res = await start(new Request("http://localhost/api/integrations/crm/zoho/start"), { params: Promise.resolve({ provider: "zoho" }) });
     expect(res.status).toBe(307);
@@ -45,5 +56,32 @@ describe("crm oauth routes", () => {
   it("callback rejects a forged state", async () => {
     const res = await callback(new Request("http://localhost/api/integrations/crm/zoho/callback?code=abc&state=bad"), { params: Promise.resolve({ provider: "zoho" }) });
     expect(res.status).toBe(400);
+  });
+
+  it("blocks CRM OAuth start for a restricted acquisition trial", async () => {
+    checkAiFrontDesk.mockResolvedValue({ allowed: false });
+
+    const res = await start(
+      new Request("http://localhost/api/integrations/crm/zoho/start"),
+      { params: Promise.resolve({ provider: "zoho" }) }
+    );
+
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: "upgrade_required" });
+  });
+
+  it("blocks the callback before exchanging an external code", async () => {
+    checkAiFrontDesk.mockResolvedValue({ allowed: false });
+    const state = signState("org1", "zoho", "k".repeat(40));
+
+    const res = await callback(
+      new Request(`http://localhost/api/integrations/crm/zoho/callback?code=abc&state=${state}`),
+      { params: Promise.resolve({ provider: "zoho" }) }
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://nudgeagent.app/explore?feature=crm");
+    expect(exchangeCode).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
   });
 });

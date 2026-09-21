@@ -4,6 +4,10 @@ import { TRIAL_PLAN, trialEndDate } from "@/modules/billing/trial";
 import { prisma } from "@/lib/db";
 import { isPendingOwner } from "@/modules/orgs/pending-owner";
 import { isSignupOpen } from "@/modules/orgs/signup";
+import {
+  claimAcquisitionTrial,
+  type TrialClaim,
+} from "@/modules/trial/claim";
 
 /**
  * Org resolution (spec §3.1). Membership is the source of truth for "which
@@ -14,7 +18,8 @@ import { isSignupOpen } from "@/modules/orgs/signup";
  *   3. a pending Invite matching the email is auto-accepted on first visit
  *      (signing up with the invited address joins); an OWNER invite also
  *      claims a workspace the founder created before the owner existed;
- *   4. otherwise a fresh org + OWNER membership is created — but only when
+ *   4. a verified acquisition-trial claim creates one simulated workspace;
+ *   5. otherwise a fresh org + OWNER membership is created — but only when
  *      open signup is enabled. With signup closed (the default, because
  *      accounts are created by Nudge after a demo) this throws
  *      `NoWorkspaceError` and the caller sends them somewhere that says so.
@@ -52,7 +57,8 @@ export function callerOrgFilter(userId: string): Prisma.OrgWhereInput {
 
 export async function resolveOrgContext(
   userId: string,
-  email?: string
+  email?: string,
+  options: { trialClaim?: TrialClaim | null } = {}
 ): Promise<ResolvedOrg> {
   // 1) Existing membership → its org.
   const membership = await prisma.membership.findFirst({
@@ -119,7 +125,18 @@ export async function resolveOrgContext(
     }
   }
 
-  // 4) First visit with no org anywhere → create org + OWNER membership.
+  // 4) A verified acquisition-trial claim can create one simulated workspace
+  //    without opening global signup. Existing access and invites win first.
+  if (email && options.trialClaim) {
+    const claimed = await claimAcquisitionTrial({
+      userId,
+      email,
+      claim: options.trialClaim,
+    });
+    if (claimed) return claimed;
+  }
+
+  // 5) First visit with no org anywhere → create org + OWNER membership.
   //    Only when open signup is on; otherwise Nudge creates the workspace.
   if (!isSignupOpen()) {
     throw new NoWorkspaceError();
@@ -154,7 +171,7 @@ export async function resolveOrgContext(
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      return resolveOrgContext(userId, email);
+      return resolveOrgContext(userId, email, options);
     }
     throw err;
   }
@@ -172,4 +189,3 @@ async function upsertMembership(
     update: {},
   });
 }
-

@@ -10,8 +10,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { useMounted, useOverlay } from "@/components/ui/overlay";
 import {
   isNavItemActive,
-  mobilePrimaryItemsForRole,
-  navGroupsForRole,
+  mobilePrimaryItemsForMode,
+  navGroupsForMode,
+  type AppShellMode,
   type AppRole,
   type NavGroup,
 } from "@/components/features/app-shell/nav";
@@ -28,21 +29,23 @@ export function isThreadRoute(pathname: string): boolean {
  */
 export function BottomNav({
   role = "OWNER",
+  mode = "standard",
   user,
   simulation = false,
 }: {
   role?: AppRole;
+  mode?: AppShellMode;
   user: SidebarUser;
   simulation?: boolean;
 }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  if (isThreadRoute(pathname)) return null;
+  if (mode === "standard" && isThreadRoute(pathname)) return null;
 
-  const primary = mobilePrimaryItemsForRole(role);
+  const primary = mobilePrimaryItemsForMode(mode, role);
   const primaryKeys = new Set(primary.map((item) => item.key));
-  const secondaryGroups = navGroupsForRole(role).flatMap((group) => {
+  const secondaryGroups = navGroupsForMode(mode, role).flatMap((group) => {
     const items = group.items.filter((item) => !primaryKeys.has(item.key));
     return items.length > 0 ? [{ ...group, items }] : [];
   });
@@ -56,7 +59,12 @@ export function BottomNav({
         aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
-        <div className="mx-auto grid h-16 max-w-lg grid-cols-5">
+        <div
+          className={cn(
+            "mx-auto grid h-16 max-w-lg",
+            secondaryGroups.length > 0 ? "grid-cols-5" : "grid-cols-4",
+          )}
+        >
           {primary.map((item) => {
             const active = isNavItemActive(pathname, item);
             const Icon = item.icon;
@@ -64,6 +72,7 @@ export function BottomNav({
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={item.tourTarget}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500",
@@ -82,29 +91,31 @@ export function BottomNav({
               </Link>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            aria-label="More sections"
-            aria-expanded={moreOpen}
-            aria-haspopup="dialog"
-            className={cn(
-              "flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500",
-              moreActive || moreOpen
-                ? "text-brand-700"
-                : "text-neutral-500 active:text-neutral-800"
-            )}
-          >
-            <span
+          {secondaryGroups.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              aria-label="More sections"
+              aria-expanded={moreOpen}
+              aria-haspopup="dialog"
               className={cn(
-                "flex h-6 w-11 items-center justify-center rounded-full transition-colors duration-150",
-                (moreActive || moreOpen) && "bg-brand-50"
+                "flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500",
+                moreActive || moreOpen
+                  ? "text-brand-700"
+                  : "text-neutral-500 active:text-neutral-800"
               )}
             >
-              <MoreHorizontal className="h-5 w-5" aria-hidden />
-            </span>
-            More
-          </button>
+              <span
+                className={cn(
+                  "flex h-6 w-11 items-center justify-center rounded-full transition-colors duration-150",
+                  (moreActive || moreOpen) && "bg-brand-50"
+                )}
+              >
+                <MoreHorizontal className="h-5 w-5" aria-hidden />
+              </span>
+              More
+            </button>
+          ) : null}
         </div>
       </nav>
 
@@ -201,6 +212,7 @@ function MoreSheet({
                   <Link
                     key={item.href}
                     href={item.href}
+                    data-tour={item.tourTarget}
                     onClick={onClose}
                     aria-current={active ? "page" : undefined}
                     className={cn(

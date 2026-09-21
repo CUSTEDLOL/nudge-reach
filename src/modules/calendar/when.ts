@@ -1,11 +1,18 @@
+import { addDays, zonedParts, zonedTimeToUtc } from "@/lib/timezone";
+
 /**
- * Best-effort natural-language → appointment time. Deterministic (takes `now`),
- * so it's unit-testable and the simulation flow is reproducible. When it can't
+ * Best-effort natural-language → appointment time, resolved on the
+ * business's own clock. Deterministic (takes `now` and the timezone), so it's
+ * unit-testable and the simulation flow is reproducible. When it can't
  * resolve a time it returns null and the booking tool falls back to the old
  * "record request + hand off to staff" behavior (graceful degradation).
  *
  * Not a full NL date library — it covers the phrasings customers actually use
  * ("tomorrow 8pm", "Sat 1pm", "20:00", ISO). The org can refine later.
+ *
+ * Every wall-clock word ("4 PM", "tomorrow", "Saturday") is read in
+ * `timezone`, never in the server's zone: Vercel runs in UTC, and a 4 PM
+ * demo in Delhi must not land at 9:30 PM.
  */
 
 export interface ParsedWhen {
@@ -36,7 +43,11 @@ function parseTimeOfDay(s: string): { h: number; m: number } | null {
   return null;
 }
 
-export function parseWhen(text: string, now: Date = new Date()): ParsedWhen | null {
+export function parseWhen(
+  text: string,
+  now: Date = new Date(),
+  timezone: string = "UTC"
+): ParsedWhen | null {
   if (!text) return null;
 
   // 1) A real ISO / parseable timestamp wins outright.
@@ -50,8 +61,8 @@ export function parseWhen(text: string, now: Date = new Date()): ParsedWhen | nu
   const time = parseTimeOfDay(raw);
   if (!time) return null;
 
-  const target = new Date(now);
-  target.setSeconds(0, 0);
+  const today = zonedParts(now, timezone);
+  let date: { year: number; month: number; day: number } = today;
 
   const hasDayKeyword =
     raw.includes("tomorrow") ||
@@ -59,25 +70,25 @@ export function parseWhen(text: string, now: Date = new Date()): ParsedWhen | nu
     WEEKDAYS.some((d) => raw.includes(d));
 
   if (raw.includes("tomorrow")) {
-    target.setDate(target.getDate() + 1);
+    date = addDays(today, 1);
   } else if (!raw.includes("today")) {
     const wd = WEEKDAYS.findIndex((d) => raw.includes(d));
     if (wd >= 0) {
-      let diff = (wd - target.getDay() + 7) % 7;
+      let diff = (wd - today.weekday + 7) % 7;
       if (diff === 0) diff = 7; // "on Monday" means the next one, not today
-      target.setDate(target.getDate() + diff);
+      date = addDays(today, diff);
     }
   }
 
-  target.setHours(time.h, time.m, 0, 0);
+  let start = zonedTimeToUtc({ ...date, hour: time.h, minute: time.m }, timezone);
 
   // A bare time already past today ("3pm" at 5pm) rolls to tomorrow.
-  if (!hasDayKeyword && target.getTime() <= now.getTime()) {
-    target.setDate(target.getDate() + 1);
+  if (!hasDayKeyword && start.getTime() <= now.getTime()) {
+    start = zonedTimeToUtc({ ...addDays(date, 1), hour: time.h, minute: time.m }, timezone);
   }
 
   return {
-    start: target,
-    end: new Date(target.getTime() + APPOINTMENT_MINUTES * 60_000),
+    start,
+    end: new Date(start.getTime() + APPOINTMENT_MINUTES * 60_000),
   };
 }

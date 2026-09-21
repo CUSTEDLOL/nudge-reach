@@ -18,10 +18,40 @@ import { CreditsExhaustedError } from "@/modules/billing/credits";
 export interface AgentReply {
   text: string;
   handoff: boolean;
+  /** Present only when the model returned non-empty customer-facing text. */
+  generatedByAi?: true;
+  /**
+   * The model call failed (provider outage, timeout, bad key, a BYOK model id
+   * the provider rejects): handed off so the customer still hears back.
+   * Distinct from a handoff the agent chose to make, and from
+   * `pausedForCredits`, which is a billing state rather than a fault.
+   */
+  aiFailed?: true;
 }
 
 const HANDOFF_MESSAGE =
   "Thanks for your message! One of our team will get back to you shortly. 🙏";
+
+/**
+ * A provider failure must never leave a customer in silence. On the live
+ * webhook the inbound message is stored before the model runs, so Meta's
+ * redelivery is skipped as a duplicate and nobody ever answers. Degrade to
+ * the hand-off line instead: the customer hears back, the thread is flagged
+ * "Needs human", and the error is logged.
+ */
+function aiFailedReply(
+  where: string,
+  ctx: Pick<ToolContext, "orgId" | "conversationId">,
+  err: unknown
+): AgentReply & { actions: string[] } {
+  console.error("[agent] reply failed; handing off", {
+    where,
+    orgId: ctx.orgId,
+    conversationId: ctx.conversationId,
+    error: err instanceof Error ? err.message : String(err),
+  });
+  return { text: HANDOFF_MESSAGE, handoff: true, aiFailed: true, actions: [] };
+}
 
 /**
  * Turn the scoped system prompt + conversation history into a reply.
@@ -35,21 +65,30 @@ export async function generateAgentReply(
   promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
 ): Promise<AgentReply> {
   const system = buildAgentSystemPrompt(profile, promptOptions);
-  const raw = await chat({
-    system,
-    messages: history,
-    maxTokens: 400,
-    attribution: {
-      orgId: ctx.orgId,
-      conversationId: ctx.conversationId,
-      purpose: "agent_reply",
-    },
-  });
+  let raw: string;
+  try {
+    raw = await chat({
+      system,
+      messages: history,
+      maxTokens: 400,
+      attribution: {
+        orgId: ctx.orgId,
+        conversationId: ctx.conversationId,
+        purpose: "agent_reply",
+      },
+    });
+  } catch (err) {
+    return aiFailedReply("generateAgentReply", ctx, err);
+  }
 
   if (!raw || raw.includes(HANDOFF_SENTINEL)) {
     return { text: HANDOFF_MESSAGE, handoff: true };
   }
-  return { text: normalizeWhatsAppMarkdown(raw), handoff: false };
+  return {
+    text: normalizeWhatsAppMarkdown(raw),
+    handoff: false,
+    generatedByAi: true,
+  };
 }
 
 export interface AgentActionReply extends AgentReply {
@@ -99,8 +138,10 @@ export async function generateAgentActionReply(
       },
     }));
   } catch (err) {
-    if (!(err instanceof CreditsExhaustedError)) throw err;
-    return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+    if (err instanceof CreditsExhaustedError) {
+      return { text: HANDOFF_MESSAGE, handoff: true, actions: [], pausedForCredits: true };
+    }
+    return aiFailedReply("generateAgentActionReply", ctx, err);
   }
 
   const handoff = calledHandoff(toolCalls);
@@ -109,7 +150,12 @@ export async function generateAgentActionReply(
   if (!text) {
     return { text: HANDOFF_MESSAGE, handoff: true, actions };
   }
-  return { text: normalizeWhatsAppMarkdown(text), handoff, actions };
+  return {
+    text: normalizeWhatsAppMarkdown(text),
+    handoff,
+    actions,
+    generatedByAi: true,
+  };
 }
 
 /**
