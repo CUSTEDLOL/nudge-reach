@@ -44,7 +44,7 @@ export default async function DashboardPage({
 }) {
   const { org, membership, email } = await requireOrgContext();
   const now = new Date();
-  const trial = await getTrialWorkspace(org.id, now);
+  const trial = await getTrialWorkspace(org.id);
   if (trial && !trial.converted) {
     const requestedUpgrade = (await searchParams).upgrade;
     const upgrade = Array.isArray(requestedUpgrade)

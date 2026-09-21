@@ -9,6 +9,24 @@ const { trialFindUnique, knowledgeCount, notFound } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ notFound }));
+vi.mock("react", () => ({
+  cache: <Args extends unknown[], Result>(
+    work: (...args: Args) => Result,
+  ) => {
+    const entries: Array<{ args: Args; result: Result }> = [];
+    return (...args: Args) => {
+      const cached = entries.find(
+        (entry) =>
+          entry.args.length === args.length &&
+          entry.args.every((value, index) => Object.is(value, args[index])),
+      );
+      if (cached) return cached.result;
+      const result = work(...args);
+      entries.push({ args, result });
+      return result;
+    };
+  },
+}));
 vi.mock("@/lib/db", () => ({
   prisma: {
     acquisitionTrial: { findUnique: trialFindUnique },
@@ -78,6 +96,20 @@ describe("trial workspace projection", () => {
     expect(knowledgeCount).toHaveBeenCalledWith({
       where: { orgId: "org_1", status: "active" },
     });
+  });
+
+  it("reuses the implicit request-time projection for the same organization", async () => {
+    trialFindUnique.mockResolvedValue(trialRow());
+    knowledgeCount.mockResolvedValue(2);
+
+    const [first, second] = await Promise.all([
+      getTrialWorkspace("org_cached"),
+      getTrialWorkspace("org_cached"),
+    ]);
+
+    expect(first).toBe(second);
+    expect(trialFindUnique).toHaveBeenCalledOnce();
+    expect(knowledgeCount).toHaveBeenCalledOnce();
   });
 
   it("clamps the visible allowance and normalizes persisted UI state", async () => {

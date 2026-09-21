@@ -80,6 +80,7 @@ describe("acquisition-trial routing", () => {
 
   it("branches to the trial Inbox before loading paid dashboard analytics", () => {
     const dashboard = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
+    const layout = readFileSync("src/app/(app)/layout.tsx", "utf8");
     const onboarding = readFileSync("src/app/(app)/onboarding/page.tsx", "utf8");
     const trialInbox = dashboard.indexOf("<TrialInbox");
     const paidDashboardQuery = dashboard.indexOf(
@@ -90,6 +91,9 @@ describe("acquisition-trial routing", () => {
     expect(paidDashboardQuery).toBeGreaterThan(-1);
     expect(trialInbox).toBeLessThan(paidDashboardQuery);
     expect(dashboard).not.toContain("<TrialHome");
+    expect(layout).toContain("getTrialWorkspace(org.id)");
+    expect(dashboard).toContain("getTrialWorkspace(org.id)");
+    expect(dashboard).not.toContain("getTrialWorkspace(org.id, now)");
     expect(dashboard).toContain("dashboardRedirectFor");
     expect(dashboard).toContain("getTrialWorkspace");
     expect(onboarding).toContain("onboardingRedirectFor");

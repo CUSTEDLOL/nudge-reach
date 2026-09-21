@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { deriveTrialStatus, type TrialStatus } from "./state";
@@ -63,9 +64,9 @@ function knowledgeSource(value: string | null): TrialKnowledgeSource | null {
 }
 
 /** One tenant-scoped, UI-safe projection for every trial screen. */
-export async function getTrialWorkspace(
+async function loadTrialWorkspace(
   orgId: string,
-  now = new Date(),
+  now: Date,
 ): Promise<TrialWorkspace | null> {
   const trial = await prisma.acquisitionTrial.findUnique({
     where: { orgId },
@@ -128,7 +129,20 @@ export async function getTrialWorkspace(
   };
 }
 
-export async function requireAcquisitionTrial(orgId: string, now = new Date()) {
+const getRequestTrialWorkspace = cache((orgId: string) =>
+  loadTrialWorkspace(orgId, new Date()),
+);
+
+export function getTrialWorkspace(
+  orgId: string,
+  now?: Date,
+): Promise<TrialWorkspace | null> {
+  return now
+    ? loadTrialWorkspace(orgId, now)
+    : getRequestTrialWorkspace(orgId);
+}
+
+export async function requireAcquisitionTrial(orgId: string, now?: Date) {
   const workspace = await getTrialWorkspace(orgId, now);
   if (!workspace || workspace.converted) notFound();
   return workspace;
