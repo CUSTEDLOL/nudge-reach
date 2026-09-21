@@ -26,23 +26,37 @@ export default async function AgentPage() {
   const trial = await getTrialWorkspace(ctx.org.id);
 
   if (trial && !trial.converted) {
-    const facts = await prisma.knowledgeEntry.findMany({
-      where: { orgId: ctx.org.id, status: "active" },
-      orderBy: { createdAt: "desc" },
-      take: 500,
-    });
+    const [facts, drafts] = await Promise.all([
+      prisma.knowledgeEntry.findMany({
+        where: { orgId: ctx.org.id, status: "active" },
+        orderBy: { createdAt: "desc" },
+        take: 500,
+        select: {
+          id: true,
+          category: true,
+          fact: true,
+          condition: true,
+          source: true,
+        },
+      }),
+      prisma.knowledgeEntry.findMany({
+        where: { orgId: ctx.org.id, status: "draft" },
+        orderBy: { createdAt: "asc" },
+        take: 100,
+        select: {
+          id: true,
+          category: true,
+          fact: true,
+          condition: true,
+        },
+      }),
+    ]);
     return (
       <TrialTraining
+        workspace={trial}
         canEdit={canEdit}
-        source={trial.knowledgeSource}
-        setupComplete={trial.setupComplete}
-        facts={facts.map((fact) => ({
-          id: fact.id,
-          category: fact.category,
-          fact: fact.fact,
-          condition: fact.condition,
-          source: fact.source,
-        }))}
+        facts={facts}
+        drafts={drafts}
       />
     );
   }

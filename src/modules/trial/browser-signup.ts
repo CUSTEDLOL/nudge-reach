@@ -44,7 +44,7 @@ export function trialAuthCredentials(
     email: form.email,
     password: form.password,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm?next=/trial/setup`,
+      emailRedirectTo: `${origin}/auth/confirm?next=/agent`,
       data: {
         acquisition_trial_id: claim.trialId,
         acquisition_trial_token: claim.claimToken,
@@ -58,7 +58,7 @@ export function validateTrialPassword(password: string) {
 }
 
 export function trialSignupDestination(hasSession: boolean) {
-  return hasSession ? "/trial/setup" : null;
+  return hasSession ? "/agent" : null;
 }
 
 export function trialClaimNeedsRefresh(

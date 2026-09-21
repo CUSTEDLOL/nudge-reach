@@ -177,12 +177,22 @@ function FactRow({
   );
 }
 
-function AddFactForm() {
+function AddFactForm({
+  factCount,
+  factLimit,
+}: {
+  factCount?: number;
+  factLimit?: number;
+}) {
   const [category, setCategory] = useState("menu_services");
   const [fact, setFact] = useState("");
   const [condition, setCondition] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const atLimit =
+    factCount !== undefined
+    && factLimit !== undefined
+    && factCount >= factLimit;
 
   return (
     <Card className="p-4">
@@ -192,6 +202,7 @@ function AddFactForm() {
             id="kf-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
+            disabled={atLimit}
           >
             {CATEGORY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -205,7 +216,8 @@ function AddFactForm() {
             id="kf-fact"
             value={fact}
             onChange={(e) => setFact(e.target.value)}
-            placeholder="e.g. Bridal mehendi package is ₹5,000"
+            placeholder="e.g. Standard setup costs $120"
+            disabled={atLimit}
           />
         </Field>
         <Field label="Condition (optional)" htmlFor="kf-cond" className="sm:w-52">
@@ -214,10 +226,11 @@ function AddFactForm() {
             value={condition}
             onChange={(e) => setCondition(e.target.value)}
             placeholder="e.g. weekends only"
+            disabled={atLimit}
           />
         </Field>
         <Button
-          disabled={pending || fact.trim().length < 3}
+          disabled={atLimit || pending || fact.trim().length < 3}
           onClick={() =>
             startTransition(async () => {
               const r = await addFactAction({ category, fact, condition });
@@ -232,6 +245,11 @@ function AddFactForm() {
           {pending ? "Adding…" : "Add fact"}
         </Button>
       </div>
+      {atLimit && (
+        <p className="mt-2 text-sm text-neutral-600" role="status">
+          Fact limit reached ({factCount}/{factLimit}). Archive an approved fact or discard a draft before adding another.
+        </p>
+      )}
       {message && <p className="mt-2 text-sm text-neutral-500">{message}</p>}
     </Card>
   );
@@ -256,10 +274,14 @@ export function Library({
   facts,
   canEdit,
   showStructureButton,
+  factCount,
+  factLimit,
 }: {
   facts: LibraryFact[];
   canEdit: boolean;
   showStructureButton: boolean;
+  factCount?: number;
+  factLimit?: number;
 }) {
   const { toast } = useToast();
   const [message, setMessage] = useState<string | null>(null);
@@ -414,7 +436,7 @@ export function Library({
         </div>
       )}
 
-      {canEdit && <AddFactForm />}
+      {canEdit && <AddFactForm factCount={factCount} factLimit={factLimit} />}
 
       {canEdit && showStructureButton && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">

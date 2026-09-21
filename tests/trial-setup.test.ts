@@ -1,8 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@/components/ui/toast";
 
 const {
   requireOrgContext,
@@ -31,57 +28,15 @@ const {
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({
   redirect,
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext, requireRole }));
 vi.mock("@/lib/db", () => ({ prisma: { $transaction: transaction } }));
-vi.mock("@/app/(app)/agent/training-actions", () => ({
-  importWebsiteAction: vi.fn(),
-  importGbpAction: vi.fn(),
-  importFileAction: vi.fn(),
-  approveDraftAction: vi.fn(),
-  discardDraftAction: vi.fn(),
-  approveAllDraftsAction: vi.fn(),
-}));
-vi.mock("@/app/(app)/agent/questionnaire/actions", () => ({
-  submitQuestionnaireAction: vi.fn(),
-}));
 
 import { completeTrialSetupAction } from "@/app/(app)/trial/setup/actions";
-import { TrialSetup, trialSetupStage } from "@/app/(app)/trial/setup/trial-setup";
-import type { TrialWorkspace } from "@/modules/trial/workspace";
-
-const workspace: TrialWorkspace = {
-  id: "trial_1",
-  status: "active",
-  expiresAt: "2026-09-27T10:00:00.000Z",
-  repliesUsed: 0,
-  replyLimit: 15,
-  repliesRemaining: 15,
-  setupComplete: false,
-  knowledgeSource: null,
-  knowledgeReady: false,
-  knowledgeCount: 0,
-  approvedFactCount: 0,
-  draftFactCount: 0,
-  factCount: 0,
-  factLimit: 50,
-  webImportsUsed: 0,
-  webImportLimit: 1,
-  fileImportsUsed: 0,
-  fileImportLimit: 3,
-  firstReplyAt: null,
-  exploreViewed: false,
-  tourStep: "welcome",
-  tourCompleted: false,
-  tourDismissed: false,
-  demoBooked: false,
-  converted: false,
-};
 
 const ctx = {
   role: "OWNER",
-  org: { id: "org_1", name: "Aster Clinic", vertical: "clinic" },
+  org: { id: "org_1", name: "Northstar Services", vertical: "services" },
 };
 
 describe("complete trial setup", () => {
@@ -124,8 +79,8 @@ describe("complete trial setup", () => {
       create: {
         orgId: "org_1",
         enabled: true,
-        vertical: "clinic",
-        businessName: "Aster Clinic",
+        vertical: "services",
+        businessName: "Northstar Services",
       },
       update: { enabled: true },
     });
@@ -163,7 +118,7 @@ describe("complete trial setup", () => {
         orgId: "org_1",
         enabled: true,
         vertical: "other",
-        businessName: "Aster Clinic",
+        businessName: "Northstar Services",
       },
       update: { enabled: true },
     });
@@ -178,84 +133,15 @@ describe("complete trial setup", () => {
   });
 });
 
-describe("three-screen trial setup", () => {
-  const questions = [
-    { id: "business_summary", prompt: "Describe your clinic", placeholder: "We help…" },
-  ];
-
-  it("offers exactly one of four starting sources", () => {
-    const html = renderToStaticMarkup(
-      createElement(TrialSetup, { workspace, drafts: [], questions }),
-    );
-
-    expect(html).toContain("Teach Nudge about your clinic");
-    for (const label of [
-      "Website",
-      "Google Business Profile",
-      "File",
-      "Answer 5 questions",
-    ]) {
-      expect(html).toContain(label);
-    }
-    expect(html.match(/data-source-card=/g)).toHaveLength(4);
-    expect(trialSetupStage(workspace, 0)).toBe("source");
-  });
-
-  it("moves imported drafts through one approval screen", () => {
-    const importing = { ...workspace, knowledgeSource: "website" as const };
-    const html = renderToStaticMarkup(
-      createElement(TrialSetup, {
-        workspace: importing,
-        drafts: [{ id: "draft_1", category: "hours", fact: "Open Monday to Saturday", condition: null }],
-        questions,
-      }),
-    );
-
-    expect(html).toContain("Review what Nudge found");
-    expect(html).toContain("Open Monday to Saturday");
-    expect(html).toContain("Approve all and continue");
-    expect(trialSetupStage(importing, 1)).toBe("review");
-  });
-
-  it("offers a manual escape hatch when every imported draft is discarded", () => {
-    const importing = { ...workspace, knowledgeSource: "website" as const };
-    const html = renderToStaticMarkup(
-      createElement(TrialSetup, { workspace: importing, drafts: [], questions }),
-    );
-
-    expect(html).toContain("No draft facts remain");
-    expect(html).toContain('href="/agent"');
-    expect(html).toContain("Add a fact manually");
-  });
-
-  it("ends with one clear handoff into the workspace", () => {
-    const ready = {
-      ...workspace,
-      knowledgeSource: "interview" as const,
-      knowledgeReady: true,
-      knowledgeCount: 5,
-      approvedFactCount: 5,
-      factCount: 5,
-    };
-    const html = renderToStaticMarkup(
-      createElement(ToastProvider, null, createElement(TrialSetup, { workspace: ready, drafts: [], questions })),
-    );
-
-    expect(html).toContain("Ready to test");
-    expect(html).toContain("5 approved facts");
-    expect(html).toContain("Open my trial");
-    expect(trialSetupStage(ready, 0)).toBe("ready");
-  });
-});
-
-describe("trial setup defaults", () => {
-  it("uses the generic questionnaire when an organization has no vertical", () => {
+describe("legacy trial setup route", () => {
+  it("redirects to the continuous Train AI page", () => {
     const source = readFileSync(
       new URL("../src/app/(app)/trial/setup/page.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(source).toContain('ctx.org.vertical ?? "other"');
-    expect(source).not.toContain('ctx.org.vertical ?? "clinic"');
+    expect(source).toContain('redirect("/agent")');
+    expect(source).not.toContain("<TrialSetup");
+    expect(source).not.toContain("questionnaireScript");
   });
 });

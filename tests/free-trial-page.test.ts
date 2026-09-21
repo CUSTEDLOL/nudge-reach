@@ -169,7 +169,7 @@ describe("free trial browser handoff", () => {
       email: "owner@aster.in",
       password: "secret-password",
       options: {
-        emailRedirectTo: "https://nudge.test/auth/confirm?next=/trial/setup",
+        emailRedirectTo: "https://nudge.test/auth/confirm?next=/agent",
         data: {
           acquisition_trial_id: "trial_1",
           acquisition_trial_token: "opaque-claim-token",
@@ -183,8 +183,8 @@ describe("free trial browser handoff", () => {
     expect(validateTrialPassword("long-enough")).toBeNull();
   });
 
-  it("routes an immediate authenticated session into trial setup", () => {
-    expect(trialSignupDestination(true)).toBe("/trial/setup");
+  it("routes an immediate authenticated session into Train AI", () => {
+    expect(trialSignupDestination(true)).toBe("/agent");
     expect(trialSignupDestination(false)).toBeNull();
   });
 
