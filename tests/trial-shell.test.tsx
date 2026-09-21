@@ -1,4 +1,3 @@
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,18 +43,16 @@ const trial: TrialWorkspace = {
 describe("trial app shell", () => {
   it("renders one shared shell with four real coach-mark links", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        {
-          orgName: "Aster Clinic",
-          user: { name: "Asha", email: "asha@aster.in" },
-          role: "OWNER",
-          simulation: true,
-          mode: "trial",
-          trial,
-        },
-        createElement("p", null, "Trial home"),
-      ),
+      <AppShell
+        orgName="Aster Clinic"
+        user={{ name: "Asha", email: "asha@aster.in" }}
+        role="OWNER"
+        simulation
+        mode="trial"
+        trial={trial}
+      >
+        <p>Trial home</p>
+      </AppShell>,
     );
 
     expect(html).toContain("Safe test workspace");
@@ -72,22 +69,20 @@ describe("trial app shell", () => {
     expect(trialStatusText(trial)).toBe(
       "Free trial · 12 of 15 replies left · Ends 27 Sep",
     );
-    const html = renderToStaticMarkup(createElement(TrialStatusStrip, { trial }));
+    const html = renderToStaticMarkup(<TrialStatusStrip trial={trial} />);
     expect(html).toContain('aria-live="polite"');
   });
 
   it("does not start the product tour until setup is complete", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        {
-          orgName: "Aster Clinic",
-          user: { name: "Asha", email: "asha@aster.in" },
-          mode: "trial",
-          trial: { ...trial, setupComplete: false },
-        },
-        createElement("p", null, "Manual fact editor"),
-      ),
+      <AppShell
+        orgName="Aster Clinic"
+        user={{ name: "Asha", email: "asha@aster.in" }}
+        mode="trial"
+        trial={{ ...trial, setupComplete: false }}
+      >
+        <p>Manual fact editor</p>
+      </AppShell>,
     );
 
     expect(html).toContain("Manual fact editor");
@@ -101,7 +96,7 @@ describe("trial app shell", () => {
     ["expired", "Trial ended"],
   ] as const)("shows conversion choices when the trial is %s", (status, reason) => {
     const html = renderToStaticMarkup(
-      createElement(TrialStatusStrip, { trial: { ...trial, status } }),
+      <TrialStatusStrip trial={{ ...trial, status }} />,
     );
     expect(html).toContain(reason);
     expect(html).toContain("Book a free demo");
