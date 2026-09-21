@@ -208,6 +208,7 @@ async function fetchPage(url: string): Promise<string | null> {
 export interface IngestResult {
   pages: number;
   drafts: number;
+  capacityReached: boolean;
 }
 
 /**
@@ -256,7 +257,11 @@ export async function ingestWebsite(
     maxCreated: budget.maxDrafts,
   });
 
-  return { pages: htmls.size, drafts: stored.created };
+  return {
+    pages: htmls.size,
+    drafts: stored.created,
+    capacityReached: stored.capacityReached,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -362,6 +367,7 @@ export interface GbpImportResult {
   name: string;
   drafts: number;
   websiteCrawled: boolean;
+  capacityReached: boolean;
 }
 
 export async function ingestGbp(
@@ -385,6 +391,7 @@ export async function ingestGbp(
     maxCreated: budget.maxDrafts,
   });
   let drafts = stored.created;
+  let capacityReached = stored.capacityReached;
 
   // Bonus: the listing knows the website — crawl it in the same run.
   let websiteCrawled = false;
@@ -392,6 +399,7 @@ export async function ingestGbp(
     try {
       const site = await ingestWebsite(orgId, place.websiteUri, budget);
       drafts += site.drafts;
+      capacityReached ||= site.capacityReached;
       websiteCrawled = true;
     } catch {
       // The GBP facts alone are still a win; never fail the run on this.
@@ -402,6 +410,7 @@ export async function ingestGbp(
     name: place.displayName?.text ?? query,
     drafts,
     websiteCrawled,
+    capacityReached,
   };
 }
 
@@ -438,7 +447,7 @@ export async function ingestFile(
   orgId: string,
   input: { base64: string; mediaType: FileMediaType },
   budget: FileIngestBudget = DEFAULT_FILE_INGEST_BUDGET,
-): Promise<{ drafts: number }> {
+): Promise<{ drafts: number; capacityReached: boolean }> {
   if (!env.ANTHROPIC_API_KEY) {
     throw new Error(
       "Reading files needs the AI key. In demo mode, import from your website instead — that works without keys."
@@ -463,5 +472,8 @@ export async function ingestFile(
     activeDraftCap: budget.activeDraftCap,
     maxCreated: budget.maxDrafts,
   });
-  return { drafts: stored.created };
+  return {
+    drafts: stored.created,
+    capacityReached: stored.capacityReached,
+  };
 }

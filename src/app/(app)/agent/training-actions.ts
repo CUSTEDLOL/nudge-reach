@@ -33,6 +33,9 @@ export interface ActionResult {
   message: string;
 }
 
+const TRIAL_IMPORT_LIMIT_MESSAGE =
+  "Your free trial can store up to 50 facts. Archive a fact before importing more.";
+
 function isCategory(c: string): c is KnowledgeCategory {
   return (KNOWLEDGE_CATEGORIES as readonly string[]).includes(c);
 }
@@ -103,6 +106,20 @@ export async function addFactAction(input: {
       return { ok: false, message: "Pick a valid category." };
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
     const condition = input.condition?.trim().slice(0, 120);
+    if (!restricted) {
+      await prisma.knowledgeEntry.create({
+        data: {
+          orgId: ctx.org.id,
+          category: input.category,
+          fact: fact.slice(0, 300),
+          condition: condition || null,
+          source: "manual",
+        },
+      });
+      revalidatePath("/agent");
+      revalidatePath("/dashboard");
+      return { ok: true, message: "Fact added." };
+    }
     const stored = await storeKnowledgeFacts(
       ctx.org.id,
       [{
@@ -113,7 +130,7 @@ export async function addFactAction(input: {
       {
         source: "manual",
         status: "active",
-        activeDraftCap: restricted ? 50 : undefined,
+        activeDraftCap: 50,
       },
     );
     if (stored.created === 0) {
@@ -231,6 +248,9 @@ export async function importWebsiteAction(url: string): Promise<ActionResult> {
     recordAudit(ctx, "knowledge.website_imported", trimmed);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
+    if (restricted && result.capacityReached && result.drafts === 0) {
+      return { ok: false, message: TRIAL_IMPORT_LIMIT_MESSAGE };
+    }
     if (result.drafts === 0) {
       return {
         ok: true,
@@ -280,6 +300,9 @@ export async function importGbpAction(query: string): Promise<ActionResult> {
     recordAudit(ctx, "knowledge.gbp_imported", trimmed);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
+    if (restricted && result.capacityReached && result.drafts === 0) {
+      return { ok: false, message: TRIAL_IMPORT_LIMIT_MESSAGE };
+    }
     if (result.drafts === 0) {
       return {
         ok: true,
@@ -342,6 +365,9 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
     recordAudit(ctx, "knowledge.file_imported", file.name);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
+    if (restricted && result.capacityReached && result.drafts === 0) {
+      return { ok: false, message: TRIAL_IMPORT_LIMIT_MESSAGE };
+    }
     if (result.drafts === 0) {
       return { ok: true, message: "Read the file but found nothing new to import." };
     }

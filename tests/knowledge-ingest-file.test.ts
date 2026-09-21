@@ -116,6 +116,15 @@ describe("ingestFile", () => {
     expect(result.drafts).toBe(1);
   });
 
+  it("propagates the shared store's capacity result", async () => {
+    storeKnowledgeFacts.mockResolvedValue({ created: 0, capacityReached: true });
+
+    await expect(ingestFile("org1", {
+      base64: "IMGDATA",
+      mediaType: "image/webp",
+    })).resolves.toEqual({ drafts: 0, capacityReached: true });
+  });
+
   it("returns zero drafts on unparseable model output (no crash)", async () => {
     generate.mockResolvedValue("sorry, I can't read this");
     const result = await ingestFile("org1", {

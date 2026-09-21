@@ -111,7 +111,7 @@ describe("storeKnowledgeFacts", () => {
     });
   });
 
-  it("keeps uncapped paid storage outside a transaction and preserves its per-run limit", async () => {
+  it("keeps uncapped paid storage outside a transaction, dedupes all statuses, and preserves its per-run limit", async () => {
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { fact: "open monday to friday" },
     ]);
@@ -127,10 +127,7 @@ describe("storeKnowledgeFacts", () => {
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.knowledgeEntry.findMany).toHaveBeenCalledWith({
-      where: {
-        orgId: "org_paid",
-        status: { in: ["active", "draft"] },
-      },
+      where: { orgId: "org_paid" },
       select: { fact: true },
     });
     expect(prisma.knowledgeEntry.createMany.mock.calls[0][0].data).toHaveLength(2);
@@ -176,5 +173,64 @@ describe("storeKnowledgeFacts", () => {
     ).resolves.toEqual({ created: 0, capacityReached: false });
 
     expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1])(
+    "treats a non-positive active-plus-draft cap of %i as exhausted",
+    async (activeDraftCap) => {
+      tx.knowledgeEntry.count.mockResolvedValue(0);
+
+      await expect(
+        storeKnowledgeFacts("org_trial", facts, {
+          source: "import",
+          status: "draft",
+          activeDraftCap,
+        }),
+      ).resolves.toEqual({ created: 0, capacityReached: true });
+
+      expect(tx.knowledgeEntry.createMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("serializes concurrent writers competing for the final trial slot", async () => {
+    let used = 49;
+    let transactionTail = Promise.resolve();
+    prisma.$transaction.mockImplementation((work) => {
+      const previous = transactionTail;
+      let release!: () => void;
+      transactionTail = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return previous.then(async () => {
+        try {
+          return await work(tx);
+        } finally {
+          release();
+        }
+      });
+    });
+    tx.knowledgeEntry.count.mockImplementation(async () => used);
+    tx.knowledgeEntry.createMany.mockImplementation(async ({ data }) => {
+      used += data.length;
+      return { count: data.length };
+    });
+
+    const results = await Promise.all([
+      storeKnowledgeFacts("org_trial", [facts[0]], {
+        source: "manual",
+        status: "active",
+        activeDraftCap: 50,
+      }),
+      storeKnowledgeFacts("org_trial", [facts[1]], {
+        source: "manual",
+        status: "active",
+        activeDraftCap: 50,
+      }),
+    ]);
+
+    expect(results.map((result) => result.created).sort()).toEqual([0, 1]);
+    expect(results.every((result) => result.capacityReached)).toBe(true);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(tx.knowledgeEntry.createMany).toHaveBeenCalledOnce();
   });
 });

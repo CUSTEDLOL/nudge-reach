@@ -59,7 +59,7 @@ export async function storeKnowledgeFacts(
 ): Promise<StoreKnowledgeFactsResult> {
   if (options.activeDraftCap === undefined) {
     const existing = await prisma.knowledgeEntry.findMany({
-      where: { orgId, status: { in: ["active", "draft"] } },
+      where: { orgId },
       select: { fact: true },
     });
     const selected = selectNewFacts(

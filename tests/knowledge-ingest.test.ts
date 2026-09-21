@@ -152,6 +152,24 @@ describe("ingestWebsite", () => {
     vi.unstubAllGlobals();
   });
 
+  it("propagates the shared store's capacity result", async () => {
+    storeKnowledgeFacts.mockResolvedValue({
+      created: 0,
+      capacityReached: true,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(PAGE, { headers: { "content-type": "text/html" } })
+      )
+    );
+
+    await expect(
+      ingestWebsite("org1", "https://glow.example.com")
+    ).resolves.toMatchObject({ drafts: 0, capacityReached: true });
+    vi.unstubAllGlobals();
+  });
+
   it("honours a smaller draft budget without changing the paid default", async () => {
     storeKnowledgeFacts.mockResolvedValue({
       created: 1,

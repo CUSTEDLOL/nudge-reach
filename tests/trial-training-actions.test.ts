@@ -16,7 +16,7 @@ const {
 } = vi.hoisted(() => ({
   prisma: {
     agentProfile: { findUnique: vi.fn() },
-    knowledgeEntry: { createMany: vi.fn() },
+    knowledgeEntry: { create: vi.fn(), createMany: vi.fn() },
   },
   requireOrgContext: vi.fn(),
   requireRole: vi.fn(),
@@ -80,16 +80,22 @@ describe("restricted trial model-backed training actions", () => {
     distillAnswer.mockResolvedValue([
       { category: "hours", fact: "Open Monday to Saturday." },
     ]);
+    prisma.knowledgeEntry.create.mockResolvedValue({});
     storeKnowledgeFacts.mockResolvedValue({
       created: 1,
       capacityReached: false,
     });
-    ingestWebsite.mockResolvedValue({ pages: 1, drafts: 2 });
-    ingestFile.mockResolvedValue({ drafts: 2 });
+    ingestWebsite.mockResolvedValue({
+      pages: 1,
+      drafts: 2,
+      capacityReached: false,
+    });
+    ingestFile.mockResolvedValue({ drafts: 2, capacityReached: false });
     ingestGbp.mockResolvedValue({
       name: "Example Business",
       drafts: 2,
       websiteCrawled: false,
+      capacityReached: false,
     });
     withTrialKnowledgeSource.mockImplementation(
       async (_orgId, _source, work) => work(),
@@ -149,6 +155,29 @@ describe("restricted trial model-backed training actions", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
+  it("preserves paid manual creation without deduping through the trial store", async () => {
+    isRestrictedAcquisitionTrial.mockResolvedValue(false);
+
+    await expect(
+      addFactAction({
+        category: "hours",
+        fact: "Open Monday to Friday",
+        condition: "Except public holidays",
+      }),
+    ).resolves.toEqual({ ok: true, message: "Fact added." });
+
+    expect(prisma.knowledgeEntry.create).toHaveBeenCalledWith({
+      data: {
+        orgId: "org_1",
+        category: "hours",
+        fact: "Open Monday to Friday",
+        condition: "Except public holidays",
+        source: "manual",
+      },
+    });
+    expect(storeKnowledgeFacts).not.toHaveBeenCalled();
+  });
+
   it("passes the shared 50-fact cap into restricted website ingestion", async () => {
     await expect(importWebsiteAction("example.com")).resolves.toMatchObject({
       ok: true,
@@ -162,6 +191,19 @@ describe("restricted trial model-backed training actions", () => {
     });
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("explains when a website import is blocked by the 50-fact limit", async () => {
+    ingestWebsite.mockResolvedValue({
+      pages: 1,
+      drafts: 0,
+      capacityReached: true,
+    });
+
+    await expect(importWebsiteAction("example.com")).resolves.toEqual({
+      ok: false,
+      message: "Your free trial can store up to 50 facts. Archive a fact before importing more.",
+    });
   });
 
   it("passes the shared 50-fact cap into restricted file ingestion", async () => {
@@ -182,6 +224,20 @@ describe("restricted trial model-backed training actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("explains when a file import is blocked by the 50-fact limit", async () => {
+    ingestFile.mockResolvedValue({ drafts: 0, capacityReached: true });
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File(["%PDF"], "services.pdf", { type: "application/pdf" }),
+    );
+
+    await expect(importFileAction(formData)).resolves.toEqual({
+      ok: false,
+      message: "Your free trial can store up to 50 facts. Archive a fact before importing more.",
+    });
+  });
+
   it("passes the shared 50-fact cap into restricted Google ingestion", async () => {
     await expect(importGbpAction("Example Business Singapore")).resolves.toMatchObject({
       ok: true,
@@ -198,5 +254,21 @@ describe("restricted trial model-backed training actions", () => {
       },
     );
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("explains when a Google import is blocked by the 50-fact limit", async () => {
+    ingestGbp.mockResolvedValue({
+      name: "Example Business",
+      drafts: 0,
+      websiteCrawled: false,
+      capacityReached: true,
+    });
+
+    await expect(
+      importGbpAction("Example Business Singapore"),
+    ).resolves.toEqual({
+      ok: false,
+      message: "Your free trial can store up to 50 facts. Archive a fact before importing more.",
+    });
   });
 });

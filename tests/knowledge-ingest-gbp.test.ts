@@ -128,6 +128,14 @@ describe("ingestGbp", () => {
     vi.unstubAllGlobals();
   });
 
+  it("propagates the shared store's capacity result", async () => {
+    storeKnowledgeFacts.mockResolvedValue({ created: 0, capacityReached: true });
+
+    await expect(
+      ingestGbp("org1", "glow beauty bangalore")
+    ).resolves.toMatchObject({ drafts: 0, capacityReached: true });
+  });
+
   it("chains into the website crawl and survives its failure", async () => {
     envState.GOOGLE_MAPS_API_KEY = "maps-key";
     storeKnowledgeFacts.mockResolvedValue({ created: 1, capacityReached: false });

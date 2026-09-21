@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { distillAnswer } from "@/modules/knowledge/distill";
 import { scriptItemById } from "@/modules/knowledge/questionnaire";
+import { storeKnowledgeFacts } from "@/modules/knowledge/store";
 import { parseHoursText } from "@/modules/calendar/hours-text";
 import { settingsWithOpeningHours } from "@/modules/calendar/hours-store";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
@@ -54,24 +55,37 @@ async function distillOne(
   orgId: string,
   v: string,
   id: string,
-  answer: string
-): Promise<number> {
+  answer: string,
+  activeDraftCap?: number,
+): Promise<{ facts: number; capacityReached: boolean }> {
   const item = scriptItemById(v, id);
   const trimmed = answer.trim();
-  if (!item || !trimmed) return 0;
+  if (!item || !trimmed) return { facts: 0, capacityReached: false };
   await rememberOpeningHours(orgId, id, trimmed);
-  const facts = await distillAnswer(item.prompt, trimmed, orgId);
+  const distilled = await distillAnswer(item.prompt, trimmed, orgId);
   // The script knows the section; prefer it when the model punted to "other".
+  const facts = distilled.map((fact) => ({
+    ...fact,
+    category: fact.category === "other" ? item.category : fact.category,
+  }));
+  if (activeDraftCap !== undefined) {
+    const stored = await storeKnowledgeFacts(orgId, facts, {
+      source: "questionnaire",
+      status: "active",
+      activeDraftCap,
+    });
+    return { facts: stored.created, capacityReached: stored.capacityReached };
+  }
   await prisma.knowledgeEntry.createMany({
     data: facts.map((f) => ({
       orgId,
-      category: f.category === "other" ? item.category : f.category,
+      category: f.category,
       fact: f.fact,
       condition: f.condition ?? null,
       source: "questionnaire",
     })),
   });
-  return facts.length;
+  return { facts: facts.length, capacityReached: false };
 }
 
 /** Interview mode: one answer at a time. */
@@ -88,7 +102,7 @@ export async function submitQuestionnaireAnswerAction(
         message: "Use the 5-question trial setup so your answers are saved together",
       };
     }
-    const facts = await distillOne(
+    const result = await distillOne(
       ctx.org.id,
       await vertical(ctx.org.id),
       id,
@@ -97,8 +111,10 @@ export async function submitQuestionnaireAnswerAction(
     revalidatePath("/agent");
     return {
       ok: true,
-      facts,
-      message: facts ? `Learned ${facts} fact${facts === 1 ? "" : "s"}.` : "Skipped.",
+      facts: result.facts,
+      message: result.facts
+        ? `Learned ${result.facts} fact${result.facts === 1 ? "" : "s"}.`
+        : "Skipped.",
     };
   } catch (err) {
     return {
@@ -131,14 +147,33 @@ export async function submitQuestionnaireAction(
       async () => {
         const v = await vertical(ctx.org.id);
         let facts = 0;
+        let capacityReached = false;
         for (const answer of selected) {
-          facts += await distillOne(ctx.org.id, v, answer.id, answer.answer);
+          const stored = await distillOne(
+            ctx.org.id,
+            v,
+            answer.id,
+            answer.answer,
+            restricted ? 50 : undefined,
+          );
+          facts += stored.facts;
+          if (stored.capacityReached) {
+            capacityReached = true;
+            break;
+          }
         }
-        return { facts };
+        return { facts, capacityReached };
       },
       (value) => value.facts > 0
     );
     revalidatePath("/agent");
+    if (restricted && result.capacityReached && result.facts === 0) {
+      return {
+        ok: false,
+        facts: 0,
+        message: "Your free trial can store up to 50 facts. Archive a fact before adding another.",
+      };
+    }
     return {
       ok: true,
       facts: result.facts,

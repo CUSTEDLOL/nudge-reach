@@ -5,6 +5,7 @@ const {
   requireOrgContext,
   requireRole,
   distillAnswer,
+  storeKnowledgeFacts,
   isRestrictedAcquisitionTrial,
   withTrialKnowledgeSource,
 } = vi.hoisted(() => ({
@@ -16,6 +17,7 @@ const {
   requireOrgContext: vi.fn(),
   requireRole: vi.fn(),
   distillAnswer: vi.fn(),
+  storeKnowledgeFacts: vi.fn(),
   isRestrictedAcquisitionTrial: vi.fn(),
   withTrialKnowledgeSource: vi.fn(),
 }));
@@ -24,6 +26,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext, requireRole }));
 vi.mock("@/modules/knowledge/distill", () => ({ distillAnswer }));
+vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 vi.mock("@/modules/trial/knowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/trial/knowledge")>()),
@@ -85,6 +88,10 @@ describe("acquisition trial questionnaire", () => {
     prisma.agentProfile.findUnique.mockResolvedValue({ vertical: "clinic" });
     prisma.knowledgeEntry.createMany.mockResolvedValue({ count: 1 });
     distillAnswer.mockResolvedValue([{ category: "other", fact: "A fact" }]);
+    storeKnowledgeFacts.mockResolvedValue({
+      created: 1,
+      capacityReached: false,
+    });
     isRestrictedAcquisitionTrial.mockResolvedValue(true);
     withTrialKnowledgeSource.mockImplementation(
       async (_orgId, _source, work) => work()
@@ -112,6 +119,36 @@ describe("acquisition trial questionnaire", () => {
       expect.any(Function),
       expect.any(Function)
     );
+    expect(storeKnowledgeFacts).toHaveBeenCalledTimes(5);
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org_1",
+      [{ category: "menu_services", fact: "A fact" }],
+      {
+        source: "questionnaire",
+        status: "active",
+        activeDraftCap: 50,
+      },
+    );
+    expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
+  });
+
+  it("stops a restricted questionnaire at the shared 50-fact limit", async () => {
+    storeKnowledgeFacts.mockResolvedValue({
+      created: 0,
+      capacityReached: true,
+    });
+
+    await expect(submitQuestionnaireAction([
+      { id: "business_summary", answer: "Aster is an aesthetic clinic." },
+      { id: "services_list", answer: "Hair restoration." },
+    ])).resolves.toEqual({
+      ok: false,
+      facts: 0,
+      message: "Your free trial can store up to 50 facts. Archive a fact before adding another.",
+    });
+
+    expect(distillAnswer).toHaveBeenCalledOnce();
+    expect(storeKnowledgeFacts).toHaveBeenCalledOnce();
   });
 
   it("rejects one-at-a-time answers so they cannot bypass the batch budget", async () => {
@@ -133,5 +170,7 @@ describe("acquisition trial questionnaire", () => {
       "Aster is an aesthetic clinic."
     )).resolves.toMatchObject({ ok: true, facts: 1 });
     expect(distillAnswer).toHaveBeenCalledOnce();
+    expect(prisma.knowledgeEntry.createMany).toHaveBeenCalledOnce();
+    expect(storeKnowledgeFacts).not.toHaveBeenCalled();
   });
 });

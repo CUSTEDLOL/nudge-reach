@@ -6,6 +6,7 @@ import { isSimulated } from "@/modules/orgs/mode";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { recordAudit } from "@/modules/orgs/audit";
 import { resetDemoWorkspace } from "@/modules/demo/reset";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 
 export interface ActionResult {
   ok: boolean;
@@ -14,13 +15,19 @@ export interface ActionResult {
 
 /**
  * Reset demo data: wipe this workspace's CRM data and re-seed the demo
- * workspace. Guard-railed twice — simulation mode only (never near real
- * customer data) and OWNER only.
+ * workspace. Guard-railed three ways — unavailable to restricted trials,
+ * simulation mode only (never near real customer data), and OWNER only.
  */
 export async function resetDemoDataAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "OWNER");
+    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
+      return {
+        ok: false,
+        message: "Demo reset is not available during a free trial.",
+      };
+    }
     if (!isSimulated(ctx.org)) {
       return {
         ok: false,
