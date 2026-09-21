@@ -80,7 +80,8 @@ describe("crm oauth routes", () => {
     );
 
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("https://nudgeagent.app/explore?feature=crm");
+    expect(res.headers.get("location")).toBe("https://nudgeagent.app/dashboard?upgrade=crm");
+    expect(res.headers.get("location")).not.toContain("/explore");
     expect(exchangeCode).not.toHaveBeenCalled();
     expect(saveConnection).not.toHaveBeenCalled();
   });

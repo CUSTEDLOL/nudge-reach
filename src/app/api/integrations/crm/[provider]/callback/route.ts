@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
   const base = env.NEXT_PUBLIC_APP_URL ?? url.origin;
   const gate = await checkAiFrontDesk(verified.orgId);
   if (!gate.allowed) {
-    return NextResponse.redirect(`${base}/explore?feature=crm`, 307);
+    return NextResponse.redirect(`${base}/dashboard?upgrade=crm`, 307);
   }
   const meta: Record<string, string> = {};
   for (const [k, v] of url.searchParams) meta[k] = v;
