@@ -4,6 +4,7 @@ import { Container } from "./section";
 import { Logo } from "./logo";
 import { LaunchDemoButton } from "./launch-cta";
 import { HoloCard } from "./holo-card";
+import { CONTACT_EMAIL, whatsappHref } from "./contact-links";
 
 type FooterLink = {
   label: string;
@@ -15,20 +16,23 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Explore",
     links: [
+      // Mirrors the navbar's order so the two read as one site.
       { label: "Features", href: "/#features" },
       { label: "Compare", href: "/#compare" },
-      { label: "Clinics", href: "/industries/clinics" },
-      { label: "Resources", href: "/resources" },
       { label: "Pricing", href: "/pricing" },
       { label: "FAQ", href: "/faq" },
+      { label: "Resources", href: "/resources" },
+      { label: "Clinics", href: "/industries/clinics" },
     ],
   },
   {
     title: "Start",
     links: [
+      // The trial is the primary CTA now, so it leads — and it points at the
+      // trial page rather than /login, which is where it used to dead-end.
+      { label: "Free trial", href: "/free-trial" },
       { label: "Book a demo", demo: true },
-      { label: "Start your trial", href: "/login" },
-      { label: "Contact", href: "mailto:hqnudge@gmail.com" },
+      { label: "Contact", href: "/contact" },
     ],
   },
   {
@@ -124,19 +128,21 @@ export function Footer() {
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <a
-                href="mailto:hqnudge@gmail.com"
+                href={`mailto:${CONTACT_EMAIL}`}
                 aria-label="Email Nudge"
                 className="grid h-11 w-11 place-items-center rounded-xl border-2 border-ink/70 bg-white text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)] transition-all hover:-translate-y-0.5 hover:bg-[#ffd94a]"
               >
                 <Mail className="h-[18px] w-[18px]" />
               </a>
-              <LaunchDemoButton
-                surface="footer"
-                aria-label="Book a demo call"
+              <a
+                href={whatsappHref()}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Message Nudge on WhatsApp"
                 className="grid h-11 w-11 place-items-center rounded-xl border-2 border-ink/70 bg-white text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)] transition-all hover:-translate-y-0.5 hover:bg-[#06c167] hover:text-white"
               >
                 <MessageCircle className="h-[18px] w-[18px]" />
-              </LaunchDemoButton>
+              </a>
               <span className="inline-flex items-center gap-2 rounded-xl border-2 border-ink/70 bg-[#e9f7ff] px-4 py-2.5 text-[12.5px] font-black text-ink shadow-[4px_4px_0_rgba(10,15,13,0.82)]">
                 <ShieldCheck className="h-4 w-4" />
                 Official Meta Cloud API only

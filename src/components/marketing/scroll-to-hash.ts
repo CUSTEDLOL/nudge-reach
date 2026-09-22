@@ -69,3 +69,27 @@ export function isSamePageHash(href: string, pathname: string): boolean {
   if (!href.startsWith("/#")) return false;
   return pathname === "/";
 }
+
+/**
+ * Where to put a dropdown panel so it hangs under its trigger.
+ *
+ * The navbar pill sets overflow-hidden (it clips the logo slab's corners), so
+ * the panel cannot be an absolutely-positioned child of the trigger — it is
+ * rendered outside the pill and positioned against the trigger's measured
+ * rect instead. Centring it on the trigger would push it off-screen for the
+ * right-most nav item on a narrow window, so the result is clamped to the
+ * viewport with a small margin.
+ */
+export function panelPosition(
+  trigger: { left: number; width: number; bottom: number },
+  viewportWidth: number,
+  panelWidth: number,
+  gap = 8,
+  margin = 12
+): { left: number; top: number } {
+  const centred = trigger.left + trigger.width / 2 - panelWidth / 2;
+  const maxLeft = viewportWidth - panelWidth - margin;
+  // When the viewport is narrower than the panel, margin wins over maxLeft.
+  const left = Math.max(margin, Math.min(centred, Math.max(margin, maxLeft)));
+  return { left, top: trigger.bottom + gap };
+}

@@ -2,10 +2,10 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, ChevronDown, Menu, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
-import { isSamePageHash, scrollToHash } from "./scroll-to-hash";
+import { isSamePageHash, panelPosition, scrollToHash } from "./scroll-to-hash";
 
 /**
  * Six top-level entries. The two content/industry destinations sit under
@@ -55,7 +55,7 @@ function NavLinks({
 }: {
   overHero: boolean;
   openMenu: string | null;
-  setOpenMenu: (label: string | null) => void;
+  setOpenMenu: (label: string | null, trigger: HTMLElement | null) => void;
 }) {
   const itemCls = cn(
     "block rounded-lg px-3.5 py-2.5 text-[16px] font-bold transition-all duration-200 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
@@ -74,7 +74,12 @@ function NavLinks({
               type="button"
               aria-expanded={openMenu === link.label}
               aria-haspopup="true"
-              onClick={() => setOpenMenu(openMenu === link.label ? null : link.label)}
+              onClick={(e) =>
+                setOpenMenu(
+                  openMenu === link.label ? null : link.label,
+                  e.currentTarget
+                )
+              }
               className={cn(itemCls, "inline-flex items-center gap-1")}
             >
               {link.label}
@@ -99,16 +104,41 @@ function NavLinks({
   );
 }
 
-/** The Resources panel. Lives outside the clipped pill, centred under it. */
+/**
+ * The Resources panel. The navbar pill clips its children, so this is rendered
+ * outside the pill and positioned against the trigger's measured rect — it
+ * cannot simply hang off the trigger with `absolute`.
+ */
+const PANEL_WIDTH = 224; // w-56
+
 function NavMenuPanel({
   link,
+  trigger,
   onClose,
 }: {
   link: NavLink;
+  trigger: HTMLElement | null;
   onClose: () => void;
 }) {
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!trigger) return;
+    const place = () =>
+      setPos(
+        panelPosition(trigger.getBoundingClientRect(), window.innerWidth, PANEL_WIDTH)
+      );
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [trigger]);
+
+  if (!pos) return null;
+
   return (
-    <div className="absolute left-1/2 top-full z-40 mt-2 hidden w-56 -translate-x-1/2 lg:block">
+    <div
+      style={{ left: pos.left, top: pos.top, width: PANEL_WIDTH }}
+      className="fixed z-40 hidden lg:block">
       <ul className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white/95 p-2 shadow-[0_24px_60px_-20px_rgba(10,31,26,0.35)] backdrop-blur-xl">
         {link.children?.map((child) => (
           <li key={child.label}>
@@ -221,7 +251,12 @@ function PixelSlab({ overHero }: { overHero: boolean }) {
  */
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openMenu, setMenu] = useState<string | null>(null);
+  const [menuTrigger, setMenuTrigger] = useState<HTMLElement | null>(null);
+  const setOpenMenu = (label: string | null, trigger: HTMLElement | null = null) => {
+    setMenu(label);
+    setMenuTrigger(label ? trigger : null);
+  };
   const [overHero, setOverHero] = useState(true);
   const openMenuLink = NAV_LINKS.find((l) => l.label === openMenu) ?? null;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -338,7 +373,11 @@ export function Navbar() {
         </div>
 
         {openMenuLink && (
-          <NavMenuPanel link={openMenuLink} onClose={() => setOpenMenu(null)} />
+          <NavMenuPanel
+            link={openMenuLink}
+            trigger={menuTrigger}
+            onClose={() => setOpenMenu(null)}
+          />
         )}
       </div>
 

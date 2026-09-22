@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { isSamePageHash, scrollToHash } from "@/components/marketing/scroll-to-hash";
+import {
+  isSamePageHash,
+  panelPosition,
+  scrollToHash,
+} from "@/components/marketing/scroll-to-hash";
 
 /**
  * The Compare link "stops in the middle" of the section. `scroll-behavior:
@@ -72,3 +76,44 @@ describe("isSamePageHash", () => {
     expect(isSamePageHash("/industries/clinics", "/")).toBe(false);
   });
 });
+
+/**
+ * The Resources panel is rendered outside the navbar pill (the pill clips its
+ * children), so it has to be positioned against the trigger's measured rect.
+ * It first shipped centred on the whole navbar, which put it under the middle
+ * of the bar rather than under Resources.
+ */
+describe("panelPosition", () => {
+  const PANEL = 224; // w-56
+
+  it("centres the panel under its trigger", () => {
+    const { left, top } = panelPosition(
+      { left: 600, width: 120, bottom: 70 },
+      1440,
+      PANEL
+    );
+    // trigger centre 660 → panel left 660 - 112
+    expect(left).toBe(548);
+    expect(top).toBe(78);
+  });
+
+  it("keeps a right-edge trigger on screen", () => {
+    const { left } = panelPosition(
+      { left: 1340, width: 120, bottom: 70 },
+      1440,
+      PANEL
+    );
+    expect(left).toBe(1440 - PANEL - 12);
+    expect(left + PANEL).toBeLessThanOrEqual(1440);
+  });
+
+  it("keeps a left-edge trigger on screen", () => {
+    const { left } = panelPosition({ left: 4, width: 80, bottom: 70 }, 1440, PANEL);
+    expect(left).toBe(12);
+  });
+
+  it("does not go negative when the viewport is narrower than the panel", () => {
+    const { left } = panelPosition({ left: 10, width: 60, bottom: 70 }, 200, PANEL);
+    expect(left).toBeGreaterThanOrEqual(0);
+  });
+})

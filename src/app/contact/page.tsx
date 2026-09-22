@@ -5,13 +5,9 @@ import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
 import { ScrollTop } from "@/components/marketing/scroll-top";
 import { BookDemoButton } from "@/components/marketing/book-demo";
+import { whatsappHref } from "@/components/marketing/contact-links";
 
 export const metadata: Metadata = metadataFor("/contact");
-
-/** Nudge's own WhatsApp Business number (wa.me wants bare digits). */
-const WHATSAPP_NUMBER = "6581373154";
-const WHATSAPP_PREFILL =
-  "Hi Nudge — I'd like to know more about the AI Front Desk.";
 
 /**
  * Two ways to reach us and nothing to fill in. A contact form is the wrong
@@ -41,7 +37,7 @@ export default function ContactPage() {
             </BookDemoButton>
 
             <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_PREFILL)}`}
+              href={whatsappHref()}
               target="_blank"
               rel="noopener noreferrer"
               className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-ink/15 bg-white px-6 py-3 text-[15px] font-semibold text-ink transition-all hover:-translate-y-0.5 hover:border-ink/25 hover:shadow-[0_12px_32px_-14px_rgba(10,31,26,0.35)]"
