@@ -1,7 +1,7 @@
 # Instant Trial Access Design
 
-**Date:** 2026-09-22  
-**Status:** Approved  
+**Date:** 2026-09-22
+**Status:** Approved
 **Builds on:** `docs/plans/2026-09-21-simplified-free-trial-design.md`
 
 ## Objective
@@ -177,4 +177,3 @@ Test-first coverage must prove:
 - the reminder is non-blocking, dismissible, and supports resend errors; and
 - focused tests, full Vitest, TypeScript, lint, production build, database sync,
   RLS audit, and a deployed production smoke test all pass.
-

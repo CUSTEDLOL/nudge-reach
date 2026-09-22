@@ -3063,3 +3063,22 @@ id can be withdrawn, which would recreate this bug.
 - The local public route returned HTTP 200. Automated responsive contracts are
   green, but the 390/768/1440 visual and keyboard walkthrough remains pending
   because no interactive browser was attached to this session.
+
+## 2026-09-22 — Instant trial access local release readiness
+
+- Password signup now opens `/dashboard` immediately, taking the new owner
+  straight into the trial Inbox without a confirmation wall. Email verification
+  is optional, non-blocking, and tracked separately from account access.
+- Global Supabase auth confirmation is unchanged. Account provisioning requires
+  both the submitted acquisition claim and its matching HTTP-only resume cookie;
+  the approved authenticated metadata handoff preserves the existing atomic,
+  email-bound, single-use claim architecture.
+- Admin acquisition-trial projections and rendering now include `phoneE164`, and
+  every reachable shared-trial surface uses general-business language rather
+  than clinic-specific copy.
+- Fresh local verification passed with 1,950 tests passed and 3 skipped;
+  TypeScript (`npx tsc --noEmit`), ESLint, and the production build all passed.
+- The additive nullable email-verification database field and Supabase auth
+  email-template configuration are staged in source but have not been applied
+  remotely. Database/RLS/auth configuration, integration, deployment, and
+  production smoke remain pending the final whole-branch review.
