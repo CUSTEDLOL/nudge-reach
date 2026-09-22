@@ -70,8 +70,26 @@ function authenticatedSession(
 }
 
 describe("free trial acquisition page", () => {
-  const html = renderToStaticMarkup(createElement(FreeTrialPage));
+  const fullHtml = renderToStaticMarkup(createElement(FreeTrialPage));
+
+  /**
+   * The page now wears the marketing navbar and footer so it reads as part of
+   * the site. That chrome carries its own links and copy ("Clinics", "Explore",
+   * a second demo button), so assertions about *this page's* content run
+   * against `<main>` only — the chrome is covered by tests/marketing-nav.test.ts.
+   */
+  const html = fullHtml.slice(
+    fullHtml.indexOf("<main"),
+    fullHtml.indexOf("</main>"),
+  );
   const text = plainText(html);
+
+  it("wears the site's navbar and footer", () => {
+    expect(html).not.toBe("");
+    expect(fullHtml).toContain('id="site-footer"');
+    expect(fullHtml).toContain('href="/free-trial"');
+    expect(count(fullHtml, /<h1\b/g)).toBe(1);
+  });
 
   it("offers one focused path into the trial", () => {
     expect(count(html, /<h1\b/g)).toBe(1);
@@ -91,9 +109,10 @@ describe("free trial acquisition page", () => {
     expect(text).toContain("Test");
     expect(text).toContain("Go live");
     expect(text).toContain("Book a free demo");
-    expect(html).toContain('href="/login"');
-    expect(html).toContain('href="/privacy"');
-    expect(html).toContain('href="/terms"');
+    // Sign-in and the legal links now live in the shared navbar and footer.
+    expect(fullHtml).toContain('href="/login"');
+    expect(fullHtml).toContain('href="/privacy"');
+    expect(fullHtml).toContain('href="/terms"');
     expect(text.toLowerCase()).not.toContain("blast");
   });
 

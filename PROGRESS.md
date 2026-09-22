@@ -1,5 +1,28 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## /free-trial joins the marketing site (2026-09-22) ✅ CODE — BROWSER-VERIFIED
+
+- The acquisition page had its own one-off header and footer, so paid traffic
+  landed somewhere that did not look like nudgeagent.app. It now renders the
+  shared `Navbar` and `Footer` — the same chrome as `/pricing` and `/contact` —
+  and the whole page speaks the landing page's visual language: cream ground
+  with the footer's graph paper, black display caps over a softer second line,
+  sticker eyebrow, and bordered cards with hard shadows.
+- The signup form is the one hero object (bordered card, 9px shadow); the left
+  column carries the promise, four proof chips (7 days · 15 replies · no card ·
+  no live WhatsApp) and a two-bubble WhatsApp preview that shows what a trial
+  reply looks like without adding copy. Inputs and the submit button moved onto
+  the site's control vocabulary.
+- `FreeTrialSections` was rewritten shorter and more scannable: three numbered
+  steps joined by a dashed rule, three outcome cards (one lime) for what the
+  paid front desk does, and three always-visible FAQs. No new client JS.
+- `tests/free-trial-page.test.ts` now scopes its copy, contrast and
+  single-conversion-path assertions to `<main>`, because the shared chrome
+  brings its own links and a second demo button; navbar/footer are covered by
+  `tests/marketing-nav.test.ts`. Verified: **1,993 tests passed** (+3 skipped),
+  ESLint and the production build exited 0; hero, steps and the full mobile
+  layout checked in a real 390px viewport.
+
 ## Instant-trial identity provenance (2026-09-22) ✅ CODE — RELEASE REVIEW PENDING
 
 - Service-role-created instant-trial users now carry a server-controlled
