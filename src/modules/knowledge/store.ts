@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import type { DistilledFact } from "./distill";
 
 type StoredKnowledgeStatus = "active" | "draft";
@@ -14,6 +15,11 @@ export interface StoreKnowledgeFactsResult {
   created: number;
   capacityReached: boolean;
 }
+
+type KnowledgeStoreTransaction = Pick<
+  Prisma.TransactionClient,
+  "$queryRaw" | "knowledgeEntry"
+>;
 
 function normalizedFactKey(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
@@ -52,10 +58,47 @@ function rowsFor(
   }));
 }
 
+async function storeCappedKnowledgeFacts(
+  tx: KnowledgeStoreTransaction,
+  orgId: string,
+  facts: DistilledFact[],
+  options: StoreKnowledgeFactsOptions,
+): Promise<StoreKnowledgeFactsResult> {
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${orgId}, 0)) AS locked`;
+  const used = await tx.knowledgeEntry.count({
+    where: { orgId, status: { in: ["active", "draft"] } },
+  });
+  const remaining = Math.max(0, options.activeDraftCap! - used);
+  if (remaining === 0) return { created: 0, capacityReached: true };
+  const existing = await tx.knowledgeEntry.findMany({
+    where: { orgId, status: { in: ["active", "draft"] } },
+    select: { fact: true },
+  });
+  const selected = selectNewFacts(
+    facts,
+    existing,
+    Math.min(remaining, options.maxCreated ?? facts.length),
+  );
+  if (selected.length === 0) {
+    return {
+      created: 0,
+      capacityReached: remaining === 0,
+    };
+  }
+  const inserted = await tx.knowledgeEntry.createMany({
+    data: rowsFor(orgId, selected, options),
+  });
+  return {
+    created: inserted.count,
+    capacityReached: used + inserted.count >= options.activeDraftCap!,
+  };
+}
+
 export async function storeKnowledgeFacts(
   orgId: string,
   facts: DistilledFact[],
   options: StoreKnowledgeFactsOptions,
+  transaction?: KnowledgeStoreTransaction,
 ): Promise<StoreKnowledgeFactsResult> {
   if (options.activeDraftCap === undefined) {
     const existing = await prisma.knowledgeEntry.findMany({
@@ -74,34 +117,10 @@ export async function storeKnowledgeFacts(
     return { created: inserted.count, capacityReached: false };
   }
 
-  return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${orgId}, 0)) AS locked`;
-    const used = await tx.knowledgeEntry.count({
-      where: { orgId, status: { in: ["active", "draft"] } },
-    });
-    const remaining = Math.max(0, options.activeDraftCap! - used);
-    if (remaining === 0) return { created: 0, capacityReached: true };
-    const existing = await tx.knowledgeEntry.findMany({
-      where: { orgId, status: { in: ["active", "draft"] } },
-      select: { fact: true },
-    });
-    const selected = selectNewFacts(
-      facts,
-      existing,
-      Math.min(remaining, options.maxCreated ?? facts.length),
-    );
-    if (selected.length === 0) {
-      return {
-        created: 0,
-        capacityReached: remaining === 0,
-      };
-    }
-    const inserted = await tx.knowledgeEntry.createMany({
-      data: rowsFor(orgId, selected, options),
-    });
-    return {
-      created: inserted.count,
-      capacityReached: used + inserted.count >= options.activeDraftCap!,
-    };
-  });
+  if (transaction) {
+    return storeCappedKnowledgeFacts(transaction, orgId, facts, options);
+  }
+  return prisma.$transaction((tx) =>
+    storeCappedKnowledgeFacts(tx, orgId, facts, options),
+  );
 }

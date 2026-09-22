@@ -71,6 +71,24 @@ describe("storeKnowledgeFacts", () => {
     });
   });
 
+  it("joins an existing transaction for an atomic capped write", async () => {
+    await expect(
+      storeKnowledgeFacts(
+        "org_1",
+        [facts[0]],
+        {
+          source: "manual",
+          status: "active",
+          activeDraftCap: 50,
+        },
+        tx as never,
+      ),
+    ).resolves.toEqual({ created: 2, capacityReached: true });
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it("dedupes normalized active and draft facts without treating duplicates as capacity", async () => {
     tx.knowledgeEntry.count.mockResolvedValue(1);
     tx.knowledgeEntry.findMany.mockResolvedValue([

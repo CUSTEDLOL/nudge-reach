@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   prisma,
+  transactionClient,
   requireOrgContext,
   requireRole,
   isRestrictedAcquisitionTrial,
@@ -15,7 +16,11 @@ const {
   withTrialKnowledgeImport,
   activateTrialAgentIfGrounded,
 } = vi.hoisted(() => ({
+  transactionClient: {
+    knowledgeEntry: { updateMany: vi.fn() },
+  },
   prisma: {
+    $transaction: vi.fn(),
     agentProfile: { findUnique: vi.fn() },
     knowledgeEntry: {
       create: vi.fn(),
@@ -101,6 +106,10 @@ describe("restricted trial model-backed training actions", () => {
     ]);
     prisma.knowledgeEntry.create.mockResolvedValue({});
     prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 1 });
+    transactionClient.knowledgeEntry.updateMany.mockResolvedValue({ count: 1 });
+    prisma.$transaction.mockImplementation(async (work) =>
+      work(transactionClient),
+    );
     storeKnowledgeFacts.mockResolvedValue({
       created: 1,
       capacityReached: false,
@@ -155,10 +164,38 @@ describe("restricted trial model-backed training actions", () => {
         status: "active",
         activeDraftCap: 50,
       },
+      transactionClient,
     );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
-    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(ctx);
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(
+      ctx,
+      transactionClient,
+    );
+  });
+
+  it("rolls back a restricted manual fact when activation fails", async () => {
+    activateTrialAgentIfGrounded.mockRejectedValue(new Error("activation failed"));
+
+    await expect(
+      addFactAction({ category: "hours", fact: "Open on Sundays" }),
+    ).resolves.toEqual({ ok: false, message: "activation failed" });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(storeKnowledgeFacts).toHaveBeenCalledWith(
+      "org_1",
+      [{ category: "hours", fact: "Open on Sundays" }],
+      {
+        source: "manual",
+        status: "active",
+        activeDraftCap: 50,
+      },
+      transactionClient,
+    );
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(
+      ctx,
+      transactionClient,
+    );
   });
 
   it("returns a clear trial-limit message without revalidating when capacity is full", async () => {
@@ -208,28 +245,73 @@ describe("restricted trial model-backed training actions", () => {
       message: "Fact approved.",
     });
 
-    expect(prisma.knowledgeEntry.updateMany).toHaveBeenCalledWith({
+    expect(transactionClient.knowledgeEntry.updateMany).toHaveBeenCalledWith({
       where: { id: "draft_1", orgId: "org_1", status: "draft" },
       data: { status: "active" },
     });
-    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(ctx);
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(
+      ctx,
+      transactionClient,
+    );
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("rolls back an individual approval when activation fails", async () => {
+    activateTrialAgentIfGrounded.mockRejectedValue(new Error("activation failed"));
+
+    await expect(approveDraftAction("draft_1")).resolves.toEqual({
+      ok: false,
+      message: "activation failed",
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(transactionClient.knowledgeEntry.updateMany).toHaveBeenCalledWith({
+      where: { id: "draft_1", orgId: "org_1", status: "draft" },
+      data: { status: "active" },
+    });
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(
+      ctx,
+      transactionClient,
+    );
+  });
+
   it("activates after a non-empty restricted-trial bulk approval", async () => {
-    prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 2 });
+    transactionClient.knowledgeEntry.updateMany.mockResolvedValue({ count: 2 });
 
     await expect(approveAllDraftsAction()).resolves.toEqual({
       ok: true,
       message: "Approved 2 facts.",
     });
 
-    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(ctx);
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(
+      ctx,
+      transactionClient,
+    );
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("rolls back a bulk approval when activation fails", async () => {
+    transactionClient.knowledgeEntry.updateMany.mockResolvedValue({ count: 2 });
+    activateTrialAgentIfGrounded.mockRejectedValue(new Error("activation failed"));
+
+    await expect(approveAllDraftsAction()).resolves.toEqual({
+      ok: false,
+      message: "activation failed",
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(transactionClient.knowledgeEntry.updateMany).toHaveBeenCalledWith({
+      where: { orgId: "org_1", status: "draft" },
+      data: { status: "active" },
+    });
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(
+      ctx,
+      transactionClient,
+    );
+  });
+
   it("does not activate a zero-row bulk approval", async () => {
-    prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 0 });
+    transactionClient.knowledgeEntry.updateMany.mockResolvedValue({ count: 0 });
     await approveAllDraftsAction();
     expect(activateTrialAgentIfGrounded).not.toHaveBeenCalled();
   });

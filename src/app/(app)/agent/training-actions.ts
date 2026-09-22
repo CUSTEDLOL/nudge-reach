@@ -106,13 +106,14 @@ export async function addFactAction(input: {
     if (fact.length < 3) return { ok: false, message: "Fact is too short." };
     if (!isCategory(input.category))
       return { ok: false, message: "Pick a valid category." };
+    const category = input.category;
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
     const condition = input.condition?.trim().slice(0, 120);
     if (!restricted) {
       await prisma.knowledgeEntry.create({
         data: {
           orgId: ctx.org.id,
-          category: input.category,
+          category,
           fact: fact.slice(0, 300),
           condition: condition || null,
           source: "manual",
@@ -122,19 +123,26 @@ export async function addFactAction(input: {
       revalidatePath("/dashboard");
       return { ok: true, message: "Fact added." };
     }
-    const stored = await storeKnowledgeFacts(
-      ctx.org.id,
-      [{
-        category: input.category,
-        fact: fact.slice(0, 300),
-        ...(condition ? { condition } : {}),
-      }],
-      {
-        source: "manual",
-        status: "active",
-        activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts,
-      },
-    );
+    const stored = await prisma.$transaction(async (tx) => {
+      const result = await storeKnowledgeFacts(
+        ctx.org.id,
+        [{
+          category,
+          fact: fact.slice(0, 300),
+          ...(condition ? { condition } : {}),
+        }],
+        {
+          source: "manual",
+          status: "active",
+          activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts,
+        },
+        tx,
+      );
+      if (result.created > 0) {
+        await activateTrialAgentIfGrounded(ctx, tx);
+      }
+      return result;
+    });
     if (stored.created === 0) {
       return stored.capacityReached
         ? {
@@ -143,7 +151,6 @@ export async function addFactAction(input: {
           }
         : { ok: false, message: "That fact is already in your knowledge." };
     }
-    await activateTrialAgentIfGrounded(ctx);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
     return { ok: true, message: "Fact added." };
@@ -393,14 +400,22 @@ export async function approveDraftAction(id: string): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
-    const updated = await prisma.knowledgeEntry.updateMany({
-      where: { id, orgId: ctx.org.id, status: "draft" },
-      data: { status: "active" },
-    });
+    const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    const update = (client: Pick<typeof prisma, "knowledgeEntry">) =>
+      client.knowledgeEntry.updateMany({
+        where: { id, orgId: ctx.org.id, status: "draft" },
+        data: { status: "active" },
+      });
+    const updated = restricted
+      ? await prisma.$transaction(async (tx) => {
+          const result = await update(tx);
+          if (result.count > 0) {
+            await activateTrialAgentIfGrounded(ctx, tx);
+          }
+          return result;
+        })
+      : await update(prisma);
     if (updated.count === 0) return { ok: false, message: "Draft not found." };
-    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
-      await activateTrialAgentIfGrounded(ctx);
-    }
     revalidatePath("/agent");
     revalidatePath("/dashboard");
     return { ok: true, message: "Fact approved." };
@@ -431,17 +446,22 @@ export async function approveAllDraftsAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
-    const updated = await prisma.knowledgeEntry.updateMany({
-      where: { orgId: ctx.org.id, status: "draft" },
-      data: { status: "active" },
-    });
+    const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    const update = (client: Pick<typeof prisma, "knowledgeEntry">) =>
+      client.knowledgeEntry.updateMany({
+        where: { orgId: ctx.org.id, status: "draft" },
+        data: { status: "active" },
+      });
+    const updated = restricted
+      ? await prisma.$transaction(async (tx) => {
+          const result = await update(tx);
+          if (result.count > 0) {
+            await activateTrialAgentIfGrounded(ctx, tx);
+          }
+          return result;
+        })
+      : await update(prisma);
     recordAudit(ctx, "knowledge.drafts_approved", String(updated.count));
-    if (
-      updated.count > 0
-      && await isRestrictedAcquisitionTrial(ctx.org.id)
-    ) {
-      await activateTrialAgentIfGrounded(ctx);
-    }
     revalidatePath("/agent");
     if (updated.count > 0) revalidatePath("/dashboard");
     return {

@@ -85,6 +85,22 @@ describe("activateTrialAgentIfGrounded", () => {
     });
   });
 
+  it("joins an existing transaction without opening a nested transaction", async () => {
+    const tx = {
+      acquisitionTrial: { findUnique: trialFindUnique },
+      knowledgeEntry: { count: knowledgeCount },
+      agentProfile: { upsert: agentProfileUpsert },
+      org: { updateMany: orgUpdateMany },
+    };
+
+    await expect(
+      activateTrialAgentIfGrounded(ctx as never, tx as never),
+    ).resolves.toEqual({ status: "activated" });
+
+    expect(transaction).not.toHaveBeenCalled();
+    expect(agentProfileUpsert).toHaveBeenCalledTimes(1);
+  });
+
   it("does not activate without an approved org-scoped fact", async () => {
     knowledgeCount.mockResolvedValue(0);
 
