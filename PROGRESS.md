@@ -3078,6 +3078,9 @@ id can be withdrawn, which would recreate this bug.
   than clinic-specific copy.
 - Fresh local verification passed with 1,950 tests passed and 3 skipped;
   TypeScript (`npx tsc --noEmit`), ESLint, and the production build all passed.
+- Pre-existing non-fatal output comprised the `/cta/bottom-cta.png` image-quality
+  warning (quality 100 vs configured `[75]`), expected mocked failure-path
+  stderr, and the Edge Runtime/static-generation warning; every gate exited 0.
 - The additive nullable email-verification database field and Supabase auth
   email-template configuration are staged in source but have not been applied
   remotely. Database/RLS/auth configuration, integration, deployment, and
