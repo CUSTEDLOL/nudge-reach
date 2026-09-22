@@ -764,6 +764,11 @@ model AcquisitionTrial {
   claimTokenHash        String                  @unique
   claimExpiresAt        DateTime
   claimedAt             DateTime?
+  // Set the moment a Supabase account is bound to this trial. It is the only
+  // proof that an auth user holds this row's id/token in its metadata, so it
+  // is what makes an unfinished intake safe (or unsafe) to hand to a later
+  // signup. Never clear it.
+  accountProvisionedAt  DateTime?
   emailVerifiedAt       DateTime?
   startedAt             DateTime?
   expiresAt             DateTime?

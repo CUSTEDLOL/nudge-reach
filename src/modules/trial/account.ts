@@ -91,11 +91,13 @@ export async function provisionTrialAccount(
     });
 
     if (error) {
+      const existingAccount = isExistingAccountError(error);
+      // An account already owns this email, so the row is account-bound even
+      // though we did not create it. Stamp it so no later signup can take it.
+      if (existingAccount) await markAccountProvisioned(trialId, now);
       return {
         ok: false,
-        code: isExistingAccountError(error)
-          ? "existing_account"
-          : "unavailable",
+        code: existingAccount ? "existing_account" : "unavailable",
       };
     }
     if (!data.user) return { ok: false, code: "unavailable" };
@@ -103,5 +105,23 @@ export async function provisionTrialAccount(
     return { ok: false, code: "unavailable" };
   }
 
+  await markAccountProvisioned(trialId, now);
   return { ok: true };
+}
+
+/**
+ * Best-effort, and deliberately stamped *after* the account exists: stamping
+ * first would burn the row whenever account creation fails, which is the
+ * dead end this marker exists to prevent. If this write is the thing that
+ * fails, the row stays reclaimable — recoverable, unlike a permanent block.
+ */
+async function markAccountProvisioned(trialId: string, now: Date) {
+  try {
+    await prisma.acquisitionTrial.updateMany({
+      where: { id: trialId, accountProvisionedAt: null },
+      data: { accountProvisionedAt: now },
+    });
+  } catch {
+    // The account is what matters; the stamp is an optimisation.
+  }
 }
