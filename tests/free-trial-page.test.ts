@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 import FreeTrialPage, { metadata } from "@/app/free-trial/page";
 import {
+  completeTrialAccountHandoff,
   trialAccountPayload,
   trialClaimNeedsRefresh,
   trialIntakePayload,
@@ -43,6 +44,30 @@ const form = {
   contactConsent: true,
   honeypot: "",
 };
+
+const claim = {
+  trialId: "trial_1",
+  claimToken: "opaque-claim-token",
+};
+
+function authenticatedSession(
+  acquisitionTrialId = claim.trialId,
+  acquisitionTrialToken = claim.claimToken,
+) {
+  return {
+    data: {
+      session: {
+        user: {
+          user_metadata: {
+            acquisition_trial_id: acquisitionTrialId,
+            acquisition_trial_token: acquisitionTrialToken,
+          },
+        },
+      },
+    },
+    error: null,
+  };
+}
 
 describe("free trial acquisition page", () => {
   const html = renderToStaticMarkup(createElement(FreeTrialPage));
@@ -168,11 +193,6 @@ describe("free trial browser handoff", () => {
   });
 
   it("sends the claim and password to account creation, then signs in", () => {
-    const claim = {
-      trialId: "trial_1",
-      claimToken: "opaque-claim-token",
-    };
-
     expect(trialAccountPayload(form, claim)).toEqual({
       trialId: "trial_1",
       claimToken: "opaque-claim-token",
@@ -200,6 +220,119 @@ describe("free trial browser handoff", () => {
     expect(signupFormSource).not.toContain(".signUp(");
     expect(signupFormSource).not.toContain("Check your email");
     expect(signupFormSource).not.toContain("confirmationEmail");
+  });
+
+  it("provisions before sign-in and routes only the matching authenticated claim", async () => {
+    const calls: string[] = [];
+    const createAccount = vi.fn(async () => {
+      calls.push("account");
+      return { status: 200, ok: true, result: { ok: true as const } };
+    });
+    const signInWithPassword = vi.fn(async () => {
+      calls.push("sign-in");
+      return authenticatedSession();
+    });
+
+    const result = await completeTrialAccountHandoff(form, claim, {
+      createAccount,
+      signInWithPassword,
+    });
+
+    expect(calls).toEqual(["account", "sign-in"]);
+    expect(result).toEqual({
+      destination: "/dashboard",
+      message: null,
+      showSignIn: false,
+    });
+  });
+
+  it("does not sign in or route after a non-409 provisioning failure", async () => {
+    const signInWithPassword = vi.fn();
+
+    const result = await completeTrialAccountHandoff(form, claim, {
+      createAccount: async () => ({
+        status: 503,
+        ok: false,
+        result: {
+          ok: false as const,
+          error: "Account creation is temporarily unavailable. Please try again.",
+        },
+      }),
+      signInWithPassword,
+    });
+
+    expect(signInWithPassword).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      destination: null,
+      message: "Account creation is temporarily unavailable. Please try again.",
+      showSignIn: false,
+    });
+  });
+
+  it("tries password sign-in after a safe account conflict", async () => {
+    const signInWithPassword = vi.fn(async () => authenticatedSession());
+
+    const result = await completeTrialAccountHandoff(form, claim, {
+      createAccount: async () => ({
+        status: 409,
+        ok: false,
+        result: {
+          ok: false as const,
+          error: "This trial cannot create a new account. Sign in or restart with a different email.",
+        },
+      }),
+      signInWithPassword,
+    });
+
+    expect(signInWithPassword).toHaveBeenCalledOnce();
+    expect(result.destination).toBe("/dashboard");
+  });
+
+  it("does not route when password sign-in has no session", async () => {
+    const result = await completeTrialAccountHandoff(form, claim, {
+      createAccount: async () => ({
+        status: 200,
+        ok: true,
+        result: { ok: true as const },
+      }),
+      signInWithPassword: async () => ({
+        data: { session: null },
+        error: null,
+      }),
+    });
+
+    expect(result).toEqual({
+      destination: null,
+      message: "We couldn't sign in to continue this trial. Check the password and try again.",
+      showSignIn: true,
+    });
+  });
+
+  it.each([
+    ["trial ID", "another_trial", claim.claimToken],
+    ["claim token", claim.trialId, "another-opaque-claim-token"],
+  ])("does not route when the authenticated %s differs", async (
+    _field,
+    acquisitionTrialId,
+    acquisitionTrialToken,
+  ) => {
+    const result = await completeTrialAccountHandoff(form, claim, {
+      createAccount: async () => ({
+        status: 200,
+        ok: true,
+        result: { ok: true as const },
+      }),
+      signInWithPassword: async () => authenticatedSession(
+        acquisitionTrialId,
+        acquisitionTrialToken,
+      ),
+    });
+
+    expect(result).toEqual({
+      destination: null,
+      message: "This account cannot continue the pending trial. Sign in with the matching account or restart with a different email.",
+      showSignIn: true,
+    });
   });
 
   it("revalidates an in-memory claim before retrying after its expiry", () => {

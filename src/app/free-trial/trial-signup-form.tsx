@@ -10,12 +10,11 @@ import {
   pushMarketingEvent,
 } from "@/modules/marketing/analytics";
 import {
-  trialAccountPayload,
+  completeTrialAccountHandoff,
   trialClaimNeedsRefresh,
   trialIntakePayload,
-  trialPasswordCredentials,
-  trialSignupDestination,
   validateTrialPassword,
+  type TrialAccountResponse,
   type TrialIntakeResponse,
   type TrialClaimResponse,
   type TrialSignupValues,
@@ -32,9 +31,6 @@ const INITIAL_VALUES: TrialSignupValues = {
 };
 
 type FailureReason = "validation" | "intake" | "auth";
-type TrialAccountResponse =
-  | { ok: true }
-  | { ok: false; error: string };
 
 export function TrialSignupForm() {
   const router = useRouter();
@@ -116,47 +112,29 @@ export function TrialSignupForm() {
         setPendingClaim(claim);
       }
 
-      const accountResponse = await fetch("/api/trials/account", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(trialAccountPayload(values, claim)),
+      const handoff = await completeTrialAccountHandoff(values, claim, {
+        createAccount: async (payload) => {
+          const response = await fetch("/api/trials/account", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          return {
+            status: response.status,
+            ok: response.ok,
+            result: (await response.json()) as TrialAccountResponse,
+          };
+        },
+        signInWithPassword: async (credentials) => {
+          const { data, error } = await createClient().auth.signInWithPassword(
+            credentials,
+          );
+          return { data: { session: data.session }, error };
+        },
       });
-      const accountResult = (await accountResponse.json()) as TrialAccountResponse;
-      const canAttemptSignIn = accountResponse.status === 409
-        || (accountResponse.ok && accountResult.ok);
-      if (!canAttemptSignIn) {
-        fail(
-          "auth",
-          accountResult.ok
-            ? "Couldn't create the account. Please try again."
-            : accountResult.error,
-        );
-        return;
-      }
-
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword(
-        trialPasswordCredentials(values),
-      );
-      if (error || !data.session) {
-        setDuplicate(true);
-        fail(
-          "auth",
-          "We couldn't sign in to continue this trial. Check the password and try again.",
-        );
-        return;
-      }
-
-      const metadata = data.session.user.user_metadata;
-      if (
-        metadata.acquisition_trial_id !== claim.trialId
-        || metadata.acquisition_trial_token !== claim.claimToken
-      ) {
-        setDuplicate(true);
-        fail(
-          "auth",
-          "This account cannot continue the pending trial. Sign in with the matching account or restart with a different email.",
-        );
+      if (!handoff.destination) {
+        setDuplicate(handoff.showSignIn);
+        fail("auth", handoff.message);
         return;
       }
 
@@ -167,11 +145,8 @@ export function TrialSignupForm() {
       setPendingClaim(null);
       setValues((current) => ({ ...current, password: "" }));
 
-      const destination = trialSignupDestination(Boolean(data.session));
-      if (destination) {
-        router.push(destination);
-        router.refresh();
-      }
+      router.push(handoff.destination);
+      router.refresh();
     } catch {
       if (claim) setDuplicate(true);
       fail(
