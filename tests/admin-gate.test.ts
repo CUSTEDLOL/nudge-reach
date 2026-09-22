@@ -82,6 +82,21 @@ describe("founder session gate", () => {
     expect(createDefaultClient).not.toHaveBeenCalled();
   });
 
+  it("rejects a provenance-marked trial identity with an allowlisted email", async () => {
+    getClaims.mockResolvedValue({
+      data: {
+        claims: {
+          email: "founder@example.com",
+          app_metadata: {
+            nudge_account_origin: "instant_trial_v1",
+          },
+        },
+      },
+    });
+
+    await expect(getFounderContext()).resolves.toBeNull();
+  });
+
   it.each([
     { claims: undefined, label: "a missing admin session" },
     {

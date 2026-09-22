@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin-server";
 import { env } from "@/lib/env";
+import { hasInstantTrialProvenance } from "@/modules/trial/provenance";
 
 /**
  * Founder admin panel gate (docs/plans/2026-09-05-admin-panel.md).
@@ -28,6 +29,16 @@ export function isFounderEmail(
     .includes(wanted);
 }
 
+/** Shared authorization predicate for both session reads and fresh logins. */
+export function isAuthorizedFounder(
+  email: string | undefined,
+  appMetadata: unknown,
+  allowlist: string | undefined,
+): boolean {
+  return !hasInstantTrialProvenance(appMetadata)
+    && isFounderEmail(email, allowlist);
+}
+
 export interface FounderContext {
   /** The founder's login email — used to attribute audit rows. */
   email: string;
@@ -37,8 +48,11 @@ export interface FounderContext {
 export async function getFounderContext(): Promise<FounderContext | null> {
   const supabase = await createAdminClient();
   const { data } = await supabase.auth.getClaims();
-  const email = data?.claims?.email as string | undefined;
-  if (!isFounderEmail(email, env.FOUNDER_EMAILS)) return null;
+  const claims = data?.claims;
+  const email = claims?.email as string | undefined;
+  if (!isAuthorizedFounder(email, claims?.app_metadata, env.FOUNDER_EMAILS)) {
+    return null;
+  }
   return { email: email!.trim().toLowerCase() };
 }
 

@@ -30,7 +30,10 @@ export const requireOrgContext = cache(async (): Promise<OrgContext> => {
   const trialClaim = parseTrialClaimMetadata(claims.user_metadata);
   let resolved;
   try {
-    resolved = await resolveOrgContext(claims.sub, email, { trialClaim });
+    resolved = await resolveOrgContext(claims.sub, email, {
+      appMetadata: claims.app_metadata,
+      trialClaim,
+    });
   } catch (err) {
     // Signed in, but nobody invited them and signup is closed.
     if (err instanceof NoWorkspaceError) redirect("/no-workspace");

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin-server";
-import { isFounderEmail } from "@/modules/admin/auth";
+import { isAuthorizedFounder } from "@/modules/admin/auth";
 
 export interface FounderLoginState {
   ok: false;
@@ -35,8 +35,15 @@ export async function loginFounderAction(
     };
   }
 
-  const founderEmail = result.data.user?.email;
-  if (result.error || !isFounderEmail(founderEmail, env.FOUNDER_EMAILS)) {
+  const user = result.data.user;
+  if (
+    result.error
+    || !isAuthorizedFounder(
+      user?.email,
+      user?.app_metadata,
+      env.FOUNDER_EMAILS,
+    )
+  ) {
     if (result.data.user) {
       try {
         await supabase.auth.signOut();

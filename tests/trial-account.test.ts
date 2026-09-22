@@ -143,7 +143,7 @@ describe("trial account provisioning", () => {
     expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
-  it("creates the password user with only the trial claim metadata", async () => {
+  it("creates the password user with immutable trial provenance and claim metadata", async () => {
     await expect(provisionTrialAccount(valid, valid.claimToken, now)).resolves
       .toEqual({ ok: true });
 
@@ -151,6 +151,9 @@ describe("trial account provisioning", () => {
       email: "owner@example.com",
       password: valid.password,
       email_confirm: true,
+      app_metadata: {
+        nudge_account_origin: "instant_trial_v1",
+      },
       user_metadata: {
         acquisition_trial_id: valid.trialId,
         acquisition_trial_token: valid.claimToken,

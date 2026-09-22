@@ -1,5 +1,25 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Instant-trial identity provenance (2026-09-22) ✅ CODE — RELEASE REVIEW PENDING
+
+- Service-role-created instant-trial users now carry a server-controlled
+  `app_metadata` origin stamp. The acquisition claim remains in `user_metadata`
+  only for the one-time workspace handoff; it is never treated as identity
+  provenance.
+- Org resolution still gives an existing membership first priority. Before a
+  membership exists, a stamped trial identity may claim only its own valid
+  simulated workspace and fails closed before legacy ownership, email-matched
+  AGENT / ADMIN / OWNER invitations, or open-signup workspace creation.
+- Founder authorization and the fresh founder login action share one predicate
+  that rejects stamped trial identities even when their address is in
+  `FOUNDER_EMAILS`. Normal non-trial invitation acceptance remains unchanged.
+- Security regressions cover the exact provisioning payload, missing, malformed
+  and tampered claim metadata, all invitation roles, successful claim and later
+  membership access, non-trial invites, and both founder gates. Full verification:
+  **1,960 tests passed** (+3 intentionally skipped), `tsc --noEmit`, ESLint and
+  the production build all exited 0. No schema, Supabase configuration,
+  verification semantics, claim single-use rule or signup setting changed.
+
 ## AI follow-ups on the automation engine (2026-09-21) ✅ CODE — BROWSER-UNVERIFIED, PROD SCHEMA PUSH PENDING
 
 - A follow-up is now one plain thing an owner can say out loud — a

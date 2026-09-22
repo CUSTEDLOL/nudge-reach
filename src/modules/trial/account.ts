@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { INSTANT_TRIAL_APP_METADATA } from "./provenance";
 import { hashClaimToken } from "./signup";
 
 export const trialAccountSchema = z.object({
@@ -82,6 +83,7 @@ export async function provisionTrialAccount(
       email: trial.emailNormalized,
       password,
       email_confirm: true,
+      app_metadata: INSTANT_TRIAL_APP_METADATA,
       user_metadata: {
         acquisition_trial_id: trialId,
         acquisition_trial_token: claimToken,

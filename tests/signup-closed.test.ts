@@ -21,14 +21,21 @@ const { prisma, claimAcquisitionTrial } = vi.hoisted(() => ({
   claimAcquisitionTrial: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ prisma }));
-vi.mock("@/modules/trial/claim", () => ({ claimAcquisitionTrial }));
+vi.mock("@/modules/trial/claim", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/modules/trial/claim")>(),
+  claimAcquisitionTrial,
+}));
 
 import { NoWorkspaceError, resolveOrgContext } from "@/modules/orgs/org";
 import { PENDING_OWNER_PREFIX } from "@/modules/orgs/pending-owner";
+import { parseTrialClaimMetadata } from "@/modules/trial/claim";
 
 const USER = "user-1";
 const EMAIL = "owner@aster.in";
 const CLAIM = { trialId: "trial_1", claimToken: "a".repeat(43) };
+const TRIAL_APP_METADATA = {
+  nudge_account_origin: "instant_trial_v1",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -92,13 +99,16 @@ describe("closed signup", () => {
     expect(prisma.org.create).not.toHaveBeenCalled();
   });
 
-  it("allows a verified trial claim while global signup stays closed", async () => {
+  it("allows a provenance-marked identity to claim its valid trial", async () => {
     claimAcquisitionTrial.mockResolvedValue({
       org: { id: "org-trial" },
       membership: { id: "membership-trial", role: "OWNER" },
     });
 
-    const result = await resolveOrgContext(USER, EMAIL, { trialClaim: CLAIM });
+    const result = await resolveOrgContext(USER, EMAIL, {
+      appMetadata: TRIAL_APP_METADATA,
+      trialClaim: CLAIM,
+    });
 
     expect(result.org.id).toBe("org-trial");
     expect(claimAcquisitionTrial).toHaveBeenCalledWith({
@@ -106,15 +116,74 @@ describe("closed signup", () => {
       email: EMAIL,
       claim: CLAIM,
     });
+    expect(prisma.invite.findFirst).not.toHaveBeenCalled();
     expect(prisma.org.create).not.toHaveBeenCalled();
   });
 
-  it("still rejects an invalid claim when global signup stays closed", async () => {
-    await expect(
-      resolveOrgContext(USER, EMAIL, { trialClaim: CLAIM })
-    ).rejects.toBeInstanceOf(NoWorkspaceError);
-    expect(prisma.org.create).not.toHaveBeenCalled();
-  });
+  it.each(["AGENT", "ADMIN", "OWNER"] as const)(
+    "does not let a provenance-marked trial identity accept a pending %s invite",
+    async (role) => {
+      prisma.invite.findFirst.mockResolvedValue({
+        id: `inv-${role.toLowerCase()}`,
+        orgId: "org-real",
+        role,
+        org: {
+          id: "org-real",
+          ownerUserId: role === "OWNER"
+            ? `${PENDING_OWNER_PREFIX}abc`
+            : "someone-real",
+        },
+      });
+
+      await expect(resolveOrgContext(USER, EMAIL, {
+        appMetadata: TRIAL_APP_METADATA,
+        trialClaim: CLAIM,
+      })).rejects.toBeInstanceOf(NoWorkspaceError);
+
+      expect(claimAcquisitionTrial).toHaveBeenCalledWith({
+        userId: USER,
+        email: EMAIL,
+        claim: CLAIM,
+      });
+      expect(prisma.invite.findFirst).not.toHaveBeenCalled();
+      expect(prisma.membership.upsert).not.toHaveBeenCalled();
+      expect(prisma.org.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["missing", undefined],
+    ["malformed", {
+      acquisition_trial_id: "../trial",
+      acquisition_trial_token: "short",
+    }],
+    ["tampered", {
+      acquisition_trial_id: CLAIM.trialId,
+      acquisition_trial_token: "b".repeat(43),
+    }],
+  ])(
+    "fails closed for %s trial user_metadata before invites or open signup",
+    async (_label, userMetadata) => {
+      process.env.SIGNUP_OPEN = "1";
+      prisma.invite.findFirst.mockResolvedValue({
+        id: "inv-real",
+        orgId: "org-real",
+        role: "OWNER",
+        org: {
+          id: "org-real",
+          ownerUserId: `${PENDING_OWNER_PREFIX}abc`,
+        },
+      });
+
+      await expect(resolveOrgContext(USER, EMAIL, {
+        appMetadata: TRIAL_APP_METADATA,
+        trialClaim: parseTrialClaimMetadata(userMetadata),
+      })).rejects.toBeInstanceOf(NoWorkspaceError);
+
+      expect(prisma.invite.findFirst).not.toHaveBeenCalled();
+      expect(prisma.org.create).not.toHaveBeenCalled();
+    },
+  );
 
   it("does not touch a real owner when a teammate accepts an invite", async () => {
     prisma.invite.findFirst.mockResolvedValue({
@@ -130,7 +199,34 @@ describe("closed signup", () => {
     expect(res.org.ownerUserId).toBe("someone-real");
   });
 
-  it("still lets an existing member in — the gate is only about new workspaces", async () => {
+  it("still lets a non-trial admin accept an email-matched invite", async () => {
+    prisma.invite.findFirst.mockResolvedValue({
+      id: "inv-admin",
+      orgId: "org-1",
+      role: "ADMIN",
+      org: { id: "org-1", ownerUserId: "someone-real" },
+    });
+
+    const res = await resolveOrgContext(USER, "admin@aster.in", {
+      appMetadata: { provider: "email", providers: ["email"] },
+    });
+
+    expect(res.org.id).toBe("org-1");
+    expect(prisma.membership.upsert).toHaveBeenCalledWith({
+      where: { orgId_userId: { orgId: "org-1", userId: USER } },
+      create: expect.objectContaining({
+        email: "admin@aster.in",
+        role: "ADMIN",
+      }),
+      update: {},
+    });
+    expect(prisma.invite.update).toHaveBeenCalledWith({
+      where: { id: "inv-admin" },
+      data: { status: "accepted" },
+    });
+  });
+
+  it("still lets a provenance-marked trial identity use its claimed membership", async () => {
     prisma.membership.findFirst.mockResolvedValue({
       id: "m1",
       role: "AGENT",
@@ -139,9 +235,14 @@ describe("closed signup", () => {
       org: { id: "org-1" },
     });
 
-    const res = await resolveOrgContext(USER, EMAIL);
+    const res = await resolveOrgContext(USER, EMAIL, {
+      appMetadata: TRIAL_APP_METADATA,
+      trialClaim: null,
+    });
 
     expect(res.org.id).toBe("org-1");
+    expect(prisma.invite.findFirst).not.toHaveBeenCalled();
+    expect(claimAcquisitionTrial).not.toHaveBeenCalled();
     expect(prisma.org.create).not.toHaveBeenCalled();
   });
 });

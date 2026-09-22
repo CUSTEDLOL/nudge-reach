@@ -8,18 +8,21 @@ import {
   claimAcquisitionTrial,
   type TrialClaim,
 } from "@/modules/trial/claim";
+import { hasInstantTrialProvenance } from "@/modules/trial/provenance";
 
 /**
  * Org resolution (spec §3.1). Membership is the source of truth for "which
  * org does this user work in":
  *
  *   1. an existing Membership wins;
- *   2. owners of pre-Membership orgs get an OWNER membership backfilled;
- *   3. a pending Invite matching the email is auto-accepted on first visit
+ *   2. an immutable-provenance trial identity may claim only its acquisition
+ *      trial, and otherwise fails closed before all email-authority paths;
+ *   3. owners of pre-Membership orgs get an OWNER membership backfilled;
+ *   4. a pending Invite matching the email is auto-accepted on first visit
  *      (signing up with the invited address joins); an OWNER invite also
  *      claims a workspace the founder created before the owner existed;
- *   4. a verified acquisition-trial claim creates one simulated workspace;
- *   5. otherwise a fresh org + OWNER membership is created — but only when
+ *   5. a valid acquisition-trial claim creates one simulated workspace;
+ *   6. otherwise a fresh org + OWNER membership is created — but only when
  *      open signup is enabled. With signup closed (the default, because
  *      accounts are created by Nudge after a demo) this throws
  *      `NoWorkspaceError` and the caller sends them somewhere that says so.
@@ -58,7 +61,7 @@ export function callerOrgFilter(userId: string): Prisma.OrgWhereInput {
 export async function resolveOrgContext(
   userId: string,
   email?: string,
-  options: { trialClaim?: TrialClaim | null } = {}
+  options: { appMetadata?: unknown; trialClaim?: TrialClaim | null } = {}
 ): Promise<ResolvedOrg> {
   // 1) Existing membership → its org.
   const membership = await prisma.membership.findFirst({
@@ -79,7 +82,23 @@ export async function resolveOrgContext(
     return { org, membership: rest };
   }
 
-  // 2) Pre-existing org without a membership row (created before teams
+  // 2) Trial-provisioned identities have not proved inbox ownership. Without
+  //    a direct membership, their immutable provenance restricts them to the
+  //    account's own valid acquisition claim; email invites and open signup
+  //    are never authority for this identity.
+  if (hasInstantTrialProvenance(options.appMetadata)) {
+    if (email && options.trialClaim) {
+      const claimed = await claimAcquisitionTrial({
+        userId,
+        email,
+        claim: options.trialClaim,
+      });
+      if (claimed) return claimed;
+    }
+    throw new NoWorkspaceError();
+  }
+
+  // 3) Pre-existing org without a membership row (created before teams
   //    existed) → lazily backfill the OWNER membership.
   const ownedOrg = await prisma.org.findUnique({ where: { ownerUserId: userId } });
   if (ownedOrg) {
@@ -91,7 +110,7 @@ export async function resolveOrgContext(
     return { org: ownedOrg, membership: backfilled };
   }
 
-  // 3) Pending invite matching this email → auto-accept.
+  // 4) Pending invite matching this email → auto-accept.
   if (email) {
     const invite = await prisma.invite.findFirst({
       where: { email, status: "pending" },
@@ -125,7 +144,7 @@ export async function resolveOrgContext(
     }
   }
 
-  // 4) A verified acquisition-trial claim can create one simulated workspace
+  // 5) A valid acquisition-trial claim can create one simulated workspace
   //    without opening global signup. Existing access and invites win first.
   if (email && options.trialClaim) {
     const claimed = await claimAcquisitionTrial({
@@ -136,7 +155,7 @@ export async function resolveOrgContext(
     if (claimed) return claimed;
   }
 
-  // 5) First visit with no org anywhere → create org + OWNER membership.
+  // 6) First visit with no org anywhere → create org + OWNER membership.
   //    Only when open signup is on; otherwise Nudge creates the workspace.
   if (!isSignupOpen()) {
     throw new NoWorkspaceError();

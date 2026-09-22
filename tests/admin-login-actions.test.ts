@@ -90,6 +90,26 @@ describe("loginFounderAction", () => {
     expect(redirect).not.toHaveBeenCalled();
   });
 
+  it("clears an allowlisted trial-provenance session instead of granting founder access", async () => {
+    signInWithPassword.mockResolvedValue({
+      data: {
+        user: {
+          email: "founder@example.com",
+          app_metadata: {
+            nudge_account_origin: "instant_trial_v1",
+          },
+        },
+      },
+      error: null,
+    });
+
+    const result = await loginFounderAction(INITIAL_STATE, credentials());
+
+    expect(result).toEqual({ ok: false, message: GENERIC_AUTH_ERROR });
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
   it("redirects an allowlisted founder into the control room", async () => {
     signInWithPassword.mockResolvedValue({
       data: { user: { email: "FOUNDER@EXAMPLE.COM" } },

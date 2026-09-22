@@ -46,9 +46,9 @@ export async function claimAcquisitionTrial(input: {
         claimTokenHash: hashClaimToken(input.claim.claimToken),
         emailNormalized,
         claimedAt: null,
-        // Anonymous resume still expires after 24h. Once Supabase has verified
-        // the matching email, keep a short grace so delayed confirmation does
-        // not strand a user whose auth metadata already contains this token.
+        // Anonymous resume still expires after 24h. Once an authenticated
+        // account carries this claim, keep a short grace so an interrupted
+        // handoff does not strand it. This is not proof of inbox ownership.
         claimExpiresAt: { gt: recoveryCutoff },
       },
     });
