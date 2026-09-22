@@ -67,23 +67,24 @@ export function TrialStatusStrip({
               <li>3. Review the reply and update your information if needed.</li>
             </ol>
           </details>
-          {stopped ? (
-            <div className="flex items-center gap-3">
-              <BookDemoButton
-                surface="trial-workspace"
-                variant="primary"
-                size="sm"
-              >
-                Book a free demo
-              </BookDemoButton>
-              <Link
-                href="/pricing"
-                className="text-xs font-semibold text-brand-800 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-              >
-                See paid plans
-              </Link>
-            </div>
-          ) : null}
+          {/* Always offered, not only once the trial has stopped: by then the
+              visitor has usually left. While it is still running the ask stays
+              secondary so it does not compete with using the product. */}
+          <div className="flex items-center gap-3">
+            <BookDemoButton
+              surface="trial-workspace"
+              variant={stopped ? "primary" : "secondary"}
+              size="sm"
+            >
+              {stopped ? "Book a free demo" : "Book a demo"}
+            </BookDemoButton>
+            <Link
+              href="/pricing"
+              className="text-xs font-semibold text-brand-800 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+            >
+              See paid plans
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -52,7 +52,8 @@ export function TrialTraining({
 
         <TrialDraftReview drafts={drafts} canEdit={canEdit} />
 
-        <section className="border-t border-neutral-200 py-7" aria-labelledby="trial-approved-heading">
+        {/* the guided tour's "train" step spotlights this — see modules/trial/tour */}
+        <section data-tour="training-source" className="border-t border-neutral-200 py-7" aria-labelledby="trial-approved-heading">
           <div className="mb-4">
             <h2 id="trial-approved-heading" className="text-base font-semibold text-neutral-900">
               Approved facts

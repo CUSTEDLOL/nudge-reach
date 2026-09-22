@@ -1,11 +1,13 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { shouldShowTrialTour } from "@/components/features/app-shell/shell";
 import {
   TrialStatusStrip,
   trialStatusText,
 } from "@/components/features/trial/trial-status-strip";
+import { TRIAL_TOUR_STEPS } from "@/modules/trial/tour";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 const trial: TrialWorkspace = {
@@ -62,10 +64,6 @@ describe("inline trial guide", () => {
   });
 
   it("uses native open and close behavior without blocking page interaction", () => {
-    const shellSource = readFileSync(
-      new URL("../src/components/features/app-shell/shell.tsx", import.meta.url),
-      "utf8",
-    );
     const stripSource = readFileSync(
       new URL(
         "../src/components/features/trial/trial-status-strip.tsx",
@@ -77,10 +75,82 @@ describe("inline trial guide", () => {
     expect(stripSource).toContain("<details");
     expect(stripSource).not.toContain("onToggle");
     expect(guide).not.toContain("href=");
+    // the strip itself is never a dialog — the guided tour owns that surface
     expect(html).not.toContain('role="dialog"');
-    expect(shellSource).not.toContain("TrialTour");
-    expect(shellSource).not.toContain("shouldShowTrialTour");
-    expect(shellSource).not.toContain("router.push");
-    expect(shellSource).not.toContain("useOverlay");
+  });
+
+  /**
+   * The guided overlay is the first-run onboarding; the inline disclosure is
+   * the always-available reminder. Both ship. The overlay must stay mounted,
+   * because the "Restart guided tour" button on the trial home only dispatches
+   * an event — with no tour listening, that button silently does nothing.
+   */
+  it("mounts the guided tour in the shell, gated on setup being complete", () => {
+    const shellSource = readFileSync(
+      new URL("../src/components/features/app-shell/shell.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(shellSource).toContain("<TrialTour");
+    expect(shellSource).toContain("shouldShowTrialTour(mode, trial)");
+    expect(shouldShowTrialTour("trial", { ...trial, setupComplete: true })).toBe(true);
+    expect(shouldShowTrialTour("trial", { ...trial, setupComplete: false })).toBe(false);
+    expect(shouldShowTrialTour("standard", { ...trial, setupComplete: true })).toBe(false);
+    expect(shouldShowTrialTour("trial", null)).toBe(false);
+  });
+
+  it("keeps the restart control wired to a tour that is actually mounted", () => {
+    const homeSource = readFileSync(
+      new URL(
+        "../src/components/features/trial/trial-home.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const tourSource = readFileSync(
+      new URL(
+        "../src/components/features/trial/trial-tour.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    // the button dispatches the event; only a mounted TrialTour listens for it
+    expect(homeSource).toContain("RestartTrialTourButton");
+    expect(tourSource).toContain("dispatchEvent(new Event(RESTART_EVENT))");
+    expect(tourSource).toContain("addEventListener(RESTART_EVENT");
+  });
+});
+
+/**
+ * Each step spotlights `[data-tour="<target>"]`. When a target disappears —
+ * as `training-source` did in the nav simplification — the tour does not
+ * fail loudly: it shows "This area is still loading", which is wrong and
+ * permanent. This keeps the steps and the markup honest with each other.
+ */
+describe("guided tour targets exist in the markup", () => {
+  const SOURCES = [
+    "../src/components/features/trial/trial-home.tsx",
+    "../src/components/features/trial/trial-training.tsx",
+    "../src/components/features/trial/try-your-ai.tsx",
+    "../src/components/features/trial/test-conversation.tsx",
+    "../src/components/features/trial/locked-feature-card.tsx",
+  ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
+
+  it.each(TRIAL_TOUR_STEPS.map((step) => [step.id, step.target] as const))(
+    "step %s spotlights an element that exists (%s)",
+    (_id, target) => {
+      expect(SOURCES).toContain(`"${target}"`);
+    },
+  );
+
+  it("points every step at a route the app still serves", () => {
+    for (const step of TRIAL_TOUR_STEPS) {
+      const route = step.route.replace(/^\//, "");
+      expect(
+        existsSync(new URL(`../src/app/(app)/${route}/page.tsx`, import.meta.url)),
+        `missing route page for ${step.route}`,
+      ).toBe(true);
+    }
   });
 });

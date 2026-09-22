@@ -173,6 +173,24 @@ describe("trial app shell", () => {
     expect(html).toContain("Book a free demo");
     expect(html).toContain('href="/pricing"');
   });
+
+  /**
+   * The demo ask used to appear only once the trial was exhausted or expired —
+   * by which point most people have already gone. It is now on every page of
+   * the workspace, but stays secondary while the trial is still usable so it
+   * does not compete with the product itself.
+   */
+  it("offers the demo on an active trial too, without shouting", () => {
+    const html = renderToStaticMarkup(
+      createElement(TrialStatusStrip, { trial, email: "asha@aster.in" }),
+    );
+
+    expect(html).toContain("Book a demo");
+    expect(html).toContain('href="/pricing"');
+    expect(html).toContain("data-cal-link");
+    // the loud "free demo" wording stays for the stopped states
+    expect(html).not.toContain("Book a free demo");
+  });
 });
 
 describe("active trial workspace copy", () => {
