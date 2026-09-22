@@ -84,8 +84,11 @@ describe("ingestFile", () => {
 
     expect(generate).not.toHaveBeenCalled();
     const [decodedPdf] = extractPdfText.mock.calls[0] ?? [];
-    expect(Buffer.isBuffer(decodedPdf)).toBe(true);
-    expect(decodedPdf).toEqual(Buffer.from("pdf bytes"));
+    expect(decodedPdf).toBeInstanceOf(Uint8Array);
+    expect(Buffer.isBuffer(decodedPdf)).toBe(false);
+    expect(decodedPdf).toEqual(new Uint8Array(Buffer.from("pdf bytes")));
+    expect(decodedPdf.byteLength).toBe(Buffer.byteLength("pdf bytes"));
+    expect(decodedPdf.buffer.byteLength).toBeGreaterThan(decodedPdf.byteLength);
     expect(storeKnowledgeFacts).toHaveBeenCalledWith(
       "org1",
       [

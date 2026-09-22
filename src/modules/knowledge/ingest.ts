@@ -457,7 +457,13 @@ export async function ingestFile(
       );
     }
 
-    const text = await extractPdfText(Buffer.from(input.base64, "base64"));
+    const decoded = Buffer.from(input.base64, "base64");
+    const pdfBytes = new Uint8Array(
+      decoded.buffer,
+      decoded.byteOffset,
+      decoded.byteLength,
+    );
+    const text = await extractPdfText(pdfBytes);
     const stored = await storeKnowledgeFacts(
       orgId,
       deterministicDocumentFacts(text),
