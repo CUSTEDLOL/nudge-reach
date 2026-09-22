@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
-import { GetAccessButton } from "@/components/marketing/get-access";
 import { WhatsAppGlyph } from "@/components/marketing/holo-card";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
 
@@ -104,16 +103,16 @@ export function HeroV2() {
             >
               Free Trial
             </a>
-            <GetAccessButton
-              source="hero"
+            <a
+              href="/contact"
               className="group/link inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3 text-[15px] font-semibold text-white backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20"
             >
-              Get Access
+              Contact Us
               <ArrowRight
                 className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5"
                 aria-hidden
               />
-            </GetAccessButton>
+            </a>
           </div>
         </div>
 

@@ -61,11 +61,14 @@ describe("marketing navbar", () => {
 });
 
 describe("home hero", () => {
-  it("swaps Book a Demo for Free Trial and keeps Get Access", () => {
+  it("offers Free Trial and Contact Us, both as plain links", () => {
     expect(hero).toContain("Free Trial");
-    expect(hero).toContain("/free-trial");
-    expect(hero).toContain("Get Access");
+    expect(hero).toContain('href="/free-trial"');
+    expect(hero).toContain("Contact Us");
+    expect(hero).toContain('href="/contact"');
+    // The demo modal and the lead-capture modal are both gone from the hero.
     expect(hero).not.toContain("Book a Demo");
+    expect(hero).not.toContain("GetAccessButton");
   });
 });
 
