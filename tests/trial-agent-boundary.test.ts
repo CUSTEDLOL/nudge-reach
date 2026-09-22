@@ -18,6 +18,7 @@ const {
     conversationMessage: { create: vi.fn(), findMany: vi.fn() },
     org: { findUnique: vi.fn() },
     knowledgeEntry: { findMany: vi.fn() },
+    agentRule: { findMany: vi.fn() },
   },
   isRestrictedAcquisitionTrial: vi.fn(),
   generateAgentReply: vi.fn(),
@@ -85,6 +86,9 @@ describe("restricted trial agent boundary", () => {
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { category: "hours", fact: "Open Monday to Saturday.", condition: null },
     ]);
+    prisma.agentRule.findMany.mockResolvedValue([
+      { instruction: "Always ask which branch they mean" },
+    ]);
     generateAgentReply.mockResolvedValue({
       text: "We can help with that.",
       handoff: false,
@@ -105,6 +109,10 @@ describe("restricted trial agent boundary", () => {
       generatedByAi: true,
     });
     expect(generateAgentReply).toHaveBeenCalledTimes(1);
+    // A trial loses the write tools, not the owner's house rules.
+    expect(generateAgentReply.mock.calls[0][3]).toMatchObject({
+      rules: [{ instruction: "Always ask which branch they mean" }],
+    });
     expect(generateAgentActionReply).not.toHaveBeenCalled();
     expect(runInboundAutomations).not.toHaveBeenCalled();
     expect(crmContactCreated).not.toHaveBeenCalled();

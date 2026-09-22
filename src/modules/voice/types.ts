@@ -21,6 +21,12 @@ export interface CallInitInput {
     doNots: string;
   };
   knowledgeDigest: string;
+  /**
+   * The org's house rules. Required, not optional: a caller that forgot them
+   * would quietly build a call where the agent ignores its owner, and nothing
+   * would say so. Load them with `activeRules` (modules/agent/rules-store).
+   */
+  rules: { instruction: string }[];
   contact: { name: string; phoneE164: string };
   source: "phone" | "browser";
   /** HMAC-scopes the dynamic tenant and caller fields used by webhook tools. */

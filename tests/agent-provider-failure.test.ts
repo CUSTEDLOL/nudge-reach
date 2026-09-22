@@ -35,6 +35,10 @@ const HISTORY = [{ role: "user" as const, text: "do you do hair transplants?" }]
 const CTX = { orgId: "org1", conversationId: "c1" };
 
 const FALLBACK = "Thanks for your message! One of our team will get back to you shortly. 🙏";
+// House rules are a required prompt input (the compiler is what stops a
+// channel silently dropping them); this file is about provider failures, so
+// it supplies none.
+const NO_RULES = { rules: [] };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -45,7 +49,7 @@ describe("the agent never leaves a customer unanswered", () => {
   it("falls back instead of throwing when the provider errors mid-reply", async () => {
     runAgent.mockRejectedValue(new Error("404 model not found: gemini-3-pro"));
 
-    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never);
+    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never, NO_RULES);
 
     expect(reply.text).toBe(FALLBACK);
     expect(reply.handoff).toBe(true);
@@ -60,7 +64,7 @@ describe("the agent never leaves a customer unanswered", () => {
   it("falls back when the plain (tool-less) reply path errors", async () => {
     chat.mockRejectedValue(new Error("401 invalid api key"));
 
-    const reply = await generateAgentReply(PROFILE, HISTORY, CTX);
+    const reply = await generateAgentReply(PROFILE, HISTORY, CTX, NO_RULES);
 
     expect(reply.text).toBe(FALLBACK);
     expect(reply.handoff).toBe(true);
@@ -70,7 +74,7 @@ describe("the agent never leaves a customer unanswered", () => {
   it("still reports a zero credit balance as its own distinct case", async () => {
     runAgent.mockRejectedValue(new CreditsExhaustedError("org1"));
 
-    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never);
+    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never, NO_RULES);
 
     expect(reply.text).toBe(FALLBACK);
     expect(reply.pausedForCredits).toBe(true);
@@ -82,7 +86,7 @@ describe("the agent never leaves a customer unanswered", () => {
   it("does not mark an empty-model fallback as generated", async () => {
     runAgent.mockResolvedValue({ text: "", toolCalls: [], cappedOut: false });
 
-    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never);
+    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never, NO_RULES);
 
     expect(reply.text).toBe(FALLBACK);
     expect(reply.generatedByAi).toBeFalsy();
@@ -91,7 +95,7 @@ describe("the agent never leaves a customer unanswered", () => {
   it("a healthy reply is not marked as a failure", async () => {
     runAgent.mockResolvedValue({ text: "Yes, we do.", toolCalls: [], cappedOut: false });
 
-    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never);
+    const reply = await generateAgentActionReply(PROFILE, HISTORY, CTX as never, NO_RULES);
 
     expect(reply.text).toBe("Yes, we do.");
     expect(reply.aiFailed).toBeFalsy();
@@ -102,7 +106,7 @@ describe("the agent never leaves a customer unanswered", () => {
   it("marks a healthy tool-less reply for trial metering", async () => {
     chat.mockResolvedValue("We are open Monday to Saturday.");
 
-    const reply = await generateAgentReply(PROFILE, HISTORY, CTX);
+    const reply = await generateAgentReply(PROFILE, HISTORY, CTX, NO_RULES);
 
     expect(reply).toMatchObject({
       text: "We are open Monday to Saturday.",

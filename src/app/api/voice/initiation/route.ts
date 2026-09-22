@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { ensureAgentProfile } from "@/modules/agent/profile";
+import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
+import { activeRules } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { buildCallInit } from "@/modules/voice/initiation";
 import { createVoiceToolToken } from "@/modules/voice/tool-token";
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const [contact, entries] = await Promise.all([
+  const [contact, entries, rules] = await Promise.all([
     caller
       ? prisma.contact.findUnique({
           where: { orgId_phoneE164: { orgId: number.orgId, phoneE164: caller } },
@@ -87,6 +89,9 @@ export async function POST(request: Request) {
       orderBy: { createdAt: "asc" },
       take: 400,
     }),
+    // A dialled number only exists for a plan that carries voice, which no
+    // acquisition trial does — the full allowance is the only reachable cap.
+    activeRules(number.orgId, MAX_ACTIVE_RULES.full),
   ]);
 
   const init = buildCallInit({
@@ -105,6 +110,7 @@ export async function POST(request: Request) {
       doNots: profile.doNots,
     },
     knowledgeDigest: buildKnowledgeDigest(entries),
+    rules,
     contact: { name: contact?.name ?? contactPhone, phoneE164: contactPhone },
     source,
     toolToken: createVoiceToolToken(

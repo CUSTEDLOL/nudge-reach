@@ -18,6 +18,7 @@ vi.mock("@/lib/db", () => ({
     voiceCall: { findMany: vi.fn(async () => []) },
     contact: { findUnique: vi.fn(async () => ({ name: "Priya", phoneE164: "+919876543210" })) },
     knowledgeEntry: { findMany: vi.fn(async () => [{ category: "hours", fact: "Open 9–7", condition: null }]) },
+    agentRule: { findMany: vi.fn(async () => [{ instruction: "Always offer the evening slot first" }]) },
   },
 }));
 vi.mock("@/modules/agent/profile", () => ({
@@ -43,6 +44,10 @@ describe("POST /api/voice/initiation", () => {
     expect(json.dynamic_variables.org_id).toBe("org1");
     expect(json.dynamic_variables.contact_name).toBe("Priya");
     expect(json.conversation_config_override.agent.prompt.prompt).toContain("Open 9–7");
+    // A phone caller gets the same house rules a WhatsApp customer does.
+    expect(json.conversation_config_override.agent.prompt.prompt).toContain(
+      "Always offer the evening slot first"
+    );
   });
   it("rejects a bad secret and an unknown number", async () => {
     expect((await POST(req({ caller_id: "+91", called_number: "+918000000001" }, "nope"))).status).toBe(401);

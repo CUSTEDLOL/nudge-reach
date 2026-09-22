@@ -91,7 +91,8 @@ async function main() {
   const reply1 = await generateAgentActionReply(
     t1.profile,
     [{ role: "user", text: "Hi, what are your opening hours?" }],
-    ctxFor({ orgId: t1.org.id, contactId: t1.contact.id, conversationId: t1.conversation.id })
+    ctxFor({ orgId: t1.org.id, contactId: t1.contact.id, conversationId: t1.conversation.id }),
+    { rules: [] }
   );
   balance = await creditBalance(t1.org.id);
   const spent = before - balance;
@@ -120,7 +121,8 @@ async function main() {
   const reply2 = await generateAgentActionReply(
     t1.profile,
     [{ role: "user", text: "Are you open on Sunday?" }],
-    ctxFor({ orgId: t1.org.id, contactId: t1.contact.id, conversationId: t1.conversation.id })
+    ctxFor({ orgId: t1.org.id, contactId: t1.contact.id, conversationId: t1.conversation.id }),
+    { rules: [] }
   );
   line(`Reply at zero balance: "${reply2.text}"`);
   line(`pausedForCredits: ${reply2.pausedForCredits}  handoff: ${reply2.handoff}`);
@@ -139,7 +141,8 @@ async function main() {
   const reply3 = await generateAgentActionReply(
     t1.profile,
     [{ role: "user", text: "Great, thank you!" }],
-    ctxFor({ orgId: t1.org.id, contactId: t1.contact.id, conversationId: t1.conversation.id })
+    ctxFor({ orgId: t1.org.id, contactId: t1.contact.id, conversationId: t1.conversation.id }),
+    { rules: [] }
   );
   line(`Reply after top-up: "${reply3.text.slice(0, 100)}..."`);
   if (reply3.pausedForCredits) throw new Error("FAIL: agent should have resumed after the grant");
@@ -150,7 +153,8 @@ async function main() {
   const reply4 = await generateAgentActionReply(
     t2.profile,
     [{ role: "user", text: "Hello" }],
-    ctxFor({ orgId: t2.org.id, contactId: t2.contact.id, conversationId: t2.conversation.id })
+    ctxFor({ orgId: t2.org.id, contactId: t2.contact.id, conversationId: t2.conversation.id }),
+    { rules: [] }
   );
   line(`Legacy org (no credit grants at all) pausedForCredits: ${reply4.pausedForCredits ?? false}`);
   if (reply4.pausedForCredits) throw new Error("FAIL: legacy unmetered org must never be gated");

@@ -10,6 +10,8 @@ import { fileCall } from "@/modules/voice/file-call";
 import { env } from "@/lib/env";
 import { voiceUsage } from "@/modules/voice/usage";
 import { ensureAgentProfile } from "@/modules/agent/profile";
+import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
+import { activeRules } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { buildCallInit } from "@/modules/voice/initiation";
 import { createVoiceToolToken } from "@/modules/voice/tool-token";
@@ -135,7 +137,7 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
   // 2026-09-15 against ElevenLabs: a js_sdk session runs on the client's
   // overrides and variables; the phone-call initiation webhook is not applied.
 
-  const [number, profile, entries] = await Promise.all([
+  const [number, profile, entries, rules] = await Promise.all([
     prisma.voiceNumber.findFirst({ where: { orgId: ctx.org.id, enabled: true } }),
     ensureAgentProfile(ctx.org.id),
     prisma.knowledgeEntry.findMany({
@@ -144,6 +146,10 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
       orderBy: { createdAt: "asc" },
       take: 400,
     }),
+    // Voice is plan-gated above (`checkVoiceAgent`) and no acquisition trial
+    // carries the voiceAgent limit, so a caller here is always a full
+    // workspace — the full rule allowance is the only reachable cap.
+    activeRules(ctx.org.id, MAX_ACTIVE_RULES.full),
   ]);
   if (!profile?.enabled) {
     return { ok: false, message: "Turn on the AI Front Desk before starting a browser call." };
@@ -166,6 +172,7 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
       doNots: profile.doNots,
     },
     knowledgeDigest: buildKnowledgeDigest(entries),
+    rules,
     contact: { name: "Browser test caller", phoneE164: browserCaller },
     source: "browser",
     toolToken: createVoiceToolToken(
