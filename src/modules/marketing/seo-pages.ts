@@ -101,6 +101,15 @@ export const SEO_PAGES = [
     index: true,
   },
   {
+    path: "/contact",
+    title: "Contact Nudge",
+    description: "Book a walkthrough of the AI Front Desk, or message us on WhatsApp and see our own agent answer.",
+    modifiedAt: "2026-09-22",
+    changeFrequency: "monthly",
+    priority: 0.5,
+    index: true,
+  },
+  {
     path: "/faq",
     title: "Frequently asked questions",
     description: "Answers about Nudge setup, pricing, trials, the official WhatsApp Cloud API, business-specific AI, calendar booking, follow-ups, payments, and data handling.",

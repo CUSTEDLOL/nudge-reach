@@ -114,8 +114,58 @@ Roughly **60%** off a tool-using reply. Break-even is two calls sharing the
 prefix; every agent reply makes at least two, seconds apart, well inside the
 5-minute TTL (which each read refreshes).
 
-Caching is a no-op below the model's minimum cacheable prefix — 1,024 tokens on
-Sonnet 5 — so an org with a thin knowledge base neither saves nor pays extra.
+Caching is a no-op below the model's minimum cacheable prefix — and that
+minimum is NOT monotonic across models, which turned out to matter. See the
+measurement below.
+
+## Measured, 2026-09-22: the prefix, and why the model choice decides this
+
+The saving above was arithmetic. Measuring the real cacheable prefix (system
+prompt + tool schemas) against actual workspaces in the dev database:
+
+| Workspace | Knowledge facts | Prefix |
+|---|---:|---:|
+| Goldmine Infotech (GIS) | 91 | ~3,413 tok |
+| NUDGE | 19 | ~3,120 tok |
+| NUDGE (second) | 21 | ~2,120 tok |
+
+Against the minimum cacheable prefix per model:
+
+| Model | Minimum | Our prefix |
+|---|---:|---|
+| Claude Sonnet 5 | 1,024 | clears it comfortably |
+| Claude Haiku 4.5 | 4,096 | **never reaches it** |
+
+So on Haiku the caching is a permanent no-op — silently, since the provider
+just charges full price. `RUNTIME_MODEL` was `claude-haiku-4-5` locally, and
+production's value could not be read (marked sensitive in Vercel, and
+`env pull` returns it blank), so it was **set explicitly to
+`claude-sonnet-5`** on 2026-09-22 and production redeployed.
+
+That is also the cheaper option, which is the counter-intuitive part:
+
+| Per agent reply (~4,100 prompt tokens, ~60 out) | Cost |
+|---|---:|
+| Uncached Haiku | ~$0.0044 |
+| **Cached Sonnet** | **~$0.0034** |
+
+Cached Sonnet beats uncached Haiku on price AND capability, and the gap widens
+on multi-step tool replies where the prefix is re-sent three or more times.
+"Switch to Haiku to save money" is the wrong instinct here.
+
+## Observability (2026-09-22)
+
+None of the above was checkable from inside the product — the founder usage
+page showed cost but never cache tokens, and production's database is a
+separate Supabase project. The org usage page now carries a **Prompt cache**
+card backed by a pure `cacheHealth()` (`modules/admin/usage.ts`), which names
+the cause instead of showing a bare zero: `not_caching` (prefix below the
+minimum), `write_only` (prefix changing between calls, so nothing is reused),
+or `working` with hit rate and money saved.
+
+**Still unverified in production:** no live traffic has run through the cached
+path yet. The check is to send a few messages through Try your AI and confirm
+the card reads "Working".
 
 ## Open — needs a founder decision
 

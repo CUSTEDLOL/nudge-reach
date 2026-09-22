@@ -3105,3 +3105,27 @@ id can be withdrawn, which would recreate this bug.
   email-template configuration are staged in source but have not been applied
   remotely. Database/RLS/auth configuration, integration, deployment, and
   production smoke remain pending the final whole-branch review.
+
+## 2026-09-22 — prompt caching: measured, and made visible
+
+Measured the real cacheable prefix (system prompt + tools) against actual
+workspaces: ~2,120–3,413 tokens, with GIS the largest at 91 knowledge facts.
+
+That lands either side of a line depending on the model. Sonnet 5 caches from
+1,024 tokens; **Haiku 4.5 needs 4,096**, so on Haiku the caching shipped on
+2026-09-20 would never engage — and the provider charges full price silently
+when it doesn't. `RUNTIME_MODEL` was Haiku locally and production's value is
+unreadable (sensitive in Vercel), so it was set explicitly to
+`claude-sonnet-5` and production redeployed.
+
+Counter-intuitively that is also cheaper: cached Sonnet ≈ $0.0034/reply vs
+uncached Haiku ≈ $0.0044, with a wider gap on multi-step tool replies.
+
+Added a **Prompt cache** card to the founder org-usage page, backed by a pure
+`cacheHealth()`. It distinguishes the three causes of zero — below the
+minimum prefix, written-but-never-read (unstable prefix), and working — so a
+silent failure stops looking like a quiet success.
+
+**Open:** no production traffic has exercised the cached path yet, so the
+saving is still arithmetic. Send messages through Try your AI and confirm the
+card reads "Working".

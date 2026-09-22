@@ -139,3 +139,15 @@ export function estimateCostMicroUsd(model: string, u: DriverUsage): number {
       1_000_000
   );
 }
+
+/**
+ * What cache reads saved, versus having paid full input price for the same
+ * tokens. Uses the same fallback rule as `estimateCostMicroUsd`, so an
+ * unpriced model reports a conservative (larger) saving rather than throwing
+ * in a dashboard.
+ */
+export function cacheSavingMicroUsd(model: string, cacheReadTokens: number): number {
+  if (cacheReadTokens <= 0) return 0;
+  const r = MODEL_RATES[model] ?? dearestRate();
+  return Math.round((cacheReadTokens * (r.input - r.cacheRead)) / 1_000_000);
+}
