@@ -347,6 +347,9 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
       };
     }
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);
+    if (restricted && file.type !== "application/pdf") {
+      return { ok: false, message: "Free trials accept text PDFs only." };
+    }
     const result = await withTrialKnowledgeImport(
       ctx.org.id,
       "file",

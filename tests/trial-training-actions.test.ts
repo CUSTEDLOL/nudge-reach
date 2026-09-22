@@ -48,7 +48,12 @@ vi.mock("@/modules/knowledge/questions", () => ({
 vi.mock("@/modules/knowledge/distill", () => ({ distillAnswer }));
 vi.mock("@/modules/knowledge/store", () => ({ storeKnowledgeFacts }));
 vi.mock("@/modules/knowledge/ingest", () => ({
-  FILE_MEDIA_TYPES: ["application/pdf"],
+  FILE_MEDIA_TYPES: [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ],
   MAX_FILE_BYTES: 4 * 1024 * 1024,
   ingestFile,
   ingestGbp,
@@ -295,6 +300,37 @@ describe("restricted trial model-backed training actions", () => {
     );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("rejects a crafted image upload for a restricted trial before reserving quota or reading bytes", async () => {
+    const formData = new FormData();
+    const file = new File(["image-bytes"], "menu.jpg", { type: "image/jpeg" });
+    const readFile = vi.spyOn(file, "arrayBuffer");
+    formData.set("file", file);
+
+    await expect(importFileAction(formData)).resolves.toEqual({
+      ok: false,
+      message: "Free trials accept text PDFs only.",
+    });
+    expect(withTrialKnowledgeImport).not.toHaveBeenCalled();
+    expect(readFile).not.toHaveBeenCalled();
+    expect(ingestFile).not.toHaveBeenCalled();
+  });
+
+  it("keeps shared image ingestion available to paid workspaces", async () => {
+    isRestrictedAcquisitionTrial.mockResolvedValue(false);
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File(["image-bytes"], "menu.jpg", { type: "image/jpeg" }),
+    );
+
+    await expect(importFileAction(formData)).resolves.toMatchObject({ ok: true });
+
+    expect(ingestFile).toHaveBeenCalledWith("org_1", {
+      base64: "aW1hZ2UtYnl0ZXM=",
+      mediaType: "image/jpeg",
+    });
   });
 
   it("rejects files over 4 MB before reserving quota or reading bytes", async () => {
