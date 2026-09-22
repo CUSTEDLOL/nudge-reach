@@ -21,6 +21,7 @@ import {
   trialSignupSchema,
   hashClaimToken,
 } from "@/modules/trial/signup";
+import { readTrialResumeToken } from "@/modules/trial/resume-cookie";
 import { POST } from "@/app/api/trials/route";
 
 const validSignup = {
@@ -36,6 +37,16 @@ describe("trial signup", () => {
     vi.clearAllMocks();
     findFirst.mockResolvedValue(null);
     checkRateLimit.mockReturnValue({ allowed: true, retryAfterSeconds: 0 });
+  });
+
+  it("reads the resume cookie without throwing on malformed encoding", () => {
+    expect(readTrialResumeToken(new Request("https://nudge.test", {
+      headers: { cookie: "other=1; nudge_trial_resume=abc%2D123" },
+    }))).toBe("abc-123");
+    expect(readTrialResumeToken(new Request("https://nudge.test"))).toBeUndefined();
+    expect(readTrialResumeToken(new Request("https://nudge.test", {
+      headers: { cookie: "nudge_trial_resume=%E0%A4%A" },
+    }))).toBeUndefined();
   });
 
   it("requires explicit contact consent and an international phone", () => {

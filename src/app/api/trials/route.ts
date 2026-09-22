@@ -8,15 +8,7 @@ import {
   TrialSignupConflictError,
   trialSignupSchema,
 } from "@/modules/trial/signup";
-
-function resumeTokenFrom(request: Request) {
-  const header = request.headers.get("cookie");
-  const cookie = header
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${TRIAL_RESUME_COOKIE}=`));
-  return cookie ? decodeURIComponent(cookie.slice(TRIAL_RESUME_COOKIE.length + 1)) : undefined;
-}
+import { readTrialResumeToken } from "@/modules/trial/resume-cookie";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-real-ip")?.trim()
@@ -59,7 +51,7 @@ export async function POST(request: Request) {
     const claim = await createPendingTrial(
       parsed.data,
       new Date(),
-      resumeTokenFrom(request),
+      readTrialResumeToken(request),
     );
     const response = NextResponse.json({ ok: true, claim });
     response.cookies.set(TRIAL_RESUME_COOKIE, claim.claimToken, {
