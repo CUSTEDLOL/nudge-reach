@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useState } from "react";
+import { Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/features/app-shell/brand-mark";
 import {
   activeNavChildKey,
   isNavItemActive,
+  lockedNavGroupsForMode,
   navGroupsForMode,
   type AppShellMode,
   type AppRole,
 } from "@/components/features/app-shell/nav";
+import { UpgradeDialog } from "@/components/features/trial/upgrade-dialog";
 
 export type SidebarUser = { name: string; email: string };
 
@@ -35,7 +38,12 @@ export function Sidebar({
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const pathname = usePathname();
-  const groups = navGroupsForMode(mode, role);
+  const groups = [
+    ...navGroupsForMode(mode, role),
+    ...lockedNavGroupsForMode(mode, role),
+  ];
+  // Which locked feature the visitor just asked about, if any.
+  const [lockedFeature, setLockedFeature] = useState<string | null>(null);
 
   const iconButton =
     "grid h-9 w-9 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500";
@@ -96,6 +104,45 @@ export function Sidebar({
                   {group.items.map((item) => {
                     const active = isNavItemActive(pathname, item);
                     const Icon = item.icon;
+
+                    // Locked rows are buttons, never links: the route guard
+                    // would bounce them, and a dead link reads as a bug. The
+                    // point is to show what paying unlocks, then ask for it.
+                    if (group.locked) {
+                      return (
+                        <li key={item.key}>
+                          <button
+                            type="button"
+                            onClick={() => setLockedFeature(item.label)}
+                            aria-label={`${item.label} — available on a paid plan`}
+                            title={
+                              collapsed
+                                ? `${item.label} — available on a paid plan`
+                                : undefined
+                            }
+                            className={cn(
+                              "flex h-9 w-full items-center rounded-md text-sm font-medium text-neutral-400 outline-none hover:bg-neutral-50 hover:text-neutral-600 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1",
+                              collapsed ? "justify-center px-2" : "gap-2.5 px-2.5"
+                            )}
+                          >
+                            <Icon
+                              className="h-[18px] w-[18px] shrink-0 text-neutral-300"
+                              aria-hidden
+                            />
+                            {!collapsed && (
+                              <>
+                                <span className="truncate">{item.label}</span>
+                                <Lock
+                                  className="ml-auto h-3.5 w-3.5 shrink-0 text-neutral-400"
+                                  aria-hidden
+                                />
+                              </>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    }
+
                     return (
                       <li key={item.key}>
                         <Link
@@ -175,6 +222,12 @@ export function Sidebar({
           )}
         </div>
       </div>
+
+      <UpgradeDialog
+        open={lockedFeature !== null}
+        onClose={() => setLockedFeature(null)}
+        featureName={lockedFeature ?? ""}
+      />
     </aside>
   );
 }

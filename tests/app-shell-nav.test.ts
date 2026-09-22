@@ -9,6 +9,8 @@ import {
   isNavItemActive,
   mobilePrimaryItemsForRole,
   mobilePrimaryItemsForMode,
+  lockedNavGroupsForMode,
+  navGroupsForMode,
   navGroupsForRole,
   navItemsForMode,
 } from "@/components/features/app-shell/nav";
@@ -16,6 +18,7 @@ import {
   bottomNavGridClass,
   isThreadRoute,
 } from "@/components/features/app-shell/bottom-nav";
+import { isTrialWorkspacePath } from "@/modules/trial/routes";
 
 describe("adaptive app navigation", () => {
   it("gives acquisition trials exactly two honest destinations", () => {
@@ -192,5 +195,80 @@ describe("adaptive app navigation", () => {
     expect(isThreadRoute("/inbox/thread-1")).toBe(true);
     expect(isThreadRoute("/inbox/try")).toBe(true);
     expect(isThreadRoute("/inbox")).toBe(false);
+  });
+});
+
+/**
+ * A trial sees the whole product in the rail: two destinations that open,
+ * and the rest shown as locked so the value of paying is visible instead of
+ * hidden. The locked shelf is presentation only — it must never become a
+ * destination anywhere, because the workspace route guard would bounce it.
+ */
+describe("trial locked shelf", () => {
+  const locked = lockedNavGroupsForMode("trial", "OWNER");
+
+  it("shows one Locked group under the two Open destinations", () => {
+    expect(locked).toHaveLength(1);
+    expect(locked[0].label).toBe("Locked");
+    expect(locked[0].locked).toBe(true);
+    expect(navGroupsForMode("trial", "OWNER").map((g) => g.label)).toEqual(["Open"]);
+  });
+
+  it("locks every standard destination the trial does not already open", () => {
+    const openKeys = navItemsForMode("trial", "OWNER").map((item) => item.key);
+    const lockedKeys = locked[0].items.map((item) => item.key);
+
+    // /dashboard is the trial's Inbox and /agent is Train AI — never locked
+    expect(lockedKeys).not.toContain("today");
+    expect(lockedKeys).not.toContain("inbox");
+    expect(lockedKeys).not.toContain("front-desk");
+    expect(lockedKeys).toEqual([
+      "bookings",
+      "leads",
+      "followups",
+      "campaigns",
+      "templates",
+      "analytics",
+      "integrations",
+      "settings",
+    ]);
+    // together they account for the whole standard rail
+    expect(new Set([...openKeys, ...lockedKeys, "today"]).size).toBe(
+      new Set(navGroupsForRole("OWNER").flatMap((g) => g.items.map((i) => i.key))).size,
+    );
+  });
+
+  it("never leaks locked items into anything that navigates", () => {
+    expect(navItemsForMode("trial", "OWNER").map((i) => i.href)).toEqual([
+      "/dashboard",
+      "/agent",
+    ]);
+    expect(commandsForMode("trial", "OWNER").map((c) => c.href)).toEqual([
+      "/dashboard",
+      "/agent",
+    ]);
+    expect(mobilePrimaryItemsForMode("trial", "OWNER").map((i) => i.href)).toEqual([
+      "/dashboard",
+      "/agent",
+    ]);
+    for (const item of locked[0].items) {
+      expect(isTrialWorkspacePath(item.href)).toBe(false);
+    }
+  });
+
+  it("is a trial-only shelf", () => {
+    expect(lockedNavGroupsForMode("standard", "OWNER")).toEqual([]);
+    expect(lockedNavGroupsForMode("standard", "AGENT")).toEqual([]);
+  });
+
+  it("renders locked rows as buttons, not links", () => {
+    const sidebar = readFileSync(
+      "src/components/features/app-shell/sidebar.tsx",
+      "utf8",
+    );
+    expect(sidebar).toContain("lockedNavGroupsForMode");
+    expect(sidebar).toContain("group.locked");
+    expect(sidebar).toContain("setLockedFeature(item.label)");
+    expect(sidebar).toContain("UpgradeDialog");
   });
 });
