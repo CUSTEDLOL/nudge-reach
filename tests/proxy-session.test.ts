@@ -26,6 +26,7 @@ describe("updateSession", () => {
 
   it("keeps trial signup public while protecting trial setup", () => {
     expect(isPublicPath("/api/trials")).toBe(true);
+    expect(isPublicPath("/api/trials/account")).toBe(true);
     expect(isPublicPath("/free-trial")).toBe(true);
     expect(isPublicPath("/trial/setup")).toBe(false);
   });
