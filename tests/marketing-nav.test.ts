@@ -15,10 +15,14 @@ const hero = readFileSync("src/components/marketing/v2/hero-v2.tsx", "utf8");
 const footer = readFileSync("src/components/marketing/footer.tsx", "utf8");
 const contactLinks = readFileSync("src/components/marketing/contact-links.ts", "utf8");
 
-/** Labels in NAV_LINKS order. */
+/** Labels in NAV_LINKS order, ignoring anything nested under `children`. */
 function topLevelLabels(): string[] {
-  const block = navbar.slice(navbar.indexOf("const NAV_LINKS"), navbar.indexOf("function NavLinks"));
-  return [...block.matchAll(/label: "([^"]+)"/g)].map((m) => m[1]);
+  const block = navbar.slice(
+    navbar.indexOf("const NAV_LINKS"),
+    navbar.indexOf("function NavLinks")
+  );
+  const withoutChildren = block.replace(/children: \[[\s\S]*?\],/g, "");
+  return [...withoutChildren.matchAll(/label: "([^"]+)"/g)].map((m) => m[1]);
 }
 
 describe("marketing navbar", () => {
@@ -29,8 +33,8 @@ describe("marketing navbar", () => {
       "Compare",
       "Pricing",
       "FAQ",
-      "Contact",
       "Resources",
+      "Contact",
     ]);
   });
 

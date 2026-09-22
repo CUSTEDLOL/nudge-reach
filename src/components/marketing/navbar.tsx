@@ -37,7 +37,6 @@ const NAV_LINKS: NavLink[] = [
   { label: "Compare", href: "/#compare" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
-  { label: "Contact", href: "/contact" },
   {
     label: "Resources",
     href: "/resources",
@@ -46,6 +45,7 @@ const NAV_LINKS: NavLink[] = [
       { label: "Other", href: "/resources" },
     ],
   },
+  { label: "Contact", href: "/contact" },
 ];
 
 function NavLinks({
