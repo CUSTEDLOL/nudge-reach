@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
-import { LaunchDemoButton } from "@/components/marketing/launch-cta";
 import { GetAccessButton } from "@/components/marketing/get-access";
 import { WhatsAppGlyph } from "@/components/marketing/holo-card";
 import { gsap, motionAllowed, useGSAP } from "./gsap";
@@ -99,12 +98,12 @@ export function HeroV2() {
             </span>
           </h1>
           <div className="hero-cta mt-5 flex flex-wrap items-center gap-3">
-            <LaunchDemoButton
-              surface="hero"
-              tone="dark"
-              className="rounded-xl bg-white px-6 py-3 text-[15px] font-semibold text-ink shadow-[0_16px_40px_-14px_rgba(7,38,28,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/90">
-              Book a Demo
-            </LaunchDemoButton>
+            <a
+              href="/free-trial"
+              className="rounded-xl bg-white px-6 py-3 text-[15px] font-semibold text-ink shadow-[0_16px_40px_-14px_rgba(7,38,28,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/90"
+            >
+              Free Trial
+            </a>
             <GetAccessButton
               source="hero"
               className="group/link inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3 text-[15px] font-semibold text-white backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20"

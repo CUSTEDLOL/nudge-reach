@@ -1,58 +1,128 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
-import { LaunchDemoButton } from "./launch-cta";
 
-const NAV_LINKS = [
+/**
+ * Six top-level entries. The two content/industry destinations sit under
+ * Resources so the bar stays short.
+ *
+ * `/industries` is deliberately absent: the route directory exists but has no
+ * page, so a link there would 404. Only `/industries/clinics` is real.
+ */
+type NavLink = { label: string; href: string; children?: { label: string; href: string }[] };
+
+const NAV_LINKS: NavLink[] = [
   { label: "Features", href: "/#features" },
   { label: "Compare", href: "/#compare" },
-  { label: "Clinics", href: "/industries/clinics" },
-  { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
+  { label: "Contact", href: "/contact" },
+  {
+    label: "Resources",
+    href: "/resources",
+    children: [
+      { label: "Clinics", href: "/industries/clinics" },
+      { label: "Other", href: "/resources" },
+    ],
+  },
 ];
 
-function NavLinks({ overHero }: { overHero: boolean }) {
+function NavLinks({
+  overHero,
+  openMenu,
+  setOpenMenu,
+}: {
+  overHero: boolean;
+  openMenu: string | null;
+  setOpenMenu: (label: string | null) => void;
+}) {
+  const itemCls = cn(
+    "block rounded-lg px-3.5 py-2.5 text-[16px] font-bold transition-all duration-200 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
+    overHero
+      ? "text-white/85 hover:bg-white/10 hover:text-white"
+      : "text-ink/65 hover:bg-ink/[0.06] hover:text-ink"
+  );
   return (
     <ul className="flex items-center gap-0.5">
-      {NAV_LINKS.map((link) => (
-        <li key={link.href}>
-          <a
-            href={link.href}
-            className={cn(
-              "block rounded-lg px-3.5 py-2.5 text-[16px] font-bold transition-all duration-200 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
-              overHero
-                ? "text-white/85 hover:bg-white/10 hover:text-white"
-                : "text-ink/65 hover:bg-ink/[0.06] hover:text-ink"
-            )}
-          >
-            {link.label}
-          </a>
-        </li>
-      ))}
+      {NAV_LINKS.map((link) =>
+        link.children ? (
+          <li key={link.href}>
+            {/* The pill clips its children (to cut the logo slab's corners),
+                so the panel itself is rendered by Navbar outside the pill. */}
+            <button
+              type="button"
+              aria-expanded={openMenu === link.label}
+              aria-haspopup="true"
+              onClick={() => setOpenMenu(openMenu === link.label ? null : link.label)}
+              className={cn(itemCls, "inline-flex items-center gap-1")}
+            >
+              {link.label}
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  openMenu === link.label && "rotate-180"
+                )}
+                aria-hidden
+              />
+            </button>
+          </li>
+        ) : (
+          <li key={link.href}>
+            <a href={link.href} className={itemCls}>
+              {link.label}
+            </a>
+          </li>
+        )
+      )}
     </ul>
   );
 }
 
-/** The solid CTA — flat ink pill with a brand-glow lift on hover. The arrow
- * slides and the whole button lifts. Opens the Cal modal. */
-function NavCta({ overHero }: { overHero: boolean }) {
+/** The Resources panel. Lives outside the clipped pill, centred under it. */
+function NavMenuPanel({
+  link,
+  onClose,
+}: {
+  link: NavLink;
+  onClose: () => void;
+}) {
   return (
-    <LaunchDemoButton
-      surface="navbar"
-      tone={overHero ? "dark" : "light"}
+    <div className="absolute left-1/2 top-full z-40 mt-2 hidden w-56 -translate-x-1/2 lg:block">
+      <ul className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white/95 p-2 shadow-[0_24px_60px_-20px_rgba(10,31,26,0.35)] backdrop-blur-xl">
+        {link.children?.map((child) => (
+          <li key={child.label}>
+            <a
+              href={child.href}
+              onClick={onClose}
+              className="flex min-h-11 items-center rounded-xl px-4 py-2.5 text-[15px] font-semibold text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink"
+            >
+              {child.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** The solid CTA — flat ink pill with a brand-glow lift on hover. Goes
+ * straight to the free trial; booking a demo now lives on /contact. */
+function NavCta() {
+  return (
+    <a
+      href="/free-trial"
       className="group/cta hidden min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] lg:inline-flex"
     >
-      <span>Book a Demo</span>
+      <span>Free Trial</span>
       <ArrowRight
         className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
         aria-hidden
       />
-    </LaunchDemoButton>
+    </a>
   );
 }
 
@@ -134,7 +204,9 @@ function PixelSlab({ overHero }: { overHero: boolean }) {
  */
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [overHero, setOverHero] = useState(true);
+  const openMenuLink = NAV_LINKS.find((l) => l.label === openMenu) ?? null;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -151,6 +223,24 @@ export function Navbar() {
       window.removeEventListener("resize", onScroll);
     };
   }, []);
+
+  // Close the Resources panel on Escape or a click anywhere else.
+  useEffect(() => {
+    if (!openMenu) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenu(null);
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const header = (e.target as HTMLElement)?.closest("header");
+      if (!header) setOpenMenu(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [openMenu]);
 
   // Lock body scroll while the mobile menu is open.
   useEffect(() => {
@@ -178,7 +268,7 @@ export function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <div className="mx-auto flex w-full max-w-[110rem] justify-center">
+      <div className="relative mx-auto flex w-full max-w-[110rem] justify-center">
         <div
           className={cn(
             "relative flex w-full max-w-5xl items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 py-2.5 sm:px-5 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:px-6",
@@ -195,7 +285,7 @@ export function Navbar() {
 
           {/* center — nav links, true-centered in the pill (desktop only) */}
           <div className="relative z-10 hidden lg:flex lg:justify-self-center">
-            <NavLinks overHero={overHero} />
+            <NavLinks overHero={overHero} openMenu={openMenu} setOpenMenu={setOpenMenu} />
           </div>
 
           {/* right — Sign in + the solid CTA (desktop only) */}
@@ -209,7 +299,7 @@ export function Navbar() {
             >
               Sign in
             </a>
-            <NavCta overHero={overHero} />
+            <NavCta />
           </div>
 
           {/* mobile hamburger */}
@@ -229,6 +319,10 @@ export function Navbar() {
             </button>
           </div>
         </div>
+
+        {openMenuLink && (
+          <NavMenuPanel link={openMenuLink} onClose={() => setOpenMenu(null)} />
+        )}
       </div>
 
       {/* Mobile menu */}
@@ -258,13 +352,33 @@ export function Navbar() {
               <ul className="flex flex-col">
                 {NAV_LINKS.map((link) => (
                   <li key={link.href}>
-                    <a
-                      href={link.href}
-                      onClick={() => setOpen(false)}
-                      className="flex min-h-11 items-center rounded-xl px-4 py-3 text-base font-medium text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                    >
-                      {link.label}
-                    </a>
+                    {link.children ? (
+                      // No disclosure on mobile — the whole menu is already a
+                      // sheet, so nesting behind a tap just hides two links.
+                      <>
+                        <p className="px-4 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-ink/40">
+                          {link.label}
+                        </p>
+                        {link.children.map((child) => (
+                          <a
+                            key={child.label}
+                            href={child.href}
+                            onClick={() => setOpen(false)}
+                            className="flex min-h-11 items-center rounded-xl px-4 py-3 text-base font-medium text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                          >
+                            {child.label}
+                          </a>
+                        ))}
+                      </>
+                    ) : (
+                      <a
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className="flex min-h-11 items-center rounded-xl px-4 py-3 text-base font-medium text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -276,13 +390,13 @@ export function Navbar() {
                 >
                   Sign in
                 </a>
-                <LaunchDemoButton
-                  surface="navbar"
-                  variant="primary"
-                  className="w-full"
+                <a
+                  href="/free-trial"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-11 w-full items-center justify-center rounded-xl bg-ink px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-ink/90"
                 >
-                  Book a Demo
-                </LaunchDemoButton>
+                  Free Trial
+                </a>
               </div>
             </motion.div>
           </motion.div>
