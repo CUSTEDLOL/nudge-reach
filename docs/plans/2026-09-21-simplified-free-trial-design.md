@@ -2,14 +2,15 @@
 
 **Date:** 2026-09-21  
 **Status:** Approved  
-**Supersedes:** The visual and workspace-navigation direction in
+**Supersedes:** The shared-trial positioning, visual direction, navigation,
+guidance, and training allowances in
 `docs/plans/2026-09-20-free-trial-funnel-design.md`
 
 ## Objective
 
 Make the acquisition trial feel clear, calm, and credible rather than like a
 feature-heavy AI product demo. The landing page should convert paid ad traffic
-into a safe trial. The trial should let a clinic teach Nudge from several useful
+into a safe trial. The trial should let a business teach Nudge from several useful
 sources, test grounded replies, and understand the next paid step without a
 dashboard full of analytics or locked-feature widgets.
 
@@ -43,13 +44,13 @@ There is no trial Home dashboard or Explore page in the navigation.
 ### Content hierarchy
 
 1. Direct outcome headline: the front desk answers before a lead goes cold.
-2. Short explanation: teach Nudge with real clinic information, test 15 private
+2. Short explanation: teach Nudge with real business information, test 15 private
    replies, and then connect the full front desk through a paid setup.
 3. Plain offer line: 7 days, 15 replies, no card, no live WhatsApp connection.
 4. Existing secure signup fields and consent, with a plain primary button.
 5. Three text-only steps: Train, Test, Go live.
 6. A short explanation of the full outcome: answers, books, follows up, and is
-   configured with the clinic.
+   configured with the business.
 7. Only the FAQ items that remove trial or purchase uncertainty.
 8. Minimal legal footer.
 
@@ -83,7 +84,7 @@ than a destination behind a Home checklist.
 
 - Show the conversation and composer first.
 - Keep the 15-reply and seven-day enforcement unchanged.
-- If the clinic has no approved facts, show a short empty state linking to
+- If the business has no approved facts, show a short empty state linking to
   Train AI; never fabricate a grounded reply.
 - Keep one quiet conversion line below or beside the conversation:
   **Connect your real WhatsApp — Book a demo · View plans.**
@@ -94,11 +95,11 @@ than a destination behind a Home checklist.
 
 First-time guidance is optional and non-blocking. It covers only:
 
-1. Add clinic information in Train AI.
+1. Add business information in Train AI.
 2. Ask a customer question in Inbox.
 3. Review the grounded answer and remaining allowance.
 
-It can be dismissed and restarted. It must not obscure the composer, trap
+It can be opened, closed, and reopened. It must not obscure the composer, trap
 focus, or force completion.
 
 ## Train AI
@@ -110,8 +111,7 @@ Train AI is one continuous page, not a source-selection wizard.
 Use simple stacked controls rather than source cards:
 
 - **Website:** one successful website or Google Business Profile import.
-- **Documents:** up to three successful PDF or supported image imports, five
-  megabytes each.
+- **Documents:** up to three successful text-PDF imports, four megabytes each.
 - **Manual information:** users may type, edit, and archive facts without an
   AI import charge.
 
@@ -155,9 +155,9 @@ toward the appropriate new allowance.
   consent and 24-hour-window safeguards.
 - Website and file ingestion stay tightly bounded to control model spend.
 - The complete path must work with `SEND_MODE=simulation` and no external keys.
-  PDF/document ingestion therefore needs a deterministic keyless path; any
-  advertised image type must also degrade honestly and successfully in
-  simulation.
+  PDF ingestion therefore needs a deterministic keyless path. The acquisition
+  trial does not advertise image ingestion; paid keyed image ingestion remains
+  unchanged.
 
 ## Error handling
 
@@ -173,7 +173,7 @@ toward the appropriate new allowance.
 The experience supports one clear sequence:
 
 1. Start the free trial and create a workspace.
-2. Add real clinic knowledge and test private replies.
+2. Add real business knowledge and test private replies.
 3. Book a free demo to connect WhatsApp and explore the full setup.
 4. Choose a paid tier.
 
@@ -194,6 +194,5 @@ Add or update focused tests for:
 - repeated website-plus-document imports on one Train AI page;
 - setup completion leading to Inbox without blocking later imports;
 - zero-key simulation behavior for supported uploads;
-- optional guidance being dismissible and restartable; and
+- optional guidance opening, closing, and reopening without blocking work; and
 - a production build plus authenticated trial smoke check.
-

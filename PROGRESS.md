@@ -2932,3 +2932,38 @@ id can be withdrawn, which would recreate this bug.
 - Changed the missing-vertical trial fallback from `clinic` to the existing generic `other` profile.
 - Added free-trial signups to Admin Leads directly from `AcquisitionTrial`, including unclaimed records, phone/email search, pipeline counts, status/notes editing, and WhatsApp links for stored mobile numbers.
 - Verification passed: the 82-test focused suite, 1,641 full-suite tests passed (3 skipped), and touched-file lint.
+
+## 2026-09-22 — Simplified acquisition trial release
+
+- Rebuilt `/free-trial` as a quiet, business-neutral editorial page with one
+  clear signup form and no decorative AI badges, chat mockup, dashboard wall,
+  or duplicate calls to action. The clinic beachhead remains confined to the
+  dedicated clinic campaign and industry pages.
+- Reduced the acquisition workspace to two destinations: Inbox at `/dashboard`
+  and Train AI at `/agent`. Retired Explore and the setup/test aliases now
+  redirect safely into those two surfaces.
+- Replaced the blocking tour with an inline disclosure guide. Train AI now
+  keeps every source on one page: one website or Google listing, up to three
+  text PDFs at 4 MB each, manual facts, draft review, and a server-enforced
+  50 active-plus-draft fact cap.
+- Added bounded, keyless text-PDF extraction for simulation mode. Restricted
+  trial uploads are PDF-only at both the UI and server boundaries; paid image
+  training remains unchanged.
+- Hardened activation and replies: knowledge mutation plus trial-agent
+  activation is atomic, each reply uses one org-scoped approved-fact snapshot,
+  empty knowledge never reaches the model, and STOP bypasses trial reply gates
+  so opt-out always wins.
+- Production schema release was applied additively. `prisma db push` correctly
+  refused unrelated destructive drift (`Automation.source` and
+  `AutomationRunStatus.CANCELLED`), so only the two approved
+  `AcquisitionTrial` counter columns were added with idempotent SQL. The
+  backfill updated one legacy website trial and zero file trials; the RLS check
+  confirmed all 48 public tables remain protected.
+- Fresh release verification passed: 23 focused files / 321 tests; 234 full
+  test files / 1,719 tests, with the existing three real-database concurrency
+  tests skipped because `TEST_DATABASE_URL` is not configured; TypeScript,
+  ESLint, and the production build all passed. Independent review reported no
+  remaining findings.
+- The local public route returned HTTP 200. Automated responsive contracts are
+  green, but the 390/768/1440 visual and keyboard walkthrough remains pending
+  because no interactive browser was attached to this session.

@@ -1,7 +1,10 @@
 # Free Trial Acquisition Funnel — Design
 
 **Date:** 2026-09-20  
-**Status:** Approved  
+**Status:** Superseded for the shared acquisition-trial experience by
+`docs/plans/2026-09-21-simplified-free-trial-design.md`; retained as the
+original clinic-campaign rationale.
+
 **Owner:** Nudge
 
 ## 1. Decision
