@@ -12,6 +12,7 @@ import {
   MODEL_RATES,
   RATE_CARD_VERSION,
   UnpricedModelError,
+  cacheSavingMicroUsd,
   estimateCostMicroUsd,
   microUsdToCredits,
   priceCall,
@@ -164,5 +165,24 @@ describe("estimateCostMicroUsd (never-throw dashboard pricing)", () => {
     expect(estimateCostMicroUsd("gpt-5-mini-2099", usage)).toBeGreaterThan(
       priceCall("gpt-5-mini", usage)
     );
+  });
+});
+
+describe("cacheSavingMicroUsd", () => {
+  it("prices the gap between a cache read and a full-price input token", () => {
+    // Sonnet: $2.00 input vs $0.20 cached → $1.80 saved per MTok.
+    expect(cacheSavingMicroUsd("claude-sonnet-5", 1_000_000)).toBe(1_800_000);
+    // Haiku: $1.00 vs $0.10 → $0.90 per MTok.
+    expect(cacheSavingMicroUsd("claude-haiku-4-5", 1_000_000)).toBe(900_000);
+  });
+
+  it("is zero when nothing was read from cache", () => {
+    expect(cacheSavingMicroUsd("claude-sonnet-5", 0)).toBe(0);
+    expect(cacheSavingMicroUsd("claude-sonnet-5", -5)).toBe(0);
+  });
+
+  it("never throws on an unpriced model", () => {
+    expect(() => cacheSavingMicroUsd("who-knows", 1000)).not.toThrow();
+    expect(cacheSavingMicroUsd("who-knows", 1_000_000)).toBeGreaterThan(0);
   });
 });

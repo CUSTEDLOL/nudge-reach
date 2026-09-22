@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireFounder } from "@/modules/admin/auth";
-import { orgUsage } from "@/modules/admin/usage";
+import { orgUsage, type CacheHealth } from "@/modules/admin/usage";
 import { formatMicroUsd, parseRange } from "@/modules/analytics/compute";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
@@ -29,6 +29,31 @@ function Bars({ series, label, format }: { series: { label: string; count: numbe
 }
 
 /** Cost side (AI, voice) and value side (messages, bookings, payments) for one org. */
+
+/**
+ * Caching fails silently, so the card names the cause rather than showing a
+ * bare zero. See `cacheHealth` for what each state means.
+ */
+const CACHE_LABEL: Record<CacheHealth["state"], string> = {
+  no_data: "No AI calls",
+  not_caching: "Not caching",
+  write_only: "Writes only",
+  working: "Working",
+};
+
+function cacheHint(c: CacheHealth): string {
+  switch (c.state) {
+    case "no_data":
+      return "Nothing to measure in this window.";
+    case "not_caching":
+      return "Prompt prefix is below the model's minimum — check RUNTIME_MODEL.";
+    case "write_only":
+      return "Cache written but never read: the prompt prefix is changing between calls.";
+    case "working":
+      return `${Math.round(c.hitRate * 100)}% of prompt tokens from cache · ${formatMicroUsd(c.savedMicroUsd)} saved`;
+  }
+}
+
 export default async function AdminOrgUsagePage({
   params,
   searchParams,
@@ -63,6 +88,11 @@ export default async function AdminOrgUsagePage({
           label="AI cost"
           value={formatMicroUsd(u.aiCostMicroUsd)}
           hint={u.aiCostByokMicroUsd > 0 ? `${formatMicroUsd(u.aiCostByokMicroUsd)} customer-paid` : `${u.aiCalls.toLocaleString()} calls · platform-paid`}
+        />
+        <StatCard
+          label="Prompt cache"
+          value={CACHE_LABEL[u.cache.state]}
+          hint={cacheHint(u.cache)}
         />
         <StatCard label="Messages" value={`${u.messagesIn.toLocaleString()} in · ${u.messagesOut.toLocaleString()} out`} />
         <StatCard label="Bookings · payments paid" value={`${u.bookings} · ${u.paymentsPaid}`} hint={`${u.paymentsRequested} payment links sent`} />
