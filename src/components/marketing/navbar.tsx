@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
+import { isSamePageHash, scrollToHash } from "./scroll-to-hash";
 
 /**
  * Six top-level entries. The two content/industry destinations sit under
@@ -14,6 +15,22 @@ import { Logo } from "./logo";
  * page, so a link there would 404. Only `/industries/clinics` is real.
  */
 type NavLink = { label: string; href: string; children?: { label: string; href: string }[] };
+
+/**
+ * In-page anchors get handled in JS. Left to the browser they animate toward
+ * a Y computed at click time, and the long landing page keeps settling under
+ * them — so Compare "stops in the middle". See scroll-to-hash.ts.
+ */
+function onHashClick(href: string) {
+  return (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    if (!isSamePageHash(href, window.location.pathname)) return;
+    const hash = href.slice(1);
+    if (!scrollToHash(hash)) return;
+    e.preventDefault();
+    window.history.replaceState(null, "", hash);
+  };
+}
 
 const NAV_LINKS: NavLink[] = [
   { label: "Features", href: "/#features" },
@@ -72,7 +89,7 @@ function NavLinks({
           </li>
         ) : (
           <li key={link.href}>
-            <a href={link.href} className={itemCls}>
+            <a href={link.href} onClick={onHashClick(link.href)} className={itemCls}>
               {link.label}
             </a>
           </li>
@@ -373,7 +390,10 @@ export function Navbar() {
                     ) : (
                       <a
                         href={link.href}
-                        onClick={() => setOpen(false)}
+                        onClick={(e) => {
+                          setOpen(false);
+                          onHashClick(link.href)(e);
+                        }}
                         className="flex min-h-11 items-center rounded-xl px-4 py-3 text-base font-medium text-ink/75 transition-colors hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       >
                         {link.label}
