@@ -19,6 +19,7 @@ import { recordContactEvent } from "@/modules/contacts/events";
 import { summarizeConversation } from "@/modules/ai/summarize";
 import { dispatchWebhook } from "@/modules/integrations/outbound-webhooks";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
+import { isStopMessage } from "@/modules/whatsapp/webhook-verify";
 import {
   type TrialReplySummary,
   withTrialReplyReservation,
@@ -499,10 +500,11 @@ export async function simulateInboundAction(
     const rawPhone = String(formData.get("phone") ?? "").trim();
     const text = String(formData.get("text") ?? "").trim();
     const restrictedTrial = await isRestrictedAcquisitionTrial(org.id);
+    const restrictedTrialOptOut = restrictedTrial && isStopMessage(text);
     if (!text || (!restrictedTrial && !rawPhone)) {
       return { ok: false, message: "Enter a message first." };
     }
-    if (restrictedTrial) {
+    if (restrictedTrial && !restrictedTrialOptOut) {
       const rate = checkRateLimit(
         `trial-simulation:${org.id}`,
         RATE_LIMITS.outboundTest,
@@ -525,9 +527,14 @@ export async function simulateInboundAction(
       return { ok: false, message: "That phone number doesn't look right." };
     }
 
-    const outcome = await withTrialReplyReservation(org.id, () =>
-      handleInboundMessage(org.id, phone, text)
-    );
+    const outcome = restrictedTrialOptOut
+      ? {
+          kind: "handled" as const,
+          result: await handleInboundMessage(org.id, phone, text),
+        }
+      : await withTrialReplyReservation(org.id, () =>
+          handleInboundMessage(org.id, phone, text)
+        );
     if (outcome.kind === "blocked") {
       return {
         ok: false,

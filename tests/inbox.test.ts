@@ -308,12 +308,60 @@ describe("trial-metered simulated inbound action", () => {
     isRestrictedAcquisitionTrial.mockResolvedValue(true);
   });
 
-  function formData() {
+  function formData(text = "Are you open tomorrow?") {
     const value = new FormData();
     value.set("phone", "9876500001");
-    value.set("text", "Are you open tomorrow?");
+    value.set("text", text);
     return value;
   }
+
+  it("lets STOP persist an opt-out when the trial simulation limiter is saturated", async () => {
+    checkRateLimit.mockReturnValue({
+      allowed: false,
+      retryAfterSeconds: 60,
+    });
+    handleInboundMessage.mockResolvedValue({ optedOut: true });
+
+    await expect(simulateInboundAction(formData("STOP"))).resolves.toMatchObject({
+      ok: true,
+      message: "Customer opted out (STOP) — no reply sent.",
+    });
+
+    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(withTrialReplyReservation).not.toHaveBeenCalled();
+    expect(handleInboundMessage).toHaveBeenCalledWith(
+      ORG,
+      trialSandboxAddress(ORG),
+      "STOP",
+    );
+  });
+
+  it("lets STOP persist an opt-out when the trial reply allowance is blocked", async () => {
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "blocked",
+      status: "exhausted",
+      trial: {
+        status: "exhausted",
+        repliesUsed: 15,
+        replyLimit: 15,
+        repliesRemaining: 0,
+      },
+    });
+    handleInboundMessage.mockResolvedValue({ optedOut: true });
+
+    await expect(simulateInboundAction(formData("STOP"))).resolves.toMatchObject({
+      ok: true,
+      message: "Customer opted out (STOP) — no reply sent.",
+    });
+
+    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(withTrialReplyReservation).not.toHaveBeenCalled();
+    expect(handleInboundMessage).toHaveBeenCalledWith(
+      ORG,
+      trialSandboxAddress(ORG),
+      "STOP",
+    );
+  });
 
   it("surfaces an ungrounded result from inside the authoritative reservation", async () => {
     handleInboundMessage.mockResolvedValue({ skipped: "no_knowledge" });
