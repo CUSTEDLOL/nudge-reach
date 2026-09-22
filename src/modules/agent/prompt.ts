@@ -5,6 +5,8 @@
  * which is what Meta's 2026 policy requires (no open-domain assistants).
  */
 
+import { renderRulesBlock } from "@/modules/agent/rules";
+
 export interface AgentProfileInput {
   vertical: string;
   businessName: string;
@@ -163,6 +165,12 @@ export interface AgentPromptOptions {
   customTools?: { name: string; description: string }[];
   /** Categorized digest from `modules/knowledge` — the primary source of truth. */
   knowledgeDigest?: string;
+  /**
+   * The org's house rules — how the owner wants the agent to BEHAVE. They are
+   * rendered ABOVE the knowledge on purpose: an owner's "always push the
+   * waitlist" must outrank whatever the facts happen to say.
+   */
+  rules?: Array<{ instruction: string }>;
   /** Together with `timezone`, adds a TODAY line so conditional facts resolve. */
   now?: Date;
   timezone?: string;
@@ -184,14 +192,20 @@ export function buildAgentSystemPrompt(
       : "- If the customer is upset, wants something you cannot handle, or explicitly asks for a person, use the handoff tool (see below)."
     : `- If the customer is upset, wants something you cannot handle, or explicitly asks for a person, reply with exactly "${HANDOFF_SENTINEL}" and nothing else, so a human takes over.`;
 
+  // Empty for an org with no rules, and dropped by the `.filter(Boolean)` below.
+  const rulesBlock = renderRulesBlock(options.rules ?? []);
+
+  // "your source of truth for facts", not "your only source of truth": the old
+  // wording told the model to ignore anything outside the knowledge, which is
+  // exactly what the house rules above it are.
   const knowledgeSections = digest
     ? [
-        "BUSINESS KNOWLEDGE (your only source of truth — never invent anything not stated here):",
+        "BUSINESS KNOWLEDGE — your source of truth for facts (never invent anything not stated here):",
         digest,
         ...(blob ? ["", "ADDITIONAL BUSINESS INFORMATION:", blob] : []),
       ]
     : [
-        "BUSINESS INFORMATION (this is your only source of truth — never invent anything not stated here):",
+        "BUSINESS INFORMATION — your source of truth for facts (never invent anything not stated here):",
         blob || "(No details provided yet.)",
       ];
 
@@ -204,6 +218,8 @@ export function buildAgentSystemPrompt(
       : []),
     "",
     `WHAT YOU HELP WITH: ${identity.scope}.`,
+    "",
+    rulesBlock,
     "",
     ...knowledgeSections,
     "",

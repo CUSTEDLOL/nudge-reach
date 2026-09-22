@@ -131,7 +131,7 @@ describe("buildAgentSystemPrompt (knowledge digest + time awareness)", () => {
   it("without a digest the original blob section is unchanged", () => {
     const p = buildAgentSystemPrompt(profile);
     expect(p).toContain(
-      "BUSINESS INFORMATION (this is your only source of truth"
+      "BUSINESS INFORMATION — your source of truth for facts (never invent anything not stated here):"
     );
     expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
   });
