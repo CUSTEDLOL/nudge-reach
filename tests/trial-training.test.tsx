@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/toast";
 
-const { refresh, actions } = vi.hoisted(() => ({
+const { refresh, actions, ruleActions, profileActions } = vi.hoisted(() => ({
   refresh: vi.fn(),
   actions: {
     addFactAction: vi.fn(),
@@ -20,16 +20,35 @@ const { refresh, actions } = vi.hoisted(() => ({
     approveAllDraftsAction: vi.fn(),
     discardAllDraftsAction: vi.fn(),
   },
+  ruleActions: {
+    createRuleAction: vi.fn(),
+    updateRuleAction: vi.fn(),
+    archiveRuleAction: vi.fn(),
+    reorderRulesAction: vi.fn(),
+  },
+  profileActions: {
+    saveBusinessBasicsAction: vi.fn(),
+    saveAgentProfileAction: vi.fn(),
+    enableAgentAction: vi.fn(),
+  },
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh, push: vi.fn() }),
 }));
 vi.mock("@/app/(app)/agent/training-actions", () => actions);
+vi.mock("@/app/(app)/agent/rules-actions", () => ruleActions);
+vi.mock("@/app/(app)/agent/setup-actions", () => profileActions);
 
-import { TrialTraining } from "@/components/features/trial/trial-training";
+import {
+  TrialTraining,
+  TrialTrainingHeader,
+} from "@/components/features/trial/trial-training";
+import { BusinessSection } from "@/app/(app)/agent/business-section";
+import { RulesSection } from "@/app/(app)/agent/rules-section";
 import { uploadTrialPdfFiles } from "@/components/features/trial/trial-knowledge-sources";
 import { Library } from "@/app/(app)/agent/library";
+import { MAX_ACTIVE_RULES, type RuleListItem } from "@/modules/agent/rules";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 const workspace: TrialWorkspace = {
@@ -76,15 +95,30 @@ const draft = {
   condition: null,
 };
 
+/**
+ * The trial and the paid app now render the SAME three sections — your
+ * business, house rules, what it knows — so the trial's page is asserted the
+ * way it is composed: the trial's own header and knowledge body around the two
+ * shared sections.
+ */
 function renderTraining(
   current: TrialWorkspace,
   facts = current.approvedFactCount > 0 ? [activeFact] : [],
   drafts = current.draftFactCount > 0 ? [draft] : [],
+  rules: RuleListItem[] = [],
+  business = { businessName: "", vertical: "", tone: "" },
 ) {
   return renderToStaticMarkup(
     createElement(
       ToastProvider,
       null,
+      createElement(TrialTrainingHeader, { workspace: current }),
+      createElement(BusinessSection, { ...business, canEdit: true }),
+      createElement(RulesSection, {
+        rules,
+        canEdit: true,
+        limit: MAX_ACTIVE_RULES.trial,
+      }),
       createElement(TrialTraining, {
         workspace: current,
         facts,
@@ -121,6 +155,23 @@ describe("continuous trial training page", () => {
     expect(html).not.toContain("data-source-card");
     expect(html).not.toMatch(/step 1|progress/i);
     expect(html).not.toMatch(/clinic|patient/i);
+  });
+
+  it("puts the two shared sections above the knowledge the trial already had", () => {
+    const html = renderTraining(workspace);
+
+    expect(html).toContain("Your business");
+    expect(html).toContain("House rules");
+    // Behaviour first, then facts — the order the page renders them in.
+    expect(html.indexOf("Your business")).toBeLessThan(
+      html.indexOf("House rules"),
+    );
+    expect(html.indexOf("House rules")).toBeLessThan(
+      html.indexOf("Approved facts"),
+    );
+    // Rules are counted on their own; the fact counter is untouched.
+    expect(html).toContain("0 of 5");
+    expect(html).toContain("Facts 0/50");
   });
 
   it("keeps every source visible after imports and offers Inbox only with approved knowledge", () => {
@@ -185,7 +236,7 @@ describe("continuous trial training page", () => {
     );
   });
 
-  it("loads active and draft facts into the trial branch and never pushes after imports", () => {
+  it("loads business, rules and both fact states for one page with no trial fork", () => {
     const agentPage = readFileSync("src/app/(app)/agent/page.tsx", "utf8");
     const sources = readFileSync(
       "src/components/features/trial/trial-knowledge-sources.tsx",
@@ -196,8 +247,155 @@ describe("continuous trial training page", () => {
     expect(agentPage).toContain('status: "draft"');
     expect(agentPage).toContain("workspace={trial}");
     expect(agentPage).toContain("drafts={");
+    expect(agentPage).toContain("<BusinessSection");
+    expect(agentPage).toContain("<RulesSection");
+    // The trial's tour step for Training anchors here; nothing rendered it
+    // before, so the step showed "This area is still loading".
+    expect(agentPage).toContain('data-tour="training-source"');
+    // The fork that gave the trial a different page is gone.
+    expect(agentPage).not.toContain("if (trial && !trial.converted)");
     expect(sources).toContain("router.refresh()");
     expect(sources).not.toContain("router.push");
+  });
+});
+
+describe("house rules section", () => {
+  const rule = (over: Partial<RuleListItem> = {}): RuleListItem => ({
+    id: "rule_1",
+    text: "push everyone to join the waitlist at https://getgutfeeling.in/",
+    scope: "always",
+    condition: null,
+    ...over,
+  });
+
+  function renderRules(
+    rules: RuleListItem[],
+    limit: number = MAX_ACTIVE_RULES.full,
+  ) {
+    return renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(RulesSection, { rules, canEdit: true, limit }),
+      ),
+    );
+  }
+
+  it("shows each rule in the owner's own words, never the distilled line", () => {
+    const html = renderRules([
+      rule(),
+      rule({ id: "rule_2", scope: "never", text: "quote a price over chat" }),
+      rule({
+        id: "rule_3",
+        scope: "when",
+        condition: "someone asks about pricing",
+        text: "offer a consultation instead",
+      }),
+    ]);
+
+    expect(html).toContain(
+      "Always: push everyone to join the waitlist at https://getgutfeeling.in/",
+    );
+    expect(html).toContain("Never: quote a price over chat");
+    expect(html).toContain(
+      "When someone asks about pricing: offer a consultation instead",
+    );
+    expect(html).toContain("3 of 20");
+  });
+
+  it("nudges on quality once the list gets long, without blocking", () => {
+    const many = Array.from({ length: 10 }, (_, i) =>
+      rule({ id: `rule_${i}`, text: `rule number ${i}` }),
+    );
+    const html = renderRules(many);
+
+    expect(html).toContain(
+      "10 of 20 · the more rules you add, the less reliably the AI follows each one.",
+    );
+    // A nudge, not a cap: there is still room, so the add form stays usable.
+    expect(html).not.toContain("Rule limit reached");
+    expect(html).not.toMatch(/id="rule-text"[^>]*disabled/);
+  });
+
+  it("says plainly when the list is full instead of failing on save", () => {
+    const full = Array.from({ length: 5 }, (_, i) =>
+      rule({ id: `rule_${i}`, text: `rule number ${i}` }),
+    );
+    const html = renderRules(full, MAX_ACTIVE_RULES.trial);
+
+    expect(html).toContain("5 of 5");
+    expect(html).toContain("Rule limit reached (5/5)");
+    expect(html).toMatch(/id="rule-text"[^>]*disabled/);
+  });
+
+  it("hides the authoring controls from a member who cannot edit", () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(RulesSection, {
+          rules: [rule()],
+          canEdit: false,
+          limit: MAX_ACTIVE_RULES.full,
+        }),
+      ),
+    );
+
+    expect(html).toContain("Always: push everyone");
+    expect(html).not.toContain('id="rule-text"');
+    expect(html).not.toContain("Add rule");
+  });
+});
+
+describe("your business section", () => {
+  function renderBusiness(
+    initial: { businessName: string; vertical: string; tone: string },
+    canEdit = true,
+  ) {
+    return renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(BusinessSection, { ...initial, canEdit }),
+      ),
+    );
+  }
+
+  it("collapses to one line once the business has a name", () => {
+    const html = renderBusiness({
+      businessName: "Spice Garden",
+      vertical: "restaurant",
+      tone: "Warm, friendly, and concise",
+    });
+
+    expect(html).toContain("Spice Garden");
+    expect(html).toContain("restaurant");
+    expect(html).toContain("Warm, friendly, and concise");
+    // Collapsed means collapsed: no form in the markup at all.
+    expect(html).not.toContain('id="business-name"');
+    expect(html).toContain("Edit");
+  });
+
+  it("opens itself when there is nothing saved yet", () => {
+    const html = renderBusiness({ businessName: "", vertical: "", tone: "" });
+
+    expect(html).toContain('id="business-name"');
+    expect(html).toContain('id="business-vertical"');
+    expect(html).toContain('id="business-tone"');
+    expect(html).toContain("Save");
+    // The trial serves every kind of business; its copy names none of them.
+    expect(html).not.toMatch(/clinic|patient/i);
+  });
+
+  it("shows a read-only summary to a member who cannot edit", () => {
+    const html = renderBusiness(
+      { businessName: "Spice Garden", vertical: "restaurant", tone: "Warm" },
+      false,
+    );
+
+    expect(html).toContain("Spice Garden");
+    expect(html).not.toContain("Edit");
+    expect(html).not.toContain('id="business-name"');
   });
 });
 
