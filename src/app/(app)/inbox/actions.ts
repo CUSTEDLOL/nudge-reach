@@ -36,7 +36,7 @@ export interface ActionResult {
   /** Set by the simulation tester so the caller can open the thread. */
   conversationId?: string;
   /** The tester's message landed but no AI reply was sent, and why. */
-  skipped?: "no_profile" | "disabled" | "trial_limit";
+  skipped?: "no_profile" | "disabled" | "trial_limit" | "no_knowledge";
   /** Present only for a restricted acquisition trial. */
   trial?: TrialReplySummary;
 }
@@ -503,6 +503,17 @@ export async function simulateInboundAction(
       return { ok: false, message: "Enter a message first." };
     }
     if (restrictedTrial) {
+      const approvedFacts = await prisma.knowledgeEntry.count({
+        where: { orgId: org.id, status: "active" },
+      });
+      if (approvedFacts < 1) {
+        return {
+          ok: false,
+          skipped: "no_knowledge",
+          message:
+            "Train your AI with at least one approved business fact before testing a reply.",
+        };
+      }
       const rate = checkRateLimit(
         `trial-simulation:${org.id}`,
         RATE_LIMITS.outboundTest,

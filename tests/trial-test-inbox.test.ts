@@ -161,6 +161,35 @@ describe("trial test conversation", () => {
     );
   });
 
+  it("offers Train AI recovery only after a stale no-knowledge response", () => {
+    const state = createTrialTestInboxState(activeTrial);
+    const blocked = renderToStaticMarkup(
+      createElement(TestConversation, {
+        state,
+        identityLabel: "Test customer · private simulation",
+        needsKnowledge: true,
+      }),
+    );
+    const ready = renderToStaticMarkup(
+      createElement(TestConversation, {
+        state,
+        identityLabel: "Test customer · private simulation",
+        needsKnowledge: false,
+      }),
+    );
+    const testerSource = readFileSync(
+      "src/components/features/trial/try-your-ai.tsx",
+      "utf8",
+    );
+
+    expect(blocked).toContain("Approve a business fact before testing a reply");
+    expect(blocked).toContain('href="/agent"');
+    expect(blocked).toContain("Train AI");
+    expect(ready).not.toContain("Approve a business fact before testing a reply");
+    expect(testerSource).toContain('result.skipped === "no_knowledge"');
+    expect(testerSource).toContain("needsKnowledge={needsKnowledge}");
+  });
+
   it("keeps the paid tester at its alias and redirects an active trial to the Inbox", () => {
     const source = readFileSync("src/app/(app)/inbox/try/page.tsx", "utf8");
 

@@ -18,10 +18,12 @@ export function TestConversation({
   state,
   identityLabel,
   replyFocusRef,
+  needsKnowledge = false,
 }: {
   state: TrialTestInboxState;
   identityLabel: string;
   replyFocusRef?: Ref<HTMLLIElement>;
+  needsKnowledge?: boolean;
 }) {
   const lastNudgeIndex = state.messages.findLastIndex(
     (message) => message.speaker === "nudge",
@@ -107,6 +109,24 @@ export function TestConversation({
           {state.announcement ? `Nudge replied: ${state.announcement}` : ""}
         </p>
       </div>
+
+      {needsKnowledge && !stopped ? (
+        <div className="border-t border-neutral-200 bg-white px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-5 sm:px-6">
+          <p className="text-sm text-neutral-700">
+            Approve a business fact before testing a reply.
+          </p>
+          <Link
+            href="/agent"
+            className={buttonVariants({
+              variant: "secondary",
+              size: "sm",
+              className: "mt-3 sm:mt-0",
+            })}
+          >
+            Train AI
+          </Link>
+        </div>
+      ) : null}
 
       {stopped && (
         <div className="border-t border-amber-200 bg-amber-50 px-4 py-4 sm:flex sm:items-center sm:justify-between sm:gap-5 sm:px-6">

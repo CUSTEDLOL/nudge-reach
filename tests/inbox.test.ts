@@ -9,6 +9,8 @@ const {
   withTrialReplyReservation,
   trialFindUnique,
   trialUpdateMany,
+  knowledgeCount,
+  checkRateLimit,
   revalidatePath,
 } = vi.hoisted(() => ({
   requireOrgContext: vi.fn(),
@@ -19,6 +21,8 @@ const {
   withTrialReplyReservation: vi.fn(),
   trialFindUnique: vi.fn(),
   trialUpdateMany: vi.fn(),
+  knowledgeCount: vi.fn(),
+  checkRateLimit: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -29,7 +33,12 @@ vi.mock("@/lib/db", () => ({
       findUnique: trialFindUnique,
       updateMany: trialUpdateMany,
     },
+    knowledgeEntry: { count: knowledgeCount },
   },
+}));
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit,
+  RATE_LIMITS: { aiSuggest: {}, outboundTest: {} },
 }));
 vi.mock("@/modules/orgs/auth", () => ({ requireOrgContext }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
@@ -293,6 +302,9 @@ describe("trial-metered simulated inbound action", () => {
     );
     trialFindUnique.mockResolvedValue({ id: "trial_1" });
     trialUpdateMany.mockResolvedValue({ count: 1 });
+    knowledgeCount.mockResolvedValue(1);
+    checkRateLimit.mockReturnValue({ allowed: true });
+    handleInboundMessage.mockResolvedValue({ conversationId: "conversation_1" });
     isRestrictedAcquisitionTrial.mockResolvedValue(true);
   });
 
@@ -302,6 +314,36 @@ describe("trial-metered simulated inbound action", () => {
     value.set("text", "Are you open tomorrow?");
     return value;
   }
+
+  it("blocks an ungrounded trial before rate limiting, reservation, or inbound writes", async () => {
+    knowledgeCount.mockResolvedValue(0);
+
+    await expect(simulateInboundAction(formData())).resolves.toEqual({
+      ok: false,
+      skipped: "no_knowledge",
+      message: "Train your AI with at least one approved business fact before testing a reply.",
+    });
+
+    expect(knowledgeCount).toHaveBeenCalledWith({
+      where: { orgId: ORG, status: "active" },
+    });
+    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(withTrialReplyReservation).not.toHaveBeenCalled();
+    expect(handleInboundMessage).not.toHaveBeenCalled();
+    expect(trialFindUnique).not.toHaveBeenCalled();
+    expect(trialUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not add a knowledge query to the paid simulation path", async () => {
+    isRestrictedAcquisitionTrial.mockResolvedValue(false);
+
+    await simulateInboundAction(formData());
+
+    expect(knowledgeCount).not.toHaveBeenCalled();
+    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(withTrialReplyReservation).toHaveBeenCalledTimes(1);
+    expect(handleInboundMessage).toHaveBeenCalledTimes(1);
+  });
 
   it("returns a safe error when the metered inbound boundary throws", async () => {
     withTrialReplyReservation.mockRejectedValue(new Error("provider down"));

@@ -13,10 +13,15 @@ const {
   ingestGbp,
   ingestWebsite,
   withTrialKnowledgeImport,
+  activateTrialAgentIfGrounded,
 } = vi.hoisted(() => ({
   prisma: {
     agentProfile: { findUnique: vi.fn() },
-    knowledgeEntry: { create: vi.fn(), createMany: vi.fn() },
+    knowledgeEntry: {
+      create: vi.fn(),
+      createMany: vi.fn(),
+      updateMany: vi.fn(),
+    },
   },
   requireOrgContext: vi.fn(),
   requireRole: vi.fn(),
@@ -29,6 +34,7 @@ const {
   ingestGbp: vi.fn(),
   ingestWebsite: vi.fn(),
   withTrialKnowledgeImport: vi.fn(),
+  activateTrialAgentIfGrounded: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath }));
@@ -56,9 +62,14 @@ vi.mock("@/modules/trial/knowledge", () => ({
 vi.mock("@/modules/trial/capabilities", () => ({
   isRestrictedAcquisitionTrial,
 }));
+vi.mock("@/modules/trial/activation", () => ({
+  activateTrialAgentIfGrounded,
+}));
 
 import {
   addFactAction,
+  approveAllDraftsAction,
+  approveDraftAction,
   answerQuestionAction,
   importFileAction,
   importGbpAction,
@@ -66,13 +77,15 @@ import {
   structureExistingInfoAction,
 } from "@/app/(app)/agent/training-actions";
 
+const ctx = {
+  org: { id: "org_1" },
+  role: "OWNER",
+};
+
 describe("restricted trial model-backed training actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireOrgContext.mockResolvedValue({
-      org: { id: "org_1" },
-      role: "OWNER",
-    });
+    requireOrgContext.mockResolvedValue(ctx);
     isRestrictedAcquisitionTrial.mockResolvedValue(true);
     prisma.agentProfile.findUnique.mockResolvedValue({
       businessInfo: "We are open Monday to Saturday.",
@@ -82,6 +95,7 @@ describe("restricted trial model-backed training actions", () => {
       { category: "hours", fact: "Open Monday to Saturday." },
     ]);
     prisma.knowledgeEntry.create.mockResolvedValue({});
+    prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 1 });
     storeKnowledgeFacts.mockResolvedValue({
       created: 1,
       capacityReached: false,
@@ -101,6 +115,7 @@ describe("restricted trial model-backed training actions", () => {
     withTrialKnowledgeImport.mockImplementation(
       async (_orgId, _source, work) => work(),
     );
+    activateTrialAgentIfGrounded.mockResolvedValue({ status: "activated" });
   });
 
   it("blocks owner-question distillation before the model-backed service", async () => {
@@ -138,6 +153,7 @@ describe("restricted trial model-backed training actions", () => {
     );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(ctx);
   });
 
   it("returns a clear trial-limit message without revalidating when capacity is full", async () => {
@@ -154,6 +170,7 @@ describe("restricted trial model-backed training actions", () => {
     });
 
     expect(revalidatePath).not.toHaveBeenCalled();
+    expect(activateTrialAgentIfGrounded).not.toHaveBeenCalled();
   });
 
   it("preserves paid manual creation without deduping through the trial store", async () => {
@@ -177,6 +194,48 @@ describe("restricted trial model-backed training actions", () => {
       },
     });
     expect(storeKnowledgeFacts).not.toHaveBeenCalled();
+    expect(activateTrialAgentIfGrounded).not.toHaveBeenCalled();
+  });
+
+  it("activates after an individual restricted-trial draft is approved", async () => {
+    await expect(approveDraftAction("draft_1")).resolves.toEqual({
+      ok: true,
+      message: "Fact approved.",
+    });
+
+    expect(prisma.knowledgeEntry.updateMany).toHaveBeenCalledWith({
+      where: { id: "draft_1", orgId: "org_1", status: "draft" },
+      data: { status: "active" },
+    });
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(ctx);
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("activates after a non-empty restricted-trial bulk approval", async () => {
+    prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 2 });
+
+    await expect(approveAllDraftsAction()).resolves.toEqual({
+      ok: true,
+      message: "Approved 2 facts.",
+    });
+
+    expect(activateTrialAgentIfGrounded).toHaveBeenCalledWith(ctx);
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("does not activate a zero-row bulk approval", async () => {
+    prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 0 });
+    await approveAllDraftsAction();
+    expect(activateTrialAgentIfGrounded).not.toHaveBeenCalled();
+  });
+
+  it("does not activate a paid approval", async () => {
+    isRestrictedAcquisitionTrial.mockResolvedValue(false);
+    prisma.knowledgeEntry.updateMany.mockResolvedValue({ count: 1 });
+
+    await approveDraftAction("draft_paid");
+
+    expect(activateTrialAgentIfGrounded).not.toHaveBeenCalled();
   });
 
   it("passes the shared 50-fact cap into restricted website ingestion", async () => {
@@ -198,6 +257,7 @@ describe("restricted trial model-backed training actions", () => {
     );
     expect(revalidatePath).toHaveBeenCalledWith("/agent");
     expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+    expect(activateTrialAgentIfGrounded).not.toHaveBeenCalled();
   });
 
   it("explains when a website import is blocked by the 50-fact limit", async () => {

@@ -28,6 +28,7 @@ import {
   withTrialKnowledgeImport,
 } from "@/modules/trial/knowledge";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
+import { activateTrialAgentIfGrounded } from "@/modules/trial/activation";
 
 export interface ActionResult {
   ok: boolean;
@@ -142,6 +143,7 @@ export async function addFactAction(input: {
           }
         : { ok: false, message: "That fact is already in your knowledge." };
     }
+    await activateTrialAgentIfGrounded(ctx);
     revalidatePath("/agent");
     revalidatePath("/dashboard");
     return { ok: true, message: "Fact added." };
@@ -393,7 +395,11 @@ export async function approveDraftAction(id: string): Promise<ActionResult> {
       data: { status: "active" },
     });
     if (updated.count === 0) return { ok: false, message: "Draft not found." };
+    if (await isRestrictedAcquisitionTrial(ctx.org.id)) {
+      await activateTrialAgentIfGrounded(ctx);
+    }
     revalidatePath("/agent");
+    revalidatePath("/dashboard");
     return { ok: true, message: "Fact approved." };
   } catch (err) {
     return fail(err);
@@ -427,7 +433,14 @@ export async function approveAllDraftsAction(): Promise<ActionResult> {
       data: { status: "active" },
     });
     recordAudit(ctx, "knowledge.drafts_approved", String(updated.count));
+    if (
+      updated.count > 0
+      && await isRestrictedAcquisitionTrial(ctx.org.id)
+    ) {
+      await activateTrialAgentIfGrounded(ctx);
+    }
     revalidatePath("/agent");
+    if (updated.count > 0) revalidatePath("/dashboard");
     return {
       ok: true,
       message: `Approved ${updated.count} fact${updated.count === 1 ? "" : "s"}.`,

@@ -47,6 +47,7 @@ export function TryYourAi({
   const [phone, setPhone] = useState("9876500001");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [needsKnowledge, setNeedsKnowledge] = useState(false);
   const initialTrial = trial ?? {
       status: "active" as const,
       repliesUsed: 0,
@@ -95,12 +96,14 @@ export function TryYourAi({
       const result = await simulateInboundAction(fd);
       authoritativeTrial = result.trial;
       if (!result.ok) {
+        setNeedsKnowledge(result.skipped === "no_knowledge");
         if (trial) dispatchTrial({ type: "failed", trial: result.trial });
         if (result.trial) router.refresh();
         toast({ tone: "error", description: result.message });
         return;
       }
       actionSucceeded = true;
+      setNeedsKnowledge(false);
       router.refresh();
       if (result.skipped) toast({ tone: "error", description: result.message });
       if (result.conversationId) {
@@ -158,6 +161,7 @@ export function TryYourAi({
           state={trialState}
           identityLabel={testIdentity.label}
           replyFocusRef={replyFocusRef}
+          needsKnowledge={needsKnowledge}
         />
       )}
       <Card className="p-4 sm:p-6" data-tour="test-composer">
