@@ -19,6 +19,7 @@ export type TrialTourStep =
 export interface TrialWorkspace {
   id: string;
   status: TrialStatus;
+  emailVerified: boolean;
   expiresAt: string | null;
   repliesUsed: number;
   replyLimit: number;
@@ -87,6 +88,7 @@ async function loadTrialWorkspace(
       id: true,
       orgId: true,
       claimedAt: true,
+      emailVerifiedAt: true,
       startedAt: true,
       expiresAt: true,
       repliesUsed: true,
@@ -132,6 +134,7 @@ async function loadTrialWorkspace(
   return {
     id: trial.id,
     status,
+    emailVerified: Boolean(trial.emailVerifiedAt),
     expiresAt: iso(trial.expiresAt),
     repliesUsed: trial.repliesUsed,
     replyLimit: trial.replyLimit,

@@ -46,6 +46,7 @@ function trialRow(overrides: Record<string, unknown> = {}) {
     id: "trial_1",
     orgId: "org_1",
     claimedAt: new Date("2026-09-20T10:00:00.000Z"),
+    emailVerifiedAt: null,
     startedAt: new Date("2026-09-20T10:00:00.000Z"),
     expiresAt: new Date("2026-09-27T10:00:00.000Z"),
     repliesUsed: 0,
@@ -79,6 +80,7 @@ describe("trial workspace projection", () => {
     await expect(getTrialWorkspace("org_1", now)).resolves.toEqual({
       id: "trial_1",
       status: "active",
+      emailVerified: false,
       expiresAt: "2026-09-27T10:00:00.000Z",
       repliesUsed: 0,
       replyLimit: 15,
@@ -103,11 +105,29 @@ describe("trial workspace projection", () => {
       demoBooked: false,
       converted: false,
     });
+    const select = trialFindUnique.mock.calls[0][0].select;
+    expect(select.emailVerifiedAt).toBe(true);
+    expect(select).not.toHaveProperty("email");
+    expect(select).not.toHaveProperty("emailNormalized");
     expect(knowledgeGroupBy).toHaveBeenCalledWith({
       by: ["status"],
       where: { orgId: "org_1", status: { in: ["active", "draft"] } },
       _count: { _all: true },
     });
+  });
+
+  it("projects verified email proof only as a boolean", async () => {
+    trialFindUnique.mockResolvedValue(
+      trialRow({
+        emailVerifiedAt: new Date("2026-09-22T09:00:00.000Z"),
+      }),
+    );
+
+    const workspace = await getTrialWorkspace("org_verified", now);
+
+    expect(workspace).toMatchObject({ emailVerified: true });
+    expect(workspace).not.toHaveProperty("emailVerifiedAt");
+    expect(workspace).not.toHaveProperty("email");
   });
 
   it("reuses the implicit request-time projection for the same organization", async () => {

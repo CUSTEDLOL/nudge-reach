@@ -764,6 +764,7 @@ model AcquisitionTrial {
   claimTokenHash        String                  @unique
   claimExpiresAt        DateTime
   claimedAt             DateTime?
+  emailVerifiedAt       DateTime?
   startedAt             DateTime?
   expiresAt             DateTime?
   replyLimit            Int                     @default(15)

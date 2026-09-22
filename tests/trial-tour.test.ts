@@ -11,6 +11,7 @@ import type { TrialWorkspace } from "@/modules/trial/workspace";
 const trial: TrialWorkspace = {
   id: "trial_1",
   status: "active",
+  emailVerified: false,
   expiresAt: "2026-09-27T10:00:00.000Z",
   repliesUsed: 3,
   replyLimit: 15,
