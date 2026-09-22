@@ -42,3 +42,32 @@ describe("SEO indexing controls", () => {
     expect(isPublicPath("/tools-private")).toBe(false);
   });
 });
+
+/**
+ * Every public marketing route must be in the proxy's allowlist. Anything
+ * missing does NOT 404 — it 307s signed-out visitors to /login, so the page
+ * looks like it exists in the build and is unreachable in production. That is
+ * exactly how /contact shipped: built fine, redirected everyone.
+ */
+describe("marketing routes are reachable when signed out", () => {
+  it("treats every marketing page as public", () => {
+    for (const path of [
+      "/contact",
+      "/free-trial",
+      "/pricing",
+      "/faq",
+      "/resources",
+      "/industries/clinics",
+      "/privacy",
+      "/terms",
+    ]) {
+      expect(isPublicPath(path), `${path} redirects to /login`).toBe(true);
+    }
+  });
+
+  it("still protects the signed-in app", () => {
+    for (const path of ["/dashboard", "/inbox", "/settings/whatsapp", "/admin/orgs"]) {
+      expect(isPublicPath(path), `${path} must stay private`).toBe(false);
+    }
+  });
+});

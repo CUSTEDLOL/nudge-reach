@@ -38,6 +38,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/terms",
   "/industries",
   "/resources",
+  "/contact",
   "/whatsapp-ai-automation",
   "/tools",
   "/features",
