@@ -3,6 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+type TrialVerificationStatus =
+  | { kind: "idle" }
+  | { kind: "success" }
+  | { kind: "error" };
+
+interface TrialVerificationState {
+  storageResolved: boolean;
+  dismissed: boolean;
+  sent: boolean;
+  latestRequestId: number;
+  status: TrialVerificationStatus;
+}
+
 export function trialVerificationStorageKeys(trialId: string) {
   return {
     sent: `nudge:trial:${trialId}:verification-sent`,
@@ -14,6 +27,67 @@ export function trialVerificationRedirect(origin: string) {
   return `${origin}/auth/confirm?next=/dashboard`;
 }
 
+export function initialTrialVerificationState(): TrialVerificationState {
+  return {
+    storageResolved: false,
+    dismissed: false,
+    sent: false,
+    latestRequestId: 0,
+    status: { kind: "idle" },
+  };
+}
+
+export function resolveTrialVerificationStorage(
+  state: TrialVerificationState,
+  snapshot: { dismissed: boolean; sent: boolean },
+): TrialVerificationState {
+  return {
+    ...state,
+    storageResolved: true,
+    dismissed: snapshot.dismissed,
+    sent: state.sent || snapshot.sent,
+  };
+}
+
+export function startTrialVerificationRequest(
+  state: TrialVerificationState,
+  requestId: number,
+): TrialVerificationState {
+  return { ...state, latestRequestId: requestId, status: { kind: "idle" } };
+}
+
+export function completeTrialVerificationRequest(
+  state: TrialVerificationState,
+  requestId: number,
+  status: "success" | "error",
+): TrialVerificationState {
+  if (requestId !== state.latestRequestId) return state;
+  return {
+    ...state,
+    sent: state.sent || status === "success",
+    status: { kind: status },
+  };
+}
+
+export function markTrialVerificationSent(
+  storage: Pick<Storage, "setItem">,
+  trialId: string,
+) {
+  storage.setItem(trialVerificationStorageKeys(trialId).sent, "true");
+}
+
+function trialVerificationStorageSnapshot(trialId: string) {
+  try {
+    const keys = trialVerificationStorageKeys(trialId);
+    return {
+      dismissed: Boolean(window.localStorage.getItem(keys.dismissed)),
+      sent: Boolean(window.localStorage.getItem(keys.sent)),
+    };
+  } catch {
+    return { dismissed: false, sent: false };
+  }
+}
+
 export function TrialEmailVerification({
   trialId,
   email,
@@ -22,24 +96,12 @@ export function TrialEmailVerification({
   email: string;
 }) {
   const requestedOnMount = useRef(false);
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return Boolean(
-        window.localStorage.getItem(
-          trialVerificationStorageKeys(trialId).dismissed,
-        ),
-      );
-    } catch {
-      return false;
-    }
-  });
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const latestRequestId = useRef(0);
+  const [state, setState] = useState(initialTrialVerificationState);
 
   const sendVerification = useCallback(async () => {
-    setMessage(null);
-    setError(null);
+    const requestId = ++latestRequestId.current;
+    setState((current) => startTrialVerificationRequest(current, requestId));
 
     try {
       const { error: otpError } = await createClient().auth.signInWithOtp({
@@ -52,33 +114,40 @@ export function TrialEmailVerification({
       if (otpError) throw otpError;
 
       try {
-        window.localStorage.setItem(
-          trialVerificationStorageKeys(trialId).sent,
-          "true",
-        );
+        markTrialVerificationSent(window.localStorage, trialId);
       } catch {
         // A privacy-restricted browser can still receive the email.
       }
-      setMessage("Verification email sent.");
+      setState((current) =>
+        completeTrialVerificationRequest(current, requestId, "success"),
+      );
     } catch {
-      setError("Could not send the verification email. Try again.");
+      setState((current) =>
+        completeTrialVerificationRequest(current, requestId, "error"),
+      );
     }
   }, [email, trialId]);
 
   useEffect(() => {
-    if (requestedOnMount.current) return;
+    const snapshot = trialVerificationStorageSnapshot(trialId);
+    queueMicrotask(() => {
+      setState((current) => resolveTrialVerificationStorage(current, snapshot));
+    });
+  }, [trialId]);
 
-    try {
-      const keys = trialVerificationStorageKeys(trialId);
-      if (window.localStorage.getItem(keys.dismissed)) return;
-      if (window.localStorage.getItem(keys.sent)) return;
-    } catch {
-      // Continue without browser storage; sending remains optional and safe.
+  useEffect(() => {
+    if (
+      !state.storageResolved ||
+      state.dismissed ||
+      state.sent ||
+      requestedOnMount.current
+    ) {
+      return;
     }
 
     requestedOnMount.current = true;
     queueMicrotask(() => void sendVerification());
-  }, [sendVerification, trialId]);
+  }, [sendVerification, state.dismissed, state.sent, state.storageResolved]);
 
   function dismiss() {
     try {
@@ -89,10 +158,10 @@ export function TrialEmailVerification({
     } catch {
       // Dismissing remains local even when storage is unavailable.
     }
-    setDismissed(true);
+    setState((current) => ({ ...current, dismissed: true }));
   }
 
-  if (dismissed) return null;
+  if (state.dismissed) return null;
 
   return (
     <p className="mt-1 text-xs leading-5 text-brand-900/65">
@@ -111,8 +180,12 @@ export function TrialEmailVerification({
       >
         Dismiss
       </button>
-      {message ? <span role="status"> {message}</span> : null}
-      {error ? <span role="alert"> {error}</span> : null}
+      {state.status.kind === "success" ? (
+        <span role="status"> Verification email sent.</span>
+      ) : null}
+      {state.status.kind === "error" ? (
+        <span role="alert"> Could not send the verification email. Try again.</span>
+      ) : null}
     </p>
   );
 }

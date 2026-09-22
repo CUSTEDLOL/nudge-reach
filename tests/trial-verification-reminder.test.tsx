@@ -4,6 +4,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   TrialEmailVerification,
+  completeTrialVerificationRequest,
+  initialTrialVerificationState,
+  markTrialVerificationSent,
+  resolveTrialVerificationStorage,
+  startTrialVerificationRequest,
   trialVerificationRedirect,
   trialVerificationStorageKeys,
 } from "@/components/features/trial/trial-email-verification";
@@ -20,6 +25,49 @@ describe("trial email verification reminder", () => {
     expect(trialVerificationRedirect("https://nudge.test")).toBe(
       "https://nudge.test/auth/confirm?next=/dashboard",
     );
+  });
+
+  it("keeps server and first-client state identical before resolving a dismissal", () => {
+    const serverState = initialTrialVerificationState();
+    const firstClientState = initialTrialVerificationState();
+
+    expect(firstClientState).toEqual(serverState);
+    expect(firstClientState.storageResolved).toBe(false);
+    expect(firstClientState.dismissed).toBe(false);
+
+    const hydrated = resolveTrialVerificationStorage(firstClientState, {
+      dismissed: true,
+      sent: false,
+    });
+
+    expect(hydrated).toMatchObject({
+      storageResolved: true,
+      dismissed: true,
+    });
+  });
+
+  it("keeps the newest visible request result while stale successes still persist", () => {
+    const writes: Array<[string, string]> = [];
+    const storage = {
+      setItem(key: string, value: string) {
+        writes.push([key, value]);
+      },
+    };
+    let state = resolveTrialVerificationStorage(initialTrialVerificationState(), {
+      dismissed: false,
+      sent: false,
+    });
+    state = startTrialVerificationRequest(state, 1);
+    state = startTrialVerificationRequest(state, 2);
+    state = completeTrialVerificationRequest(state, 2, "error");
+
+    markTrialVerificationSent(storage, "trial_1");
+    state = completeTrialVerificationRequest(state, 1, "success");
+
+    expect(state.status).toEqual({ kind: "error" });
+    expect(writes).toEqual([
+      ["nudge:trial:trial_1:verification-sent", "true"],
+    ]);
   });
 
   it("renders the optional reminder with quiet text actions", () => {
@@ -46,11 +94,13 @@ describe("trial email verification reminder", () => {
 
     expect(source).toContain("shouldCreateUser: false");
     expect(source).toContain("useRef");
-    expect(source).toContain("useState(() =>");
+    expect(source).toContain("initialTrialVerificationState");
+    expect(source).toContain("storageResolved");
     expect(source).toContain("queueMicrotask");
     expect(source).toContain("trialVerificationStorageKeys(trialId)");
     expect(source).toContain("Verification email sent.");
-    expect(source).toContain("setError");
+    expect(source).toContain("latestRequestId");
+    expect(source).toContain("completeTrialVerificationRequest");
     expect(source).not.toMatch(/(?:router\.|window\.location\s*=|disabled=)/);
   });
 });
