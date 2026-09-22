@@ -6,6 +6,7 @@ import { Footer } from "@/components/marketing/footer";
 import { ScrollTop } from "@/components/marketing/scroll-top";
 import { BookDemoButton } from "@/components/marketing/book-demo";
 import { whatsappHref } from "@/components/marketing/contact-links";
+import { GetAccessButton } from "@/components/marketing/get-access";
 
 export const metadata: Metadata = metadataFor("/contact");
 
@@ -54,6 +55,26 @@ export default function ContactPage() {
             </a>{" "}
             — no call needed.
           </p>
+
+          {/*
+            Booking a call and starting a trial both require the visitor to act
+            now. This is the path for someone who is interested but not ready:
+            leave a name and we come to them. It reuses the existing Get Access
+            form rather than adding a second implementation of the same POST.
+          */}
+          <div className="mt-10 border-t border-ink/10 pt-8">
+            <h2 className="text-lg font-bold text-ink">Not ready yet?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink/60">
+              Leave your details and we&apos;ll get in touch when it makes sense
+              — no call, no trial, no commitment.
+            </p>
+            <GetAccessButton
+              source="contact"
+              className="group/link mt-4 inline-flex min-h-12 items-center gap-2 rounded-xl border border-ink/15 bg-white px-6 py-3 text-[15px] font-semibold text-ink transition-all hover:-translate-y-0.5 hover:border-ink/25 hover:shadow-[0_12px_32px_-14px_rgba(10,31,26,0.35)]"
+            >
+              Leave your details
+            </GetAccessButton>
+          </div>
         </section>
       </main>
       <Footer />
