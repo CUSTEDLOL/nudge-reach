@@ -503,17 +503,6 @@ export async function simulateInboundAction(
       return { ok: false, message: "Enter a message first." };
     }
     if (restrictedTrial) {
-      const approvedFacts = await prisma.knowledgeEntry.count({
-        where: { orgId: org.id, status: "active" },
-      });
-      if (approvedFacts < 1) {
-        return {
-          ok: false,
-          skipped: "no_knowledge",
-          message:
-            "Train your AI with at least one approved business fact before testing a reply.",
-        };
-      }
       const rate = checkRateLimit(
         `trial-simulation:${org.id}`,
         RATE_LIMITS.outboundTest,
@@ -576,6 +565,15 @@ export async function simulateInboundAction(
     const conversationId = result.conversationId;
     if (result.optedOut) {
       return { ok: true, message: "Customer opted out (STOP) — no reply sent.", conversationId };
+    }
+    if (result.skipped === "no_knowledge") {
+      return {
+        ok: false,
+        message:
+          "Train your AI with at least one approved business fact before testing a reply.",
+        skipped: "no_knowledge",
+        ...(freshTrial ? { trial: freshTrial } : {}),
+      };
     }
     if (result.skipped) {
       return {

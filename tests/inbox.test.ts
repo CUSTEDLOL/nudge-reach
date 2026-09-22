@@ -315,8 +315,8 @@ describe("trial-metered simulated inbound action", () => {
     return value;
   }
 
-  it("blocks an ungrounded trial before rate limiting, reservation, or inbound writes", async () => {
-    knowledgeCount.mockResolvedValue(0);
+  it("surfaces an ungrounded result from inside the authoritative reservation", async () => {
+    handleInboundMessage.mockResolvedValue({ skipped: "no_knowledge" });
 
     await expect(simulateInboundAction(formData())).resolves.toEqual({
       ok: false,
@@ -324,14 +324,34 @@ describe("trial-metered simulated inbound action", () => {
       message: "Train your AI with at least one approved business fact before testing a reply.",
     });
 
-    expect(knowledgeCount).toHaveBeenCalledWith({
-      where: { orgId: ORG, status: "active" },
-    });
-    expect(checkRateLimit).not.toHaveBeenCalled();
-    expect(withTrialReplyReservation).not.toHaveBeenCalled();
-    expect(handleInboundMessage).not.toHaveBeenCalled();
+    expect(knowledgeCount).not.toHaveBeenCalled();
+    expect(checkRateLimit).toHaveBeenCalledTimes(1);
+    expect(withTrialReplyReservation).toHaveBeenCalledTimes(1);
+    expect(handleInboundMessage).toHaveBeenCalledTimes(1);
     expect(trialFindUnique).not.toHaveBeenCalled();
     expect(trialUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("returns the authoritative expired state before checking knowledge", async () => {
+    knowledgeCount.mockResolvedValue(0);
+    withTrialReplyReservation.mockResolvedValue({
+      kind: "blocked",
+      status: "expired",
+      trial: {
+        status: "expired",
+        repliesUsed: 4,
+        replyLimit: 15,
+        repliesRemaining: 11,
+      },
+    });
+
+    await expect(simulateInboundAction(formData())).resolves.toMatchObject({
+      ok: false,
+      skipped: "trial_limit",
+      trial: { status: "expired", repliesRemaining: 11 },
+    });
+    expect(knowledgeCount).not.toHaveBeenCalled();
+    expect(handleInboundMessage).not.toHaveBeenCalled();
   });
 
   it("does not add a knowledge query to the paid simulation path", async () => {

@@ -22,7 +22,7 @@ export interface InboundResult {
   reply?: string;
   handoff?: boolean;
   conversationId?: string;
-  skipped?: "no_profile" | "disabled";
+  skipped?: "no_profile" | "disabled" | "no_knowledge";
   /** Set when an automation (not the AI agent) produced the reply. */
   automated?: true;
   /** Tools the agent invoked this turn (capture_lead, capture_booking_request, …). */
@@ -47,6 +47,21 @@ export async function handleInboundMessage(
   opts: { metaMessageId?: string; whatsappAccountId?: string } = {}
 ): Promise<InboundResult> {
   const restrictedTrial = await isRestrictedAcquisitionTrial(orgId);
+  const stopMessage = isStopMessage(text);
+  // A restricted trial must use one authoritative knowledge snapshot for the
+  // whole turn. Re-reading after an outer preflight allowed the last active
+  // fact to be archived between checks and sent an ungrounded prompt.
+  const trialKnowledgeEntries = restrictedTrial && !stopMessage
+    ? await prisma.knowledgeEntry.findMany({
+        where: { orgId, status: "active" },
+        select: { category: true, fact: true, condition: true },
+        orderBy: { createdAt: "asc" },
+        take: 400,
+      })
+    : null;
+  if (restrictedTrial && !stopMessage && trialKnowledgeEntries?.length === 0) {
+    return { skipped: "no_knowledge" };
+  }
   // Meta's webhook always sends `from` with the country code but no "+"
   // (e.g. "919876543210", "971501234567") — so a bare digit string is an
   // international number as-is, never a local number to prefix.
@@ -76,7 +91,7 @@ export async function handleInboundMessage(
   }
 
   // Opt-out always wins, and we never auto-reply to it.
-  if (isStopMessage(text)) {
+  if (stopMessage) {
     await prisma.contact.update({
       where: { id: contact.id },
       data: { optedIn: false, optedOutAt: new Date() },
@@ -174,12 +189,14 @@ export async function handleInboundMessage(
       })
       .then((rows) => rows.reverse()),
     prisma.org.findUnique({ where: { id: orgId }, select: { timezone: true } }),
-    prisma.knowledgeEntry.findMany({
-      where: { orgId, status: "active" },
-      select: { category: true, fact: true, condition: true },
-      orderBy: { createdAt: "asc" },
-      take: 400,
-    }),
+    restrictedTrial
+      ? Promise.resolve(trialKnowledgeEntries ?? [])
+      : prisma.knowledgeEntry.findMany({
+          where: { orgId, status: "active" },
+          select: { category: true, fact: true, condition: true },
+          orderBy: { createdAt: "asc" },
+          take: 400,
+        }),
   ]);
 
   // buildHistory drops leading assistant turns; whatever happens, the agent

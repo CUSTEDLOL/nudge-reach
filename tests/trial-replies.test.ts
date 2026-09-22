@@ -133,6 +133,7 @@ describe("trial reply allowance", () => {
     ["provider fallback", { reply: "A person will follow up.", aiFailed: true }],
     ["automation", { reply: "Automated answer", automated: true }],
     ["no reply", { skipped: "no_profile" }],
+    ["ungrounded reply", { skipped: "no_knowledge" }],
   ])("refunds the reservation for a non-AI %s", async (_case, result) => {
     const inbound = vi.fn().mockResolvedValue(result);
 

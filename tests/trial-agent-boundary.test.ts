@@ -80,7 +80,9 @@ describe("restricted trial agent boundary", () => {
     ]);
     prisma.conversation.update.mockResolvedValue({});
     prisma.org.findUnique.mockResolvedValue({ timezone: "Asia/Kolkata" });
-    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    prisma.knowledgeEntry.findMany.mockResolvedValue([
+      { category: "hours", fact: "Open Monday to Saturday.", condition: null },
+    ]);
     generateAgentReply.mockResolvedValue({
       text: "We can help with that.",
       handoff: false,
@@ -112,6 +114,35 @@ describe("restricted trial agent boundary", () => {
       expect.any(Object),
       expect.objectContaining({ suppressWebhook: true }),
     );
+  });
+
+  it("stops before any inbound writes or model call when the active knowledge snapshot is empty", async () => {
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+
+    await expect(
+      handleInboundMessage("org_1", "+999123", "Can I book tomorrow?"),
+    ).resolves.toEqual({ skipped: "no_knowledge" });
+
+    expect(prisma.knowledgeEntry.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.conversation.upsert).not.toHaveBeenCalled();
+    expect(prisma.conversationMessage.create).not.toHaveBeenCalled();
+    expect(generateAgentReply).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("lets STOP win without requiring a knowledge snapshot", async () => {
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+
+    await expect(
+      handleInboundMessage("org_1", "+999123", "STOP"),
+    ).resolves.toEqual({ optedOut: true });
+
+    expect(prisma.knowledgeEntry.findMany).not.toHaveBeenCalled();
+    expect(prisma.contact.update).toHaveBeenCalledWith({
+      where: { id: "contact_1" },
+      data: { optedIn: false, optedOutAt: expect.any(Date) },
+    });
+    expect(generateAgentReply).not.toHaveBeenCalled();
   });
 
   it("does not persist a trial handoff as paid inbox state", async () => {
