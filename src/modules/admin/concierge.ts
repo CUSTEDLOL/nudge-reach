@@ -14,6 +14,7 @@ import {
   writeStarterSet,
 } from "@/modules/followup/install";
 import { draftFollowUp } from "@/modules/followup/draft";
+import { migrateProfileToRules } from "@/modules/agent/migrate-profile";
 import { parseFollowUpSpec, specErrorMessage } from "@/modules/followup/spec";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
 
@@ -209,5 +210,42 @@ export async function founderDraftFollowUps(
     ]
       .filter(Boolean)
       .join(" "),
+  };
+}
+
+/**
+ * Concierge onboarding, run deliberately: turn the client's legacy Setup boxes
+ * (`doNots` and the "what should the assistant know?" free text) into house
+ * rules and draft knowledge facts. The Training page does this lazily on the
+ * owner's first visit; this is the founder doing it during a setup call,
+ * before the owner has ever opened the page.
+ *
+ * Idempotent and non-destructive — it never clears the legacy columns and
+ * re-running it creates nothing. Not flagship-gated for the same reason as
+ * the drafting above: onboarding happens before billing, and it costs no AI.
+ */
+export async function founderMigrateProfile(
+  orgId: string,
+  founderEmail: string,
+  reason?: string
+): Promise<FounderResult> {
+  const org = await prisma.org.findUnique({ where: { id: orgId }, select: { id: true } });
+  if (!org) return { ok: false, error: "Org not found." };
+
+  const { rules, facts } = await migrateProfileToRules(orgId);
+  if (rules === 0 && facts === 0) {
+    return { ok: false, error: "Nothing to migrate — already done, or both legacy boxes are empty." };
+  }
+
+  await founderAudit(
+    orgId,
+    founderEmail,
+    "admin.profile_migrated",
+    null,
+    withReason(`${rules} rules, ${facts} draft facts`, reason)
+  );
+  return {
+    ok: true,
+    message: `Migrated: ${rules} house rule${rules === 1 ? "" : "s"} (live) and ${facts} draft fact${facts === 1 ? "" : "s"} awaiting review. The old boxes are untouched.`,
   };
 }

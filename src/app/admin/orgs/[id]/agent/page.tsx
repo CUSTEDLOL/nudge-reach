@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
-import { draftFollowUpsAction, setAgentEnabledAction, setFollowUpsEnabledAction, setupClientAction } from "../actions";
+import { draftFollowUpsAction, migrateProfileAction, setAgentEnabledAction, setFollowUpsEnabledAction, setupClientAction } from "../actions";
 
 const VERTICAL_LABEL: Record<string, string> = { clinic: "Clinic / Health", salon: "Salon / Beauty" };
 const inputCls =
@@ -74,7 +74,18 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
             )}
           </dl>
           {p && (
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ActionForm
+                action={migrateProfileAction}
+                hidden={H}
+                submitLabel="Migrate legacy setup text"
+                confirm={{
+                  title: "Turn the legacy setup boxes into rules and facts?",
+                  description:
+                    "Every “never do” sentence and every instruction in the business-info box becomes a live house rule; the rest become knowledge facts in draft, awaiting the owner's review. Neither legacy box is cleared, and re-running it creates nothing. The owner's own first visit to Training does this anyway — run it here to have it done before the call.",
+                }}
+                askReason
+              />
               <ActionForm
                 action={setAgentEnabledAction}
                 hidden={{ ...H, enabled: p.enabled ? "false" : "true" }}

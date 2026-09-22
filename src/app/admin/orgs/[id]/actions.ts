@@ -418,6 +418,7 @@ export async function setCustomActionEnabledAction(formData: FormData): Promise<
 // ---- Front Desk (concierge) ----------------------------------------------
 import {
   founderDraftFollowUps,
+  founderMigrateProfile,
   founderSetAgentEnabled,
   founderSetFollowUpsEnabled,
   founderSetupClient,
@@ -470,6 +471,16 @@ export async function draftFollowUpsAction(formData: FormData): Promise<AdminAct
     return withRequiredReason(formData, async (reason) => {
       const orgId = str(formData, "orgId");
       return done(orgId, await founderDraftFollowUps(orgId, str(formData, "request"), founder.email, reason));
+    });
+  });
+}
+
+/** Concierge onboarding: the legacy Setup boxes become rules and draft facts. */
+export async function migrateProfileAction(formData: FormData): Promise<AdminActionResult> {
+  return runFounderAction(async (founder) => {
+    return withRequiredReason(formData, async (reason) => {
+      const orgId = str(formData, "orgId");
+      return done(orgId, await founderMigrateProfile(orgId, founder.email, reason));
     });
   });
 }

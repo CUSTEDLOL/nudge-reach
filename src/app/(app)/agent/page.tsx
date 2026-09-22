@@ -11,6 +11,7 @@ import { Queue, type QueueItem } from "./queue";
 import { Library, type LibraryFact } from "./library";
 import { ImportPanel } from "./import-panel";
 import { parseWaiting } from "@/modules/knowledge/questions";
+import { migrateProfileOnce } from "@/modules/agent/migrate-profile";
 import {
   MAX_ACTIVE_RULES,
   toRuleScope,
@@ -37,6 +38,10 @@ export const metadata: Metadata = { title: "AI Front Desk" };
 export default async function AgentPage() {
   const ctx = await requireOrgContext();
   const canEdit = hasRole(ctx.role, "ADMIN");
+  // The old Setup page's two free-text boxes become rules and draft facts, once
+  // per org, before the reads below — so the first sight of this page already
+  // shows what the owner typed there. Guarded and failure-swallowing.
+  await migrateProfileOnce(ctx.org.id);
   const trial = await getTrialWorkspace(ctx.org.id);
   const onTrial = trial !== null && !trial.converted;
   const ruleLimit = onTrial ? MAX_ACTIVE_RULES.trial : MAX_ACTIVE_RULES.full;

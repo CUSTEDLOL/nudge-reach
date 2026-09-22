@@ -74,6 +74,7 @@ export type AuditAction =
   | "admin.followups_toggled"
   | "admin.followups_drafted"
   | "admin.client_setup"
+  | "admin.profile_migrated"
   | "admin.operation_requested"
   | "admin.operation_completed"
   | "admin.operation_failed";
@@ -145,6 +146,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.followups_toggled": "Nudge support switched follow-ups on/off",
   "admin.followups_drafted": "Nudge support drafted follow-ups",
   "admin.client_setup": "Nudge support ran concierge setup",
+  "admin.profile_migrated": "Nudge support migrated the legacy setup text into rules and facts",
   "admin.operation_requested": "Nudge support requested an operational recovery",
   "admin.operation_completed": "Nudge support completed an operational recovery",
   "admin.operation_failed": "Nudge support recovery failed",
