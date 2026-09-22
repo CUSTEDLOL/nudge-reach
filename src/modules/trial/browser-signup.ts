@@ -35,22 +35,19 @@ export function trialIntakePayload(
   };
 }
 
-export function trialAuthCredentials(
+export function trialAccountPayload(
   form: TrialSignupValues,
-  origin: string,
   claim: TrialClaimResponse,
 ) {
   return {
-    email: form.email,
+    trialId: claim.trialId,
+    claimToken: claim.claimToken,
     password: form.password,
-    options: {
-      emailRedirectTo: `${origin}/auth/confirm?next=/agent`,
-      data: {
-        acquisition_trial_id: claim.trialId,
-        acquisition_trial_token: claim.claimToken,
-      },
-    },
   };
+}
+
+export function trialPasswordCredentials(form: TrialSignupValues) {
+  return { email: form.email, password: form.password };
 }
 
 export function validateTrialPassword(password: string) {
@@ -58,7 +55,7 @@ export function validateTrialPassword(password: string) {
 }
 
 export function trialSignupDestination(hasSession: boolean) {
-  return hasSession ? "/agent" : null;
+  return hasSession ? "/dashboard" as const : null;
 }
 
 export function trialClaimNeedsRefresh(

@@ -10,9 +10,10 @@ import {
   pushMarketingEvent,
 } from "@/modules/marketing/analytics";
 import {
-  trialAuthCredentials,
+  trialAccountPayload,
   trialClaimNeedsRefresh,
   trialIntakePayload,
+  trialPasswordCredentials,
   trialSignupDestination,
   validateTrialPassword,
   type TrialIntakeResponse,
@@ -31,6 +32,9 @@ const INITIAL_VALUES: TrialSignupValues = {
 };
 
 type FailureReason = "validation" | "intake" | "auth";
+type TrialAccountResponse =
+  | { ok: true }
+  | { ok: false; error: string };
 
 export function TrialSignupForm() {
   const router = useRouter();
@@ -38,7 +42,6 @@ export function TrialSignupForm() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [duplicate, setDuplicate] = useState(false);
-  const [confirmationEmail, setConfirmationEmail] = useState("");
   const [pendingClaim, setPendingClaim] = useState<TrialClaimResponse | null>(null);
 
   function update(event: ChangeEvent<HTMLInputElement>) {
@@ -113,15 +116,46 @@ export function TrialSignupForm() {
         setPendingClaim(claim);
       }
 
+      const accountResponse = await fetch("/api/trials/account", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(trialAccountPayload(values, claim)),
+      });
+      const accountResult = (await accountResponse.json()) as TrialAccountResponse;
+      const canAttemptSignIn = accountResponse.status === 409
+        || (accountResponse.ok && accountResult.ok);
+      if (!canAttemptSignIn) {
+        fail(
+          "auth",
+          accountResult.ok
+            ? "Couldn't create the account. Please try again."
+            : accountResult.error,
+        );
+        return;
+      }
+
       const supabase = createClient();
-      const { data, error } = await supabase.auth.signUp(
-        trialAuthCredentials(values, window.location.origin, claim),
+      const { data, error } = await supabase.auth.signInWithPassword(
+        trialPasswordCredentials(values),
       );
-      if (error) {
+      if (error || !data.session) {
         setDuplicate(true);
         fail(
           "auth",
-          `${error.message} Your trial details are saved—update the password if needed, then retry account creation.`,
+          "We couldn't sign in to continue this trial. Check the password and try again.",
+        );
+        return;
+      }
+
+      const metadata = data.session.user.user_metadata;
+      if (
+        metadata.acquisition_trial_id !== claim.trialId
+        || metadata.acquisition_trial_token !== claim.claimToken
+      ) {
+        setDuplicate(true);
+        fail(
+          "auth",
+          "This account cannot continue the pending trial. Sign in with the matching account or restart with a different email.",
         );
         return;
       }
@@ -137,8 +171,6 @@ export function TrialSignupForm() {
       if (destination) {
         router.push(destination);
         router.refresh();
-      } else {
-        setConfirmationEmail(values.email);
       }
     } catch {
       if (claim) setDuplicate(true);
@@ -151,27 +183,6 @@ export function TrialSignupForm() {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (confirmationEmail) {
-    return (
-      <div
-        className="border-l-2 border-brand-500 py-1 pl-5 text-ink"
-        aria-live="polite"
-      >
-        <h2 className="text-xl font-bold">Check your email</h2>
-        <p className="mt-2 text-sm leading-6 text-ink/65">
-          We sent a secure confirmation link to <strong>{confirmationEmail}</strong>.
-          Open it to continue your business setup.
-        </p>
-        <p className="mt-3 text-sm text-ink/60">
-          Already confirmed or created the account?{" "}
-          <Link href="/login" className="font-semibold text-brand-800 underline underline-offset-2">
-            Sign in to resume
-          </Link>
-        </p>
-      </div>
-    );
   }
 
   return (
@@ -226,6 +237,7 @@ export function TrialSignupForm() {
           autoComplete="new-password"
           placeholder="8+ characters"
           minLength={8}
+          maxLength={128}
         />
       </div>
 
@@ -286,7 +298,8 @@ export function TrialSignupForm() {
       </div>
 
       <p className="text-xs leading-5 text-ink/60">
-        Your password goes directly to secure account creation.
+        Your workspace opens immediately. We will also email you an optional link
+        to verify the address for account recovery.
       </p>
     </form>
   );

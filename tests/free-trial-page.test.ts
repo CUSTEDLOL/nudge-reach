@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -7,12 +8,18 @@ vi.mock("next/navigation", () => ({
 }));
 import FreeTrialPage, { metadata } from "@/app/free-trial/page";
 import {
-  trialAuthCredentials,
+  trialAccountPayload,
   trialClaimNeedsRefresh,
   trialIntakePayload,
+  trialPasswordCredentials,
   trialSignupDestination,
   validateTrialPassword,
 } from "@/modules/trial/browser-signup";
+
+const signupFormSource = readFileSync(
+  "src/app/free-trial/trial-signup-form.tsx",
+  "utf8",
+);
 
 function plainText(markup: string) {
   return markup
@@ -113,6 +120,7 @@ describe("free trial acquisition page", () => {
     expect(consent).toContain('type="checkbox"');
     expect(consent).not.toContain("checked");
     expect(password).toContain('minLength="8"');
+    expect(password).toContain('maxLength="128"');
     expect(honeypot).toContain('aria-hidden="true"');
     expect(honeypot).toContain('tabindex="-1"');
     expect(html).toContain('aria-live="polite"');
@@ -159,22 +167,20 @@ describe("free trial browser handoff", () => {
     expect(JSON.stringify(intake)).not.toContain("secret-password");
   });
 
-  it("sends the claim and password only to Supabase Auth", () => {
-    expect(
-      trialAuthCredentials(form, "https://nudge.test", {
-        trialId: "trial_1",
-        claimToken: "opaque-claim-token",
-      }),
-    ).toEqual({
+  it("sends the claim and password to account creation, then signs in", () => {
+    const claim = {
+      trialId: "trial_1",
+      claimToken: "opaque-claim-token",
+    };
+
+    expect(trialAccountPayload(form, claim)).toEqual({
+      trialId: "trial_1",
+      claimToken: "opaque-claim-token",
+      password: "secret-password",
+    });
+    expect(trialPasswordCredentials(form)).toEqual({
       email: "owner@aster.in",
       password: "secret-password",
-      options: {
-        emailRedirectTo: "https://nudge.test/auth/confirm?next=/agent",
-        data: {
-          acquisition_trial_id: "trial_1",
-          acquisition_trial_token: "opaque-claim-token",
-        },
-      },
     });
   });
 
@@ -183,9 +189,17 @@ describe("free trial browser handoff", () => {
     expect(validateTrialPassword("long-enough")).toBeNull();
   });
 
-  it("routes an immediate authenticated session into Train AI", () => {
-    expect(trialSignupDestination(true)).toBe("/agent");
+  it("routes an immediate authenticated session into the dashboard", () => {
+    expect(trialSignupDestination(true)).toBe("/dashboard");
     expect(trialSignupDestination(false)).toBeNull();
+  });
+
+  it("creates the account before password sign-in without a confirmation wall", () => {
+    expect(signupFormSource).toContain('fetch("/api/trials/account"');
+    expect(signupFormSource).toContain("signInWithPassword");
+    expect(signupFormSource).not.toContain(".signUp(");
+    expect(signupFormSource).not.toContain("Check your email");
+    expect(signupFormSource).not.toContain("confirmationEmail");
   });
 
   it("revalidates an in-memory claim before retrying after its expiry", () => {
