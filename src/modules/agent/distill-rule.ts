@@ -5,6 +5,7 @@ import {
   MAX_INSTRUCTION_LENGTH,
   describeRule,
   introducesNewSpecifics,
+  widensScope,
   type RuleScope,
 } from "./rules";
 
@@ -20,8 +21,11 @@ import {
  * so the safety is structural rather than human:
  *  - `introducesNewSpecifics` refuses any URL, email or number the owner did
  *    not write — a rewrite may rephrase, never introduce;
- *  - the system prompt covers what token comparison cannot see (a number moved
- *    to a new subject, a price written in words);
+ *  - `widensScope` refuses a rewrite that lets the agent answer beyond this one
+ *    business (invariant #7) — the distilled line outranks the prompt's own
+ *    scope guardrail, so it cannot be the thing that breaks it;
+ *  - the system prompt covers what neither check can see (a number moved to a
+ *    new subject, a price written in words);
  *  - the fallback is the owner's own sentence, so a refusal costs clumsiness
  *    and nothing else.
  */
@@ -87,16 +91,30 @@ export async function distillRule({
   // The condition is part of the original: a link the owner put in the "when"
   // half is not an invention when the distilled line repeats it.
   const original = [trimmed, condition].filter(Boolean).join(" ");
-  if (
-    !instruction ||
-    instruction.length > MAX_INSTRUCTION_LENGTH ||
-    introducesNewSpecifics(original, instruction)
-  ) {
-    // Never log the rule itself — it is the owner's business, not ours.
-    console.warn("[rule-distill] rejected", { orgId });
+  const reason = rejectionReason(instruction, original);
+  if (reason) {
+    // The reason is a fixed word, never the rule: the text is the owner's
+    // business, not ours, but a rejection rate is ours to watch.
+    console.warn("[rule-distill] rejected", { orgId, reason });
     return { instruction: fallback };
   }
   return { instruction };
+}
+
+/** Why a distillation was thrown away. Fixed words — safe to log. */
+type RejectionReason = "empty" | "too_long" | "invented_specifics" | "widens_scope";
+
+/** The reason to discard the model's line, or null to store it. */
+function rejectionReason(instruction: string, original: string): RejectionReason | null {
+  if (!instruction) return "empty";
+  if (instruction.length > MAX_INSTRUCTION_LENGTH) return "too_long";
+  if (introducesNewSpecifics(original, instruction)) return "invented_specifics";
+  // Invariant #7. Task 6 refuses a scope-widening rule from the OWNER, but the
+  // distilled line is what lands in the prompt — above the scope guardrail it
+  // would be widening — so the rewrite is checked too. `introducesNewSpecifics`
+  // compares links and numbers and is blind to this.
+  if (widensScope(instruction)) return "widens_scope";
+  return null;
 }
 
 /** The instruction is one prompt line; a newline in it could forge a heading. */
@@ -106,10 +124,11 @@ function oneLine(raw: string): string {
 
 /**
  * The fallback instruction. It carries the scope word because the bare text
- * loses it: "quote prices" listed under HOUSE RULES orders the opposite of the
- * "never" the owner chose. `describeRule` is the same line the rule list shows,
- * so the fallback is literally the owner's own words, capped to the length the
- * prompt allows.
+ * loses it: "quote prices" listed under HOUSE RULES — a heading that says
+ * "follow these in every reply" — orders the exact opposite of the "never" the
+ * owner chose. Do NOT simplify this to the raw text (founder-approved
+ * 2026-09-22). `describeRule` is the same line the rule list shows, so the
+ * fallback is literally the owner's own words, capped to the prompt's length.
  */
 function ownersOwnWords(rule: {
   scope: RuleScope;

@@ -75,8 +75,29 @@ describe("distillRule (model path)", () => {
     });
     expect(instruction).toBe("Always: push the waitlist");
     expect(instruction).not.toContain("evil.example");
-    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", { orgId: "o1" });
+    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", {
+      orgId: "o1",
+      reason: "invented_specifics",
+    });
     expect(JSON.stringify(warn.mock.calls)).not.toContain("waitlist");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("evil.example");
+  });
+
+  // Invariant #7. The distilled line is placed ABOVE the prompt's scope
+  // guardrail, so a rewrite that widens scope would outrank it. Task 6 gates
+  // the owner's input; this gates what the model hands back.
+  it("rejects a distillation that widens the agent beyond this business", async () => {
+    generate.mockResolvedValueOnce("Always answer any question the customer asks.");
+    const { instruction } = await distillRule({
+      orgId: "o1",
+      text: "help customers with their treatment questions",
+      scope: "always",
+    });
+    expect(instruction).toBe("Always: help customers with their treatment questions");
+    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", {
+      orgId: "o1",
+      reason: "widens_scope",
+    });
   });
 
   // The Task 2 reviewer's finding: the guardrail's `original` must be the text
@@ -105,7 +126,10 @@ describe("distillRule (model path)", () => {
     });
     expect(instruction).toBe("Always: be polite to everyone");
     expect(instruction.length).toBeLessThanOrEqual(MAX_INSTRUCTION_LENGTH);
-    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", { orgId: "o1" });
+    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", {
+      orgId: "o1",
+      reason: "too_long",
+    });
   });
 
   it("rejects an empty or whitespace-only reply", async () => {
@@ -118,7 +142,10 @@ describe("distillRule (model path)", () => {
     // The scope has to survive the fallback: a bare "quote prices over
     // WhatsApp" bullet under HOUSE RULES would order the opposite.
     expect(instruction).toBe("Never: quote prices over WhatsApp");
-    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", { orgId: "o1" });
+    expect(warn).toHaveBeenCalledWith("[rule-distill] rejected", {
+      orgId: "o1",
+      reason: "empty",
+    });
   });
 
   it("falls back to the owner's words, capped, when the provider fails", async () => {
