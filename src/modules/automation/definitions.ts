@@ -11,6 +11,7 @@ export const AUTOMATION_TRIGGERS = [
   "tag_added",
   "campaign_reply",
   "booking_created",
+  "conversation_quiet",
 ] as const;
 
 export type AutomationTrigger = (typeof AUTOMATION_TRIGGERS)[number];
@@ -43,6 +44,7 @@ export const TRIGGER_LABELS: Record<AutomationTrigger, string> = {
   tag_added: "Tag added",
   campaign_reply: "Campaign reply",
   booking_created: "Booking created",
+  conversation_quiet: "Conversation goes quiet",
 };
 
 export const STEP_LABELS: Record<StepKind, string> = {
@@ -182,4 +184,39 @@ export function readWaitMinutes(raw: unknown): number {
   const minutes = Number(obj.minutes);
   if (!Number.isFinite(minutes) || minutes < 1) return 1;
   return Math.min(Math.round(minutes), MAX_WAIT_MINUTES);
+}
+
+// ---------------------------------------------------------------------------
+// Quiet-conversation trigger config (pure)
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_QUIET_HOURS = 72;
+export const MAX_QUIET_HOURS = 14 * 24;
+
+export interface QuietConfig {
+  /** Hours since the customer's last message. */
+  hours: number;
+  /** Only chase contacts at this lead stage, when set. */
+  stage?: (typeof LEAD_STAGES)[number];
+}
+
+/**
+ * Coerce a triggerConfig blob into a safe QuietConfig. An unrecognised stage
+ * is ignored (chases every stage); sub-1 or non-numeric hours fall back to the
+ * 72h default rather than a 1h floor.
+ */
+export function parseQuietConfig(raw: unknown): QuietConfig {
+  const obj =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  const hours = Number(obj.hours);
+  const stage =
+    typeof obj.stage === "string" && (LEAD_STAGES as readonly string[]).includes(obj.stage)
+      ? (obj.stage as QuietConfig["stage"])
+      : undefined;
+  return {
+    hours: Number.isFinite(hours) && hours >= 1 ? Math.min(Math.round(hours), MAX_QUIET_HOURS) : DEFAULT_QUIET_HOURS,
+    stage,
+  };
 }

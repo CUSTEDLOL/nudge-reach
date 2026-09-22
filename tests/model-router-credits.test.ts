@@ -199,15 +199,18 @@ describe("metered platform call", () => {
 });
 
 describe("never gated", () => {
-  it("ingest/distill purposes are never preflighted even at balance 0", async () => {
+  // concierge_draft is the founder drafting a client's follow-ups during
+  // onboarding: Nudge pays, and a zero-credit (or trial) org must still be
+  // set up — it is the whole point of the concierge panel.
+  it("ingest/distill/concierge_draft purposes are never preflighted even at balance 0", async () => {
     prisma.creditGrant.aggregate.mockResolvedValue(balance(0));
-    for (const purpose of ["ingest", "distill"] as const) {
+    for (const purpose of ["ingest", "distill", "concierge_draft"] as const) {
       await expect(say(purpose)).resolves.toBe("hi");
     }
     expect(prisma.creditGrant.aggregate).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(mockCreate).toHaveBeenCalledTimes(2);
-    for (const [i, purpose] of ["ingest", "distill"].entries()) {
+    expect(mockCreate).toHaveBeenCalledTimes(3);
+    for (const [i, purpose] of ["ingest", "distill", "concierge_draft"].entries()) {
       expect(prisma.creditDebit.create.mock.calls[i][0].data).toMatchObject({
         purpose,
         allocations: [],

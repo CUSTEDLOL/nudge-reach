@@ -8,6 +8,7 @@ import {
   releaseDueCampaigns,
 } from "@/modules/send/queue";
 import { tickAutomationRuns } from "@/modules/automation/engine";
+import { fireQuietConversations } from "@/modules/automation/triggers";
 import { tickBookingReminders } from "@/modules/followup/reminders";
 import { tickReminderCalls } from "@/modules/voice/reminder-calls";
 import { tickCrmSync } from "@/modules/crm/sync";
@@ -48,6 +49,9 @@ export async function GET(request: Request) {
 
     step = "resume-automations";
     const resumedRuns = await tickAutomationRuns();
+
+    step = "chase-quiet";
+    const chased = await fireQuietConversations();
 
     step = "sync-crm";
     const crmSynced = await tickCrmSync();
@@ -91,6 +95,7 @@ export async function GET(request: Request) {
     const summary = {
       released: boundedCount(released),
       resumedRuns: boundedCount(resumedRuns),
+      chased: boundedCount(chased),
       crm: {
         done: boundedCount(crmSynced.done),
         failed: boundedCount(crmSynced.failed),

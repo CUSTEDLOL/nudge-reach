@@ -26,6 +26,10 @@ export type AuditAction =
   | "followup.enabled"
   | "followup.disabled"
   | "followup.timing"
+  | "followup.drafted"
+  | "followup.created"
+  | "followup.updated"
+  | "followup.deleted"
   | "concierge.client_setup"
   | "demo.reset"
   | "knowledge.answered"
@@ -65,6 +69,7 @@ export type AuditAction =
   | "admin.integration_changed"
   | "admin.agent_toggled"
   | "admin.followups_toggled"
+  | "admin.followups_drafted"
   | "admin.client_setup"
   | "admin.operation_requested"
   | "admin.operation_completed"
@@ -90,6 +95,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "followup.enabled": "Follow-up enabled",
   "followup.disabled": "Follow-up paused",
   "followup.timing": "Follow-up timing changed",
+  "followup.drafted": "AI drafted follow-ups",
+  "followup.created": "Follow-up created",
+  "followup.updated": "Follow-up edited",
+  "followup.deleted": "Follow-up deleted",
   "concierge.client_setup": "Concierge client setup",
   "demo.reset": "Demo data reset",
   "knowledge.answered": "Owner answered agent question",
@@ -128,6 +137,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.integration_changed": "Nudge support changed an integration",
   "admin.agent_toggled": "Nudge support switched the AI Front Desk on/off",
   "admin.followups_toggled": "Nudge support switched follow-ups on/off",
+  "admin.followups_drafted": "Nudge support drafted follow-ups",
   "admin.client_setup": "Nudge support ran concierge setup",
   "admin.operation_requested": "Nudge support requested an operational recovery",
   "admin.operation_completed": "Nudge support completed an operational recovery",
