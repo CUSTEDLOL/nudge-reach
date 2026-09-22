@@ -84,6 +84,13 @@ describe("contact page", () => {
     expect(contact).not.toContain("<form");
   });
 
+  it("keeps the lead-capture path alive after the hero dropped it", () => {
+    // Get Access left the hero when it became Contact Us; without a home its
+    // form and /api/access had no UI at all. Reused here rather than rebuilt.
+    expect(contact).toContain("GetAccessButton");
+    expect(contact).toContain('source="contact"');
+  });
+
   it("keeps the number in one shared place, not copied per page", () => {
     expect(contactLinks).toContain("6581373154");
     expect(contact).not.toContain("6581373154");
