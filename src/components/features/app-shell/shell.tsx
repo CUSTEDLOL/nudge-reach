@@ -128,7 +128,9 @@ export function AppShell({
           mode={mode}
           simulation={simulation}
         />
-        {mode === "trial" && trial ? <TrialStatusStrip trial={trial} /> : null}
+        {mode === "trial" && trial ? (
+          <TrialStatusStrip trial={trial} email={user.email} />
+        ) : null}
         <main
           id="main-content"
           tabIndex={-1}

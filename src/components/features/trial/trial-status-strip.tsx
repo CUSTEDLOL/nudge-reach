@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookDemoButton } from "@/components/marketing/book-demo";
+import { TrialEmailVerification } from "@/components/features/trial/trial-email-verification";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 const MONTHS = [
@@ -34,7 +35,13 @@ export function trialStatusText(trial: TrialWorkspace) {
   return `Free trial · ${trial.repliesRemaining} of ${trial.replyLimit} replies left · ${endLabel(trial.expiresAt)}`;
 }
 
-export function TrialStatusStrip({ trial }: { trial: TrialWorkspace }) {
+export function TrialStatusStrip({
+  trial,
+  email,
+}: {
+  trial: TrialWorkspace;
+  email: string;
+}) {
   const stopped = trial.status === "exhausted" || trial.status === "expired";
 
   return (
@@ -45,6 +52,9 @@ export function TrialStatusStrip({ trial }: { trial: TrialWorkspace }) {
           <p aria-live="polite" className="text-xs leading-5 text-brand-900/65">
             {trialStatusText(trial)}
           </p>
+          {!trial.emailVerified && trial.status === "active" ? (
+            <TrialEmailVerification trialId={trial.id} email={email} />
+          ) : null}
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <details className="text-xs text-brand-900">

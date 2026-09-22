@@ -27,6 +27,9 @@ const desired = {
   mailer_templates_recovery_content: `<h2>Reset your password</h2>
 <p>Tap the link below to choose a new password. If you didn't ask for this, ignore this email.</p>
 <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset">Choose a new password</a></p>`,
+  mailer_templates_magic_link_content: `<h2>Verify your Nudge email</h2>
+<p>Use this link to verify the email for your trial workspace:</p>
+<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next=/dashboard">Verify email</a></p>`,
 };
 
 const before = await fetch(API, { headers }).then((r) => r.json());

@@ -39,7 +39,7 @@ const trial: TrialWorkspace = {
 
 describe("inline trial guide", () => {
   const html = renderToStaticMarkup(
-    createElement(TrialStatusStrip, { trial }),
+    createElement(TrialStatusStrip, { trial, email: "owner@example.com" }),
   );
   const guide = html.match(/<details\b[\s\S]*?<\/details>/)?.[0] ?? "";
 

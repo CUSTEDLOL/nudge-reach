@@ -112,8 +112,30 @@ describe("trial app shell", () => {
     expect(trialStatusText(trial)).toBe(
       "Free trial · 12 of 15 replies left · Ends 27 Sep",
     );
-    const html = renderToStaticMarkup(createElement(TrialStatusStrip, { trial }));
+    const html = renderToStaticMarkup(
+      createElement(TrialStatusStrip, { trial, email: "asha@aster.in" }),
+    );
     expect(html).toContain('aria-live="polite"');
+  });
+
+  it("shows the verification reminder only for an unverified active trial", () => {
+    const unverified = renderToStaticMarkup(
+      createElement(TrialStatusStrip, {
+        trial,
+        email: "asha@aster.in",
+      }),
+    );
+    const verified = renderToStaticMarkup(
+      createElement(TrialStatusStrip, {
+        trial: { ...trial, emailVerified: true },
+        email: "asha@aster.in",
+      }),
+    );
+
+    expect(unverified).toContain("Verify your email to protect this workspace.");
+    expect(unverified).toContain("Resend email");
+    expect(unverified).toContain("Dismiss");
+    expect(verified).not.toContain("Verify your email to protect this workspace.");
   });
 
   it("shows quiet inline guidance before setup without mounting a tour", () => {
@@ -142,7 +164,10 @@ describe("trial app shell", () => {
     ["expired", "Trial ended"],
   ] as const)("shows conversion choices when the trial is %s", (status, reason) => {
     const html = renderToStaticMarkup(
-      createElement(TrialStatusStrip, { trial: { ...trial, status } }),
+      createElement(TrialStatusStrip, {
+        trial: { ...trial, status },
+        email: "asha@aster.in",
+      }),
     );
     expect(html).toContain(reason);
     expect(html).toContain("Book a free demo");
