@@ -9,6 +9,7 @@ import {
   HANDOFF_SENTINEL,
 } from "@/modules/agent/prompt";
 import { questionnaireScript } from "@/modules/knowledge/questionnaire";
+import { VERTICALS } from "@/modules/dashboard/verticals";
 import { buildHistory } from "@/modules/agent/reply";
 
 describe("isWithinServiceWindow (24h customer-service window)", () => {
@@ -209,5 +210,48 @@ describe("software / B2B vertical", () => {
   it("asks the questionnaire about the right sellable thing", () => {
     const q = questionnaireScript("software");
     expect(JSON.stringify(q)).toMatch(/plans|product/i);
+  });
+});
+
+/**
+ * The beachhead is hair-transplant / aesthetic-derma / cosmetic-dental
+ * clinics (AGENTS.md), so "clinic" must reach `VERTICAL_TEMPLATES` and not the
+ * generic fallback. Founder decision 2026-09-22: the Training page's business
+ * picker therefore renders the canonical taxonomy — a free-text box would have
+ * cost exactly these customers their curated scope line.
+ */
+describe("clinic vertical (the beachhead)", () => {
+  it("keeps its curated scope instead of the generic fallback", () => {
+    const { noun, scope } = agentIdentity("clinic");
+    expect(noun).toBe("clinic");
+    expect(scope).toMatch(/treatments/i);
+    expect(scope).toMatch(/booking or rescheduling/i);
+    expect(scope).not.toBe(GENERIC_SCOPE);
+  });
+
+  it("introduces itself as a clinic in the built prompt", () => {
+    const p = buildAgentSystemPrompt({
+      vertical: "clinic",
+      businessName: "Aster Hair",
+      businessInfo: "We do hair transplants.",
+      tone: "Warm",
+      doNots: "",
+    });
+    expect(p).toContain(
+      'You are the WhatsApp assistant for "Aster Hair", a clinic.'
+    );
+    expect(p).not.toContain(GENERIC_SCOPE);
+  });
+
+  it("is pickable on the Training page from the shared taxonomy", () => {
+    expect(VERTICALS.some((v) => v.value === "clinic")).toBe(true);
+    const section = readFileSync(
+      "src/app/(app)/agent/business-section.tsx",
+      "utf8"
+    );
+    // Rendered from the one allowlist, never a list invented in the UI —
+    // an invented list is how a vertical stops matching its template.
+    expect(section).toContain("VERTICALS");
+    expect(section).not.toMatch(/<option value="[a-z_]+">/);
   });
 });

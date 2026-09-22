@@ -179,7 +179,9 @@ export default async function AgentPage() {
         <BusinessSection
           canEdit={canEdit}
           businessName={profile?.businessName ?? ""}
-          vertical={profile?.vertical ?? ""}
+          // No profile yet: start the picker on the answer they already gave
+          // at onboarding rather than on whatever the list happens to open on.
+          vertical={profile?.vertical ?? ctx.org.vertical ?? "other"}
           tone={profile?.tone ?? ""}
         />
 

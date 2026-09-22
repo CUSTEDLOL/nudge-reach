@@ -110,11 +110,10 @@ export async function saveBusinessBasicsAction(input: {
       return { ok: false, message: "Please enter your business name." };
     }
     const tone = input.tone.trim() || "Warm, friendly, and concise";
-    // The column is a token the prompt looks up ("real_estate"), the field is
-    // words ("real estate"), so normalising here keeps a typed answer matching
-    // the curated vertical templates instead of falling back to the generic one.
-    const vertical =
-      input.vertical.trim().toLowerCase().replace(/\s+/g, "_") || "other";
+    // Stored exactly as the picker sends it: `agentIdentity` looks the column
+    // up in VERTICAL_TEMPLATES by this token, so "clinic" must stay "clinic"
+    // or the beachhead loses its curated scope line for the generic one.
+    const vertical = input.vertical.trim() || "other";
 
     await prisma.agentProfile.upsert({
       where: { orgId: ctx.org.id },

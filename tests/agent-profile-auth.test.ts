@@ -34,7 +34,10 @@ vi.mock("@/modules/orgs/auth", () => {
   };
 });
 
-import { saveAgentProfileAction } from "@/app/(app)/agent/setup-actions";
+import {
+  saveAgentProfileAction,
+  saveBusinessBasicsAction,
+} from "@/app/(app)/agent/setup-actions";
 
 const form = (fields: Record<string, string>) => {
   const fd = new FormData();
@@ -103,6 +106,68 @@ describe("saveAgentProfileAction — H1 role gate", () => {
     requireOrgContext.mockResolvedValue(ctx("ADMIN"));
     const r = await saveAgentProfileAction(form({ businessName: "" }));
     expect(r.ok).toBe(false);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The Training page's "Your business" section writes through its OWN action,
+ * and that is the whole point of it: `saveAgentProfileAction` rebuilds the
+ * profile from its form, so three fields posted to it would blank
+ * `businessInfo` (the owner's own instructions) and `doNots`, and switch the
+ * AI off. This one touches three columns and no others.
+ */
+describe("saveBusinessBasicsAction — partial write", () => {
+  beforeEach(() => {
+    upsert.mockClear();
+    requireOrgContext.mockReset();
+  });
+
+  it("stores the picked vertical as the token its template is keyed by", async () => {
+    requireOrgContext.mockResolvedValue(ctx("ADMIN"));
+    const r = await saveBusinessBasicsAction({
+      businessName: "Aster Hair",
+      vertical: "clinic",
+      tone: "Warm",
+    });
+
+    expect(r.ok).toBe(true);
+    const call = upsert.mock.calls[0][0];
+    expect(call.where).toEqual({ orgId: "org1" });
+    expect(call.update).toEqual({
+      businessName: "Aster Hair",
+      vertical: "clinic",
+      tone: "Warm",
+    });
+  });
+
+  it("never touches the business info, the guardrails or the on/off switch", async () => {
+    requireOrgContext.mockResolvedValue(ctx("ADMIN"));
+    await saveBusinessBasicsAction({
+      businessName: "Aster Hair",
+      vertical: "clinic",
+      tone: "",
+    });
+
+    const { create, update } = upsert.mock.calls[0][0];
+    for (const key of ["businessInfo", "doNots", "enabled"]) {
+      expect(update).not.toHaveProperty(key);
+      expect(create).not.toHaveProperty(key);
+    }
+    // An empty tone falls back rather than storing a blank persona.
+    expect(update.tone).toBe("Warm, friendly, and concise");
+  });
+
+  it("refuses an AGENT and writes nothing", async () => {
+    requireOrgContext.mockResolvedValue(ctx("AGENT"));
+    const r = await saveBusinessBasicsAction({
+      businessName: "Aster Hair",
+      vertical: "clinic",
+      tone: "Warm",
+    });
+
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/admin/i);
     expect(upsert).not.toHaveBeenCalled();
   });
 });

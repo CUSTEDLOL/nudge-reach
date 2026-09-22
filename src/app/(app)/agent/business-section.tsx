@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { VERTICALS, isVertical } from "@/modules/dashboard/verticals";
 import { saveBusinessBasicsAction } from "./setup-actions";
 
 /**
@@ -24,7 +26,8 @@ export function BusinessSection({
   canEdit,
 }: {
   businessName: string;
-  /** Stored as one lower-case token ("real_estate"); shown as words. */
+  /** A `VERTICALS` token ("real_estate") — what the prompt's curated
+   *  templates are keyed by, so it is picked, never typed. */
   vertical: string;
   tone: string;
   canEdit: boolean;
@@ -35,7 +38,7 @@ export function BusinessSection({
   // means absent from the DOM, not merely hidden.
   const [editing, setEditing] = useState(canEdit && !businessName);
   const [name, setName] = useState(businessName);
-  const [type, setType] = useState(asWords(vertical));
+  const [type, setType] = useState(vertical);
   const [voice, setVoice] = useState(tone);
 
   function save() {
@@ -82,15 +85,27 @@ export function BusinessSection({
           <Field
             label="What you do"
             htmlFor="business-vertical"
-            hint="In your own words — your AI introduces itself with this."
+            hint="Your AI introduces itself with this, and answers the questions this kind of business gets asked."
           >
-            <Input
+            <Select
               id="business-vertical"
               value={type}
               disabled={pending}
-              placeholder="restaurant, salon, real estate, dental studio…"
               onChange={(e) => setType(e.target.value)}
-            />
+            >
+              {/* A stored vertical that predates this list (or came from the
+                  older setup form) is offered as itself: a select with no
+                  matching option submits its FIRST one, which would silently
+                  relabel the business on the next save. */}
+              {type && !isVertical(type) && (
+                <option value={type}>{asWords(type)}</option>
+              )}
+              {VERTICALS.map((v) => (
+                <option key={v.value} value={v.value}>
+                  {v.label}
+                </option>
+              ))}
+            </Select>
           </Field>
           <Field label="Tone" htmlFor="business-tone">
             <Input
@@ -117,7 +132,7 @@ export function BusinessSection({
                 disabled={pending}
                 onClick={() => {
                   setName(businessName);
-                  setType(asWords(vertical));
+                  setType(vertical);
                   setVoice(tone);
                   setEditing(false);
                 }}
@@ -136,9 +151,16 @@ export function BusinessSection({
   );
 }
 
-/** "real_estate" → "real estate". The column is a token; owners read words. */
+/** "real_estate" → "real estate", for a token the taxonomy no longer lists. */
 function asWords(vertical: string): string {
   return vertical.replace(/_/g, " ").trim();
+}
+
+/** The taxonomy's own label, so the summary reads back what was picked. */
+function labelFor(vertical: string): string {
+  return (
+    VERTICALS.find((v) => v.value === vertical)?.label ?? asWords(vertical)
+  );
 }
 
 function summarise(
@@ -146,7 +168,7 @@ function summarise(
   vertical: string,
   tone: string,
 ): string {
-  const parts = [businessName, asWords(vertical), tone].filter(
+  const parts = [businessName, labelFor(vertical), tone].filter(
     (part) => part.trim().length > 0,
   );
   return parts.length > 0 ? parts.join(" · ") : "Nothing saved yet.";

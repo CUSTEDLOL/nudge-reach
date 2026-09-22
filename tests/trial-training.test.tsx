@@ -49,6 +49,7 @@ import { RulesSection } from "@/app/(app)/agent/rules-section";
 import { uploadTrialPdfFiles } from "@/components/features/trial/trial-knowledge-sources";
 import { Library } from "@/app/(app)/agent/library";
 import { MAX_ACTIVE_RULES, type RuleListItem } from "@/modules/agent/rules";
+import { VERTICALS } from "@/modules/dashboard/verticals";
 import type { TrialWorkspace } from "@/modules/trial/workspace";
 
 const workspace: TrialWorkspace = {
@@ -79,6 +80,22 @@ const workspace: TrialWorkspace = {
   demoBooked: false,
   converted: false,
 };
+
+/**
+ * What the trial must never do is ASSUME its visitor is a clinic — "we help
+ * clinics book patients" in a heading, a hint or a placeholder. The shared
+ * business-type picker is the one exemption: it renders the canonical
+ * taxonomy (`modules/dashboard/verticals.ts`), whose health option is a value
+ * an owner chooses, not a claim the page makes about them. Founder decision
+ * 2026-09-22 — the beachhead IS clinics, and that option is what maps them to
+ * the curated `VERTICAL_TEMPLATES` entry instead of the generic scope.
+ *
+ * So the ban is asserted on everything outside a `<select>`, which keeps it
+ * biting on every word of trial prose.
+ */
+function trialProse(html: string): string {
+  return html.replace(/<select\b[^>]*>[\s\S]*?<\/select>/gi, "");
+}
 
 const activeFact = {
   id: "fact_1",
@@ -154,7 +171,20 @@ describe("continuous trial training page", () => {
     expect(html).not.toContain("Test in Inbox");
     expect(html).not.toContain("data-source-card");
     expect(html).not.toMatch(/step 1|progress/i);
-    expect(html).not.toMatch(/clinic|patient/i);
+    expect(trialProse(html)).not.toMatch(/clinic|patient/i);
+  });
+
+  it("keeps the clinic ban biting on trial prose outside the picker", () => {
+    // The guard itself, guarded: a heading that assumed the visitor runs a
+    // clinic is still caught, and only the option list is exempt.
+    expect(
+      trialProse("<h2>We help clinics book more patients</h2>"),
+    ).toMatch(/clinic|patient/i);
+    expect(
+      trialProse(
+        '<select id="business-vertical"><option value="clinic">Clinic / Health</option></select>',
+      ),
+    ).not.toMatch(/clinic|patient/i);
   });
 
   it("puts the two shared sections above the knowledge the trial already had", () => {
@@ -369,7 +399,8 @@ describe("your business section", () => {
     });
 
     expect(html).toContain("Spice Garden");
-    expect(html).toContain("restaurant");
+    // The taxonomy's own label, so the summary reads back what was picked.
+    expect(html).toContain("Restaurant / Café");
     expect(html).toContain("Warm, friendly, and concise");
     // Collapsed means collapsed: no form in the markup at all.
     expect(html).not.toContain('id="business-name"');
@@ -383,8 +414,35 @@ describe("your business section", () => {
     expect(html).toContain('id="business-vertical"');
     expect(html).toContain('id="business-tone"');
     expect(html).toContain("Save");
-    // The trial serves every kind of business; its copy names none of them.
-    expect(html).not.toMatch(/clinic|patient/i);
+    // The section's own words name no industry; the picker's option list is
+    // the taxonomy, and is exempt (see `trialProse`).
+    expect(trialProse(html)).not.toMatch(/clinic|patient/i);
+  });
+
+  it("offers the canonical business types, health included", () => {
+    const html = renderBusiness({ businessName: "", vertical: "", tone: "" });
+
+    for (const v of VERTICALS) {
+      expect(html).toContain(`value="${v.value}"`);
+      // "Home & Decor" reaches the browser as "Home &amp; Decor".
+      expect(html).toContain(v.label.replace(/&/g, "&amp;"));
+    }
+    // The value the beachhead needs: it is what maps to the curated template.
+    expect(html).toContain('value="clinic"');
+  });
+
+  it("keeps a vertical that predates the list rather than silently relabelling it", () => {
+    // "software" is a curated template but not an onboarding option. A select
+    // with no matching option submits its first one, so the stored value is
+    // offered explicitly — saving must not turn a software business into a
+    // boutique behind the owner's back.
+    const html = renderBusiness({
+      businessName: "",
+      vertical: "software",
+      tone: "",
+    });
+
+    expect(html).toContain('value="software"');
   });
 
   it("shows a read-only summary to a member who cannot edit", () => {
