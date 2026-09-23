@@ -247,3 +247,74 @@ Follow the conventions in `src/app/(app)/agent/setup-actions.ts` (read it): `req
 - The trial shows the same three sections, its tour's Training step highlights the knowledge section instead of showing "still loading", and `Facts n/50` is unchanged.
 - `/agent/setup` redirects; opening hours still drive booking availability.
 - tsc, lint, the full suite and the build are green; the seven invariant tests are untouched.
+
+---
+
+## Deferred — knowingly left undone (2026-09-23)
+
+Everything here was found during the build or its reviews, judged not worth
+fixing now, and is written down so the next person does not rediscover it.
+
+**The rule cap**
+
+1. **TOCTOU race on the cap.** `createRuleAction` counts active rules and then
+   creates one; two requests interleaving between the count and the write can
+   leave an org with 21 active rules (trial: 6). Contained rather than fixed:
+   every read path takes `limit`, so the prompt still carries at most 20 — the
+   extra row is invisible to the AI and archivable by hand. A transaction or a
+   partial unique index would close it properly.
+2. **Voice reads `MAX_ACTIVE_RULES.full` unconditionally**, while the WhatsApp
+   path derives trial-ness. Correct today only because no acquisition trial
+   carries the `voiceAgent` limit — the moment a trial gets voice, a trial org's
+   voice calls would carry 20 rules where its chats carry 5. The comments at
+   each call site say so; the coupling is not enforced in code.
+
+**The distiller guardrail** (`introducesNewSpecifics`)
+
+3. **It is one-directional.** It catches a specific the distillation *invented*,
+   never one it *dropped*. "Consults are ₹500 before 6pm" rewritten to "Tell them
+   consults are ₹500" passes cleanly — the constraint is gone and nothing
+   objects. The owner's own wording is what the UI shows, which is the only
+   mitigation.
+4. **Word-priced and worded facts are invisible to it.** It compares digits,
+   links and emails; "five hundred rupees", "the consult is free", "next Tuesday"
+   carry no token it can compare, so a model that invents one is not caught. The
+   system prompt forbids it emphatically; the guardrail cannot enforce it.
+5. **`widensScope` is phrasing-bypassable by design.** It matches the shapes a
+   scope-widening instruction usually takes ("answer anything", "help with any
+   question"), not the meaning. A determined paraphrase gets past it. It is a
+   net, not a proof — invariant 7's real enforcement remains the scope line in
+   the prompt, which the rules block sits above.
+
+**The migration**
+
+6. **The classifier's error rate on real customer text is unmeasured.** It is a
+   regex with a documented, tested error class (a declarative sentence carrying
+   "always" or "never" reads as an instruction) and a deliberate bias towards
+   "instruction". Nobody has run it over a corpus of real `businessInfo` blobs;
+   the only honest claim is the direction of the bias, not a number.
+7. **The legacy columns still reach the prompt.** `migrateProfileToRules`
+   deliberately does not clear `businessInfo` or `doNots`, and `prompt.ts` still
+   renders both (as `ADDITIONAL BUSINESS INFORMATION` and `- Also avoid: …`). So
+   a migrated org's text is in the prompt twice, and — now that Setup is retired
+   — there is no UI left to edit or clear it. Deliberate for one release: an org
+   whose migration failed (an un-pushed `AgentRule` table, say) still has its
+   business information in the prompt. The follow-up is to stop reading both
+   columns once every org is migrated, and only then drop them.
+
+**From Task 9 (retiring Setup)**
+
+8. **`setup-actions.ts` outlived the page it was named for.** It now holds the
+   Training page's profile writer and the auto-reply switch. Renaming it touches
+   five files for no behaviour change, so it was left; the header comment says
+   what it is.
+9. **The new auto-reply switch is admin-only and non-trial.** An AGENT sees
+   nothing saying the AI is on (the status quo — the old switch was on a page
+   they could not use either), and the trial does not get one, since its AI is
+   switched on at activation and its chrome is pinned by `trial-training.test.tsx`.
+10. **`/agent/setup` redirects permanently (308).** It matches how `/knowledge`
+    and `/settings/agent` already retire, and browsers cache it — bringing a page
+    back at that path later would need a different path or a cache bust.
+11. **The opening-hours card sits at the foot of `/bookings` on every view**,
+    including "Past". Fine at today's page size; if Bookings grows, hours want
+    their own settings surface rather than a card under a list.
