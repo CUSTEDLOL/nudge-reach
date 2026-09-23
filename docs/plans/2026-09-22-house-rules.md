@@ -172,7 +172,9 @@ Follow the conventions in `src/app/(app)/agent/setup-actions.ts` (read it): `req
 - `createRuleAction(text, scope, condition?)` — validates, enforces the active cap (trial 5 / full 20 — derive trial-ness from `getTrialWorkspace`), distils, saves `status: "active"`, `source: "owner"`. Returns `{ ok, message }`.
 - `updateRuleAction(id, text, scope, condition?)` — org-scoped `findFirst`; re-distils.
 - `archiveRuleAction(id)` — sets `status: "archived"` (never deletes).
-- `reorderRulesAction(ids: string[])` — writes `order`.
+- ~~`reorderRulesAction(ids: string[])` — writes `order`.~~ **Removed** — no UI
+  ever reached it (no drag affordance was built), so it was a role-gated server
+  action with no caller. `order` is now insertion order only.
 - Audit actions: add `"rule.created" | "rule.updated" | "rule.archived"` to `AuditAction` + labels in `src/modules/orgs/audit.ts`.
 - Tests: cap refusal message; non-ADMIN refused; cross-org id refused; archive doesn't delete.
 

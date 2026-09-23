@@ -24,7 +24,7 @@ const { refresh, actions, ruleActions, profileActions } = vi.hoisted(() => ({
     createRuleAction: vi.fn(),
     updateRuleAction: vi.fn(),
     archiveRuleAction: vi.fn(),
-    reorderRulesAction: vi.fn(),
+    restoreRuleAction: vi.fn(),
   },
   profileActions: {
     saveBusinessBasicsAction: vi.fn(),

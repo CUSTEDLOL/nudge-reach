@@ -37,10 +37,10 @@ vi.mock("@/modules/orgs/audit", () => ({ recordAudit }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 vi.mock("@/modules/agent/distill-rule", () => ({ distillRule }));
 
+import * as ruleActions from "@/app/(app)/agent/rules-actions";
 import {
   archiveRuleAction,
   createRuleAction,
-  reorderRulesAction,
   restoreRuleAction,
   updateRuleAction,
 } from "@/app/(app)/agent/rules-actions";
@@ -541,62 +541,22 @@ describe("house rule server actions", () => {
     });
   });
 
-  describe("reorderRulesAction", () => {
-    it("writes each rule's array position, org-scoped", async () => {
-      await expect(reorderRulesAction(["rule_c", "rule_a", "rule_b"])).resolves.toMatchObject({
-        ok: true,
-      });
-
-      expect(prisma.agentRule.updateMany).toHaveBeenNthCalledWith(1, {
-        where: { id: "rule_c", orgId: "org_1" },
-        data: { order: 0 },
-      });
-      expect(prisma.agentRule.updateMany).toHaveBeenNthCalledWith(2, {
-        where: { id: "rule_a", orgId: "org_1" },
-        data: { order: 1 },
-      });
-      expect(prisma.agentRule.updateMany).toHaveBeenNthCalledWith(3, {
-        where: { id: "rule_b", orgId: "org_1" },
-        data: { order: 2 },
-      });
-      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(revalidatePath).toHaveBeenCalledWith("/agent");
-    });
-
-    it("drops duplicates and blanks before numbering", async () => {
-      await reorderRulesAction(["rule_a", "", "rule_a", "rule_b"]);
-
-      expect(prisma.agentRule.updateMany).toHaveBeenCalledTimes(2);
-      expect(prisma.agentRule.updateMany).toHaveBeenNthCalledWith(2, {
-        where: { id: "rule_b", orgId: "org_1" },
-        data: { order: 1 },
-      });
-    });
-
-    it("never writes outside the org, so a foreign id is a no-op not a failure", async () => {
-      prisma.agentRule.updateMany.mockResolvedValue({ count: 0 });
-
-      await expect(reorderRulesAction(["rule_other_org"])).resolves.toMatchObject({
-        ok: true,
-      });
-      expect(prisma.agentRule.updateMany).toHaveBeenCalledWith({
-        where: { id: "rule_other_org", orgId: "org_1" },
-        data: { order: 0 },
-      });
-    });
-
-    it("refuses an empty list", async () => {
-      await expect(reorderRulesAction([])).resolves.toMatchObject({ ok: false });
-      expect(prisma.$transaction).not.toHaveBeenCalled();
-    });
-
-    it("refuses a non-ADMIN", async () => {
-      requireRole.mockImplementation(() => {
-        throw new Error("Only Admin or above can do this. Ask your workspace owner for access.");
-      });
-
-      await expect(reorderRulesAction(["rule_a"])).resolves.toMatchObject({ ok: false });
-      expect(prisma.$transaction).not.toHaveBeenCalled();
-    });
+  /**
+   * `reorderRulesAction` lived here as a role-gated server-action endpoint no
+   * UI ever reached: nothing in `src/` imported it, this file was its only
+   * caller, and `rules-section.tsx` has no drag affordance. Deleted rather than
+   * left standing — a `"use server"` export is reachable by anyone who can POST
+   * a Server Action id, so an unused one is attack surface bought with nothing.
+   *
+   * This is what stops it drifting back in unnoticed: the module's exports are
+   * the product's write surface for house rules, so they are enumerated.
+   */
+  it("exports exactly the four writes the UI reaches, and no more", () => {
+    expect(Object.keys(ruleActions).filter((key) => key !== "default").sort()).toEqual([
+      "archiveRuleAction",
+      "createRuleAction",
+      "restoreRuleAction",
+      "updateRuleAction",
+    ]);
   });
 });

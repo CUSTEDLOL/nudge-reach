@@ -9,10 +9,19 @@ import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
  * module stays pure (zod + string helpers), shared unchanged by the authoring
  * UI, the server actions and the prompt builder.
  *
- * Org-scoped (invariant #5) and ordered exactly as the owner arranged them:
- * `order` is the drag handle, `createdAt` breaks ties between rows that share
- * one. `limit` is the caller's — trial workspaces allow fewer active rules
- * than full ones (`MAX_ACTIVE_RULES`).
+ * Org-scoped (invariant #5) and ordered by `order`, `createdAt` breaking ties
+ * between rows that share one.
+ *
+ * `order` is INSERTION order and nothing more: `createRuleAction` numbers each
+ * new rule past every row the org has (archived ones included, so restoring
+ * one cannot collide), and no other write touches it. There is no way for an
+ * owner to rearrange the list — this said `order` is the drag handle, which
+ * described a `reorderRulesAction` no UI ever reached; it is gone. What the
+ * column buys is a stable order across reads, so the prompt does not shuffle
+ * the owner's rules between replies.
+ *
+ * `limit` is the caller's — trial workspaces allow fewer active rules than
+ * full ones (`MAX_ACTIVE_RULES`).
  */
 export async function activeRules(
   orgId: string,

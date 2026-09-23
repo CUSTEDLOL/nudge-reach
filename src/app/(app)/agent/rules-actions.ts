@@ -8,7 +8,6 @@ import { recordAudit } from "@/modules/orgs/audit";
 import { distillRule } from "@/modules/agent/distill-rule";
 import { ruleLimitFor } from "@/modules/agent/rules-store";
 import {
-  MAX_ACTIVE_RULES,
   MAX_INSTRUCTION_LENGTH,
   MAX_RULE_TEXT_LENGTH,
   ruleSchema,
@@ -252,41 +251,6 @@ export async function archiveRuleAction(id: string): Promise<ActionResult> {
     recordAudit(ctx, "rule.archived", id);
     revalidatePath("/agent");
     return { ok: true, message: "Rule archived — your AI stops following it now." };
-  } catch (err) {
-    return fail(err);
-  }
-}
-
-/**
- * Drag-to-reorder: `order` becomes the position in `ids`.
- *
- * Every write carries the org filter, so an id from another workspace updates
- * nothing. That is deliberately a no-op rather than a failure: the list is
- * dragged as a whole, and a single stale id (a rule archived in another tab)
- * should not throw away the owner's whole rearrangement.
- */
-export async function reorderRulesAction(ids: string[]): Promise<ActionResult> {
-  const ctx = await requireOrgContext();
-  try {
-    requireRole(ctx, "ADMIN");
-    const unique = [...new Set(ids.filter((id) => typeof id === "string" && id))].slice(
-      0,
-      MAX_ACTIVE_RULES.full
-    );
-    if (unique.length === 0) return { ok: false, message: "Nothing to reorder." };
-
-    await prisma.$transaction(
-      unique.map((id, index) =>
-        prisma.agentRule.updateMany({
-          where: { id, orgId: ctx.org.id },
-          data: { order: index },
-        })
-      )
-    );
-
-    recordAudit(ctx, "rule.updated", undefined, `Reordered ${unique.length} rules`);
-    revalidatePath("/agent");
-    return { ok: true, message: "Order saved." };
   } catch (err) {
     return fail(err);
   }
