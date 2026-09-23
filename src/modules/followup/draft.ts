@@ -4,6 +4,8 @@ import { env } from "@/lib/env";
 import { generate } from "@/lib/model-router";
 import { recordSyntheticUsage, type UsagePurpose } from "@/lib/model-router/usage";
 import { extractJson } from "@/modules/campaign/guardrails";
+import { renderRulesBlock } from "@/modules/agent/rules";
+import { activeRulesForOrg } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { PACK_TEMPLATES } from "@/modules/followup/pack";
 import {
@@ -25,14 +27,23 @@ import {
 interface BusinessContext {
   businessName: string;
   vertical: string;
+  /**
+   * The two retired `/agent/setup` boxes. Still on the profile row, still read
+   * by the Training page's "structure my existing info" and the concierge
+   * checks, but deliberately NOT rendered into this prompt any more — see the
+   * notes in `systemPrompt`. Kept on the type because this is "stop rendering",
+   * not "stop storing".
+   */
   businessInfo: string;
   tone: string;
   doNots: string;
+  /** The owner's house rules — what `doNots` was migrated into. */
+  rules: { instruction: string }[];
   knowledge: string;
 }
 
 async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
-  const [profile, org, entries] = await Promise.all([
+  const [profile, org, entries, rules] = await Promise.all([
     prisma.agentProfile.findUnique({ where: { orgId } }),
     prisma.org.findUnique({ where: { id: orgId }, select: { name: true, vertical: true } }),
     // Active facts only — archived or unreviewed imports must not ground a draft (invariant #7).
@@ -42,6 +53,10 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
       select: { category: true, fact: true, condition: true },
       take: 60,
     }),
+    // The owner's house rules, the same ones the reply prompt carries. This
+    // builder has no idea whether the workspace is a restricted trial, so it
+    // takes the derived limit rather than naming a `MAX_ACTIVE_RULES` entry.
+    activeRulesForOrg(orgId),
   ]);
   return {
     businessName: profile?.businessName || org?.name || "the business",
@@ -51,12 +66,19 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
     businessInfo: (profile?.businessInfo ?? "").trim(),
     tone: profile?.tone ?? "Warm, friendly, and concise",
     doNots: profile?.doNots ?? "",
+    rules,
     knowledge: buildKnowledgeDigest(entries, 2500).trim(),
   };
 }
 
 function systemPrompt(b: BusinessContext): string {
-  const grounded = Boolean(b.businessInfo || b.knowledge);
+  // What the owner has told us, by either route the migration writes to. This
+  // used to read `b.businessInfo || b.knowledge`: with the legacy box no longer
+  // rendered, an org whose whole box was instruction-shaped — every line filed
+  // as a rule, none as a fact — would otherwise be told it knows nothing about
+  // a business it has rules for.
+  const grounded = Boolean(b.knowledge || b.rules.length);
+  const houseRules = renderRulesBlock(b.rules);
   return [
     `You design WhatsApp follow-ups for ${b.businessName}, a ${b.vertical} business. A follow-up is a message (or up to ${MAX_MESSAGES}) sent automatically after a situation, to bring a customer back.`,
     "",
@@ -74,11 +96,20 @@ function systemPrompt(b: BusinessContext): string {
     `- afterDays: days after the previous message (0 = immediately), max ${MAX_GAP_DAYS}. For went_quiet the first message is always 0 — the waiting is in the situation.`,
     "- stopOn: which customer actions end the follow-up early — any of reply, booking, payment (default: all three; booked situations omit it).",
     `- Tone: ${b.tone}.`,
-    b.doNots ? `- Never: ${b.doNots}` : false,
+    // The retired `/agent/setup` do-nots box used to add `- Never: ${b.doNots}`
+    // here. Do not reinstate it: `migrateProfileToRules` copies that box into
+    // `AgentRule` rows, which the HOUSE RULES block below now renders, so
+    // rendering the original as well sends the same instruction twice — and
+    // leaves the stale original speaking for a rule the owner has since edited
+    // or archived. The column stays on the profile row and on `BusinessContext`.
+    houseRules ? `\n${houseRules}` : false,
     grounded
       ? false
       : "\nYou know nothing about this business except its name and type. Do not mention prices, offers, discounts, hours, staff, or named services — keep every message generic: invite a reply, offer to help.",
-    b.businessInfo ? `\nAbout the business:\n${b.businessInfo}` : false,
+    // The retired `/agent/setup` business-info box used to be rendered here as
+    // "About the business:". Same reason: the migration files its fact-shaped
+    // lines as `KnowledgeEntry` rows, which are the digest below, so rendering
+    // the blob as well duplicated every migrated fact.
     b.knowledge ? `\nWhat the business has told us (only use facts from here):\n${b.knowledge}` : false,
     "",
     "Return ONLY a JSON object, no markdown, no commentary.",

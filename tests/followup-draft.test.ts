@@ -7,6 +7,11 @@ const { prisma, generate, recordSyntheticUsage, envState } = vi.hoisted(() => ({
     agentProfile: { findUnique: vi.fn() },
     org: { findUnique: vi.fn() },
     knowledgeEntry: { findMany: vi.fn() },
+    // The house rules the drafter now loads, and the trial row `ruleLimitFor`
+    // reads to size that load. Mocked at the database rather than at
+    // `rules-store`, so the org scoping and the cap are really exercised.
+    agentRule: { findMany: vi.fn() },
+    acquisitionTrial: { findUnique: vi.fn() },
   },
   generate: vi.fn(),
   recordSyntheticUsage: vi.fn(),
@@ -25,6 +30,7 @@ import {
   starterSetOffline,
 } from "@/modules/followup/draft";
 import { compileFollowUp } from "@/modules/followup/compile";
+import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
 
 describe("draftOffline (zero-key simulation path)", () => {
   it("reads the situation and the days out of a sentence", () => {
@@ -192,6 +198,10 @@ describe("draft with a key (model path)", () => {
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { category: "pricing", fact: "Consults are ₹500", condition: null },
     ]);
+    prisma.agentRule.findMany.mockResolvedValue([
+      { instruction: "Always offer the evening slot first" },
+    ]);
+    prisma.acquisitionTrial.findUnique.mockResolvedValue(null);
   });
   afterEach(() => {
     envState.ANTHROPIC_API_KEY = undefined;
@@ -233,8 +243,11 @@ describe("draft with a key (model path)", () => {
     const { system } = generate.mock.calls[0][0];
     expect(system).toContain("Glow Clinic");
     expect(system).toContain("clinic business");
-    expect(system).toContain("Hair transplant consults.");
+    // The retired Setup box is no longer a source of facts — the active
+    // knowledge is. `migrateProfileToRules` moved its contents there.
+    expect(system).not.toContain("Hair transplant consults.");
     expect(system).toContain("Consults are ₹500");
+    expect(system).toContain("Always offer the evening slot first");
     expect(system).toContain("booked situations omit it");
     expect(system).toContain("never write 'tomorrow'");
     expect(system).toContain("unless it appears in the business information below");
@@ -243,26 +256,107 @@ describe("draft with a key (model path)", () => {
     expect(system).toContain("\n\nSituations (use exactly these kinds):");
   });
 
-  it("lists the owner's do-nots as a Never line", async () => {
+  /**
+   * The retired `/agent/setup` boxes. `migrateProfileToRules` copies both into
+   * house rules and knowledge facts; this builder now loads the rules, so
+   * rendering the originals as well would send a migrated org the same content
+   * twice and let an archived rule keep speaking through the untouched blob.
+   *
+   * "lists the owner's do-nots as a Never line" and the `businessInfo`
+   * assertion above encoded that duplication — they are inverted here.
+   */
+  it("no longer renders the retired do-nots box (it is a house rule now)", async () => {
     prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, doNots: "promise results" });
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
-    expect(generate.mock.calls[0][0].system).toContain("- Never: promise results");
+    const { system } = generate.mock.calls[0][0];
+    expect(system).not.toContain("- Never: promise results");
+    expect(system).not.toContain("promise results");
+    expect(system).not.toContain("About the business:");
   });
 
-  it("tells the model it knows nothing when there is no business info or knowledge", async () => {
+  it("carries the owner's house rules, above the facts", async () => {
+    prisma.agentRule.findMany.mockResolvedValue([
+      { instruction: "Always offer the evening slot first" },
+      { instruction: "Never quote a transplant price over WhatsApp" },
+    ]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain(
+      "HOUSE RULES — follow these in every reply, even when the knowledge below points elsewhere:"
+    );
+    expect(system).toContain("- Always offer the evening slot first");
+    expect(system).toContain("- Never quote a transplant price over WhatsApp");
+    expect(system.indexOf("HOUSE RULES")).toBeLessThan(
+      system.indexOf("What the business has told us")
+    );
+  });
+
+  it("reads the rules org-scoped, at the limit the workspace derives", async () => {
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    expect(prisma.agentRule.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { orgId: "o1", status: "active" },
+        take: MAX_ACTIVE_RULES.full,
+      })
+    );
+
+    // A restricted acquisition trial gets the short list, not the full one.
+    prisma.acquisitionTrial.findUnique.mockResolvedValue({
+      convertedAt: null,
+      org: { subscriptionStatus: "trialing" },
+    });
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    expect(prisma.agentRule.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ take: MAX_ACTIVE_RULES.trial })
+    );
+  });
+
+  it("an org with rules but no facts is not told it knows nothing", async () => {
+    // `grounded` used to be `businessInfo || knowledge`. With the box unread,
+    // an org whose every migrated line became a rule has no facts at all — it
+    // still knows something, and must not be handed the generic-message line.
     prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "" });
     prisma.knowledgeEntry.findMany.mockResolvedValue([]);
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
     const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("- Always offer the evening slot first");
+    expect(system).not.toContain("know nothing");
+  });
+
+  it("tells the model it knows nothing when there are no facts and no rules", async () => {
+    prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "" });
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    prisma.agentRule.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
     expect(system).toContain("know nothing");
+    expect(system).not.toContain("HOUSE RULES");
     expect(system).not.toContain("About the business:");
+  });
+
+  it("a legacy box on its own no longer counts as grounding", async () => {
+    // It used to: the blob was rendered, so it was the org's only grounding.
+    // Now it reaches no prompt, and an org that never migrated must be told so
+    // rather than writing specifics from a blob the model cannot see.
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    prisma.agentRule.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).not.toContain("Hair transplant consults.");
+    expect(system).toContain("know nothing");
   });
 
   it("treats a whitespace-only profile as knowing nothing", async () => {
     prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "   \n  " });
     prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    prisma.agentRule.findMany.mockResolvedValue([]);
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
     const { system } = generate.mock.calls[0][0];
