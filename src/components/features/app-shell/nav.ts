@@ -62,8 +62,14 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  label: "Workspace" | "Automation" | "Insights" | "Manage";
+  label: "Workspace" | "Automation" | "Insights" | "Manage" | "Open" | "Locked";
   items: readonly NavItem[];
+  /**
+   * A shelf of what the paid product does, shown to trials. These are never
+   * links — the workspace route guard would bounce them anyway — they open
+   * the upgrade prompt instead.
+   */
+  locked?: boolean;
 };
 
 export type AppCommand = {
@@ -232,6 +238,14 @@ export const TRIAL_NAV_ITEMS = [
   },
 ] satisfies readonly NavItem[];
 
+/**
+ * Keys the trial's own two destinations already cover: "today" and "inbox"
+ * are both /dashboard, and "front-desk" is /agent. Everything else in the
+ * standard rail is shown to a trial as locked, so the value of paying is
+ * visible instead of hidden.
+ */
+const TRIAL_OPEN_KEYS: readonly NavKey[] = ["today", "inbox", "front-desk"];
+
 const MOBILE_PRIMARY_KEYS: readonly NavKey[] = [
   "today",
   "inbox",
@@ -257,9 +271,25 @@ export function navGroupsForMode(
   role: AppRole,
 ): NavGroup[] {
   if (mode === "trial") {
-    return [{ label: "Workspace", items: TRIAL_NAV_ITEMS }];
+    return [{ label: "Open", items: TRIAL_NAV_ITEMS }];
   }
   return navGroupsForRole(role);
+}
+
+/**
+ * The locked shelf, deliberately kept out of `navGroupsForMode` so it never
+ * reaches the command menu, the mobile "More" sheet or `navItemsForMode` —
+ * those must only ever offer destinations that actually open.
+ */
+export function lockedNavGroupsForMode(
+  mode: AppShellMode,
+  role: AppRole,
+): NavGroup[] {
+  if (mode !== "trial") return [];
+  const items = navItemsForRole(role).filter(
+    (item) => !TRIAL_OPEN_KEYS.includes(item.key),
+  );
+  return items.length > 0 ? [{ label: "Locked", items, locked: true }] : [];
 }
 
 export function navItemsForMode(

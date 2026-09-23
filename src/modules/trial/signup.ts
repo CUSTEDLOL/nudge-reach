@@ -79,6 +79,8 @@ export async function createPendingTrial(
       claimTokenHash: true,
       claimExpiresAt: true,
       claimedAt: true,
+      orgId: true,
+      accountProvisionedAt: true,
     },
   });
 
@@ -115,9 +117,52 @@ export async function createPendingTrial(
       };
     }
 
-    // Never replace the row here: a Supabase user may already hold this
-    // trial id/token in verified auth metadata. Replacing it would strand
-    // that account. Exact-cookie recovery above safely extends the same row.
+    // An intake nobody finished: no workspace, and no Supabase account ever
+    // bound to it. It holds nothing, so hand the row to this signup instead
+    // of burning its email and mobile forever — someone who closed the tab,
+    // mistyped their email, or came back on another device (no resume
+    // cookie) would otherwise be locked out for good, with the UI telling
+    // them to sign in to an account that does not exist.
+    if (!existing.claimedAt && !existing.orgId && !existing.accountProvisionedAt) {
+      const claimToken = randomBytes(32).toString("base64url");
+      const claimExpiresAt = new Date(now.getTime() + TRIAL_CLAIM_TTL_MS);
+      // The guard is repeated in the WHERE so a concurrent claim or account
+      // provision wins the race instead of being overwritten.
+      const takenOver = await prisma.acquisitionTrial.updateMany({
+        where: {
+          id: existing.id,
+          claimedAt: null,
+          orgId: null,
+          accountProvisionedAt: null,
+        },
+        data: {
+          ownerName: input.ownerName,
+          businessName: input.businessName,
+          email: input.email,
+          emailNormalized,
+          phoneE164,
+          contactConsentAt: now,
+          claimTokenHash: hashClaimToken(claimToken),
+          claimExpiresAt,
+          landingPath: input.attribution.landingPath,
+          referrer: input.attribution.referrer,
+          utmSource: input.attribution.utmSource,
+          utmMedium: input.attribution.utmMedium,
+          utmCampaign: input.attribution.utmCampaign,
+          gaClientId: input.attribution.gaClientId,
+        },
+      });
+      if (takenOver.count !== 1) throw new TrialSignupConflictError();
+      return {
+        trialId: existing.id,
+        claimToken,
+        expiresAt: claimExpiresAt.toISOString(),
+      };
+    }
+
+    // Anything else is a real duplicate — a claimed trial, or one an account
+    // already holds in its auth metadata. Never replace those: doing so
+    // would strand the Supabase user carrying this trial id/token.
     throw new TrialSignupConflictError();
   }
 

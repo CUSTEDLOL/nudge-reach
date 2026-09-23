@@ -278,9 +278,19 @@ describe("continuous trial training page", () => {
     expect(agentPage).toContain("drafts={");
     expect(agentPage).toContain("<BusinessSection");
     expect(agentPage).toContain("<RulesSection");
-    // The trial's tour step for Training anchors here; nothing rendered it
-    // before, so the step showed "This area is still loading".
-    expect(agentPage).toContain('data-tour="training-source"');
+    // The trial's tour step for Training anchors on the "Approved facts"
+    // section inside TrialTraining, which is what the step's copy describes.
+    // The tour resolves it with a single-element lookup, so a second anchor
+    // anywhere in the rendered page would silently spotlight the wrong one:
+    // assert it exists there and nowhere else on this page.
+    const training = readFileSync(
+      "src/components/features/trial/trial-training.tsx",
+      "utf8",
+    );
+    const anchors = (source: string) =>
+      source.match(/data-tour="training-source"/g)?.length ?? 0;
+    expect(anchors(training)).toBe(1);
+    expect(anchors(agentPage)).toBe(0);
     // The fork that gave the trial a different page is gone.
     expect(agentPage).not.toContain("if (trial && !trial.converted)");
     expect(sources).toContain("router.refresh()");

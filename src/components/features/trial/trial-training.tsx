@@ -36,6 +36,10 @@ export function TrialTrainingHeader({
 /**
  * The trial's "What it knows": the same fact library the paid app shows, with
  * the trial's import allowances and its 50-fact ceiling around it.
+ *
+ * The page supplies the "What it knows" heading above this, so the headings
+ * here are one level down from it — the same level as the paid path's queue
+ * and library headings, which are this component's siblings on that page.
  */
 export function TrialTraining({
   workspace,
@@ -67,11 +71,16 @@ export function TrialTraining({
 
       <TrialDraftReview drafts={drafts} canEdit={canEdit} />
 
-      <section className="border-t border-neutral-200 py-7" aria-labelledby="trial-approved-heading">
+      {/* the guided tour's "train" step spotlights this — see modules/trial/tour */}
+      <section
+        data-tour="training-source"
+        className="border-t border-neutral-200 py-7"
+        aria-labelledby="trial-approved-heading"
+      >
         <div className="mb-4">
-          <h2 id="trial-approved-heading" className="text-base font-semibold text-neutral-900">
+          <h3 id="trial-approved-heading" className="text-sm font-semibold text-neutral-900">
             Approved facts
-          </h2>
+          </h3>
           <p className="mt-1 text-sm text-neutral-500">
             Add a fact manually or edit what Nudge is allowed to say about your business.
           </p>

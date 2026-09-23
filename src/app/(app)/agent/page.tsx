@@ -194,11 +194,10 @@ export default async function AgentPage() {
 
         <RulesSection rules={rules} canEdit={canEdit} limit={ruleLimit} />
 
-        {/* The trial's tour anchors its Training step here. */}
-        <section
-          data-tour="training-source"
-          aria-labelledby="training-knowledge-heading"
-        >
+        {/* The trial's tour anchors its Training step on the "Approved facts"
+            section inside TrialTraining — one anchor only, because the tour
+            looks it up with a single-element query. */}
+        <section aria-labelledby="training-knowledge-heading">
           <h2
             id="training-knowledge-heading"
             className="text-sm font-semibold text-neutral-900"

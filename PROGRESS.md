@@ -70,8 +70,11 @@ reading by the prompt's own wording. No amount of retyping it would have worked.
   the invariant unchallenged. The rewrite is checked too now.
 - The trial tour's Training step was **silently broken**: `tour.ts` anchors it to
   `[data-tour="training-source"]`, which nothing in `src/` rendered, so the step
-  fell back to an amber "this area is still loading" notice. The anchor now sits
-  on the *What it knows* section. Fixed in passing; `tour.ts` untouched.
+  fell back to an amber "this area is still loading" notice. This branch put the
+  anchor on the *What it knows* section; `main` independently put it on the
+  *Approved facts* section, and the merge below keeps **main's** placement — the
+  step's copy ("These approved business facts are all your AI can use") names
+  that section exactly. One anchor only, asserted by test; `tour.ts` untouched.
 - Retiring Setup would have quietly deleted two things, both re-homed instead:
   the AI's **OFF switch** lived only on that form (`enableAgentAction` became
   `setAutoReplyAction(enabled)`, with a switch on Training), and the form's
@@ -118,6 +121,29 @@ original.
   guardrail cannot see, a dropped specific never being caught, voice reading the
   full cap unconditionally, the classifier's error rate, and the legacy
   `businessInfo` blob still reaching the prompt with no UI left to edit it).
+
+## /free-trial joins the marketing site (2026-09-22) ✅ CODE — BROWSER-VERIFIED
+
+- The acquisition page had its own one-off header and footer, so paid traffic
+  landed somewhere that did not look like nudgeagent.app. It now renders the
+  shared `Navbar` and `Footer` — the same chrome as `/pricing` and `/contact` —
+  and the whole page speaks the landing page's visual language: cream ground
+  with the footer's graph paper, black display caps over a softer second line,
+  sticker eyebrow, and bordered cards with hard shadows.
+- The signup form is the one hero object (bordered card, 9px shadow); the left
+  column carries the promise, four proof chips (7 days · 15 replies · no card ·
+  no live WhatsApp) and a two-bubble WhatsApp preview that shows what a trial
+  reply looks like without adding copy. Inputs and the submit button moved onto
+  the site's control vocabulary.
+- `FreeTrialSections` was rewritten shorter and more scannable: three numbered
+  steps joined by a dashed rule, three outcome cards (one lime) for what the
+  paid front desk does, and three always-visible FAQs. No new client JS.
+- `tests/free-trial-page.test.ts` now scopes its copy, contrast and
+  single-conversion-path assertions to `<main>`, because the shared chrome
+  brings its own links and a second demo button; navbar/footer are covered by
+  `tests/marketing-nav.test.ts`. Verified: **1,993 tests passed** (+3 skipped),
+  ESLint and the production build exited 0; hero, steps and the full mobile
+  layout checked in a real 390px viewport.
 
 ## Instant-trial identity provenance (2026-09-22) ✅ CODE — RELEASE REVIEW PENDING
 

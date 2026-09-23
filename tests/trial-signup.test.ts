@@ -20,6 +20,7 @@ import {
   createPendingTrial,
   trialSignupSchema,
   hashClaimToken,
+  TrialSignupConflictError,
 } from "@/modules/trial/signup";
 import { readTrialResumeToken } from "@/modules/trial/resume-cookie";
 import { POST } from "@/app/api/trials/route";
@@ -221,6 +222,74 @@ describe("trial signup", () => {
     });
     expect(create).not.toHaveBeenCalled();
     expect(deleteMany).not.toHaveBeenCalled();
+  });
+
+  /**
+   * An intake nobody finished used to burn its email AND mobile forever: the
+   * next signup matching either field got a permanent 409 telling it to sign
+   * in to an account that was never created. Paid traffic that closed the tab,
+   * mistyped an email, or returned on another device was locked out for good.
+   */
+  describe("an unfinished intake does not lock the visitor out", () => {
+    const abandoned = {
+      id: "trial_abandoned",
+      emailNormalized: "someone-else@aster.in",
+      phoneE164: validSignup.phone,
+      claimTokenHash: hashClaimToken("z".repeat(43)),
+      claimExpiresAt: new Date(Date.now() + 60_000),
+      claimedAt: null,
+      orgId: null,
+      accountProvisionedAt: null,
+    };
+
+    it("hands the row to the new signup when the mobile matches but nothing was ever claimed", async () => {
+      findFirst.mockResolvedValue(abandoned);
+      updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await createPendingTrial(validSignup, new Date());
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "trial_abandoned",
+          claimedAt: null,
+          orgId: null,
+          accountProvisionedAt: null,
+        },
+        data: expect.objectContaining({
+          emailNormalized: validSignup.email,
+          phoneE164: validSignup.phone,
+          claimTokenHash: expect.any(String),
+        }),
+      });
+      expect(result.trialId).toBe("trial_abandoned");
+      expect(result.claimToken).toMatch(/^[A-Za-z0-9_-]{40,}$/);
+      // the fresh secret is stored hashed, never echoed from the old row
+      expect(updateMany.mock.calls[0][0].data.claimTokenHash).toBe(
+        hashClaimToken(result.claimToken),
+      );
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it("loses the race to a concurrent claim rather than overwriting it", async () => {
+      findFirst.mockResolvedValue(abandoned);
+      updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(createPendingTrial(validSignup, new Date()))
+        .rejects.toBeInstanceOf(TrialSignupConflictError);
+    });
+
+    it.each([
+      ["a workspace already exists", { orgId: "org_1" }],
+      ["the trial was already claimed", { claimedAt: new Date() }],
+      ["an account already holds this trial", { accountProvisionedAt: new Date() }],
+    ])("still refuses when %s", async (_case, state) => {
+      findFirst.mockResolvedValue({ ...abandoned, ...state });
+
+      await expect(createPendingTrial(validSignup, new Date()))
+        .rejects.toBeInstanceOf(TrialSignupConflictError);
+      expect(updateMany).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    });
   });
 
   it("returns the one-time claim token without exposing its stored hash", async () => {

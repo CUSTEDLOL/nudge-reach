@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   acquisitionTrialFindFirst,
+  acquisitionTrialUpdateMany,
   checkRateLimit,
   createServiceRoleClient,
   createUser,
 } = vi.hoisted(() => ({
   acquisitionTrialFindFirst: vi.fn(),
+  acquisitionTrialUpdateMany: vi.fn(),
   checkRateLimit: vi.fn(),
   createServiceRoleClient: vi.fn(),
   createUser: vi.fn(),
@@ -14,7 +16,10 @@ const {
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    acquisitionTrial: { findFirst: acquisitionTrialFindFirst },
+    acquisitionTrial: {
+      findFirst: acquisitionTrialFindFirst,
+      updateMany: acquisitionTrialUpdateMany,
+    },
   },
 }));
 vi.mock("@/lib/rate-limit", () => ({
@@ -68,6 +73,7 @@ describe("trial account provisioning", () => {
     vi.clearAllMocks();
     checkRateLimit.mockReturnValue({ allowed: true, retryAfterSeconds: 0 });
     acquisitionTrialFindFirst.mockResolvedValue(activeTrial());
+    acquisitionTrialUpdateMany.mockResolvedValue({ count: 1 });
     createServiceRoleClient.mockReturnValue({
       auth: { admin: { createUser } },
     });
@@ -222,6 +228,53 @@ describe("trial account provisioning", () => {
     expect(existingBody).toEqual(invalidBody);
     expect(JSON.stringify(existingBody)).not.toContain("owner@example.com");
     expect(JSON.stringify(existingBody)).not.toContain("auth_user_1");
+  });
+
+  /**
+   * The stamp is the only proof that an auth user holds this trial's
+   * id/token, and it is what stops a later signup taking the row over. If it
+   * is missing, a stranded account can be silently detached; if it is set too
+   * eagerly, an unfinished intake burns its email and mobile forever.
+   */
+  describe("records that an account is bound to the trial", () => {
+    it("stamps the row once the auth user exists", async () => {
+      await provisionTrialAccount(valid, valid.claimToken, now);
+
+      expect(acquisitionTrialUpdateMany).toHaveBeenCalledWith({
+        where: { id: valid.trialId, accountProvisionedAt: null },
+        data: { accountProvisionedAt: now },
+      });
+    });
+
+    it("stamps the row when the email already has an account", async () => {
+      createUser.mockResolvedValue({
+        data: { user: null },
+        error: { code: "email_exists", message: "already registered" },
+      });
+
+      const result = await provisionTrialAccount(valid, valid.claimToken, now);
+
+      expect(result).toEqual({ ok: false, code: "existing_account" });
+      expect(acquisitionTrialUpdateMany).toHaveBeenCalledOnce();
+    });
+
+    it("does not stamp when no account was created", async () => {
+      createUser.mockResolvedValue({
+        data: { user: null },
+        error: { code: "unexpected", message: "boom" },
+      });
+
+      await provisionTrialAccount(valid, valid.claimToken, now);
+
+      expect(acquisitionTrialUpdateMany).not.toHaveBeenCalled();
+    });
+
+    it("still provisions when the stamp write fails", async () => {
+      acquisitionTrialUpdateMany.mockRejectedValue(new Error("db down"));
+
+      await expect(provisionTrialAccount(valid, valid.claimToken, now))
+        .resolves.toEqual({ ok: true });
+    });
   });
 
   it("returns a redacted temporary-unavailable response for admin failures", async () => {

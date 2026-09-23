@@ -248,7 +248,7 @@ export function TrialSignupForm() {
       <button
         type="submit"
         disabled={busy}
-        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-700 px-5 py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60"
+        className="flex min-h-13 w-full items-center justify-center gap-2 rounded-xl bg-ink px-5 py-3.5 text-[15.5px] font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-10px_rgba(6,193,103,0.65)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60"
       >
         {busy ? (
           <LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
@@ -295,7 +295,7 @@ function Field({
         {...props}
         name={name}
         required
-        className="mt-1.5 h-12 w-full rounded-md border border-ink/20 bg-white px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/60 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10"
+        className="mt-1.5 h-12 w-full rounded-xl border-2 border-ink/15 bg-[#fcfdfa] px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink/60 focus:border-brand-600 focus:bg-white focus:ring-4 focus:ring-brand-500/15"
       />
     </label>
   );
