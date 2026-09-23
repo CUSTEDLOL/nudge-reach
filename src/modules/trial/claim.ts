@@ -1,4 +1,5 @@
-import type { Membership, Org, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Membership, Org } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { trialGrant } from "@/modules/billing/credits";
 import { hashClaimToken } from "./signup";
@@ -6,6 +7,22 @@ import { trialEndsAt } from "./state";
 
 export type TrialClaim = { trialId: string; claimToken: string };
 const AUTHENTICATED_RECOVERY_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Another request claimed this trial while we were claiming it. Not a
+ * failure: the workspace exists, it just was not this transaction that made
+ * it. Callers should resolve the org again rather than surface an error.
+ */
+export class TrialClaimRaceError extends Error {}
+
+/** True when `error` means "someone else already did this". */
+export function isTrialClaimRace(error: unknown): boolean {
+  return (
+    error instanceof TrialClaimRaceError
+    || (error instanceof Prisma.PrismaClientKnownRequestError
+      && error.code === "P2002")
+  );
+}
 
 export function parseTrialClaimMetadata(raw: unknown): TrialClaim | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -78,7 +95,7 @@ export async function claimAcquisitionTrial(input: {
       where: { id: trial.id, claimedAt: null },
       data: { orgId: org.id, claimedAt: now, startedAt: now, expiresAt },
     });
-    if (claimed.count !== 1) throw new Error("Trial was already claimed.");
+    if (claimed.count !== 1) throw new TrialClaimRaceError();
 
     const { memberships, ...orgRow } = org;
     return { org: orgRow, membership: memberships[0] };
