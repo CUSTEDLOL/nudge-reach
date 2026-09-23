@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma, tx } = vi.hoisted(() => {
   const tx = {
-    $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
     knowledgeEntry: {
       count: vi.fn(),
       findMany: vi.fn(),
@@ -35,7 +36,7 @@ describe("storeKnowledgeFacts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prisma.$transaction.mockImplementation(async (work) => work(tx));
-    tx.$queryRaw.mockResolvedValue([{ locked: null }]);
+    tx.$executeRaw.mockResolvedValue(1);
     tx.knowledgeEntry.count.mockResolvedValue(48);
     tx.knowledgeEntry.findMany.mockResolvedValue([]);
     tx.knowledgeEntry.createMany.mockResolvedValue({ count: 2 });
@@ -52,7 +53,7 @@ describe("storeKnowledgeFacts", () => {
       }),
     ).resolves.toEqual({ created: 2, capacityReached: true });
 
-    const [sqlParts, orgId] = tx.$queryRaw.mock.calls[0];
+    const [sqlParts, orgId] = tx.$executeRaw.mock.calls[0];
     expect((sqlParts as TemplateStringsArray).join("?")).toContain(
       "pg_advisory_xact_lock",
     );
@@ -86,7 +87,7 @@ describe("storeKnowledgeFacts", () => {
     ).resolves.toEqual({ created: 2, capacityReached: true });
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
   });
 
   it("dedupes normalized active and draft facts without treating duplicates as capacity", async () => {
@@ -248,7 +249,29 @@ describe("storeKnowledgeFacts", () => {
 
     expect(results.map((result) => result.created).sort()).toEqual([0, 1]);
     expect(results.every((result) => result.capacityReached)).toBe(true);
-    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(2);
     expect(tx.knowledgeEntry.createMany).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * pg_advisory_xact_lock() returns void, and Prisma cannot deserialize a void
+ * column: $queryRaw fails with "Failed to deserialize column of type 'void'"
+ * against real Postgres. Every unit test here mocks the client, so no mock can
+ * reproduce it — this shipped and broke website import for every trial, which
+ * is the only path that takes this lock. The guard is therefore on the source.
+ */
+describe("advisory lock never goes through $queryRaw", () => {
+  const source = readFileSync("src/modules/knowledge/store.ts", "utf8");
+
+  it("executes the void-returning lock instead of querying it", () => {
+    expect(source).toContain("$executeRaw`SELECT pg_advisory_xact_lock");
+    // usage, not prose: the comment above the call names $queryRaw on purpose
+    expect(source).not.toMatch(/\btx\.\$queryRaw/);
+    expect(source).not.toMatch(/Pick<[\s\S]{0,120}?"\$queryRaw"/);
+  });
+
+  it("does not alias a void column, which cannot be read back", () => {
+    expect(source).not.toMatch(/pg_advisory_xact_lock[^`]*AS\s+\w+/i);
   });
 });

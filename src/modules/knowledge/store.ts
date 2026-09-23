@@ -18,7 +18,7 @@ export interface StoreKnowledgeFactsResult {
 
 type KnowledgeStoreTransaction = Pick<
   Prisma.TransactionClient,
-  "$queryRaw" | "knowledgeEntry"
+  "$executeRaw" | "knowledgeEntry"
 >;
 
 function normalizedFactKey(value: string): string {
@@ -64,7 +64,12 @@ async function storeCappedKnowledgeFacts(
   facts: DistilledFact[],
   options: StoreKnowledgeFactsOptions,
 ): Promise<StoreKnowledgeFactsResult> {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${orgId}, 0)) AS locked`;
+  // $executeRaw, not $queryRaw: pg_advisory_xact_lock() returns void, and
+  // Prisma cannot deserialize a void column — $queryRaw fails with
+  // "Failed to deserialize column of type 'void'" against real Postgres,
+  // which no mocked unit test can reproduce. Nothing reads this result; the
+  // lock is taken for its side effect and released when the transaction ends.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${orgId}, 0))`;
   const used = await tx.knowledgeEntry.count({
     where: { orgId, status: { in: ["active", "draft"] } },
   });
