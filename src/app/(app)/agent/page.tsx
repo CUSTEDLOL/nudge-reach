@@ -48,7 +48,7 @@ export default async function AgentPage() {
   const onTrial = trial !== null && !trial.converted;
   const ruleLimit = onTrial ? MAX_ACTIVE_RULES.trial : MAX_ACTIVE_RULES.full;
 
-  const [questions, facts, drafts, profile, ruleRows] = await Promise.all([
+  const [questions, facts, drafts, profile, ruleRows, migratedRule] = await Promise.all([
     // The trial has no owner-question queue, so it does not pay for the read.
     onTrial
       ? []
@@ -83,6 +83,14 @@ export default async function AgentPage() {
       take: ruleLimit,
       select: { id: true, text: true, scope: true, condition: true },
     }),
+    // Has `migrateProfileToRules` already carried this org's legacy blob over?
+    // Its own durable guard is this exact row, so asking for it is asking the
+    // same question the migration asks itself — and it is the only honest
+    // signal, since the migration writes drafts the fact list below cannot see.
+    prisma.agentRule.findFirst({
+      where: { orgId: ctx.org.id, source: { startsWith: "migrated_" } },
+      select: { id: true },
+    }),
   ]);
 
   const queueItems: QueueItem[] = questions.map((q) => ({
@@ -110,9 +118,19 @@ export default async function AgentPage() {
     condition: r.condition,
   }));
 
-  const hasImported = facts.some((f) => f.source === "import");
+  // "Structure my existing info" re-distills `AgentProfile.businessInfo` into
+  // facts, so it has to retire once that blob has been structured by ANY route.
+  // It used to test only active facts with `source: "import"` — which the
+  // migration never writes (it files `source: "manual"`, `status: "draft"`) —
+  // so the card showed on every migrated org forever, and each press produced a
+  // second, differently-worded copy of what the migration had already queued.
+  // `migrated_…` is the migration's own guard row; `concierge` facts are the
+  // same six fields the blob was built from, written by client setup.
+  const alreadyStructured =
+    migratedRule !== null ||
+    facts.some((f) => f.source === "import" || f.source === "concierge");
   const showStructureButton =
-    Boolean(profile?.businessInfo.trim()) && !hasImported;
+    Boolean(profile?.businessInfo.trim()) && !alreadyStructured;
   // An empty library has no count worth showing.
   const taught = facts.length > 0;
 

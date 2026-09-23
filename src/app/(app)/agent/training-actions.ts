@@ -12,7 +12,7 @@ import {
   answerOwnerQuestion,
   dismissOwnerQuestion,
 } from "@/modules/knowledge/questions";
-import { distillAnswer } from "@/modules/knowledge/distill";
+import { distillAnswer, type DistilledFact } from "@/modules/knowledge/distill";
 import { storeKnowledgeFacts } from "@/modules/knowledge/store";
 import {
   FILE_MEDIA_TYPES,
@@ -497,7 +497,17 @@ export async function discardAllDraftsAction(): Promise<ActionResult> {
   }
 }
 
-/** One-click migration: distill the legacy businessInfo blob into facts. */
+/**
+ * One-click migration: distill the legacy businessInfo blob into facts.
+ *
+ * Writes through `storeKnowledgeFacts`, not a bare `createMany`, so its dedupe
+ * applies: this used to insert whatever the distiller returned every time it
+ * was pressed, and the card that offers it showed on migrated orgs forever, so
+ * a second press bought a second copy of the same information. The dedupe is on
+ * normalised fact text, which catches a re-press verbatim; a re-worded
+ * distillation of the same sentence is past what it can see, which is why the
+ * card retiring (see /agent) is the other half of this fix.
+ */
 export async function structureExistingInfoAction(): Promise<ActionResult> {
   const ctx = await requireOrgContext();
   try {
@@ -521,28 +531,30 @@ export async function structureExistingInfoAction(): Promise<ActionResult> {
       .map((c) => c.trim())
       .filter(Boolean)
       .slice(0, 40);
-    let count = 0;
+    const distilled: DistilledFact[] = [];
     for (const chunk of chunks) {
-      const facts = await distillAnswer(
-        "General business information",
-        chunk,
-        ctx.org.id
+      distilled.push(
+        ...(await distillAnswer("General business information", chunk, ctx.org.id))
       );
-      await prisma.knowledgeEntry.createMany({
-        data: facts.map((f) => ({
-          orgId: ctx.org.id,
-          category: f.category,
-          fact: f.fact,
-          condition: f.condition ?? null,
-          source: "import",
-        })),
-      });
-      count += facts.length;
     }
+    // One store for the whole blob: the dedupe then sees the chunks against each
+    // other as well as against what the org already has.
+    const { created } = distilled.length
+      ? await storeKnowledgeFacts(ctx.org.id, distilled, {
+          source: "import",
+          status: "active",
+        })
+      : { created: 0 };
     revalidatePath("/agent");
+    if (created === 0) {
+      return {
+        ok: true,
+        message: "Your existing info is already in the fact library — nothing new to add.",
+      };
+    }
     return {
       ok: true,
-      message: `Structured ${count} fact${count === 1 ? "" : "s"} from your existing info.`,
+      message: `Structured ${created} fact${created === 1 ? "" : "s"} from your existing info.`,
     };
   } catch (err) {
     return fail(err);
