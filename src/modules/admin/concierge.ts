@@ -245,23 +245,38 @@ export async function founderMigrateProfile(
   const org = await prisma.org.findUnique({ where: { id: orgId }, select: { id: true } });
   if (!org) return { ok: false, error: "Org not found." };
 
-  const { rules, archived, facts } = await migrateProfileToRules(orgId);
-  if (rules === 0 && archived === 0 && facts === 0) {
+  const { rules, archived, facts, factsArchived } = await migrateProfileToRules(orgId);
+  // `factsArchived` counts too: a workspace already at its fact cap can migrate
+  // a whole blob into archived facts and nothing else, and that is emphatically
+  // not "nothing to migrate".
+  if (rules === 0 && archived === 0 && facts === 0 && factsArchived === 0) {
     return { ok: false, error: "Nothing to migrate — already done, or both legacy boxes are empty." };
   }
 
-  // Lines past the org's active-rule cap are written archived rather than
-  // dropped. The founder needs to know they exist: nothing else surfaces them.
-  const overCap = archived
-    ? ` ${archived} more went over the rule cap and were archived — free up rule slots to bring them live.`
-    : "";
+  // Lines past a cap are written archived rather than dropped — rules since
+  // 4a69dae, facts since the cap stopped silently discarding them. The founder
+  // needs to know they exist: nothing else surfaces either.
+  const overCap = [
+    archived
+      ? `${archived} more went over the rule cap and were archived — free up rule slots to bring them live.`
+      : "",
+    factsArchived
+      ? `${factsArchived} fact${factsArchived === 1 ? "" : "s"} went over the fact cap and were archived — free up fact slots to bring them back for review.`
+      : "",
+  ]
+    .filter(Boolean)
+    .map((sentence) => ` ${sentence}`)
+    .join("");
 
   await founderAudit(
     orgId,
     founderEmail,
     "admin.profile_migrated",
     null,
-    withReason(`${rules} rules, ${archived} archived, ${facts} draft facts`, reason)
+    withReason(
+      `${rules} rules, ${archived} archived, ${facts} draft facts, ${factsArchived} archived facts`,
+      reason
+    )
   );
   return {
     ok: true,

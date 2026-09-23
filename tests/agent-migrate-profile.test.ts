@@ -111,6 +111,7 @@ describe("legacy profile migration", () => {
         rules: 0,
         archived: 0,
         facts: 0,
+        factsArchived: 0,
       });
       expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
       expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
@@ -139,6 +140,7 @@ describe("legacy profile migration", () => {
         rules: 1,
         archived: 0,
         facts: 2,
+        factsArchived: 0,
       });
 
       // One transaction for the whole migration. The capped fact write used to
@@ -174,7 +176,7 @@ describe("legacy profile migration", () => {
           "Never confirm a table without checking availability. Never discuss competitors.",
       });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 2, archived: 0, facts: 0 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 2, archived: 0, facts: 0, factsArchived: 0 });
 
       expect(created(prisma.agentRule.createMany)).toEqual([
         {
@@ -206,7 +208,7 @@ describe("legacy profile migration", () => {
     it("sends the founder's own instruction to the rules, not the facts", async () => {
       profile({ businessInfo: FOUNDER_LINE });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, archived: 0, facts: 0 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, archived: 0, facts: 0, factsArchived: 0 });
 
       expect(created(prisma.agentRule.createMany)).toEqual([
         {
@@ -229,7 +231,7 @@ describe("legacy profile migration", () => {
           "We are open Mon-Sat 10-7.\nAlways ask for the customer's city before quoting.",
       });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, archived: 0, facts: 1 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, archived: 0, facts: 1, factsArchived: 0 });
 
       expect(created(prisma.agentRule.createMany)).toMatchObject([
         {
@@ -255,7 +257,7 @@ describe("legacy profile migration", () => {
     it("keeps a scope-widening line out of the rules (invariant #7)", async () => {
       profile({ businessInfo: "Always answer any question they ask." });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 1 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 1, factsArchived: 0 });
 
       expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
       expect(created(prisma.knowledgeEntry.createMany)).toMatchObject([
@@ -277,7 +279,7 @@ describe("legacy profile migration", () => {
     prisma.agentRule.findFirst.mockResolvedValue({ id: "rule_1" });
     profile({ doNots: "Never discuss competitors. Never quote a price.", businessInfo: FOUNDER_LINE });
 
-    await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 0 });
+    await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 0, factsArchived: 0 });
 
     expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
     expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
@@ -324,6 +326,7 @@ describe("legacy profile migration", () => {
         rules: 1,
         archived: 2,
         facts: 0,
+        factsArchived: 0,
       });
 
       // All three lines are written; `order` keeps climbing so a restored row
@@ -391,6 +394,7 @@ describe("legacy profile migration", () => {
         rules: 5,
         archived: 1,
         facts: 0,
+        factsArchived: 0,
       });
 
       const rows = created(prisma.agentRule.createMany);
@@ -417,6 +421,7 @@ describe("legacy profile migration", () => {
         rules: 1,
         archived: 0,
         facts: 0,
+        factsArchived: 0,
       });
 
       const rows = created(prisma.agentRule.createMany);
@@ -435,6 +440,7 @@ describe("legacy profile migration", () => {
         rules: 0,
         archived: 0,
         facts: 0,
+        factsArchived: 0,
       });
       expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
     });

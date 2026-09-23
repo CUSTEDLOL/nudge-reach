@@ -51,7 +51,7 @@ describe("storeKnowledgeFacts", () => {
         status: "draft",
         activeDraftCap: 50,
       }),
-    ).resolves.toEqual({ created: 2, capacityReached: true });
+    ).resolves.toEqual({ created: 2, skipped: 1, capacityReached: true });
 
     const [sqlParts, orgId] = tx.$executeRaw.mock.calls[0];
     expect((sqlParts as TemplateStringsArray).join("?")).toContain(
@@ -84,7 +84,7 @@ describe("storeKnowledgeFacts", () => {
         },
         tx as never,
       ),
-    ).resolves.toEqual({ created: 2, capacityReached: true });
+    ).resolves.toEqual({ created: 2, skipped: 0, capacityReached: true });
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
@@ -111,7 +111,7 @@ describe("storeKnowledgeFacts", () => {
       },
     );
 
-    expect(result).toEqual({ created: 1, capacityReached: false });
+    expect(result).toEqual({ created: 1, skipped: 0, capacityReached: false });
     expect(tx.knowledgeEntry.findMany).toHaveBeenCalledWith({
       where: { orgId: "org_1", status: { in: ["active", "draft"] } },
       select: { fact: true },
@@ -148,7 +148,7 @@ describe("storeKnowledgeFacts", () => {
         { source: "manual", status: "draft" },
         tx as never,
       ),
-    ).resolves.toEqual({ created: 3, capacityReached: false });
+    ).resolves.toEqual({ created: 3, skipped: 0, capacityReached: false });
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.knowledgeEntry.findMany).not.toHaveBeenCalled();
@@ -170,7 +170,9 @@ describe("storeKnowledgeFacts", () => {
         status: "draft",
         maxCreated: 2,
       }),
-    ).resolves.toEqual({ created: 2, capacityReached: false });
+      // One of the three is a duplicate, so the budget of 2 fits the other two
+      // exactly: nothing new was turned away.
+    ).resolves.toEqual({ created: 2, skipped: 0, capacityReached: false });
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.knowledgeEntry.findMany).toHaveBeenCalledWith({
@@ -178,6 +180,19 @@ describe("storeKnowledgeFacts", () => {
       select: { fact: true },
     });
     expect(prisma.knowledgeEntry.createMany.mock.calls[0][0].data).toHaveLength(2);
+  });
+
+  it("counts new facts the per-run budget turned away, on the uncapped path too", async () => {
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    prisma.knowledgeEntry.createMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      storeKnowledgeFacts("org_paid", facts, {
+        source: "import",
+        status: "draft",
+        maxCreated: 1,
+      }),
+    ).resolves.toEqual({ created: 1, skipped: 2, capacityReached: false });
   });
 
   it("reports duplicate-only input separately from an exhausted cap", async () => {
@@ -196,10 +211,12 @@ describe("storeKnowledgeFacts", () => {
           activeDraftCap: 50,
         },
       ),
-    ).resolves.toEqual({ created: 0, capacityReached: false });
+    ).resolves.toEqual({ created: 0, skipped: 0, capacityReached: false });
 
     expect(tx.knowledgeEntry.createMany).not.toHaveBeenCalled();
 
+    // Two of the three are new and cannot be written. An exhausted cap now says
+    // how many it turned away instead of discarding them in silence.
     tx.knowledgeEntry.count.mockResolvedValue(50);
     await expect(
       storeKnowledgeFacts("org_1", facts, {
@@ -207,7 +224,7 @@ describe("storeKnowledgeFacts", () => {
         status: "active",
         activeDraftCap: 50,
       }),
-    ).resolves.toEqual({ created: 0, capacityReached: true });
+    ).resolves.toEqual({ created: 0, skipped: 2, capacityReached: true });
   });
 
   it.each([0, -1])("never inserts when maxCreated is %i", async (maxCreated) => {
@@ -217,7 +234,7 @@ describe("storeKnowledgeFacts", () => {
         status: "draft",
         maxCreated,
       }),
-    ).resolves.toEqual({ created: 0, capacityReached: false });
+    ).resolves.toEqual({ created: 0, skipped: 3, capacityReached: false });
 
     expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
   });
@@ -233,7 +250,7 @@ describe("storeKnowledgeFacts", () => {
           status: "draft",
           activeDraftCap,
         }),
-      ).resolves.toEqual({ created: 0, capacityReached: true });
+      ).resolves.toEqual({ created: 0, skipped: 3, capacityReached: true });
 
       expect(tx.knowledgeEntry.createMany).not.toHaveBeenCalled();
     },

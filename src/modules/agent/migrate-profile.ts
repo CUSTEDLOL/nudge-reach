@@ -48,8 +48,9 @@ import {
  * It applies the two guards that `rules-actions.ts` (until now the only writer
  * of `AgentRule`) enforces, because bypassing them here would be a hole in
  * both: the active-rule cap, and `widensScope` (invariant #7). Nothing is
- * thrown away on the way — a line the guards turn back becomes a draft fact,
- * and a line past the cap becomes an archived rule.
+ * thrown away on the way — a line the guards turn back becomes a draft fact, a
+ * line past the rule cap becomes an archived rule, and a fact line past the
+ * org's fact cap becomes an archived fact.
  */
 
 export interface ProfileMigrationResult {
@@ -65,11 +66,19 @@ export interface ProfileMigrationResult {
    * agent does not follow them; they exist so the line is not lost.
    */
   archived: number;
-  /** Draft knowledge facts created. */
+  /** Draft knowledge facts created — live in the sense that a reviewer sees them. */
   facts: number;
+  /**
+   * Fact lines written past the org's fact cap, as `status: "archived"` rows.
+   * The same answer `archived` above gives an over-cap rule, for the same
+   * reason: they existed nowhere else once the prompt stopped reading the
+   * legacy column. A caller that says "N facts are awaiting review" must say
+   * this number too, or it is describing a migration that did not happen.
+   */
+  factsArchived: number;
 }
 
-const NOTHING: ProfileMigrationResult = { rules: 0, archived: 0, facts: 0 };
+const NOTHING: ProfileMigrationResult = { rules: 0, archived: 0, facts: 0, factsArchived: 0 };
 
 /** `factSchema`'s own ceiling; the legacy column keeps the untruncated text. */
 const MAX_FACT_LENGTH = 300;
@@ -169,10 +178,37 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
           },
           tx
         )
+      : { created: 0, skipped: 0 };
+
+    // A fact past the cap is written `archived`, not dropped — the answer
+    // 4a69dae already gave an over-cap RULE, for the same reason: the prompt no
+    // longer reads the legacy column, so a dropped line would exist nowhere a
+    // reviewer can reach it. `archived` is the state `archiveFactAction`
+    // already produces, it is excluded from the cap's own
+    // `status: in [active, draft]` count, and no prompt reads it.
+    //
+    // This second pass is uncapped and dedupes against every row the org has,
+    // the drafts this transaction just wrote included, so it writes exactly the
+    // lines that did not fit. It is bounded by MAX_LINES, which is why the same
+    // treatment is NOT given to `storeKnowledgeFacts` in general: an import
+    // crawl would write hundreds of archived rows past the very cap that exists
+    // to bound a trial workspace.
+    const overflow = stored.skipped
+      ? await storeKnowledgeFacts(
+          orgId,
+          planned.facts,
+          { source: "manual", status: "archived" },
+          tx
+        )
       : { created: 0 };
 
     const live = planned.rules.filter((rule) => rule.status === "active").length;
-    return { rules: live, archived: planned.rules.length - live, facts: stored.created };
+    return {
+      rules: live,
+      archived: planned.rules.length - live,
+      facts: stored.created,
+      factsArchived: overflow.created,
+    };
   }, TRANSACTION_OPTIONS);
   return migration ?? NOTHING;
 }

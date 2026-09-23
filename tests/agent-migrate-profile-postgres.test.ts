@@ -57,6 +57,7 @@ vi.mock("@/modules/knowledge/store", async (importOriginal) => {
 
 import { migrateProfileToRules } from "@/modules/agent/migrate-profile";
 import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
+import { TRIAL_KNOWLEDGE_LIMITS } from "@/modules/trial/knowledge";
 
 /** Three instructions and two facts, in the shape an owner actually types. */
 const DO_NOTS = "Never quote a final price without a consultation. Never discuss competitors.";
@@ -193,9 +194,71 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         rules: 3,
         archived: 0,
         facts: 2,
+        factsArchived: 0,
       });
       expect(await prisma.agentRule.count({ where: { orgId } })).toBe(3);
       expect(await prisma.knowledgeEntry.count({ where: { orgId } })).toBe(2);
+    });
+
+    /**
+     * A trial workspace two facts short of its cap, migrating a six-line
+     * fact-shaped blob. `selectNewFacts` used to truncate to what fit and
+     * discard the rest with no signal at all, so this wrote 2, threw away 4,
+     * and the founder panel read "2 draft facts awaiting review." An over-cap
+     * RULE has been written `archived` since 4a69dae; an over-cap fact now is
+     * too, and the count says so.
+     */
+    it("archives the fact lines past a trial's cap instead of dropping them", async () => {
+      isRestrictedAcquisitionTrial.mockResolvedValue(true);
+      const lines = [
+        "Consultation costs ₹500, adjusted against the procedure.",
+        "We are at 2nd floor, Orchid Plaza, Koramangala.",
+        "Parking is behind the building.",
+        "The clinic has two surgeons and four consultants.",
+        "50% advance is required for procedures.",
+        "Grafts are charged at ₹40 each.",
+      ];
+      const orgId = await seedOrg("fact-cap", {
+        businessInfo: lines.join("\n"),
+        doNots: "Never discuss competitors.",
+      });
+      const free = 2;
+      await prisma.knowledgeEntry.createMany({
+        data: Array.from({ length: TRIAL_KNOWLEDGE_LIMITS.facts - free }, (_, i) => ({
+          orgId,
+          category: "other",
+          fact: `Seeded fact ${i}`,
+          source: "manual",
+          status: "active",
+        })),
+      });
+
+      expect(await migrateProfileToRules(orgId)).toEqual({
+        rules: 1,
+        archived: 0,
+        facts: free,
+        factsArchived: lines.length - free,
+      });
+
+      // The cap still holds — archived rows are not counted by it.
+      expect(
+        await prisma.knowledgeEntry.count({
+          where: { orgId, status: { in: ["active", "draft"] } },
+        })
+      ).toBe(TRIAL_KNOWLEDGE_LIMITS.facts);
+      // And not one line is lost: the two that fit are drafts, the four that
+      // did not are archived, and together they are the owner's whole blob.
+      const written = await prisma.knowledgeEntry.findMany({
+        where: { orgId, source: "manual" },
+        select: { fact: true, status: true },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(written.filter((f) => f.status === "draft").map((f) => f.fact)).toEqual(
+        lines.slice(0, free)
+      );
+      expect(written.filter((f) => f.status === "archived").map((f) => f.fact).sort()).toEqual(
+        lines.slice(free).sort()
+      );
     });
 
     it("is still a no-op on a later run, once the lock is long gone", async () => {
@@ -206,6 +269,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         rules: 0,
         archived: 0,
         facts: 0,
+        factsArchived: 0,
       });
 
       expect(await prisma.agentRule.count({ where: { orgId } })).toBe(3);

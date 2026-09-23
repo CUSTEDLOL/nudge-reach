@@ -2,7 +2,13 @@ import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { DistilledFact } from "./distill";
 
-type StoredKnowledgeStatus = "active" | "draft";
+/**
+ * `archived` is here for one caller: `migrateProfileToRules` writes the fact
+ * lines that did not fit the org's cap as archived rows rather than dropping
+ * them. No prompt reads an archived fact and the cap does not count one, so it
+ * is the same "kept, not live" state `archiveFactAction` produces.
+ */
+type StoredKnowledgeStatus = "active" | "draft" | "archived";
 
 export interface StoreKnowledgeFactsOptions {
   source: string;
@@ -13,6 +19,15 @@ export interface StoreKnowledgeFactsOptions {
 
 export interface StoreKnowledgeFactsResult {
   created: number;
+  /**
+   * Facts that were new — not duplicates of anything the org already has — and
+   * were NOT written, because the cap or the per-run `maxCreated` budget ran
+   * out first. It used to be nothing: `selectNewFacts` truncated the list and
+   * returned, so a trial with 48 facts migrating a 20-line blob wrote 2 and
+   * silently dropped 18 while its caller said "2 draft facts awaiting review."
+   * A caller that reports a count to a human must report this one too.
+   */
+  skipped: number;
   capacityReached: boolean;
 }
 
@@ -25,12 +40,17 @@ function normalizedFactKey(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+/**
+ * Every fact the org does not already carry, in order and with no limit
+ * applied — the caller slices it and reports what it left behind. It used to
+ * take the limit and break out of the loop at it, which is precisely why an
+ * over-cap fact vanished without a trace: the facts past the limit were never
+ * counted, so there was nothing to return.
+ */
 function selectNewFacts(
   facts: DistilledFact[],
   existing: { fact: string }[],
-  limit: number,
 ): DistilledFact[] {
-  if (limit <= 0) return [];
   const known = new Set(existing.map((entry) => normalizedFactKey(entry.fact)));
   const selected: DistilledFact[] = [];
   for (const fact of facts) {
@@ -38,7 +58,6 @@ function selectNewFacts(
     if (!key || known.has(key)) continue;
     known.add(key);
     selected.push(fact);
-    if (selected.length >= limit) break;
   }
   return selected;
 }
@@ -74,27 +93,26 @@ async function storeCappedKnowledgeFacts(
     where: { orgId, status: { in: ["active", "draft"] } },
   });
   const remaining = Math.max(0, options.activeDraftCap! - used);
-  if (remaining === 0) return { created: 0, capacityReached: true };
   const existing = await tx.knowledgeEntry.findMany({
     where: { orgId, status: { in: ["active", "draft"] } },
     select: { fact: true },
   });
-  const selected = selectNewFacts(
-    facts,
-    existing,
-    Math.min(remaining, options.maxCreated ?? facts.length),
-  );
+  // Dedupe first, then cut to what fits. A full cap used to return before this
+  // read, which was cheaper but could not tell a caller whether the facts it
+  // handed over were already known or were being thrown away.
+  const eligible = selectNewFacts(facts, existing);
+  const room = Math.max(0, Math.min(remaining, options.maxCreated ?? eligible.length));
+  const selected = eligible.slice(0, room);
+  const skipped = eligible.length - selected.length;
   if (selected.length === 0) {
-    return {
-      created: 0,
-      capacityReached: remaining === 0,
-    };
+    return { created: 0, skipped, capacityReached: remaining === 0 };
   }
   const inserted = await tx.knowledgeEntry.createMany({
     data: rowsFor(orgId, selected, options),
   });
   return {
     created: inserted.count,
+    skipped,
     capacityReached: used + inserted.count >= options.activeDraftCap!,
   };
 }
@@ -117,16 +135,17 @@ export async function storeKnowledgeFacts(
       where: { orgId },
       select: { fact: true },
     });
-    const selected = selectNewFacts(
-      facts,
-      existing,
-      options.maxCreated ?? facts.length,
+    const eligible = selectNewFacts(facts, existing);
+    const selected = eligible.slice(
+      0,
+      Math.max(0, options.maxCreated ?? eligible.length),
     );
-    if (selected.length === 0) return { created: 0, capacityReached: false };
+    const skipped = eligible.length - selected.length;
+    if (selected.length === 0) return { created: 0, skipped, capacityReached: false };
     const inserted = await db.knowledgeEntry.createMany({
       data: rowsFor(orgId, selected, options),
     });
-    return { created: inserted.count, capacityReached: false };
+    return { created: inserted.count, skipped, capacityReached: false };
   }
 
   if (transaction) {
