@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { PowerOff } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { enableAgentAction } from "@/app/(app)/agent/setup-actions";
+import { setAutoReplyAction } from "@/app/(app)/agent/setup-actions";
 
 /**
  * One line, one button. Owners hit "Try it in chat" and got silence because
@@ -38,7 +38,7 @@ export function AiOffNotice({ canEdit }: { canEdit: boolean }) {
           loading={pending}
           onClick={() =>
             start(async () => {
-              const r = await enableAgentAction();
+              const r = await setAutoReplyAction(true);
               toast({ description: r.message, tone: r.ok ? "success" : "error" });
             })
           }
@@ -46,7 +46,7 @@ export function AiOffNotice({ canEdit }: { canEdit: boolean }) {
           Turn it on
         </Button>
       ) : (
-        <Link href="/agent/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+        <Link href="/agent" className={buttonVariants({ variant: "secondary", size: "sm" })}>
           Ask an admin
         </Link>
       )}

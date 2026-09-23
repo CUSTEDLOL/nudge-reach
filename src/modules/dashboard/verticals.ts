@@ -13,6 +13,11 @@ export const VERTICALS = [
   { value: "home_decor", label: "Home & Decor" },
   { value: "real_estate", label: "Real estate" },
   { value: "services", label: "Local services" },
+  // Curated in VERTICAL_TEMPLATES (a B2B seller qualifies and books a call
+  // rather than taking an order) but missing here, so the only way to pick it
+  // was the retired Setup form's own five-option list. Listed now, or deleting
+  // that form would have quietly made the template unreachable.
+  { value: "software", label: "Software / B2B services" },
   { value: "other", label: "Something else" },
 ] as const;
 

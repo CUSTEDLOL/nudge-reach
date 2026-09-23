@@ -202,9 +202,11 @@ describe("software / B2B vertical", () => {
     expect(scope).not.toBe(GENERIC_SCOPE);
   });
 
-  it("is selectable in the agent setup form", () => {
-    const form = readFileSync("src/app/(app)/agent/agent-form.tsx", "utf8");
-    expect(form).toContain('<option value="software">');
+  it("is pickable on the Training page from the shared taxonomy", () => {
+    // It used to be selectable only on the retired Setup form, whose own
+    // five-option list was not the canonical one — so retiring that page
+    // without this would have left the curated template unreachable.
+    expect(VERTICALS.some((v) => v.value === "software")).toBe(true);
   });
 
   it("asks the questionnaire about the right sellable thing", () => {

@@ -15,7 +15,7 @@ import {
 
 /**
  * Seven rows, one per day: a closed/open switch and one or more open–close
- * windows. Serialised into a hidden input the Setup form posts as JSON.
+ * windows. Serialised into a hidden input the Bookings form posts as JSON.
  * Deliberately plain: owners fill this once, in under a minute.
  */
 export function HoursEditor({

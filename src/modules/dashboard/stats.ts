@@ -471,7 +471,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       description: input.agentEnabled
         ? "It replies to new messages instantly."
         : "It stays silent until this is on — including in Try your AI.",
-      href: "/agent/setup",
+      href: "/agent",
       done: input.agentEnabled,
     },
     {

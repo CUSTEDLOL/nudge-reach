@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { hasRole, requireOrgContext } from "@/modules/orgs/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
+import { AutoReplySwitch } from "./auto-reply-switch";
 import { BusinessSection } from "./business-section";
 import { RulesSection } from "./rules-section";
 import { Queue, type QueueItem } from "./queue";
@@ -180,6 +181,7 @@ export default async function AgentPage() {
         {!onTrial && profile && !profile.enabled && (
           <AiOffNotice canEdit={canEdit} />
         )}
+        {!onTrial && profile?.enabled && canEdit && <AutoReplySwitch />}
 
         <BusinessSection
           canEdit={canEdit}

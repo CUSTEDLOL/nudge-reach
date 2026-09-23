@@ -28,8 +28,7 @@ const { refresh, actions, ruleActions, profileActions } = vi.hoisted(() => ({
   },
   profileActions: {
     saveBusinessBasicsAction: vi.fn(),
-    saveAgentProfileAction: vi.fn(),
-    enableAgentAction: vi.fn(),
+    setAutoReplyAction: vi.fn(),
   },
 }));
 
