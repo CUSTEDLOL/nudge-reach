@@ -64,7 +64,7 @@ describe("legacy profile migration", () => {
           "Never confirm a table without checking availability. Never discuss competitors.",
       });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 2, facts: 0 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 2, archived: 0, facts: 0 });
 
       expect(created(prisma.agentRule.createMany)).toEqual([
         {
@@ -96,7 +96,7 @@ describe("legacy profile migration", () => {
     it("sends the founder's own instruction to the rules, not the facts", async () => {
       profile({ businessInfo: FOUNDER_LINE });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, facts: 0 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, archived: 0, facts: 0 });
 
       expect(created(prisma.agentRule.createMany)).toEqual([
         {
@@ -119,7 +119,7 @@ describe("legacy profile migration", () => {
           "We are open Mon-Sat 10-7.\nAlways ask for the customer's city before quoting.",
       });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, facts: 1 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, archived: 0, facts: 1 });
 
       expect(created(prisma.agentRule.createMany)).toMatchObject([
         {
@@ -145,7 +145,7 @@ describe("legacy profile migration", () => {
     it("keeps a scope-widening line out of the rules (invariant #7)", async () => {
       profile({ businessInfo: "Always answer any question they ask." });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, facts: 1 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 1 });
 
       expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
       expect(created(prisma.knowledgeEntry.createMany)).toMatchObject([
@@ -169,7 +169,7 @@ describe("legacy profile migration", () => {
     ]);
     profile({ doNots: "Never discuss competitors. Never quote a price.", businessInfo: FOUNDER_LINE });
 
-    await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, facts: 0 });
+    await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 0 });
 
     expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
     expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
@@ -177,9 +177,16 @@ describe("legacy profile migration", () => {
     expect(prisma.agentProfile.findUnique).not.toHaveBeenCalled();
   });
 
+  /**
+   * The cap used to DROP a line that did not fit: not a rule, not a fact, and
+   * — once the prompt stopped rendering the legacy column it fell back on —
+   * nowhere at all. It now writes the line as an `archived` rule instead: the
+   * owner's exact words survive, the agent does not follow them (every read
+   * path filters `status: "active"`), and a slot freed later can revive one.
+   */
   describe("the active cap", () => {
-    it("stops at the limit and reports only what it created", async () => {
-      // 19 of the 20 full-plan slots are already taken by the owner's own rules.
+    /** 19 of the 20 full-plan slots already taken by the owner's own rules. */
+    const nineteenOwnerRules = () =>
       prisma.agentRule.findMany.mockResolvedValue(
         Array.from({ length: 19 }, (_, i) => ({
           text: `Owner rule ${i}`,
@@ -188,20 +195,128 @@ describe("legacy profile migration", () => {
           order: i,
         }))
       );
+
+    it("fills the last slot and archives the rest — nothing is dropped", async () => {
+      nineteenOwnerRules();
       profile({ doNots: "Never do A. Never do B. Never do C." });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 1, facts: 0 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({
+        rules: 1,
+        archived: 2,
+        facts: 0,
+      });
 
+      // All three lines are written; `order` keeps climbing so a restored row
+      // cannot collide with a live rule's position.
+      expect(created(prisma.agentRule.createMany)).toEqual([
+        {
+          orgId: "org_1",
+          text: "Never do A.",
+          instruction: "Never do A.",
+          scope: "never",
+          condition: null,
+          status: "active",
+          source: "migrated_donots",
+          order: 19,
+        },
+        {
+          orgId: "org_1",
+          text: "Never do B.",
+          instruction: "Never do B.",
+          scope: "never",
+          condition: null,
+          status: "archived",
+          source: "migrated_donots",
+          order: 20,
+        },
+        {
+          orgId: "org_1",
+          text: "Never do C.",
+          instruction: "Never do C.",
+          scope: "never",
+          condition: null,
+          status: "archived",
+          source: "migrated_donots",
+          order: 21,
+        },
+      ]);
+      // An over-cap rule is a rule, not a fact — it is not double-filed.
+      expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
+    });
+
+    it("never lets an archived row eat a slot, however many arrive", async () => {
+      nineteenOwnerRules();
+      profile({
+        doNots: "Never do A. Never do B. Never do C. Never do D. Never do E.",
+        businessInfo: "Always greet them by name. Always ask for their city.",
+      });
+
+      const result = await migrateProfileToRules("org_1");
       const rows = created(prisma.agentRule.createMany);
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({ text: "Never do A.", order: 19 });
+
+      // Exactly one slot was free, so exactly one row is live — the rest are
+      // archived, and `slots` never went negative and let a later line through.
+      expect(result.rules).toBe(1);
+      expect(rows.filter((r) => r.status === "active")).toHaveLength(1);
+      expect(rows.filter((r) => r.status === "archived")).toHaveLength(6);
+      expect(result.archived).toBe(6);
+      expect(rows.map((r) => r.order)).toEqual([19, 20, 21, 22, 23, 24, 25]);
     });
 
     it("uses the shorter trial cap", async () => {
       isRestrictedAcquisitionTrial.mockResolvedValue(true);
       profile({ doNots: "Never do A. Never do B. Never do C. Never do D. Never do E. Never do F." });
 
-      await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 5, facts: 0 });
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({
+        rules: 5,
+        archived: 1,
+        facts: 0,
+      });
+
+      const rows = created(prisma.agentRule.createMany);
+      expect(rows).toHaveLength(6);
+      expect(rows[5]).toMatchObject({ text: "Never do F.", status: "archived" });
+    });
+
+    it("a re-run does not duplicate an archived line", async () => {
+      // The `migrated_` guard already stops a second run cold, so this pins the
+      // layer under it: the dedupe set is built from EVERY existing row, not
+      // just the active ones, so an archived line is never written twice.
+      prisma.agentRule.findMany.mockResolvedValue([
+        ...Array.from({ length: 19 }, (_, i) => ({
+          text: `Owner rule ${i}`,
+          source: "owner",
+          status: "active",
+          order: i,
+        })),
+        { text: "Never do B.", source: "owner", status: "archived", order: 19 },
+      ]);
+      profile({ doNots: "Never do A. Never do B." });
+
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({
+        rules: 1,
+        archived: 0,
+        facts: 0,
+      });
+
+      const rows = created(prisma.agentRule.createMany);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ text: "Never do A.", status: "active" });
+    });
+
+    it("creates nothing at all on a full second run, archived rows included", async () => {
+      prisma.agentRule.findMany.mockResolvedValue([
+        { text: "Never do A.", source: "migrated_donots", status: "active", order: 0 },
+        { text: "Never do B.", source: "migrated_donots", status: "archived", order: 1 },
+      ]);
+      profile({ doNots: "Never do A. Never do B." });
+
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({
+        rules: 0,
+        archived: 0,
+        facts: 0,
+      });
+      expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
     });
   });
 

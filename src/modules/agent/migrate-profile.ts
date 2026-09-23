@@ -47,17 +47,29 @@ import {
  *
  * It applies the two guards that `rules-actions.ts` (until now the only writer
  * of `AgentRule`) enforces, because bypassing them here would be a hole in
- * both: the active-rule cap, and `widensScope` (invariant #7).
+ * both: the active-rule cap, and `widensScope` (invariant #7). Nothing is
+ * thrown away on the way — a line the guards turn back becomes a draft fact,
+ * and a line past the cap becomes an archived rule.
  */
 
 export interface ProfileMigrationResult {
-  /** Rules actually created — fewer than the lines found when the cap bites. */
+  /**
+   * LIVE rules created — `status: "active"` — and only those. Never more than
+   * the org's remaining active-rule allowance. Lines written past that
+   * allowance are counted in `archived`, not here, so a caller that says "N
+   * rules are live" stays true.
+   */
   rules: number;
+  /**
+   * Rules created past the active cap, written as `status: "archived"`. The
+   * agent does not follow them; they exist so the line is not lost.
+   */
+  archived: number;
   /** Draft knowledge facts created. */
   facts: number;
 }
 
-const NOTHING: ProfileMigrationResult = { rules: 0, facts: 0 };
+const NOTHING: ProfileMigrationResult = { rules: 0, archived: 0, facts: 0 };
 
 /** `factSchema`'s own ceiling; the legacy column keeps the untruncated text. */
 const MAX_FACT_LENGTH = 300;
@@ -108,9 +120,6 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
 
     const key = dedupeKey(line);
     if (seen.has(key)) return;
-    // The cap is the one place this stops rather than re-routing: an
-    // over-cap rule is reported back, and the legacy column still holds it.
-    if (slots <= 0) return;
 
     const parsed = ruleSchema.safeParse({
       text: line,
@@ -119,16 +128,28 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
     });
     if (!parsed.success) return addFact(line);
 
+    // Past the cap the line is still written — as an `archived` rule, not a
+    // dropped one. It used to be dropped, on the grounds that the legacy
+    // column still held it; the prompt no longer reads that column, so a
+    // dropped line would now exist nowhere. Archived keeps the owner's exact
+    // words and inferred scope, is the same row `archiveRuleAction` already
+    // produces (nothing new has to understand it), can be restored by flipping
+    // `status`, and cannot breach the cap because every read path filters
+    // `status: "active"`. An archived row consumes no slot.
+    const live = slots > 0;
+    if (live) slots -= 1;
+
     seen.add(key);
-    slots -= 1;
     rules.push({
       orgId,
       text: parsed.data.text,
       instruction: parsed.data.instruction,
       scope: parsed.data.scope,
       condition: null,
-      status: "active",
+      status: live ? "active" : "archived",
       source,
+      // `order` climbs through archived rows too, exactly as `createRuleAction`
+      // assumes: restoring one later must not collide with a live rule.
       order: order++,
     });
   };
@@ -156,7 +177,8 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
       })
     : { created: 0 };
 
-  return { rules: rules.length, facts: stored.created };
+  const live = rules.filter((rule) => rule.status === "active").length;
+  return { rules: live, archived: rules.length - live, facts: stored.created };
 }
 
 /**
@@ -187,7 +209,8 @@ interface RuleRow {
   instruction: string;
   scope: RuleScope;
   condition: null;
-  status: "active";
+  /** `archived` only when the line arrived past the active-rule cap. */
+  status: "active" | "archived";
   source: RuleSource;
   order: number;
 }
