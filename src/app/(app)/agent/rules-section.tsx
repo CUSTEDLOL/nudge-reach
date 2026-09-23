@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ListChecks, Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -13,7 +12,6 @@ import { useToast } from "@/components/ui/toast";
 import {
   MAX_RULE_TEXT_LENGTH,
   RULE_QUALITY_NUDGE_AT,
-  describeRule,
   type RuleListItem,
   type RuleScope,
 } from "@/modules/agent/rules";
@@ -22,6 +20,7 @@ import {
   createRuleAction,
   updateRuleAction,
 } from "./rules-actions";
+import { SectionHeader } from "./section-header";
 
 /**
  * House rules — how the AI should behave, as opposed to what is true.
@@ -40,58 +39,80 @@ export function RulesSection({
   limit: number;
 }) {
   const atLimit = rules.length >= limit;
+  // The add form opens itself on the first visit (no rules yet) and stays out
+  // of the way ever after — the same first-visit logic as "Your business".
+  // Closed means absent from the DOM, not merely hidden.
+  const [adding, setAdding] = useState(canEdit && rules.length === 0);
 
   return (
-    <section
-      aria-labelledby="house-rules-heading"
-      className="flex flex-col gap-4"
-    >
-      <div>
-        <h2
-          id="house-rules-heading"
-          className="text-sm font-semibold text-neutral-900"
-        >
-          House rules
-        </h2>
-        <p className="mt-0.5 text-sm text-neutral-500">
-          How your AI should behave. A rule outranks everything it knows — if a
-          rule and a fact disagree, it follows the rule.
-        </p>
-        <p className="mt-1 text-xs text-neutral-500" role="status">
-          {counterLine(rules.length, limit)}
-        </p>
+    <section aria-labelledby="house-rules-heading">
+      <SectionHeader
+        id="house-rules-heading"
+        title="House rules"
+        meta={`${rules.length} of ${limit}`}
+        action={
+          canEdit && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={atLimit || adding}
+              title={atLimit ? "Rule limit reached" : undefined}
+              onClick={() => setAdding(true)}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden /> Add rule
+            </Button>
+          )
+        }
+      />
+      <div className="flex flex-col gap-3">
+        {canEdit && adding && (
+          <AddRuleForm atLimit={atLimit} onDone={() => setAdding(false)} />
+        )}
+        {rules.length > 0 && (
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-neutral-100">
+              {rules.map((rule) => (
+                <RuleRow key={rule.id} rule={rule} canEdit={canEdit} />
+              ))}
+            </ul>
+          </Card>
+        )}
       </div>
-
-      {canEdit && <AddRuleForm count={rules.length} limit={limit} atLimit={atLimit} />}
-
-      {rules.length === 0 ? (
-        <EmptyState
-          icon={<ListChecks className="h-5 w-5" />}
-          title="No rules yet"
-          description="A rule is an order, not a fact: “always send the booking link first”, “never quote a price over chat”. Your AI follows it in every reply."
-        />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {rules.map((rule) => (
-            <RuleRow key={rule.id} rule={rule} canEdit={canEdit} />
-          ))}
-        </ul>
-      )}
+      <p className="mt-2 text-xs text-neutral-500" role="status">
+        {explanation(rules.length, limit)}
+      </p>
     </section>
   );
 }
 
 /**
- * The count doubles as the quality warning. Founder decision 2026-09-22: the
- * cap is about how reliably a model obeys a long list of competing orders, not
- * about cost — rules ride in the cached part of the prompt. So this nudges
- * from ten rules onward and never blocks.
+ * The one line under the box. From ten rules on it carries the quality nudge
+ * (founder decision 2026-09-22: the cap is about how reliably a model obeys a
+ * long list of competing orders, not cost — rules ride in the cached part of
+ * the prompt — so it nudges and never blocks); at the cap, the way out.
  */
-function counterLine(count: number, limit: number): string {
-  const counter = `${count} of ${limit}`;
-  return count >= RULE_QUALITY_NUDGE_AT
-    ? `${counter} · the more rules you add, the less reliably the AI follows each one.`
-    : counter;
+function explanation(count: number, limit: number): string {
+  const base = "What it must always or never do. Rules win over facts.";
+  if (count === 0) {
+    return `${base} Try: “always send the booking link first”, “never quote a price over chat”.`;
+  }
+  if (count >= limit) {
+    return `${base} Rule limit reached (${count}/${limit}). Archive one to add another — a short list is one your AI follows.`;
+  }
+  if (count >= RULE_QUALITY_NUDGE_AT) {
+    return `${base} The more rules you add, the less reliably the AI follows each one.`;
+  }
+  return base;
+}
+
+/** The bold lead-in that makes a row read as a sentence: "Never quote a price over chat". */
+function scopeLead(rule: RuleListItem): string | null {
+  if (rule.scope === "always") return "Always";
+  if (rule.scope === "never") return "Never";
+  const condition = rule.condition?.trim();
+  // A "when" rule with no condition can only come from a bad migration; its
+  // text alone is honest, where "Always" would claim a scope it lacks.
+  return condition ? `When ${condition},` : null;
 }
 
 const SCOPE_OPTIONS: { value: RuleScope; label: string }[] = [
@@ -101,13 +122,12 @@ const SCOPE_OPTIONS: { value: RuleScope; label: string }[] = [
 ];
 
 function AddRuleForm({
-  count,
-  limit,
   atLimit,
+  onDone,
 }: {
-  count: number;
-  limit: number;
   atLimit: boolean;
+  /** Called once the rule is saved, and on Cancel; the form unmounts. */
+  onDone: () => void;
 }) {
   const { toast } = useToast();
   const [text, setText] = useState("");
@@ -123,11 +143,7 @@ function AddRuleForm({
         scope === "when" ? condition : undefined,
       );
       toast({ description: r.message, tone: r.ok ? "success" : "error" });
-      if (r.ok) {
-        setText("");
-        setCondition("");
-        setScope("always");
-      }
+      if (r.ok) onDone();
     });
   }
 
@@ -171,21 +187,20 @@ function AddRuleForm({
               />
             </Field>
           )}
-          <Button
-            loading={pending}
-            disabled={atLimit || text.trim().length < 3}
-            onClick={add}
-          >
-            Add rule
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              loading={pending}
+              disabled={atLimit || text.trim().length < 3}
+              onClick={add}
+            >
+              Add rule
+            </Button>
+            <Button variant="ghost" disabled={pending} onClick={onDone}>
+              Cancel
+            </Button>
+          </div>
         </div>
       </div>
-      {atLimit && (
-        <p className="mt-2 text-sm text-neutral-600" role="status">
-          Rule limit reached ({count}/{limit}). Archive one to add another — a
-          short list is one your AI follows.
-        </p>
-      )}
     </Card>
   );
 }
@@ -220,7 +235,7 @@ function RuleRow({ rule, canEdit }: { rule: RuleListItem; canEdit: boolean }) {
 
   if (editing) {
     return (
-      <li className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+      <li className="flex flex-col gap-2 bg-neutral-50 px-4 py-3">
         <Textarea
           value={text}
           disabled={pending}
@@ -282,10 +297,16 @@ function RuleRow({ rule, canEdit }: { rule: RuleListItem; canEdit: boolean }) {
     );
   }
 
+  const lead = scopeLead(rule);
   return (
-    <li className="flex items-start justify-between gap-3 rounded-xl border border-neutral-100 bg-white p-3">
-      <p className="min-w-0 flex-1 text-sm text-neutral-800">
-        {describeRule(rule)}
+    <li className="flex items-start justify-between gap-3 px-4 py-3">
+      <p className="min-w-0 flex-1 text-sm text-neutral-700">
+        {lead && (
+          <>
+            <span className="font-semibold text-neutral-900">{lead}</span>{" "}
+          </>
+        )}
+        {rule.text.trim()}
       </p>
       {canEdit && (
         <div className="flex shrink-0 gap-1">

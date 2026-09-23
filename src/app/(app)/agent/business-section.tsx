@@ -54,16 +54,16 @@ export function BusinessSection({
   }
 
   return (
-    <Card className="p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-neutral-900">
-            Your business
-          </h2>
-          <p className="mt-0.5 text-sm text-neutral-500">
-            Who your AI says it is when it answers.
+    <Card className="p-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <h2 className="shrink-0 text-sm font-semibold text-neutral-900">
+          Your business
+        </h2>
+        {!editing && (
+          <p className="min-w-0 flex-1 text-sm text-neutral-700">
+            {summarise(businessName, vertical, tone)}
           </p>
-        </div>
+        )}
         {canEdit && !editing && (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
             <Pencil className="h-3.5 w-3.5" aria-hidden /> Edit
@@ -71,7 +71,7 @@ export function BusinessSection({
         )}
       </div>
 
-      {editing ? (
+      {editing && (
         <div className="mt-4 flex flex-col gap-4">
           <Field label="Business name" htmlFor="business-name" required>
             <Input
@@ -142,10 +142,6 @@ export function BusinessSection({
             )}
           </div>
         </div>
-      ) : (
-        <p className="mt-3 text-sm text-neutral-700">
-          {summarise(businessName, vertical, tone)}
-        </p>
       )}
     </Card>
   );

@@ -332,12 +332,14 @@ describe("house rules section", () => {
       }),
     ]);
 
+    // The scope word is bold and the owner's sentence follows it plain, so a
+    // row reads as English: "Never quote a price over chat".
     expect(html).toContain(
-      "Always: push everyone to join the waitlist at https://getgutfeeling.in/",
+      "Always</span> push everyone to join the waitlist at https://getgutfeeling.in/",
     );
-    expect(html).toContain("Never: quote a price over chat");
+    expect(html).toContain("Never</span> quote a price over chat");
     expect(html).toContain(
-      "When someone asks about pricing: offer a consultation instead",
+      "When someone asks about pricing,</span> offer a consultation instead",
     );
     expect(html).toContain("3 of 20");
   });
@@ -348,12 +350,14 @@ describe("house rules section", () => {
     );
     const html = renderRules(many);
 
+    expect(html).toContain("10 of 20");
     expect(html).toContain(
-      "10 of 20 · the more rules you add, the less reliably the AI follows each one.",
+      "The more rules you add, the less reliably the AI follows each one.",
     );
-    // A nudge, not a cap: there is still room, so the add form stays usable.
+    // A nudge, not a cap: there is still room, so Add rule stays usable —
+    // nothing in the section is disabled.
     expect(html).not.toContain("Rule limit reached");
-    expect(html).not.toMatch(/id="rule-text"[^>]*disabled/);
+    expect(html).not.toContain('disabled=""');
   });
 
   it("says plainly when the list is full instead of failing on save", () => {
@@ -364,7 +368,11 @@ describe("house rules section", () => {
 
     expect(html).toContain("5 of 5");
     expect(html).toContain("Rule limit reached (5/5)");
-    expect(html).toMatch(/id="rule-text"[^>]*disabled/);
+    // The form is closed by default once rules exist, so the cap lands on the
+    // Add rule button: disabled, and it says why.
+    expect(html).toMatch(
+      /<button[^>]*disabled=""[^>]*title="Rule limit reached"/,
+    );
   });
 
   it("hides the authoring controls from a member who cannot edit", () => {
@@ -380,7 +388,7 @@ describe("house rules section", () => {
       ),
     );
 
-    expect(html).toContain("Always: push everyone");
+    expect(html).toContain("Always</span> push everyone");
     expect(html).not.toContain('id="rule-text"');
     expect(html).not.toContain("Add rule");
   });

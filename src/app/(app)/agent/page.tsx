@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { cn } from "@/lib/cn";
 import { hasRole, requireOrgContext } from "@/modules/orgs/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { AutoReplySwitch } from "./auto-reply-switch";
 import { BusinessSection } from "./business-section";
 import { RulesSection } from "./rules-section";
+import { SectionHeader } from "./section-header";
 import { Queue, type QueueItem } from "./queue";
 import { Library, type LibraryFact } from "./library";
 import { ImportPanel } from "./import-panel";
@@ -113,7 +113,7 @@ export default async function AgentPage() {
   const showStructureButton =
     Boolean(profile?.businessInfo.trim()) && !hasImported;
   // Once it knows something, lead with that — the proof of the questionnaire
-  // was sitting below an import box and an empty queue.
+  // was sitting below an import box.
   const taught = facts.length > 0;
 
   const importPanel = (
@@ -127,24 +127,22 @@ export default async function AgentPage() {
       }))}
     />
   );
-  const queue = (
-    <div>
-      <h3 className="mb-3 text-sm font-semibold text-neutral-900">
-        Needs your answer
-        {queueItems.length > 0 && (
-          <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700">
-            {queueItems.length}
-          </span>
-        )}
-      </h3>
-      <Queue items={queueItems} canEdit={canEdit} />
-    </div>
-  );
+  // The one coloured element on the page, and only when there is something
+  // in it: an empty queue is nothing to look at, not a box saying so.
+  const queueBand =
+    queueItems.length > 0 ? (
+      <div className="rounded-2xl border border-brand-200 bg-brand-50 p-4">
+        <h3 className="mb-3 text-sm font-semibold text-brand-900">
+          {queueItems.length === 1
+            ? "1 question is waiting for you"
+            : `${queueItems.length} questions are waiting for you`}
+        </h3>
+        <Queue items={queueItems} canEdit={canEdit} />
+      </div>
+    ) : null;
+  // `id="library"` is where the questionnaire's "back to Training" link lands.
   const library = (
     <div id="library">
-      <h3 className="mb-3 text-sm font-semibold text-neutral-900">
-        {taught ? `Your AI knows ${facts.length} fact${facts.length === 1 ? "" : "s"}` : "Fact library"}
-      </h3>
       <Library
         facts={libraryFacts}
         canEdit={canEdit}
@@ -160,24 +158,15 @@ export default async function AgentPage() {
       ) : (
         <PageHeader
           title="Training"
-          description="How your AI Front Desk behaves, what it knows, and the questions it's waiting on you to answer."
           actions={
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/agent/questionnaire"
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
-              >
-                Teach it with the questionnaire
-              </Link>
-              <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
-                Try it in chat
-              </Link>
-            </div>
+            <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
+              Try it in chat
+            </Link>
           }
         />
       )}
 
-      <div className={cn("flex flex-col gap-8", onTrial && "max-w-3xl")}>
+      <div className="flex max-w-3xl flex-col gap-10">
         {!onTrial && profile && !profile.enabled && (
           <AiOffNotice canEdit={canEdit} />
         )}
@@ -198,17 +187,28 @@ export default async function AgentPage() {
             section inside TrialTraining — one anchor only, because the tour
             looks it up with a single-element query. */}
         <section aria-labelledby="training-knowledge-heading">
-          <h2
+          <SectionHeader
             id="training-knowledge-heading"
-            className="text-sm font-semibold text-neutral-900"
-          >
-            What it knows
-          </h2>
-          <p className="mt-0.5 text-sm text-neutral-500">
-            The facts your AI is allowed to state. It never makes up anything
-            that is not here.
-          </p>
-          <div className="mt-4 flex flex-col gap-8">
+            title="What it knows"
+            // The trial counts its own facts inside TrialTraining ("Facts
+            // 3/50", drafts included); a second number here would contradict it.
+            meta={
+              !onTrial && taught
+                ? `${facts.length} fact${facts.length === 1 ? "" : "s"}`
+                : undefined
+            }
+            action={
+              !onTrial && (
+                <Link
+                  href="/agent/questionnaire"
+                  className={buttonVariants({ variant: "secondary", size: "sm" })}
+                >
+                  Questionnaire
+                </Link>
+              )
+            }
+          />
+          <div className="flex flex-col gap-6">
             {trial && onTrial ? (
               <TrialTraining
                 workspace={trial}
@@ -218,18 +218,21 @@ export default async function AgentPage() {
               />
             ) : taught ? (
               <>
-                {queue}
+                {queueBand}
                 {library}
                 {importPanel}
               </>
             ) : (
               <>
                 {importPanel}
-                {queue}
+                {queueBand}
                 {library}
               </>
             )}
           </div>
+          <p className="mt-2 text-xs text-neutral-500">
+            {"It only ever says what's in here."}
+          </p>
         </section>
       </div>
     </section>
