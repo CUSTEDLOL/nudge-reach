@@ -105,10 +105,32 @@ function explanation(count: number, limit: number): string {
   return base;
 }
 
-/** The bold lead-in that makes a row read as a sentence: "Never quote a price over chat". */
+/**
+ * A rule whose own first words already say its scope. `migrateProfileToRules`
+ * stores the owner's sentence verbatim, and an owner writing a do-not writes
+ * "Do not invent features…" — so the bold lead-in doubled it into "**Never** Do
+ * not invent features…". 10 of the 26 rules in production open this way.
+ *
+ * Anchored and word-bounded: "Avoidable delays…" is not a rule that opens with
+ * "avoid", and only the opening counts — a scope word mid-sentence says nothing
+ * about how the row reads.
+ */
+const OPENS_WITH_ITS_SCOPE: Record<"always" | "never", RegExp> = {
+  always: /^always\b/i,
+  never: /^(?:never|do not|don['’]t|avoid|under no circumstances)\b/i,
+};
+
+/**
+ * The bold lead-in that makes a row read as a sentence: "Never quote a price
+ * over chat". Null when the text already carries its own scope word — the
+ * sentence communicates the scope on its own, and the Select in the editor
+ * keeps the stored scope visible either way.
+ */
 function scopeLead(rule: RuleListItem): string | null {
-  if (rule.scope === "always") return "Always";
-  if (rule.scope === "never") return "Never";
+  if (rule.scope === "always" || rule.scope === "never") {
+    if (OPENS_WITH_ITS_SCOPE[rule.scope].test(rule.text.trim())) return null;
+    return rule.scope === "always" ? "Always" : "Never";
+  }
   const condition = rule.condition?.trim();
   // A "when" rule with no condition can only come from a bad migration; its
   // text alone is honest, where "Always" would claim a scope it lacks.
