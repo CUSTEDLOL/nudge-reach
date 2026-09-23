@@ -127,8 +127,9 @@ function oneLine(raw: string): string {
  * loses it: "quote prices" listed under HOUSE RULES — a heading that says
  * "follow these in every reply" — orders the exact opposite of the "never" the
  * owner chose. Do NOT simplify this to the raw text (founder-approved
- * 2026-09-22). `describeRule` is the same line the rule list shows, so the
- * fallback is literally the owner's own words, capped to the prompt's length.
+ * 2026-09-22). `describeRule` is the scope word plus the owner's text, so the
+ * fallback is literally the owner's own words with their scope intact, capped
+ * to the prompt's length.
  */
 function ownersOwnWords(rule: {
   scope: RuleScope;

@@ -152,7 +152,10 @@ export default async function AgentPage() {
   );
 
   return (
-    <section>
+    // The width sits on the whole page, header included: the shell's content
+    // area is 1400px wide, and a title and button spanning that above a 768px
+    // column float away from what they belong to.
+    <section className="max-w-3xl">
       {trial && onTrial ? (
         <TrialTrainingHeader workspace={trial} />
       ) : (
@@ -166,7 +169,7 @@ export default async function AgentPage() {
         />
       )}
 
-      <div className="flex max-w-3xl flex-col gap-10">
+      <div className="flex flex-col gap-10">
         {!onTrial && profile && !profile.enabled && (
           <AiOffNotice canEdit={canEdit} />
         )}
