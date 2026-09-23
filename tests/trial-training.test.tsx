@@ -243,7 +243,12 @@ describe("continuous trial training page", () => {
     const html = renderTraining(full, [activeFact], [draft]);
 
     expect(html).toContain("Fact limit reached (50/50)");
-    expect(html).toMatch(/id="kf-fact"[^>]*disabled/);
+    // The form is closed once facts exist, so the cap lands on the Add fact
+    // button: disabled, and it says why.
+    expect(html).not.toContain('id="kf-fact"');
+    expect(html).toMatch(
+      /<button[^>]*disabled=""[^>]*title="Fact limit reached"/,
+    );
     expect(html).toContain("Test in Inbox");
   });
 
@@ -408,7 +413,7 @@ describe("your business section", () => {
     );
   }
 
-  it("collapses to one line once the business has a name", () => {
+  it("collapses to three lines once the business has a name", () => {
     const html = renderBusiness({
       businessName: "Spice Garden",
       vertical: "restaurant",

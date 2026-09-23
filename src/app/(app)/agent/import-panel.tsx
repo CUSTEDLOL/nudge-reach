@@ -27,6 +27,8 @@ export interface DraftFact {
  * Import-first training: paste a website URL → the crawler drafts facts →
  * the owner confirms them card-by-card (or all at once). Confirm, don't
  * enter: nothing here asks the owner to type knowledge from scratch.
+ *
+ * Lives in Training's 340px rail, so each source stacks: input, then buttons.
  */
 export function ImportPanel({
   drafts,
@@ -71,18 +73,16 @@ export function ImportPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="p-5">
+      <Card className="p-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
           <Globe className="h-4 w-4 text-brand-600" aria-hidden />
           Teach it from what you already have
         </div>
-        <p className="mt-1 text-[13.5px] text-neutral-500">
-          Paste your website, or upload a menu, price list or brochure — we
-          read it into facts you approve below. Nothing goes live until you
-          say so.
+        <p className="mt-1 text-sm text-neutral-500">
+          You approve every imported fact before it goes live.
         </p>
         <form
-          className="mt-3 flex flex-wrap gap-2"
+          className="mt-3 flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             if (!gbpQuery.trim()) {
@@ -96,15 +96,17 @@ export function ImportPanel({
             value={gbpQuery}
             onChange={(e) => setGbpQuery(e.target.value)}
             placeholder="Your business name + city (finds your Google listing)"
-            className="min-w-0 flex-1"
+            className="w-full"
             disabled={!canEdit || pending}
           />
-          <Button type="submit" size="sm" disabled={!canEdit || pending}>
-            {pending ? "Searching…" : "Find my listing"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" disabled={!canEdit || pending}>
+              {pending ? "Searching…" : "Find my listing"}
+            </Button>
+          </div>
         </form>
         <form
-          className="mt-2 flex flex-wrap gap-2"
+          className="mt-3 flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             if (!url.trim()) {
@@ -118,22 +120,24 @@ export function ImportPanel({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="yourbusiness.com"
-            className="min-w-0 flex-1"
+            className="w-full"
             disabled={!canEdit || pending}
           />
-          <Button type="submit" size="sm" disabled={!canEdit || pending}>
-            {pending ? "Reading…" : "Import"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={!canEdit || pending}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4" aria-hidden />
-            Upload menu / PDF
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" disabled={!canEdit || pending}>
+              {pending ? "Reading…" : "Import"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!canEdit || pending}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" aria-hidden />
+              Upload menu / PDF
+            </Button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"

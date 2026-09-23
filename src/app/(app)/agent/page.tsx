@@ -112,21 +112,9 @@ export default async function AgentPage() {
   const hasImported = facts.some((f) => f.source === "import");
   const showStructureButton =
     Boolean(profile?.businessInfo.trim()) && !hasImported;
-  // Once it knows something, lead with that — the proof of the questionnaire
-  // was sitting below an import box.
+  // An empty library has no count worth showing.
   const taught = facts.length > 0;
 
-  const importPanel = (
-    <ImportPanel
-      canEdit={canEdit}
-      drafts={drafts.map((d) => ({
-        id: d.id,
-        category: d.category,
-        fact: d.fact,
-        condition: d.condition,
-      }))}
-    />
-  );
   // The one coloured element on the page, and only when there is something
   // in it: an empty queue is nothing to look at, not a box saying so.
   const queueBand =
@@ -152,91 +140,108 @@ export default async function AgentPage() {
   );
 
   return (
-    // The width sits on the whole page, header included: the shell's content
-    // area is 1400px wide, and a title and button spanning that above a 768px
-    // column float away from what they belong to.
-    <section className="max-w-3xl">
+    <section>
       {trial && onTrial ? (
         <TrialTrainingHeader workspace={trial} />
       ) : (
         <PageHeader
           title="Training"
           actions={
-            <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
-              Try it in chat
-            </Link>
+            <>
+              {profile?.enabled && canEdit && <AutoReplySwitch />}
+              <Link href="/inbox/try" className={buttonVariants({ size: "sm" })}>
+                Try it in chat
+              </Link>
+            </>
           }
         />
       )}
 
-      <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-6">
         {!onTrial && profile && !profile.enabled && (
           <AiOffNotice canEdit={canEdit} />
         )}
-        {!onTrial && profile?.enabled && canEdit && <AutoReplySwitch />}
 
-        <BusinessSection
-          canEdit={canEdit}
-          businessName={profile?.businessName ?? ""}
-          // No profile yet: start the picker on the answer they already gave
-          // at onboarding rather than on whatever the list happens to open on.
-          vertical={profile?.vertical ?? ctx.org.vertical ?? "other"}
-          tone={profile?.tone ?? ""}
-        />
-
-        <RulesSection rules={rules} canEdit={canEdit} limit={ruleLimit} />
-
-        {/* The trial's tour anchors its Training step on the "Approved facts"
-            section inside TrialTraining — one anchor only, because the tour
-            looks it up with a single-element query. */}
-        <section aria-labelledby="training-knowledge-heading">
-          <SectionHeader
-            id="training-knowledge-heading"
-            title="What it knows"
-            // The trial counts its own facts inside TrialTraining ("Facts
-            // 3/50", drafts included); a second number here would contradict it.
-            meta={
-              !onTrial && taught
-                ? `${facts.length} fact${facts.length === 1 ? "" : "s"}`
-                : undefined
-            }
-            action={
-              !onTrial && (
-                <Link
-                  href="/agent/questionnaire"
-                  className={buttonVariants({ variant: "secondary", size: "sm" })}
-                >
-                  Questionnaire
-                </Link>
-              )
-            }
-          />
-          <div className="flex flex-col gap-6">
-            {trial && onTrial ? (
-              <TrialTraining
-                workspace={trial}
+        {/* Two columns from lg: rules and facts fill the left, the rail on the
+            right holds the business and where facts come from. The rail is
+            FIRST in the DOM and ordered last on desktop, so on a phone the
+            import box sits at the top rather than below every fact. */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          <aside
+            className="flex flex-col gap-4 lg:order-last"
+            aria-label="Business and sources"
+          >
+            <BusinessSection
+              canEdit={canEdit}
+              businessName={profile?.businessName ?? ""}
+              // No profile yet: start the picker on the answer they already gave
+              // at onboarding rather than on whatever the list happens to open on.
+              vertical={profile?.vertical ?? ctx.org.vertical ?? "other"}
+              tone={profile?.tone ?? ""}
+            />
+            {/* The trial's own sources live inside TrialTraining. */}
+            {!onTrial && (
+              <ImportPanel
                 canEdit={canEdit}
-                facts={libraryFacts}
-                drafts={drafts}
+                drafts={drafts.map((d) => ({
+                  id: d.id,
+                  category: d.category,
+                  fact: d.fact,
+                  condition: d.condition,
+                }))}
               />
-            ) : taught ? (
-              <>
-                {queueBand}
-                {library}
-                {importPanel}
-              </>
-            ) : (
-              <>
-                {importPanel}
-                {queueBand}
-                {library}
-              </>
             )}
+          </aside>
+
+          <div className="flex min-w-0 flex-col gap-8">
+            <RulesSection rules={rules} canEdit={canEdit} limit={ruleLimit} />
+
+            {/* The trial's tour anchors its Training step on the "Approved facts"
+                section inside TrialTraining — one anchor only, because the tour
+                looks it up with a single-element query. */}
+            <section aria-labelledby="training-knowledge-heading">
+              <SectionHeader
+                id="training-knowledge-heading"
+                title="What it knows"
+                // The trial counts its own facts inside TrialTraining ("Facts
+                // 3/50", drafts included); a second number here would contradict it.
+                meta={
+                  !onTrial && taught
+                    ? `${facts.length} fact${facts.length === 1 ? "" : "s"}`
+                    : undefined
+                }
+                action={
+                  !onTrial && (
+                    <Link
+                      href="/agent/questionnaire"
+                      className={buttonVariants({ variant: "secondary", size: "sm" })}
+                    >
+                      Questionnaire
+                    </Link>
+                  )
+                }
+              />
+              <div className="flex flex-col gap-4">
+                {trial && onTrial ? (
+                  <TrialTraining
+                    workspace={trial}
+                    canEdit={canEdit}
+                    facts={libraryFacts}
+                    drafts={drafts}
+                  />
+                ) : (
+                  <>
+                    {queueBand}
+                    {library}
+                  </>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                {"It only ever says what's in here."}
+              </p>
+            </section>
           </div>
-          <p className="mt-2 text-xs text-neutral-500">
-            {"It only ever says what's in here."}
-          </p>
-        </section>
+        </div>
       </div>
     </section>
   );

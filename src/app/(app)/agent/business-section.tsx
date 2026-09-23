@@ -14,10 +14,10 @@ import { saveBusinessBasicsAction } from "./setup-actions";
 /**
  * Who the AI says it is: name, what the business does, and the voice it uses.
  *
- * It is the first section of Training and it collapses to one line the moment
- * there is a name to show — an owner who has answered this once should never
- * have to scroll past it again. The same section serves the free trial and the
- * full app; its copy therefore names no industry.
+ * A small box in Training's rail that collapses to those three lines the
+ * moment there is a name to show — an owner who has answered this once should
+ * never have to scroll past a form again. The same section serves the free
+ * trial and the full app; its copy therefore names no industry.
  */
 export function BusinessSection({
   businessName,
@@ -53,23 +53,33 @@ export function BusinessSection({
     });
   }
 
+  const kind = labelFor(vertical);
+  const saved = [businessName, kind, tone].some((part) => part.trim() !== "");
+
   return (
     <Card className="p-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <h2 className="shrink-0 text-sm font-semibold text-neutral-900">
-          Your business
-        </h2>
-        {!editing && (
-          <p className="min-w-0 flex-1 text-sm text-neutral-700">
-            {summarise(businessName, vertical, tone)}
-          </p>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-neutral-900">Your business</h2>
         {canEdit && !editing && (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
             <Pencil className="h-3.5 w-3.5" aria-hidden /> Edit
           </Button>
         )}
       </div>
+
+      {/* One part per line: joined with "·" they wrapped mid-string in the rail. */}
+      {!editing && (
+        <div className="mt-2">
+          {businessName.trim() !== "" && (
+            <p className="text-sm font-medium text-neutral-900">{businessName}</p>
+          )}
+          {kind.trim() !== "" && (
+            <p className="text-sm text-neutral-600">{kind}</p>
+          )}
+          {tone.trim() !== "" && <p className="text-sm text-neutral-500">{tone}</p>}
+          {!saved && <p className="text-sm text-neutral-500">Nothing saved yet.</p>}
+        </div>
+      )}
 
       {editing && (
         <div className="mt-4 flex flex-col gap-4">
@@ -157,15 +167,4 @@ function labelFor(vertical: string): string {
   return (
     VERTICALS.find((v) => v.value === vertical)?.label ?? asWords(vertical)
   );
-}
-
-function summarise(
-  businessName: string,
-  vertical: string,
-  tone: string,
-): string {
-  const parts = [businessName, labelFor(vertical), tone].filter(
-    (part) => part.trim().length > 0,
-  );
-  return parts.length > 0 ? parts.join(" · ") : "Nothing saved yet.";
 }
