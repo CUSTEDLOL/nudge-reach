@@ -11,7 +11,10 @@ import { TrialKnowledgeSources } from "./trial-knowledge-sources";
 
 /**
  * The trial's own title for the shared Training page. Chrome, not substance:
- * below it the trial renders exactly the sections the paid app renders.
+ * below it the trial renders the same sections the paid app renders, through
+ * the same layout — which is why the title is a separate export rather than
+ * part of the body. `/agent` owns the page: its header slot, its two-column
+ * grid, its rail. This is only what goes where the paid page says "Training".
  */
 export function TrialTrainingHeader({
   workspace,
@@ -37,9 +40,9 @@ export function TrialTrainingHeader({
  * The trial's "What it knows": the same fact library the paid app shows, with
  * the trial's import allowances and its 50-fact ceiling around it.
  *
- * The page supplies the "What it knows" heading above this, so the headings
- * here are one level down from it — the same level as the paid path's queue
- * and library headings, which are this component's siblings on that page.
+ * The page supplies the "What it knows" heading above this, so the heading
+ * here is one level down from it — the same level as the paid path's own
+ * sub-headings, which are this component's siblings on that page.
  */
 export function TrialTraining({
   workspace,
@@ -52,15 +55,11 @@ export function TrialTraining({
   drafts: TrialDraftFact[];
   canEdit: boolean;
 }) {
-  return (
-    <div>
-      <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
-        <p className="text-sm text-neutral-600">
-          Facts {workspace.factCount}/{workspace.factLimit}
-        </p>
-        <p className="text-xs text-neutral-500">Approved and draft facts combined</p>
-      </div>
+  // Mirrors the paid page: once it has been taught, lead with what it knows.
+  const taught = workspace.approvedFactCount > 0;
 
+  const sources = (
+    <div className="flex flex-col gap-8">
       <TrialKnowledgeSources
         canEdit={canEdit}
         webImportsUsed={workspace.webImportsUsed}
@@ -68,32 +67,51 @@ export function TrialTraining({
         fileImportsUsed={workspace.fileImportsUsed}
         fileImportLimit={workspace.fileImportLimit}
       />
-
       <TrialDraftReview drafts={drafts} canEdit={canEdit} />
+    </div>
+  );
 
-      {/* the guided tour's "train" step spotlights this — see modules/trial/tour */}
-      <section
-        data-tour="training-source"
-        className="border-t border-neutral-200 py-7"
-        aria-labelledby="trial-approved-heading"
-      >
-        <div className="mb-4">
-          <h3 id="trial-approved-heading" className="text-sm font-semibold text-neutral-900">
-            Approved facts
-          </h3>
-          <p className="mt-1 text-sm text-neutral-500">
-            Add a fact manually or edit what Nudge is allowed to say about your business.
-          </p>
-        </div>
-        <Library
-          facts={facts}
-          canEdit={canEdit}
-          showStructureButton={false}
-          factCount={workspace.factCount}
-          factLimit={workspace.factLimit}
-          factPlaceholder="e.g. Standard setup costs $120"
-        />
-      </section>
+  const library = (
+    /* the guided tour's "train" step spotlights this — see modules/trial/tour */
+    <div id="library" data-tour="training-source">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h3
+          id="trial-approved-heading"
+          className="text-sm font-semibold text-neutral-900"
+        >
+          {taught
+            ? `Your AI knows ${workspace.approvedFactCount} fact${workspace.approvedFactCount === 1 ? "" : "s"}`
+            : "Approved facts"}
+        </h3>
+        {/* Approved and draft facts combined — what the 50-fact ceiling counts. */}
+        <span className="text-xs tabular-nums text-neutral-500">
+          Facts {workspace.factCount}/{workspace.factLimit}
+        </span>
+      </div>
+      <Library
+        facts={facts}
+        canEdit={canEdit}
+        showStructureButton={false}
+        factCount={workspace.factCount}
+        factLimit={workspace.factLimit}
+        factPlaceholder="e.g. Standard setup costs $120"
+      />
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-8">
+      {taught ? (
+        <>
+          {library}
+          {sources}
+        </>
+      ) : (
+        <>
+          {sources}
+          {library}
+        </>
+      )}
     </div>
   );
 }
