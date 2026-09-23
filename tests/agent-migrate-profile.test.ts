@@ -4,7 +4,7 @@ const { prisma, isRestrictedAcquisitionTrial } = vi.hoisted(() => ({
   prisma: {
     $transaction: vi.fn(),
     agentProfile: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-    agentRule: { findMany: vi.fn(), createMany: vi.fn() },
+    agentRule: { findMany: vi.fn(), findFirst: vi.fn(), createMany: vi.fn() },
     knowledgeEntry: { findMany: vi.fn(), createMany: vi.fn() },
   },
   isRestrictedAcquisitionTrial: vi.fn(),
@@ -16,6 +16,7 @@ vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial })
 import {
   classifyLegacyLine,
   inferLegacyScope,
+  migrateProfileOnce,
   migrateProfileToRules,
   splitLegacyLines,
 } from "@/modules/agent/migrate-profile";
@@ -45,6 +46,7 @@ describe("legacy profile migration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     isRestrictedAcquisitionTrial.mockResolvedValue(false);
+    prisma.agentRule.findFirst.mockResolvedValue(null);
     prisma.agentRule.findMany.mockResolvedValue([]);
     prisma.agentRule.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
       count: data.length,
@@ -164,17 +166,27 @@ describe("legacy profile migration", () => {
   });
 
   it("creates nothing on a second run", async () => {
-    prisma.agentRule.findMany.mockResolvedValue([
-      { text: "Never discuss competitors.", source: "migrated_donots", status: "active", order: 0 },
-    ]);
+    prisma.agentRule.findFirst.mockResolvedValue({ id: "rule_1" });
     profile({ doNots: "Never discuss competitors. Never quote a price.", businessInfo: FOUNDER_LINE });
 
     await expect(migrateProfileToRules("org_1")).resolves.toEqual({ rules: 0, archived: 0, facts: 0 });
 
     expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
     expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
-    // The guard is the first read: an already-migrated org pays for nothing else.
+    // The guard is the first read: an already-migrated org pays for nothing
+    // else — not the profile, and above all not the whole rule table, which is
+    // what this used to read to answer one boolean on every cold page load.
     expect(prisma.agentProfile.findUnique).not.toHaveBeenCalled();
+    expect(prisma.agentRule.findMany).not.toHaveBeenCalled();
+  });
+
+  it("asks one indexed row whether the org is migrated", async () => {
+    await migrateProfileToRules("org_1");
+
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledWith({
+      where: { orgId: "org_1", source: { startsWith: "migrated_" } },
+      select: { id: true },
+    });
   });
 
   /**
@@ -375,5 +387,75 @@ describe("legacy profile migration", () => {
       expect(classifyLegacyLine("We never work on Sundays.")).toBe("instruction");
       expect(classifyLegacyLine("Reminders are always sent a day before.")).toBe("instruction");
     });
+  });
+});
+
+/**
+ * The lazy trigger. Its memo is module state that survives `clearAllMocks`, so
+ * every test below uses an org id of its own.
+ */
+describe("migrateProfileOnce", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isRestrictedAcquisitionTrial.mockResolvedValue(false);
+    prisma.agentRule.findFirst.mockResolvedValue(null);
+    prisma.agentRule.findMany.mockResolvedValue([]);
+    prisma.agentRule.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
+      count: data.length,
+    }));
+    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+    prisma.knowledgeEntry.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
+      count: data.length,
+    }));
+    prisma.$transaction.mockImplementation(async (work: (c: unknown) => unknown) => work(prisma));
+    profile({ doNots: "Never discuss competitors." });
+  });
+
+  /**
+   * The memo used to be a `Set` written BEFORE the await, so a second
+   * concurrent load in the same instance returned immediately and could render
+   * an empty rules list while the first was still committing. Holding the
+   * promise makes the second caller wait for the same work.
+   */
+  it("makes a concurrent second caller await the same work, not skip it", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    prisma.agentRule.findFirst.mockImplementation(async () => {
+      await gate;
+      return null;
+    });
+
+    const first = migrateProfileOnce("org_concurrent");
+    const second = migrateProfileOnce("org_concurrent");
+
+    expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
+    release();
+    await Promise.all([first, second]);
+
+    // One migration, and BOTH callers saw it finish before returning.
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(1);
+    expect(prisma.agentRule.createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks the database once per org per instance", async () => {
+    await migrateProfileOnce("org_memo");
+    await migrateProfileOnce("org_memo");
+
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it("swallows a failure and retries on the next load", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    prisma.agentRule.findFirst.mockRejectedValueOnce(new Error("no AgentRule table"));
+
+    // The page it runs behind must still render.
+    await expect(migrateProfileOnce("org_failing")).resolves.toBeUndefined();
+    expect(error).toHaveBeenCalled();
+
+    await migrateProfileOnce("org_failing");
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(2);
+    error.mockRestore();
   });
 });

@@ -77,18 +77,30 @@ const MAX_FACT_LENGTH = 300;
 const MAX_LINES = 60;
 
 export async function migrateProfileToRules(orgId: string): Promise<ProfileMigrationResult> {
-  // One read answers three questions: has this org been migrated, how many
-  // active rules does it already have, and where does the order counter start.
-  const existing = await prisma.agentRule.findMany({
-    where: { orgId },
-    select: { text: true, source: true, status: true, order: true },
+  // "Has this org been migrated?" is a yes/no, and this runs on every cold
+  // /agent load. It used to be answered by reading every rule the org ever had,
+  // archived included, with no `take` — the whole row set fetched to look at
+  // one boolean, for the ~100% of loads whose answer is yes. One indexed row
+  // is enough; the full set is loaded below, only on the path that writes.
+  const migrated = await prisma.agentRule.findFirst({
+    where: { orgId, source: { startsWith: "migrated_" } },
+    select: { id: true },
   });
-  if (existing.some((rule) => rule.source.startsWith("migrated_"))) return NOTHING;
+  if (migrated) return NOTHING;
 
-  const profile = await prisma.agentProfile.findUnique({
-    where: { orgId },
-    select: { businessInfo: true, doNots: true },
-  });
+  // The un-migrated path, once per org in its lifetime. The rules answer the
+  // other two questions — how many active rules does it already have, and where
+  // does the `order` counter start — and neither read needs the other.
+  const [existing, profile] = await Promise.all([
+    prisma.agentRule.findMany({
+      where: { orgId },
+      select: { text: true, status: true, order: true },
+    }),
+    prisma.agentProfile.findUnique({
+      where: { orgId },
+      select: { businessInfo: true, doNots: true },
+    }),
+  ]);
   if (!profile) return NOTHING;
 
   const onTrial = await isRestrictedAcquisitionTrial(orgId);
@@ -186,19 +198,31 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
  * `migrateProfileToRules`; this one stops a warm server instance asking the
  * database again on every page load, and swallows failures — a migration that
  * cannot run (an un-pushed `AgentRule` table, say) must never blank the page it
- * runs behind. A failure clears the marker so the next load retries.
+ * runs behind. A failure forgets the org so the next load retries; with the
+ * guard above now a single indexed `findFirst`, a persistently failing org
+ * costs one small query per load rather than a full rule scan.
+ *
+ * The map holds the in-flight PROMISE, not a bare "we started this". It held
+ * the latter, and the marker went in before the await — so a second concurrent
+ * load in the same instance skipped the migration outright and could render an
+ * empty rules list while the first was still committing. Awaiting the same work
+ * makes both loads see the same finished state, which is the whole point of
+ * running this ahead of the page's reads.
  */
-const attempted = new Set<string>();
+const attempted = new Map<string, Promise<void>>();
 
 export async function migrateProfileOnce(orgId: string): Promise<void> {
-  if (attempted.has(orgId)) return;
-  attempted.add(orgId);
-  try {
-    await migrateProfileToRules(orgId);
-  } catch (err) {
-    attempted.delete(orgId);
-    console.error("[migrate-profile] failed", err);
-  }
+  const inFlight = attempted.get(orgId);
+  if (inFlight) return inFlight;
+  const run = migrateProfileToRules(orgId).then(
+    () => undefined,
+    (err: unknown) => {
+      attempted.delete(orgId);
+      console.error("[migrate-profile] failed", err);
+    }
+  );
+  attempted.set(orgId, run);
+  return run;
 }
 
 type RuleSource = "migrated_donots" | "migrated_businessinfo";

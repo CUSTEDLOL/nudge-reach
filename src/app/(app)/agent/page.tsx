@@ -43,6 +43,12 @@ export default async function AgentPage() {
   // The old Setup page's two free-text boxes become rules and draft facts, once
   // per org, before the reads below — so the first sight of this page already
   // shows what the owner typed there. Guarded and failure-swallowing.
+  //
+  // It stays ahead of the `Promise.all` rather than joining it: this WRITES the
+  // rules and drafts those reads select, so running them together would race,
+  // and the first render is exactly the one that would lose. The cost is one
+  // indexed `findFirst` on a cold load and nothing at all once the instance has
+  // seen this org.
   await migrateProfileOnce(ctx.org.id);
   const trial = await getTrialWorkspace(ctx.org.id);
   const onTrial = trial !== null && !trial.converted;
