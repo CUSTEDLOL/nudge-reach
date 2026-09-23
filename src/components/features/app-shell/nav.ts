@@ -348,13 +348,31 @@ const QUICK_COMMANDS: readonly AppCommand[] = [
 ];
 
 export function commandsForRole(role: AppRole): AppCommand[] {
-  const navigation = navItemsForRole(role).map<AppCommand>((item) => ({
-    label: item.label,
-    href: item.href,
-    group: "Navigate",
-    icon: item.icon,
-    keywords: [item.mobileLabel, item.key],
-  }));
+  // Children are commands too. The sidebar draws its second level only while
+  // expanded, and the Front Desk tab strip only below `lg` — so a collapsed
+  // sidebar on a desktop left Voice and Actions reachable by typed URL alone,
+  // and the collapse is remembered server-side, so it stayed that way. Search
+  // is the surface that should never depend on the rail's width.
+  const navigation = navItemsForRole(role).flatMap<AppCommand>((item) => [
+    {
+      label: item.label,
+      href: item.href,
+      group: "Navigate",
+      icon: item.icon,
+      keywords: [item.mobileLabel, item.key],
+    },
+    // The first child repeats the parent's href (Training IS /agent); listing
+    // it again would offer the same destination twice under two names.
+    ...(item.children ?? [])
+      .filter((child) => child.href !== item.href)
+      .map<AppCommand>((child) => ({
+        label: `${item.label} — ${child.label}`,
+        href: child.href,
+        group: "Navigate",
+        icon: item.icon,
+        keywords: [child.label, child.key, item.label, item.key],
+      })),
+  ]);
   const actions = QUICK_COMMANDS.filter(
     (command) => role !== "AGENT" || !command.hideForAgent
   );

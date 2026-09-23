@@ -25,6 +25,18 @@ change / surgical edits" discipline apply to every task here.
    `.env.local` points at the production Supabase project — read freely, write
    only deliberately and clean up after yourself).
 
+   **You cannot see a signed-in page.** The test account in
+   `scripts/fetch-as-user.js` (`visheshjain1705+nudgetest@gmail.com`) does not
+   exist on that Supabase project — it fails `Invalid login credentials` — and
+   there is no service-role key in `.env.local` to mint a session with. The only
+   rows in `auth.users` are real people's, which are not yours to sign in as.
+   Playwright 1.63 and Chromium are installed and working, so the tooling is
+   fine; only the login is missing. Practical consequences: `curl` on an app
+   route gives you 307 (the redirect), which proves the route *compiles* and
+   nothing more — it is **not** evidence the page renders. Don't claim a UI
+   works because you got a 307. Either ask the founder to re-create the test
+   user, or say plainly that the page is founder-verified only.
+
 2. **This repo is shared with other Claude sessions and many git worktrees**
    (`git worktree list`). Before committing: `git fetch origin` and check
    `git rev-list --left-right --count origin/main...HEAD`. Before building
@@ -122,19 +134,93 @@ That session documented what it knowingly left undone in
 **`docs/plans/2026-09-22-house-rules.md` → "Deferred — knowingly left undone"**.
 Read it in full. The three worth doing first:
 
-1. **TOCTOU race on the rule cap.** `createRuleAction` counts active rules and
+1. **Legacy columns still reach the prompt — do this one first.**
+   `migrateProfileToRules` copies the old Setup boxes into rules and draft
+   facts but deliberately does **not** clear `AgentProfile.businessInfo` or
+   `.doNots`, and `prompt.ts` still renders both (`ADDITIONAL BUSINESS
+   INFORMATION:` at line ~205, `- Also avoid: …` at ~241). So every migrated
+   org sends that content **twice**, and an edit to the rule leaves the stale
+   original in place underneath it. Setup is retired, so there is no longer any
+   UI to view or clear those columns.
+
+   It was left deliberately for one release, as a net: an org whose migration
+   failed (an un-pushed `AgentRule` table, say) would still have its business
+   information in the prompt. That net has served its purpose — the table is
+   live in production with RLS on, and `migrateProfileOnce` runs on every
+   `/agent` load. **The follow-up is to stop reading both columns, confirm
+   against real orgs that nothing was lost, and only then drop them.** Do not
+   drop and stop-reading in one change; there is no migration rollback.
+2. **TOCTOU race on the rule cap.** `createRuleAction` counts active rules and
    then creates one; two interleaved requests can exceed the cap. This is the
    *same class of bug* as the login-500 fixed today in `resolveOrgContext` —
    check-then-act without a guarded write. Fix by repeating the guard in the
    write's `WHERE`, or a unique/partial index, not by widening a transaction.
-2. **The distiller guardrail (`introducesNewSpecifics`) is one-directional.**
+   Contained meanwhile: every read path takes `limit`, so the prompt still
+   carries at most 20 and the extra row is invisible to the AI.
+3. **The distiller guardrail (`introducesNewSpecifics`) is one-directional.**
    It catches a specific the distillation *invented*, but compares digits only —
    **word-priced and worded facts are invisible to it** ("twenty rupees").
    Invariant-adjacent: a wrong price inside an instruction reaches customers.
-3. **Legacy columns still reach the prompt.** `migrateProfileToRules` moves the
-   old business-info box into rules and draft facts, but the legacy
-   `AgentProfile` columns are still read when building the prompt — so migrated
-   orgs can get the same content twice, and stale content after an edit.
+   It also never catches a constraint the distillation *dropped*: "consults are
+   ₹500 before 6pm" → "tell them consults are ₹500" passes clean.
+
+---
+
+## 4a. The Training page redesign (same session, after the merge)
+
+`/agent` was rebuilt twice on the founder's direct feedback — first for
+hierarchy, then for density. Shipped and live. What a later session should know:
+
+- **Layout.** Two columns from `lg` (`grid-cols-[minmax(0,1fr)_340px]`). The
+  rail is **first in the DOM** and `lg:order-last`, so on a phone the import box
+  sits above the facts instead of below all 92 of them. Left column: House rules,
+  then What it knows. Rail: Your business, then the import panel.
+- **Section headers sit outside their boxes** (`section-header.tsx`,
+  `text-base`) — the only place that size appears, and the whole hierarchy fix.
+  Sub-headings inside boxes stay `text-sm font-semibold`. Don't add a third size.
+- **One tinted element on the page**, the "N questions are waiting for you"
+  band, and only when non-empty. Keep it that way; it is what draws the eye.
+- **Forms collapse behind a button** (rules and facts both), open by default
+  only when the list is empty. Mirrors `AddRuleForm`; copy that shape.
+- **The trial and paid pages are the same page.** `trial-training.tsx` is the
+  body only — `/agent/page.tsx` owns the header slot, the grid and the rail.
+  `TrialTrainingHeader` is a separate export for exactly that reason; folding it
+  back into the body breaks the page's import. That collision already happened
+  once (`cf35a6e`).
+- **`data-tour="training-source"` must appear exactly once** — the tour looks it
+  up with a single-element query. It lives on the trial's library block, and
+  `tests/trial-training.test.tsx` counts it (1 there, 0 in `page.tsx`).
+
+**Still open here:**
+
+- **The trial's rail is nearly empty.** It gets Your business, but its own
+  sources (`TrialKnowledgeSources` + `TrialDraftReview`) stay in the left column,
+  where the paid page puts the import panel in the rail. Moving
+  `TrialKnowledgeSources` into the rail would finish the symmetry the founder
+  asked for; `TrialDraftReview` probably wants the width and should stay left.
+  Not done because it restructures a component another session had just shipped.
+- **The library's "Add fact" form is shared with the trial**, which is why only
+  its open/closed state was touched and not its contents.
+
+---
+
+## 4b. Fixed here, so nobody re-derives it
+
+**The collapsed sidebar hid Voice and Actions entirely.** Three things lined up:
+the rail renders its second level only when expanded (`sidebar.tsx`,
+`!collapsed && item.children`), the Front Desk tab strip is `lg:hidden` (added
+when the redesign found it duplicating the rail on desktop), and `commandsForRole`
+mapped only top-level nav items — so ⌘K never offered the children either. With
+the sidebar collapsed on a desktop, Voice and Actions were reachable by typed URL
+alone, and the collapse is **persisted server-side** (`saveSidebarCollapsedAction`),
+so it stayed broken across sessions.
+
+Fixed by flattening nav children into `commandsForRole`, deduped against the
+parent's href (Training *is* `/agent`). **Deliberately not applied to
+`commandsForMode`'s trial branch** — Front Desk is open in the trial but Voice
+and Actions are not trial paths, so flattening there would offer a route the
+server guard bounces. Both properties are now asserted in
+`tests/app-shell-nav.test.ts`.
 
 ---
 

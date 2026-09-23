@@ -184,6 +184,30 @@ describe("adaptive app navigation", () => {
     ]);
   });
 
+  it("finds the Front Desk sub-pages by search, whatever the rail is doing", () => {
+    // The rail draws its second level only while expanded, and the Front Desk
+    // tab strip only below `lg`. A collapsed sidebar on a desktop therefore
+    // left Voice and Actions reachable by typed URL alone — and the collapse
+    // is remembered server-side, so it stayed broken. Search must not depend
+    // on the rail's width.
+    const hrefs = commandsForRole("OWNER").map((command) => command.href);
+
+    expect(hrefs).toContain("/agent/voice");
+    expect(hrefs).toContain("/agent/actions");
+    // Training's href IS the parent's, so it must appear once, not twice.
+    expect(hrefs.filter((href) => href === "/agent")).toHaveLength(1);
+  });
+
+  it("keeps the trial's command menu to routes its guard actually opens", () => {
+    // Front Desk is open in the trial and has children, but Voice and Actions
+    // are not trial paths — flattening children here would offer a route the
+    // server guard bounces straight back to /dashboard.
+    const hrefs = commandsForMode("trial", "OWNER").map((c) => c.href);
+
+    expect(hrefs).not.toContain("/agent/voice");
+    expect(hrefs).not.toContain("/agent/actions");
+  });
+
   it("does not offer admin-only commands to agents", () => {
     expect(commandsForRole("AGENT").map((command) => command.href)).not.toContain(
       "/integrations"
