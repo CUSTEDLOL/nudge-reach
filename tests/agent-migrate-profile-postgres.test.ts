@@ -38,6 +38,23 @@ const { db, isRestrictedAcquisitionTrial } = await vi.hoisted(async () => {
 vi.mock("@/lib/db", () => ({ prisma: db }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 
+/**
+ * The real store, with one switch to make its write throw. Only the failure is
+ * injected — the rollback it triggers is a real Postgres rollback of real
+ * rows, which is the whole point of testing this here.
+ */
+const failTheFactWrite = { on: false };
+vi.mock("@/modules/knowledge/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/knowledge/store")>();
+  return {
+    ...actual,
+    storeKnowledgeFacts: (...args: Parameters<typeof actual.storeKnowledgeFacts>) => {
+      if (failTheFactWrite.on) throw new Error("the fact write blew up");
+      return actual.storeKnowledgeFacts(...args);
+    },
+  };
+});
+
 import { migrateProfileToRules } from "@/modules/agent/migrate-profile";
 import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
 
@@ -60,6 +77,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
     beforeEach(() => {
       vi.clearAllMocks();
       isRestrictedAcquisitionTrial.mockResolvedValue(false);
+      failTheFactWrite.on = false;
     });
 
     /** A throwaway org with the two legacy boxes filled in. */
@@ -150,6 +168,34 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
         MAX_ACTIVE_RULES.full
       );
       expect(await prisma.agentRule.count({ where: { orgId, status: "archived" } })).toBe(2);
+    });
+
+    /**
+     * The rule write and the fact write used to be two round-trips. If the
+     * rules committed and the facts threw, the `migrated_` guard was set for
+     * good — `migrateProfileOnce` swallowed the error, every later run returned
+     * NOTHING, the fact-shaped lines were never written, and the founder panel
+     * reported "Nothing to migrate — already done".
+     */
+    it("rolls the rules back when the fact write fails, and migrates cleanly on the retry", async () => {
+      const orgId = await seedOrg("atomic");
+      failTheFactWrite.on = true;
+
+      await expect(migrateProfileToRules(orgId)).rejects.toThrow("the fact write blew up");
+
+      // Nothing at all: no rules, so no `migrated_` guard row to poison the
+      // next run either.
+      expect(await prisma.agentRule.count({ where: { orgId } })).toBe(0);
+      expect(await prisma.knowledgeEntry.count({ where: { orgId } })).toBe(0);
+
+      failTheFactWrite.on = false;
+      expect(await migrateProfileToRules(orgId)).toEqual({
+        rules: 3,
+        archived: 0,
+        facts: 2,
+      });
+      expect(await prisma.agentRule.count({ where: { orgId } })).toBe(3);
+      expect(await prisma.knowledgeEntry.count({ where: { orgId } })).toBe(2);
     });
 
     it("is still a no-op on a later run, once the lock is long gone", async () => {

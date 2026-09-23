@@ -130,7 +130,7 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
    * $executeRaw, not $queryRaw: pg_advisory_xact_lock() returns void and Prisma
    * cannot deserialize a void column. The key is a bound parameter.
    */
-  const plan = await prisma.$transaction(async (tx) => {
+  const migration = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`agentrule:${orgId}`}, 0))`;
 
     // The real guard. The loser of a race reads the winner's committed rows
@@ -148,21 +148,33 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
     });
     const planned = planMigration(orgId, profile, existing, limit);
     if (planned.rules.length) await tx.agentRule.createMany({ data: planned.rules });
-    return planned;
+
+    // Inside the SAME transaction, through the same client. The rules and the
+    // facts are two halves of one migration, and the `migrated_` guard trips on
+    // a rule row: written separately, a run whose rules committed and whose
+    // facts threw left the guard set for good, `migrateProfileOnce` swallowed
+    // the error, every later run returned NOTHING, and the fact-shaped lines
+    // were never written at all — while `founderMigrateProfile` reported
+    // "Nothing to migrate — already done". Now either both land or neither
+    // does, and a failed run leaves an org the next load migrates properly.
+    const stored = planned.facts.length
+      ? await storeKnowledgeFacts(
+          orgId,
+          planned.facts,
+          {
+            source: "manual",
+            status: "draft",
+            // The trial's 50-fact ceiling is the same one its imports honour.
+            ...(onTrial ? { activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts } : {}),
+          },
+          tx
+        )
+      : { created: 0 };
+
+    const live = planned.rules.filter((rule) => rule.status === "active").length;
+    return { rules: live, archived: planned.rules.length - live, facts: stored.created };
   }, TRANSACTION_OPTIONS);
-  if (!plan) return NOTHING;
-
-  const stored = plan.facts.length
-    ? await storeKnowledgeFacts(orgId, plan.facts, {
-        source: "manual",
-        status: "draft",
-        // The trial's 50-fact ceiling is the same one its imports honour.
-        ...(onTrial ? { activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts } : {}),
-      })
-    : { created: 0 };
-
-  const live = plan.rules.filter((rule) => rule.status === "active").length;
-  return { rules: live, archived: plan.rules.length - live, facts: stored.created };
+  return migration ?? NOTHING;
 }
 
 interface MigrationPlan {

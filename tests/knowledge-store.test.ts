@@ -130,6 +130,34 @@ describe("storeKnowledgeFacts", () => {
     });
   });
 
+  /**
+   * The uncapped path takes no lock — there is no count to race for — but it
+   * must still write through a CALLER's transaction when it is given one.
+   * `migrateProfileToRules` writes rules and facts in one transaction so a
+   * half-migrated org cannot exist; an uncapped fact write that opened its own
+   * connection would have put that hole straight back for every paid org.
+   */
+  it("joins an existing transaction on the uncapped path too", async () => {
+    tx.knowledgeEntry.findMany.mockResolvedValue([]);
+    tx.knowledgeEntry.createMany.mockResolvedValue({ count: 3 });
+
+    await expect(
+      storeKnowledgeFacts(
+        "org_paid",
+        facts,
+        { source: "manual", status: "draft" },
+        tx as never,
+      ),
+    ).resolves.toEqual({ created: 3, capacityReached: false });
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.knowledgeEntry.findMany).not.toHaveBeenCalled();
+    expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
+    expect(tx.knowledgeEntry.createMany).toHaveBeenCalledOnce();
+    // No cap, so no lock: the advisory lock belongs to the capped path alone.
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
+  });
+
   it("keeps uncapped paid storage outside a transaction, dedupes all statuses, and preserves its per-run limit", async () => {
     prisma.knowledgeEntry.findMany.mockResolvedValue([
       { fact: "open monday to friday" },

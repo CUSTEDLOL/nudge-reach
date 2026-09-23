@@ -116,6 +116,47 @@ describe("legacy profile migration", () => {
       expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
     });
 
+    /**
+     * Rules and facts are two halves of one migration, and the `migrated_`
+     * guard trips on a rule row. Written in two round-trips, a run whose rules
+     * committed and whose facts threw left the guard set for good: every later
+     * run returned NOTHING and the fact-shaped lines were never written, while
+     * the founder panel said "Nothing to migrate — already done".
+     *
+     * This is also the case that would have caught the missing `$executeRaw` on
+     * the mock: a restricted trial takes `storeKnowledgeFacts`' capped path,
+     * which locks through `tx.$executeRaw` — `undefined` until now, because no
+     * test combined a trial with fact-shaped lines.
+     */
+    it("a trial org's fact write joins the migration's transaction, not its own", async () => {
+      isRestrictedAcquisitionTrial.mockResolvedValue(true);
+      profile({
+        doNots: "Never discuss competitors.",
+        businessInfo: "We are open Mon-Sat 10-7.\nParking is behind the building.",
+      });
+
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({
+        rules: 1,
+        archived: 0,
+        facts: 2,
+      });
+
+      // One transaction for the whole migration. The capped fact write used to
+      // open a second one of its own, which is what made a partial commit
+      // possible in the first place.
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      // Both locks taken on the one connection: the rule lock, then the
+      // knowledge cap's.
+      expect(prisma.$executeRaw).toHaveBeenCalledTimes(2);
+      expect(prisma.knowledgeEntry.count).toHaveBeenCalledWith({
+        where: { orgId: "org_1", status: { in: ["active", "draft"] } },
+      });
+      expect(created(prisma.knowledgeEntry.createMany)).toMatchObject([
+        { fact: "We are open Mon-Sat 10-7.", status: "draft" },
+        { fact: "Parking is behind the building.", status: "draft" },
+      ]);
+    });
+
     it("gives the transaction room for the lock wait, not Prisma's 5s default", async () => {
       profile({ doNots: "Never discuss competitors." });
 

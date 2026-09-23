@@ -106,7 +106,14 @@ export async function storeKnowledgeFacts(
   transaction?: KnowledgeStoreTransaction,
 ): Promise<StoreKnowledgeFactsResult> {
   if (options.activeDraftCap === undefined) {
-    const existing = await prisma.knowledgeEntry.findMany({
+    // No cap means no count to race for, so this path takes no lock — but it
+    // must still write through the CALLER's client when there is one, or its
+    // rollback leaves these rows behind. `migrateProfileToRules` writes rules
+    // and facts in one transaction precisely so a half-migrated org cannot
+    // exist; an uncapped fact write that quietly opened its own connection
+    // would have put the hole straight back for every paid org.
+    const db: KnowledgeStoreTransaction = transaction ?? prisma;
+    const existing = await db.knowledgeEntry.findMany({
       where: { orgId },
       select: { fact: true },
     });
@@ -116,7 +123,7 @@ export async function storeKnowledgeFacts(
       options.maxCreated ?? facts.length,
     );
     if (selected.length === 0) return { created: 0, capacityReached: false };
-    const inserted = await prisma.knowledgeEntry.createMany({
+    const inserted = await db.knowledgeEntry.createMany({
       data: rowsFor(orgId, selected, options),
     });
     return { created: inserted.count, capacityReached: false };
