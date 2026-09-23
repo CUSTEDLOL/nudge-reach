@@ -59,6 +59,28 @@ describe("house rules rows", () => {
     expect(html).not.toContain("Never:");
     expect(html).not.toContain("pricing:");
   });
+
+  /**
+   * The rows sit in a `Card` with `overflow-hidden`, so a word too long for the
+   * track is CLIPPED — no scrollbar, no way to read the rest. A URL is one such
+   * word, and "push everyone to join the waitlist at https://getgutfeeling.in/"
+   * is the exact rule this feature was built around; the two-column redesign
+   * made that track narrower still.
+   */
+  it("wraps a rule whose text carries a long URL instead of clipping it", () => {
+    const html = render([
+      {
+        id: "r1",
+        scope: "always",
+        text: "push everyone to join the waitlist at https://getgutfeeling.in/",
+        condition: null,
+      },
+    ]);
+
+    const row = html.match(/<p class="([^"]*)"[^>]*>[\s\S]*?getgutfeeling/)?.[1];
+    expect(row).toBeDefined();
+    expect(row).toContain("break-words");
+  });
 });
 
 /**

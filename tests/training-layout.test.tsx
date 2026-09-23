@@ -120,6 +120,21 @@ describe("fact list", () => {
     }
   });
 
+  /** Same clipping as the rules list: a `Card` with `overflow-hidden` around a
+   *  fact whose URL is one unbreakable word. */
+  it("wraps a fact carrying a long URL instead of clipping it", () => {
+    const html = render([
+      {
+        ...fact,
+        fact: "Join the waitlist at https://getgutfeeling.in/waitlist-signup",
+      },
+    ]);
+
+    const row = html.match(/<p class="([^"]*)"[^>]*>[^<]*getgutfeeling/)?.[1];
+    expect(row).toBeDefined();
+    expect(row).toContain("break-words");
+  });
+
   it("opens the add form only while there are no facts", () => {
     const empty = render([]);
     expect(empty).toContain('id="kf-fact"');

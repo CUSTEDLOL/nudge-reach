@@ -146,7 +146,10 @@ function FactRow({
         />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-neutral-800">{f.fact}</p>
+        {/* `break-words`: a fact carrying a URL is one unbreakable token, and
+            the Card around this list clips its overflow — without it the tail
+            is cut off with no scroll to recover it. */}
+        <p className="break-words text-sm text-neutral-800">{f.fact}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {f.condition && <Badge tone="warning">only: {f.condition}</Badge>}
           {f.source === "owner_answer" && (
@@ -391,6 +394,9 @@ export function Library({
             icon={<BookOpen className="h-5 w-5" />}
             title="No knowledge yet"
             description="Add facts in Manage view and the sheet builds itself."
+            // This list always renders inside the Training page's "What it
+            // knows" section, whose own heading is the h2.
+            headingLevel={3}
           />
         ) : (
           <Card className="p-6">
@@ -505,6 +511,7 @@ export function Library({
           icon={<BookOpen className="h-5 w-5" />}
           title="No knowledge yet"
           description="Add facts here, run the questionnaire, or just let the AI ask you as questions come in."
+          headingLevel={3}
         />
       ) : (
         grouped.map((g) => {

@@ -423,7 +423,13 @@ function RuleRow({ rule, canEdit }: { rule: RuleListItem; canEdit: boolean }) {
   const lead = scopeLead(rule);
   return (
     <li className="flex items-start justify-between gap-3 px-4 py-3">
-      <p className="min-w-0 flex-1 text-sm text-neutral-700">
+      {/* `break-words`: a rule's text is one long unbreakable token whenever it
+          carries a URL — "push everyone to join the waitlist at
+          https://getgutfeeling.in/" is the shape this feature was built
+          around — and the Card above clips its overflow, so without it the
+          tail is cut off with no scroll to recover it. Narrower still since
+          the page became two columns. */}
+      <p className="min-w-0 flex-1 break-words text-sm text-neutral-700">
         {lead && (
           <>
             <span className="font-semibold text-neutral-900">{lead}</span>{" "}

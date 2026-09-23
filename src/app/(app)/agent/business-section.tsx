@@ -59,6 +59,19 @@ export function BusinessSection({
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between gap-2">
+        {/* An h2 at h3's size, deliberately, and the one place on this page
+            that is true.
+            LEVEL: h2. "Your business" is one of Training's three sections — who
+            it is, how it must behave, what it knows — so it is a peer of "House
+            rules" and "What it knows", not a child of either.
+            SIZE: text-sm, not `SectionHeader`'s text-base. That size is what
+            makes a section title read as a section title ABOVE its box; this
+            heading is INSIDE the Card, on one line with the Edit button, in a
+            340px rail. `SectionHeader` cannot render there — it is the line
+            above a box, not a line in one — and borrowing its size here would
+            give the rail's small collapsed summary the same weight as the two
+            columns of work beside it. The rail's other box (`ImportPanel`,
+            `TrialKnowledgeSources`) labels itself exactly this way. */}
         <h2 className="text-sm font-semibold text-neutral-900">Your business</h2>
         {canEdit && !editing && (
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>

@@ -565,10 +565,15 @@ describe("sequential PDF uploads", () => {
       const html = renderTraining(workspace);
       // h3, not h2: the page supplies the "What it knows" h2 above this, and
       // these blocks sit inside it. The paid page's own sub-headings are the
-      // same level and the same size. (Shared primitives below this — the
-      // library's empty state — bring their own h2, so this pins the trial's
-      // own heading rather than banning the level outright.)
+      // same level and the same size. Everything below this level now agrees —
+      // the draft review was an h2 (a peer of the section containing it) and
+      // the shared empty state rendered its own h2 (so "No knowledge yet"
+      // announced as a peer of "House rules"), which is why the level is
+      // asserted on every h-tag the body renders rather than on one id.
       expect(html).toMatch(/<h3[^>]*id="trial-approved-heading"/);
+      expect(html).toMatch(/<h3[^>]*id="trial-drafts-heading"/);
+      expect(html).toContain("No knowledge yet");
+      expect(html).not.toMatch(/<h2[^>]*>\s*(?:Drafts to review|No knowledge yet)/);
       const headings = html.match(/<h3[^>]*>[\s\S]*?<\/h3>/g) ?? [];
 
       expect(headings.length).toBeGreaterThan(0);
@@ -578,6 +583,27 @@ describe("sequential PDF uploads", () => {
       expect(paidPage).toContain('<h3 className="mb-3 text-sm font-semibold');
       // …one step below the section titles the page sets above them.
       expect(sectionHeader).toContain("text-base font-semibold text-neutral-900");
+    });
+
+    /**
+     * `trial-approved-heading` was a dead id: nothing referenced it, unlike
+     * every sibling block on this page, and only this file kept it alive. The
+     * fix was to make the block what its neighbours are — a region named by its
+     * own heading — rather than to drop the id.
+     */
+    it("names the approved-facts region by its own heading, like its neighbours", () => {
+      const html = renderTraining(workspace);
+
+      expect(html).toMatch(
+        /<section[^>]*aria-labelledby="trial-approved-heading"/,
+      );
+      // The anchors that block also carries must survive being a <section>.
+      expect(html).toMatch(/<section[^>]*id="library"/);
+      expect(html).toMatch(/<section[^>]*data-tour="training-source"/);
+      // Every heading id this page renders is pointed at by something.
+      for (const [, id] of html.matchAll(/<h[23][^>]*\bid="([^"]+)"/g)) {
+        expect(html).toContain(`aria-labelledby="${id}"`);
+      }
     });
 
     /**

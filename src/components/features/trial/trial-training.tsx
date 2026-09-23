@@ -67,8 +67,17 @@ export function TrialTraining({
   const review = <TrialDraftReview drafts={drafts} canEdit={canEdit} />;
 
   const library = (
-    /* the guided tour's "train" step spotlights this — see modules/trial/tour */
-    <div id="library" data-tour="training-source">
+    /* the guided tour's "train" step spotlights this — see modules/trial/tour.
+       A labelled <section>, not a bare <div>: `trial-approved-heading` was a
+       dead id that nothing pointed at, while every sibling block on this page
+       — the draft review, House rules, "What it knows" — is a section named by
+       its own heading. Kept as `#library`, which is where the questionnaire's
+       "back to Training" link lands. */
+    <section
+      id="library"
+      data-tour="training-source"
+      aria-labelledby="trial-approved-heading"
+    >
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h3
           id="trial-approved-heading"
@@ -91,7 +100,7 @@ export function TrialTraining({
         factLimit={workspace.factLimit}
         factPlaceholder="e.g. Standard setup costs $120"
       />
-    </div>
+    </section>
   );
 
   return (

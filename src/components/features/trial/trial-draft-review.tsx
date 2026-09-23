@@ -41,9 +41,13 @@ export function TrialDraftReview({
     <section aria-labelledby="trial-drafts-heading">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="trial-drafts-heading" className="text-sm font-semibold text-neutral-900">
+          {/* h3: `/agent` renders this inside its "What it knows" section,
+              whose SectionHeader is the h2. As an h2 this announced as a peer
+              of the section containing it, while its sibling block's
+              `trial-approved-heading` already sat one level down. */}
+          <h3 id="trial-drafts-heading" className="text-sm font-semibold text-neutral-900">
             Drafts to review
-          </h2>
+          </h3>
           <p className="mt-1 text-sm text-neutral-500">
             Imported facts stay out of customer replies until you approve them.
           </p>
