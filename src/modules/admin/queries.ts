@@ -303,9 +303,14 @@ export async function orgsList(opts: OrgsFilter): Promise<OrgsPage> {
         select: { id: true },
         take: 1,
       },
-      agentProfile: { select: { enabled: true, businessInfo: true } },
+      agentProfile: { select: { enabled: true } },
       calendarAccount: { select: { status: true } },
       knowledgeEntries: {
+        where: { status: "active" },
+        select: { id: true },
+        take: 1,
+      },
+      agentRules: {
         where: { status: "active" },
         select: { id: true },
         take: 1,
@@ -347,7 +352,10 @@ export async function orgsList(opts: OrgsFilter): Promise<OrgsPage> {
     const readinessIssues = [
       creditsIssue(o, now),
       o.whatsappAccounts.length === 0 ? "WhatsApp not connected" : null,
-      !o.agentProfile?.businessInfo.trim() && o.knowledgeEntries.length === 0
+      // What the prompt carries, not what the retired Setup box holds: no
+      // builder has read `businessInfo` since fe85add, so an org with a full
+      // blob and no facts has an agent that knows nothing.
+      o.knowledgeEntries.length === 0 && o.agentRules.length === 0
         ? "Knowledge not configured"
         : null,
       !o.agentProfile?.enabled ? "AI Front Desk disabled" : null,

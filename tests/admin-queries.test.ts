@@ -103,9 +103,14 @@ describe("orgsList", () => {
     createdAt: new Date(Date.UTC(2026, 8, 1, 0, 0, Number(id.slice(1)) || 1)),
     memberships: [{ email: `${id}@x.com` }],
     whatsappAccounts: [{ id: `wa-${id}` }],
-    agentProfile: { enabled: true, businessInfo: "Clinic facts" },
+    agentProfile: { enabled: true },
     calendarAccount: { status: "connected" },
-    knowledgeEntries: [],
+    // A ready workspace is grounded in what the prompt actually carries. This
+    // fixture used to be `knowledgeEntries: []` with a full `businessInfo`,
+    // which is precisely the state the readiness gate now (correctly) flags:
+    // no builder has read that column since fe85add.
+    knowledgeEntries: [{ id: `knowledge-${id}` }],
+    agentRules: [],
     templates: [{ id: `template-${id}` }],
     followUpConfig: { enabled: true },
     _count: { contacts: 3, whatsappAccounts: 1, memberships: 2 },
@@ -172,6 +177,36 @@ describe("orgsList", () => {
     expect((await orgsList({ readiness: "ready" })).rows.map((row) => row.id)).toEqual(["o1"]);
     expect((await orgsList({ readiness: "blocked" })).rows.map((row) => row.id)).toEqual(["o2"]);
     expect((await orgsList({ readiness: "degraded" })).rows.map((row) => row.id)).toEqual(["o3"]);
+  });
+
+  /**
+   * The readiness gate used to read `AgentProfile.businessInfo`, a column no
+   * prompt builder has touched since fe85add — so a concierge-onboarded client
+   * whose agent had an empty prompt showed "Knowledge configured". It now counts
+   * only what the prompt carries: active facts, or active house rules.
+   */
+  it("flags an org grounded only in the retired Setup blob", async () => {
+    const blobOnly = { ...makeOrg("o1"), knowledgeEntries: [], agentRules: [] };
+    const ruledOnly = { ...makeOrg("o2"), knowledgeEntries: [] };
+    prisma.org.findMany.mockResolvedValue([
+      blobOnly,
+      { ...ruledOnly, agentRules: [{ id: "rule-o2" }] },
+    ]);
+
+    const rows = (await orgsList({ readiness: "all" })).rows;
+    const issues = Object.fromEntries(rows.map((row) => [row.id, row.readinessIssues]));
+    expect(issues.o1).toContain("Knowledge not configured");
+    // An org whose whole knowledge base was instruction-shaped has rules and no
+    // facts, and is grounded — the rules ride above the facts in every prompt.
+    expect(issues.o2).toEqual([]);
+  });
+
+  it("does not read the dead businessInfo column at all", async () => {
+    prisma.org.findMany.mockResolvedValue([makeOrg("o1")]);
+    await orgsList({});
+    const select = prisma.org.findMany.mock.calls.at(-1)![0].select;
+    expect(select.agentProfile.select).not.toHaveProperty("businessInfo");
+    expect(select.agentRules.where).toEqual({ status: "active" });
   });
 
   it("flags a paid workspace whose AI has no credits coming", async () => {

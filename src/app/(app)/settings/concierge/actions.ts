@@ -5,7 +5,12 @@ import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAiFrontDesk } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
 import { prisma } from "@/lib/db";
-import { buildBusinessInfo, installVerticalPack } from "@/modules/concierge";
+import {
+  buildBusinessInfo,
+  installClientGrounding,
+  installVerticalPack,
+  type KnowledgeBaseInput,
+} from "@/modules/concierge";
 import { installRevenueRecoveryPack } from "@/modules/followup/install";
 
 export interface ActionResult {
@@ -23,6 +28,13 @@ const str = (fd: FormData, k: string) => {
  * persona (enabled) + a per-vertical template pack + the Revenue-Recovery
  * follow-up pack. The operator connects the calendar separately; the go-live
  * gate on the page then reads green.
+ *
+ * The knowledge base is written TWICE on purpose. `installClientGrounding`
+ * writes the rows the agent reads (active `KnowledgeEntry` facts, active
+ * `never` `AgentRule` rows); `businessInfo`/`doNots` keep the operator's own
+ * text, because the form reads `doNots` back to populate itself and the blob is
+ * the untouched original a mis-split line can be redone from. Only the first of
+ * those two reaches a prompt — see `buildBusinessInfo`.
  */
 export async function saveConciergeSetupAction(
   formData: FormData
@@ -42,14 +54,15 @@ export async function saveConciergeSetupAction(
       return { ok: false, message: "Enter the client's business name." };
     }
 
-    const businessInfo = buildBusinessInfo({
+    const knowledge: KnowledgeBaseInput = {
       hours: str(formData, "hours"),
       location: str(formData, "location"),
       services: str(formData, "services"),
       prices: str(formData, "prices"),
       policies: str(formData, "policies"),
       faqs: str(formData, "faqs"),
-    });
+    };
+    const businessInfo = buildBusinessInfo(knowledge);
     if (!businessInfo) {
       return {
         ok: false,
@@ -73,6 +86,7 @@ export async function saveConciergeSetupAction(
     });
     await prisma.org.update({ where: { id: ctx.org.id }, data: { vertical } });
 
+    const grounding = await installClientGrounding(ctx.org.id, knowledge, doNots);
     const packCount = await installVerticalPack(ctx.org.id, vertical);
     await installRevenueRecoveryPack(ctx.org.id);
 
@@ -80,12 +94,18 @@ export async function saveConciergeSetupAction(
       ctx,
       "concierge.client_setup",
       businessName,
-      `${vertical} · ${packCount} templates`
+      `${vertical} · ${packCount} templates · ${grounding.facts} facts · ${grounding.rules} rules`
     );
     revalidatePath("/settings/concierge");
+    revalidatePath("/agent");
+    // The counts are what this run CREATED: a re-run that changed nothing says
+    // "+0 facts", which is the truth an operator needs to see.
+    const turnedBack = grounding.rulesRejected
+      ? ` ${grounding.rulesRejected} do-not line${grounding.rulesRejected === 1 ? "" : "s"} could not become a rule — reword ${grounding.rulesRejected === 1 ? "it" : "them"} on the Training page.`
+      : "";
     return {
       ok: true,
-      message: `${businessName} is set up — agent trained, ${packCount} vertical templates ready, follow-ups on. Connect the calendar to finish going live.`,
+      message: `${businessName} is set up — agent trained (+${grounding.facts} facts, +${grounding.rules} house rules), ${packCount} vertical templates ready, follow-ups on.${turnedBack} Connect the calendar to finish going live.`,
     };
   } catch (err) {
     return {

@@ -3,6 +3,7 @@ import { checkAiFrontDesk, checkAutomationLimit } from "@/modules/billing/limits
 import {
   buildBusinessInfo,
   getConciergeStatus,
+  installClientGrounding,
   installVerticalPack,
   VERTICAL_PACKS,
   type KnowledgeBaseInput,
@@ -72,7 +73,13 @@ export interface ClientSetupInput extends KnowledgeBaseInput {
   doNots?: string;
 }
 
-/** One-pass client setup. Refuses (with the plan message) below the flagship. */
+/**
+ * One-pass client setup. Refuses (with the plan message) below the flagship.
+ *
+ * Same two writes as the client-side action: `installClientGrounding` writes the
+ * rows the agent reads, and `businessInfo`/`doNots` keep the operator's own text
+ * for the form to read back. Only the first reaches a prompt.
+ */
 export async function founderSetupClient(
   orgId: string,
   input: ClientSetupInput,
@@ -94,12 +101,18 @@ export async function founderSetupClient(
     update: { vertical, businessName, businessInfo, tone, doNots, enabled: true },
   });
   await prisma.org.update({ where: { id: orgId }, data: { vertical } });
+  const grounding = await installClientGrounding(orgId, input, doNots);
   const packCount = await installVerticalPack(orgId, vertical);
   await installRevenueRecoveryPack(orgId);
-  await founderAudit(orgId, founderEmail, "admin.client_setup", businessName, `${vertical} · ${packCount} templates · follow-ups on`);
+  await founderAudit(orgId, founderEmail, "admin.client_setup", businessName, `${vertical} · ${packCount} templates · follow-ups on · ${grounding.facts} facts · ${grounding.rules} rules`);
+  // The counts are what this run CREATED: a re-run that changed nothing says
+  // "+0 facts", which is the truth a founder needs to see.
+  const turnedBack = grounding.rulesRejected
+    ? ` ${grounding.rulesRejected} do-not line${grounding.rulesRejected === 1 ? "" : "s"} could not become a rule — reword ${grounding.rulesRejected === 1 ? "it" : "them"} on Training.`
+    : "";
   return {
     ok: true,
-    message: `${businessName} set up — agent trained and on, ${packCount} ${vertical} templates installed, follow-ups on. Connect the calendar and a number to finish going live.`,
+    message: `${businessName} set up — agent trained and on (+${grounding.facts} facts, +${grounding.rules} house rules), ${packCount} ${vertical} templates installed, follow-ups on.${turnedBack} Connect the calendar and a number to finish going live.`,
   };
 }
 

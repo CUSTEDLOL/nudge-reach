@@ -215,7 +215,12 @@ interface RuleRow {
   order: number;
 }
 
-function dedupeKey(text: string): string {
+/**
+ * How two rule texts are compared for "the org already has this one". Exported
+ * because the concierge writer dedupes its own do-not lines the same way — two
+ * writers with two notions of "the same rule" would duplicate across each other.
+ */
+export function dedupeKey(text: string): string {
   return text.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
