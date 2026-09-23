@@ -10,7 +10,11 @@ vi.mock("@/app/(app)/agent/rules-actions", () => ({
 }));
 
 import { RulesSection } from "@/app/(app)/agent/rules-section";
-import { MAX_ACTIVE_RULES, type RuleListItem } from "@/modules/agent/rules";
+import {
+  MAX_ACTIVE_RULES,
+  describeRule,
+  type RuleListItem,
+} from "@/modules/agent/rules";
 
 const BOLD = '<span class="font-semibold text-neutral-900">';
 
@@ -115,6 +119,21 @@ describe("a rule that already says its own scope", () => {
     expect(row("always", "Reply as we always do, within the hour")).toContain(
       `${BOLD}Always</span> Reply as we always do, within the hour`,
     );
+  });
+
+  /**
+   * The page and the prompt now share one test for "already says its scope"
+   * (`opensWithItsScope`). They were two copies: this page suppressed the bold
+   * lead-in at 5ae7f18 while `describeRule` — the instruction `distillRule`
+   * falls back to on the whole keyless path — kept its prefix, so a row that
+   * read correctly here still reached the model doubled.
+   */
+  it("agrees with the line the prompt carries, opener by opener", () => {
+    for (const text of [...NEVER_OPENERS, "quote a price over chat"]) {
+      const suppressedOnThePage = !row("never", text).includes(`${BOLD}Never</span>`);
+      const suppressedInThePrompt = describeRule({ scope: "never", text }) === text;
+      expect(suppressedOnThePage).toBe(suppressedInThePrompt);
+    }
   });
 
   it("leaves a when rule alone even when its text opens with a scope word", () => {

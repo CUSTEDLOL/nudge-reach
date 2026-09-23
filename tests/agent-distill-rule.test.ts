@@ -179,15 +179,36 @@ describe("distillRule without a key (invariant #4)", () => {
   it("never calls the model, keeps the owner's words and meters a synthetic row", async () => {
     const { instruction } = await distillRule({
       orgId: "o1",
-      text: "  never promise results  ",
+      text: "  quote prices over WhatsApp  ",
       scope: "never",
     });
-    expect(instruction).toBe("Never: never promise results");
+    expect(instruction).toBe("Never: quote prices over WhatsApp");
     expect(generate).not.toHaveBeenCalled();
     expect(recordSyntheticUsage).toHaveBeenCalledWith(
       { orgId: "o1", purpose: "rule_distill" },
+      "quote prices over WhatsApp",
+      "Never: quote prices over WhatsApp"
+    );
+  });
+
+  /**
+   * This assertion used to read `"Never: never promise results"`, and it
+   * encoded the bug: the fallback is taken for EVERY rule on the keyless path,
+   * so the whole simulation demo sent the model doubled negatives — "Never: Do
+   * not invent features we do not offer" — for the 10 of 26 production rules
+   * that open with their own scope word.
+   */
+  it("does not double a scope word the owner already wrote", async () => {
+    const { instruction } = await distillRule({
+      orgId: "o1",
+      text: "  never promise results  ",
+      scope: "never",
+    });
+    expect(instruction).toBe("never promise results");
+    expect(recordSyntheticUsage).toHaveBeenCalledWith(
+      { orgId: "o1", purpose: "rule_distill" },
       "never promise results",
-      "Never: never promise results"
+      "never promise results"
     );
   });
 });

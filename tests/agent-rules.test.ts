@@ -6,6 +6,7 @@ import {
   RULE_QUALITY_NUDGE_AT,
   describeRule,
   introducesNewSpecifics,
+  opensWithItsScope,
   renderRulesBlock,
   ruleSchema,
   toRuleScope,
@@ -112,6 +113,78 @@ describe("describeRule", () => {
     // A "when" row with no condition is a data error; stating the rule plainly
     // is honest, where "Always:" would misrepresent it.
     expect(describeRule({ scope: "when", text, condition: null })).toBe(text);
+  });
+});
+
+/**
+ * `describeRule` is not display-only: `distillRule` falls back to it for EVERY
+ * rule when there is no API key (the whole simulation path, invariant #4), and
+ * on every provider failure and guardrail rejection. An owner writing a do-not
+ * writes "Do not invent features…", so the unconditional prefix sent the model
+ * "Never: Do not invent features…" — 10 of the 26 production rules.
+ *
+ * The Training page suppressed its own bold lead-in on the same test (5ae7f18)
+ * and `describeRule` did not, which is why the test now lives here and
+ * `scopeLead` calls it.
+ */
+describe("a rule that already says its own scope", () => {
+  const NEVER_OPENERS = [
+    "Never quote a price over chat",
+    "Do not invent features we do not offer",
+    "Don't promise a delivery date",
+    "Don’t promise a delivery date",
+    "Avoid medical advice of any kind",
+    "Under no circumstances share a customer's number",
+  ];
+
+  for (const text of NEVER_OPENERS) {
+    it(`drops the prefix for a never rule opening “${text.split(" ")[0]}”`, () => {
+      expect(opensWithItsScope({ scope: "never", text })).toBe(true);
+      expect(describeRule({ scope: "never", text })).toBe(text);
+    });
+  }
+
+  it("drops the prefix for an always rule opening “Always”", () => {
+    const text = "Always record the lead in the sheet";
+    expect(describeRule({ scope: "always", text })).toBe(text);
+  });
+
+  it("keeps the prefix where the scope is NOT in the text", () => {
+    // Without it, "quote prices over chat" under a heading that says "follow
+    // these in every reply" orders the opposite of what the owner chose.
+    expect(describeRule({ scope: "never", text: "quote prices over chat" })).toBe(
+      "Never: quote prices over chat"
+    );
+    expect(describeRule({ scope: "always", text: "send the booking link first" })).toBe(
+      "Always: send the booking link first"
+    );
+  });
+
+  it("matches only at the start, and only on a whole word", () => {
+    expect(opensWithItsScope({ scope: "never", text: "Avoidable delays annoy customers" })).toBe(
+      false
+    );
+    expect(opensWithItsScope({ scope: "never", text: "Tell them we never discount" })).toBe(false);
+    expect(
+      opensWithItsScope({ scope: "always", text: "Reply as we always do, within the hour" })
+    ).toBe(false);
+  });
+
+  it("leaves a when rule alone — its lead-in carries the condition", () => {
+    expect(opensWithItsScope({ scope: "when", text: "never quote a figure" })).toBe(false);
+    expect(
+      describeRule({
+        scope: "when",
+        text: "never quote a figure",
+        condition: "someone asks about pricing",
+      })
+    ).toBe("When someone asks about pricing: never quote a figure");
+  });
+
+  it("ignores surrounding whitespace, as the stored text may carry it", () => {
+    expect(describeRule({ scope: "never", text: "  Do not quote prices  " })).toBe(
+      "Do not quote prices"
+    );
   });
 });
 

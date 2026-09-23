@@ -62,15 +62,59 @@ export function toRuleScope(value: string): RuleScope | null {
   return (RULE_SCOPES as readonly string[]).includes(value) ? (value as RuleScope) : null;
 }
 
-/** The plain-English line the rule list shows the owner. */
+/**
+ * A rule whose own first words already say its scope. `migrateProfileToRules`
+ * and the concierge writer store the owner's sentence verbatim, and an owner
+ * writing a do-not writes one — "Do not invent features…" — so putting the
+ * scope in front doubles it into "Never: Do not invent features…". 10 of the 26
+ * rules in production open this way.
+ *
+ * Anchored and word-bounded: "Avoidable delays…" is not a rule that opens with
+ * "avoid", and only the opening counts — a scope word mid-sentence says nothing
+ * about how the line reads.
+ */
+const OPENS_WITH_ITS_SCOPE: Record<"always" | "never", RegExp> = {
+  always: /^always\b/i,
+  never: /^(?:never|do not|don['’]t|avoid|under no circumstances)\b/i,
+};
+
+/**
+ * Does this rule's text already carry its own scope word?
+ *
+ * The one test behind both places a scope is put in front of a rule: the line
+ * `describeRule` builds, and the bold lead-in the Training page renders. They
+ * were two copies, and two copies of this cannot be kept in agreement — a rule
+ * that reads correctly on the page would still reach the model doubled.
+ *
+ * `when` never matches: its lead-in carries the condition, which the text does
+ * not repeat.
+ */
+export function opensWithItsScope(rule: { scope: RuleScope; text: string }): boolean {
+  if (rule.scope === "when") return false;
+  return OPENS_WITH_ITS_SCOPE[rule.scope].test(rule.text.trim());
+}
+
+/**
+ * The plain-English line the rule list shows the owner — and, through
+ * `distillRule`'s fallback, the instruction the PROMPT carries whenever the
+ * distiller does not run: the whole keyless simulation path (invariant #4),
+ * every provider failure, every guardrail rejection.
+ *
+ * The scope prefix is there because the bare text loses it — "quote prices"
+ * under a heading that says "follow these in every reply" orders the opposite —
+ * and it is suppressed when the text already says its own scope, which would
+ * otherwise send the model "Never: Do not invent features we do not offer".
+ */
 export function describeRule(rule: {
   scope: RuleScope;
   text: string;
   condition?: string | null;
 }): string {
   const text = rule.text.trim();
-  if (rule.scope === "always") return `Always: ${text}`;
-  if (rule.scope === "never") return `Never: ${text}`;
+  if (rule.scope === "always" || rule.scope === "never") {
+    if (opensWithItsScope(rule)) return text;
+    return rule.scope === "always" ? `Always: ${text}` : `Never: ${text}`;
+  }
   const condition = rule.condition?.trim();
   // A "when" rule with no condition can only come from a bad migration.
   // Stating it plainly is honest; "Always:" would claim a scope it lacks.
