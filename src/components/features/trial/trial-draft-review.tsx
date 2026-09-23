@@ -38,10 +38,10 @@ export function TrialDraftReview({
   }
 
   return (
-    <section className="border-t border-neutral-200 py-7" aria-labelledby="trial-drafts-heading">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section aria-labelledby="trial-drafts-heading">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="trial-drafts-heading" className="text-base font-semibold text-neutral-900">
+          <h2 id="trial-drafts-heading" className="text-sm font-semibold text-neutral-900">
             Drafts to review
           </h2>
           <p className="mt-1 text-sm text-neutral-500">

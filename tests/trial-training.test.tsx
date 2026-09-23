@@ -233,6 +233,64 @@ describe("sequential PDF uploads", () => {
     ).toEqual(files.slice(0, 2));
   });
 
+  /**
+   * The trial's Train AI page and the paid Training page are the same screen
+   * at different allowances, so they should read as one design: full width,
+   * one flat stack of small labelled blocks, and the fact library leading
+   * once the AI has been taught anything. The trial's limits stay — they are
+   * what the trial is.
+   */
+  describe("matches the paid Training page layout", () => {
+    const paidPage = readFileSync("src/app/(app)/agent/page.tsx", "utf8");
+
+    it("uses the paid page's full-width stack, not a narrow column", () => {
+      const html = renderTraining(workspace);
+
+      expect(html).not.toContain("max-w-3xl");
+      expect(html).toContain("flex flex-col gap-8");
+      expect(paidPage).toContain('<div className="flex flex-col gap-8">');
+      // the old bordered-divider treatment is gone from every trial block
+      expect(html).not.toContain("border-t border-neutral-200 py-7");
+    });
+
+    it("labels blocks the same way the paid page does", () => {
+      const html = renderTraining(workspace);
+      const headings = html.match(/<h2[^>]*>[\s\S]*?<\/h2>/g) ?? [];
+
+      expect(headings.length).toBeGreaterThan(0);
+      for (const heading of headings) {
+        expect(heading).toContain("text-sm font-semibold text-neutral-900");
+      }
+      expect(paidPage).toContain('className="mb-3 text-sm font-semibold text-neutral-900"');
+    });
+
+    it("leads with the library once taught, and with the sources before that", () => {
+      const untaught = renderTraining(workspace);
+      expect(untaught).toContain("Approved facts");
+      expect(untaught.indexOf("Website or Google listing"))
+        .toBeLessThan(untaught.indexOf("Approved facts"));
+
+      const taught = renderTraining({
+        ...workspace,
+        approvedFactCount: 2,
+        factCount: 2,
+        knowledgeCount: 2,
+      });
+      expect(taught).toContain("Your AI knows 2 facts");
+      expect(taught.indexOf("Your AI knows"))
+        .toBeLessThan(taught.indexOf("Website or Google listing"));
+    });
+
+    it("keeps the trial allowances visible in the new layout", () => {
+      const html = renderTraining(workspace);
+
+      expect(html).toContain("Facts 0/50");
+      expect(html).toContain("0/1");
+      expect(html).toContain("0/3");
+      expect(html).toContain('data-tour="training-source"');
+    });
+  });
+
   it("refreshes the allowance after a persisted upload even when the next PDF fails", async () => {
     const files = [
       new File(["one"], "one.pdf", { type: "application/pdf" }),

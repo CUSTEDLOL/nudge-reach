@@ -112,10 +112,10 @@ export function TrialKnowledgeSources({
   }
 
   return (
-    <section className="border-t border-neutral-200 py-7" aria-labelledby="trial-web-heading">
-      <div className="flex items-baseline justify-between gap-4">
+    <section aria-labelledby="trial-web-heading">
+      <div className="mb-3 flex items-baseline justify-between gap-4">
         <div>
-          <h2 id="trial-web-heading" className="text-base font-semibold text-neutral-900">
+          <h2 id="trial-web-heading" className="text-sm font-semibold text-neutral-900">
             Website or Google listing
           </h2>
           <p className="mt-1 text-sm text-neutral-500">
@@ -202,10 +202,10 @@ export function TrialKnowledgeSources({
         </p>
       )}
 
-      <div className="mt-7 border-t border-neutral-100 pt-7">
-        <div className="flex items-baseline justify-between gap-4">
+      <div className="mt-8">
+        <div className="mb-3 flex items-baseline justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-neutral-900">Text PDFs</h2>
+            <h2 className="text-sm font-semibold text-neutral-900">Text PDFs</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Add price lists, policies, service guides, or FAQs. Text PDF, 4 MB max each.
             </p>
