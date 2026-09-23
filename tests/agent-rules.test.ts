@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { inferLegacyScope } from "@/modules/agent/migrate-profile";
 import {
   MAX_ACTIVE_RULES,
   MAX_INSTRUCTION_LENGTH,
@@ -185,6 +186,50 @@ describe("a rule that already says its own scope", () => {
     expect(describeRule({ scope: "never", text: "  Do not quote prices  " })).toBe(
       "Do not quote prices"
     );
+  });
+
+  /**
+   * The migration decides a legacy line is a `never`; the page and
+   * `describeRule` decide whether that line already says so. When those were
+   * two regexes they disagreed — the migration stepped over a polite lead-in
+   * and accepted an apostrophe-less "dont", this side did neither — so a
+   * migrated "Please never quote a price" was filed as a `never` and then
+   * rendered "Never: Please never quote a price". They share one definition
+   * now; this is the test that holds them together.
+   */
+  describe("agrees with the migration about what opens as a prohibition", () => {
+    const MIGRATED_NEVERS = [
+      "Please never quote a price",
+      "Kindly do not share a customer's number",
+      "Also don't discuss competitors",
+      "Dont quote prices",
+      "And avoid medical advice",
+    ];
+
+    for (const text of MIGRATED_NEVERS) {
+      it(`files “${text}” as a never and then does not say it twice`, () => {
+        expect(inferLegacyScope(text)).toBe("never");
+        expect(opensWithItsScope({ scope: "never", text })).toBe(true);
+        expect(describeRule({ scope: "never", text })).toBe(text);
+      });
+    }
+
+    it("steps over the same polite lead-in on an always rule", () => {
+      const text = "Please always send the booking link first";
+      expect(inferLegacyScope(text)).toBe("always");
+      expect(describeRule({ scope: "always", text })).toBe(text);
+    });
+
+    it("still needs a real opener after the polite words", () => {
+      // "Please" alone is not a prohibition, and the lead-in must not let a
+      // scope word from mid-sentence count as the opening.
+      expect(opensWithItsScope({ scope: "never", text: "Please quote prices over chat" })).toBe(
+        false
+      );
+      expect(
+        opensWithItsScope({ scope: "never", text: "Please tell them we never discount" })
+      ).toBe(false);
+    });
   });
 });
 

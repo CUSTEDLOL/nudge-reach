@@ -26,8 +26,14 @@ export function TrialTrainingHeader({
       description="Add the business information Nudge can use when it replies. Review imported facts before they go live."
       actions={
         workspace.approvedFactCount > 0 ? (
+          // "Try it in chat", not "Test in Inbox": one name per action, in the
+          // house's sentence case. It is the same job the paid page's header
+          // button does from the same slot, and the same words the auto-reply
+          // toast and the questionnaire's CTA already use — and it names the
+          // action rather than a surface a trial does not have (this goes to
+          // /dashboard, which renders the trial's own inbox).
           <Link href="/dashboard" className={buttonVariants({ size: "sm" })}>
-            Test in Inbox
+            Try it in chat
           </Link>
         ) : undefined
       }

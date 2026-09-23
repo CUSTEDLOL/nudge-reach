@@ -178,7 +178,7 @@ describe("adaptive app navigation", () => {
       )
     ).toEqual([
       ["Teach your Front Desk", "/agent/questionnaire"],
-      ["Try your Front Desk", "/inbox/try"],
+      ["Try it in chat", "/inbox/try"],
       ["Add a lead", "/contacts?new=1"],
       ["Connect an app", "/integrations"],
     ]);

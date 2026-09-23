@@ -365,21 +365,42 @@ export function Library({
     URL.revokeObjectURL(url);
   }
 
+  // These two are a tab pair, not `Button`s — so they bypass `buttonVariants`
+  // and have to bring its focus ring themselves, and they need `aria-pressed`:
+  // without it the selected view is conveyed by colour alone, which a screen
+  // reader cannot hear and a colour-blind owner may not see.
   const viewBtn = (v: "manage" | "sheet") =>
-    `inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium sm:min-h-0 ${view === v ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"}`;
+    `inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 sm:min-h-0 ${view === v ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"}`;
+
+  // Built once, above the `view === "sheet"` early return: both views render the
+  // identical pair, and inside that branch TypeScript has narrowed `view` to
+  // "sheet", so `aria-pressed={view === "manage"}` would not even compile.
+  const viewTabs = (
+    <div className="flex gap-1">
+      <button
+        type="button"
+        aria-pressed={view === "manage"}
+        className={viewBtn("manage")}
+        onClick={() => setView("manage")}
+      >
+        <ListChecks className="h-4 w-4" aria-hidden /> Manage
+      </button>
+      <button
+        type="button"
+        aria-pressed={view === "sheet"}
+        className={viewBtn("sheet")}
+        onClick={() => setView("sheet")}
+      >
+        <FileText className="h-4 w-4" aria-hidden /> Fact sheet
+      </button>
+    </div>
+  );
 
   if (view === "sheet") {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-1">
-            <button type="button" className={viewBtn("manage")} onClick={() => setView("manage")}>
-              <ListChecks className="h-4 w-4" /> Manage
-            </button>
-            <button type="button" className={viewBtn("sheet")} onClick={() => setView("sheet")}>
-              <FileText className="h-4 w-4" /> Fact sheet
-            </button>
-          </div>
+          {viewTabs}
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={copySheet}>
               <Copy className="h-3.5 w-3.5" /> Copy
@@ -429,14 +450,7 @@ export function Library({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
-          <button type="button" className={viewBtn("manage")} onClick={() => setView("manage")}>
-            <ListChecks className="h-4 w-4" /> Manage
-          </button>
-          <button type="button" className={viewBtn("sheet")} onClick={() => setView("sheet")}>
-            <FileText className="h-4 w-4" /> Fact sheet
-          </button>
-        </div>
+        {viewTabs}
         {canEdit && (
           <Button
             size="sm"
@@ -450,11 +464,15 @@ export function Library({
         )}
       </div>
 
-      {atLimit && (
-        <p className="text-sm text-neutral-600" role="status">
-          Fact limit reached ({factCount}/{factLimit}). Archive an approved fact or discard a draft before adding another.
-        </p>
-      )}
+      {/* Always in the DOM, its TEXT changing — the same shape the rules
+          section's counter line uses. A live region mounted at the moment it
+          has something to say is not announced: the assistive tech has nothing
+          to diff it against. Empty until the cap is hit, so nothing is shown. */}
+      <p className="text-sm text-neutral-600 empty:hidden" role="status">
+        {atLimit
+          ? `Fact limit reached (${factCount}/${factLimit}). Archive an approved fact or discard a draft before adding another.`
+          : ""}
+      </p>
 
       {canEdit && selected.size > 0 && (
         <div className="sticky top-2 z-10 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 shadow-sm">
@@ -521,13 +539,18 @@ export function Library({
             <section key={g.value}>
               <div className="mb-2 flex items-center gap-2">
                 {canEdit && (
+                  // A checkbox drawn by hand, so it has to say what a real one
+                  // would: `aria-pressed` for the state (the tick is otherwise
+                  // colour alone) and its own focus ring, since it is not a
+                  // `Button` and does not get `buttonVariants`'.
                   <button
                     type="button"
+                    aria-pressed={allIn}
                     onClick={() => toggleCategory(ids)}
                     aria-label={`${allIn ? "Deselect" : "Select"} all in ${LABEL_BY_VALUE[g.value]}`}
-                    className={`relative grid h-4 w-4 place-items-center rounded border before:absolute before:-inset-3 before:content-[''] ${allIn ? "border-brand-600 bg-brand-600 text-white" : "border-neutral-300 bg-white text-transparent"}`}
+                    className={`relative grid h-4 w-4 place-items-center rounded border outline-none before:absolute before:-inset-3 before:content-[''] focus-visible:ring-2 focus-visible:ring-brand-400/50 ${allIn ? "border-brand-600 bg-brand-600 text-white" : "border-neutral-300 bg-white text-transparent"}`}
                   >
-                    <Check className="h-3 w-3" />
+                    <Check className="h-3 w-3" aria-hidden />
                   </button>
                 )}
                 <h3 className="text-xs font-bold uppercase tracking-wide text-neutral-400">

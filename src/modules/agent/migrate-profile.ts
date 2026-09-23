@@ -4,6 +4,7 @@ import type { DistilledFact } from "@/modules/knowledge/distill";
 import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 import { TRIAL_KNOWLEDGE_LIMITS } from "@/modules/trial/knowledge";
 import {
+  LEADING_NEGATION,
   MAX_ACTIVE_RULES,
   MAX_INSTRUCTION_LENGTH,
   MAX_RULE_TEXT_LENGTH,
@@ -420,6 +421,12 @@ const IMPERATIVE_START =
  * never infers `when`: extracting a reliable condition from a legacy sentence
  * is guesswork, and a `when` rule with a wrong condition fires at the wrong
  * moment — whereas an `always` rule is at least visibly wrong.
+ *
+ * `LEADING_NEGATION` is imported, not written here. It used to be a second copy
+ * that allowed a polite lead-in and an apostrophe-less "dont" where the rules
+ * module's own copy allowed neither — so this filed "Please never quote a
+ * price" as a `never` and the Training page then rendered it with a doubled
+ * lead-in. One definition; they cannot drift.
  */
 export function inferLegacyScope(line: string): RuleScope {
   if (LEADING_NEGATION.test(line)) return "never";
@@ -429,7 +436,5 @@ export function inferLegacyScope(line: string): RuleScope {
   return ANY_NEGATION.test(line) ? "never" : "always";
 }
 
-const LEADING_NEGATION =
-  /^(?:please\s+|kindly\s+|also\s+|then\s+|and\s+)*(?:never|do not|don[’']?t|avoid|under no circumstances)\b/i;
 const ANY_NEGATION =
   /\b(?:never|do not|don[’']?t|avoid|must not|cannot|can[’']?t|shouldn[’']?t|won[’']?t|under no circumstances)\b/i;

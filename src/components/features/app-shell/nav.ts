@@ -324,11 +324,14 @@ const QUICK_COMMANDS: readonly AppCommand[] = [
     keywords: ["train", "knowledge", "answer"],
   },
   {
-    label: "Try your Front Desk",
+    // The same words the Training header, the questionnaire's CTA and the
+    // auto-reply toast use for this link. It had a third name here and a
+    // fourth on the trial's header; one action gets one name.
+    label: "Try it in chat",
     href: "/inbox/try",
     group: "Quick actions",
     icon: MessageSquareText,
-    keywords: ["test", "chat", "simulation"],
+    keywords: ["test", "chat", "simulation", "front desk", "try"],
   },
   {
     label: "Add a lead",

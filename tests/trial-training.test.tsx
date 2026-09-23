@@ -183,7 +183,7 @@ describe("continuous trial training page", () => {
     expect(html).toContain("Facts 0/50");
     expect(html).toContain('placeholder="e.g. Standard setup costs $120"');
     expect(html).not.toContain("Bridal mehendi");
-    expect(html).not.toContain("Test in Inbox");
+    expect(html).not.toContain("Try it in chat");
     expect(html).not.toContain("data-source-card");
     expect(html).not.toMatch(/step 1|progress/i);
     expect(trialProse(html)).not.toMatch(/clinic|patient/i);
@@ -243,7 +243,7 @@ describe("continuous trial training page", () => {
     expect(html).toContain(activeFact.fact);
     expect(html).toContain("Facts 2/50");
     expect(html).toContain('href="/dashboard"');
-    expect(html).toContain("Test in Inbox");
+    expect(html).toContain("Try it in chat");
     expect(html).not.toContain("/trial/setup");
   });
 
@@ -265,7 +265,7 @@ describe("continuous trial training page", () => {
     expect(html).toMatch(
       /<button[^>]*disabled=""[^>]*title="Fact limit reached"/,
     );
-    expect(html).toContain("Test in Inbox");
+    expect(html).toContain("Try it in chat");
   });
 
   it("preserves the paid Library placeholder when no trial override is passed", () => {

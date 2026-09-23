@@ -73,19 +73,50 @@ export function toRuleScope(value: string): RuleScope | null {
 }
 
 /**
+ * The polite or connective words an owner puts before the real instruction —
+ * "Please never quote a price", "Also don't discuss competitors", "And avoid
+ * medical advice". They change nothing for either reader below, so both step
+ * over them.
+ */
+const POLITE_LEAD = "(?:please|kindly|also|then|and)\\s+";
+/** How a prohibition opens. The apostrophe in "don't" is optional: owners type
+ *  "Dont", and a line that reads as a never must be treated as one. */
+const NEGATION_OPENER = "(?:never|do not|don[’']?t|avoid|under no circumstances)";
+
+/**
+ * A line phrased as a prohibition — ONE definition, shared by the two readers
+ * that have to agree on it: `opensWithItsScope` below (does the text already
+ * say its own scope, so neither the page nor the prompt should put it in front
+ * again?) and `inferLegacyScope` in `migrate-profile` (is this legacy line a
+ * `never`?).
+ *
+ * They were two regexes and they disagreed. The migration's allowed a leading
+ * "please/kindly/also/then/and" and made the apostrophe optional; this one did
+ * neither — so the migration filed "Please never quote a price" and "Dont quote
+ * prices" as `never` rules, and the list then rendered them "**Never** Please
+ * never quote a price". Two copies of this test cannot be kept in agreement,
+ * which is the same lesson 7251cce already learned between the page and
+ * `describeRule`.
+ *
+ * Anchored and word-bounded: "Avoidable delays…" is not a line that opens with
+ * "avoid", and only the opening counts — a scope word mid-sentence says nothing
+ * about how the line reads.
+ */
+export const LEADING_NEGATION = new RegExp(
+  `^(?:${POLITE_LEAD})*${NEGATION_OPENER}\\b`,
+  "i"
+);
+
+/**
  * A rule whose own first words already say its scope. `migrateProfileToRules`
  * and the concierge writer store the owner's sentence verbatim, and an owner
  * writing a do-not writes one — "Do not invent features…" — so putting the
  * scope in front doubles it into "Never: Do not invent features…". 10 of the 26
  * rules in production open this way.
- *
- * Anchored and word-bounded: "Avoidable delays…" is not a rule that opens with
- * "avoid", and only the opening counts — a scope word mid-sentence says nothing
- * about how the line reads.
  */
 const OPENS_WITH_ITS_SCOPE: Record<"always" | "never", RegExp> = {
-  always: /^always\b/i,
-  never: /^(?:never|do not|don['’]t|avoid|under no circumstances)\b/i,
+  always: new RegExp(`^(?:${POLITE_LEAD})*always\\b`, "i"),
+  never: LEADING_NEGATION,
 };
 
 /**

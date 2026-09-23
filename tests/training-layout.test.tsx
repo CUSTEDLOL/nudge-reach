@@ -18,6 +18,7 @@ vi.mock("@/app/(app)/agent/training-actions", () => ({
 
 import { FrontDeskTabs } from "@/app/(app)/agent/front-desk-tabs";
 import { Library, type LibraryFact } from "@/app/(app)/agent/library";
+import LoadingTraining from "@/app/(app)/agent/loading";
 
 /**
  * The two-column Training page (founder, 2026-09-23): rules and facts on the
@@ -77,6 +78,29 @@ describe("Training page columns", () => {
   });
 });
 
+/**
+ * The skeleton is what the owner sees first, so it has to be the shape the
+ * page resolves into. It was `LoadingKnowledge` — one full-width column of
+ * stacked cards, the pre-House-Rules layout — against a page that is now two
+ * columns with a 340px rail, so the content slid sideways on first paint.
+ */
+describe("Training loading skeleton", () => {
+  const page = readFileSync("src/app/(app)/agent/page.tsx", "utf8");
+
+  it("holds the same grid and rail order the page resolves into", () => {
+    const html = renderToStaticMarkup(createElement(LoadingTraining));
+
+    const grid = "lg:grid-cols-[minmax(0,1fr)_340px]";
+    expect(html).toContain(grid);
+    expect(page).toContain(grid);
+    // The rail is first in the DOM and ordered last on desktop, exactly as the
+    // page does it — otherwise the phone stack flips between the two.
+    expect(html).toContain("lg:order-last");
+    expect(html.indexOf("lg:order-last")).toBeLessThan(html.lastIndexOf("rounded-2xl"));
+    expect(html).toContain('aria-busy="true"');
+  });
+});
+
 describe("Front Desk tab strip", () => {
   it("shows only where the sidebar does not", () => {
     const html = renderToStaticMarkup(createElement(FrontDeskTabs));
@@ -97,6 +121,22 @@ describe("fact list", () => {
     condition: null,
     source: "manual",
   };
+
+  function renderWithLimit(facts: LibraryFact[], factCount: number, factLimit: number) {
+    return renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(Library, {
+          facts,
+          canEdit: true,
+          showStructureButton: false,
+          factCount,
+          factLimit,
+        }),
+      ),
+    );
+  }
 
   function render(facts: LibraryFact[], canEdit = true) {
     return renderToStaticMarkup(
@@ -133,6 +173,54 @@ describe("fact list", () => {
     const row = html.match(/<p class="([^"]*)"[^>]*>[^<]*getgutfeeling/)?.[1];
     expect(row).toBeDefined();
     expect(row).toContain("break-words");
+  });
+
+  /**
+   * Manage / Fact sheet are a tab pair drawn as bare `<button>`s, so they get
+   * none of what `buttonVariants` gives a `Button`. Without `aria-pressed` the
+   * chosen view is a dark pill and nothing else — inaudible to a screen reader
+   * and invisible to an owner who cannot tell the two greys apart.
+   */
+  it("says which view is chosen, and can be seen taking focus", () => {
+    const html = render([fact]);
+
+    // Exactly two, so the pair hoisted above the `view === "sheet"` return
+    // cannot quietly become two copies again.
+    const tabs = [
+      ...html.matchAll(/<button[^>]*>\s*<svg[^>]*>[\s\S]*?<\/svg>\s*(Manage|Fact sheet)/g),
+    ];
+    expect(tabs.map((m) => m[1])).toEqual(["Manage", "Fact sheet"]);
+    const manage = html.match(/<button([^>]*)>(?:(?!<button)[\s\S])*?Manage/)?.[1] ?? "";
+    const sheet = html.match(/<button([^>]*)>(?:(?!<button)[\s\S])*?Fact sheet/)?.[1] ?? "";
+    expect(manage).toContain('aria-pressed="true"');
+    expect(sheet).toContain('aria-pressed="false"');
+    for (const tag of [manage, sheet]) expect(tag).toContain("focus-visible:ring-2");
+  });
+
+  it("says whether a category is fully selected, on a checkbox it drew by hand", () => {
+    const html = render([fact]);
+
+    const box = html.match(/<button([^>]*aria-label="Select all in [^"]*"[^>]*)>/)?.[1];
+    expect(box).toBeDefined();
+    expect(box).toContain('aria-pressed="false"');
+    expect(box).toContain("focus-visible:ring-2");
+  });
+
+  /**
+   * The fact-limit line is a live region. It used to be rendered only once the
+   * cap was hit — and a live region that appears at the moment it has something
+   * to say is not announced, because assistive tech has nothing to diff it
+   * against. It is always in the DOM now and its TEXT changes, which is the
+   * shape the rules section's counter already used.
+   */
+  it("keeps the fact-limit live region mounted before the cap is reached", () => {
+    const under = renderWithLimit([fact], 1, 50);
+    expect(under).toContain('role="status"');
+    expect(under).not.toContain("Fact limit reached");
+
+    const at = renderWithLimit([fact], 50, 50);
+    expect(at).toContain('role="status"');
+    expect(at).toContain("Fact limit reached (50/50)");
   });
 
   it("opens the add form only while there are no facts", () => {
