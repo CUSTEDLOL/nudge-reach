@@ -11,6 +11,7 @@ const {
 } = vi.hoisted(() => ({
   prisma: {
     $transaction: vi.fn(),
+    $executeRaw: vi.fn(),
     agentRule: {
       count: vi.fn(),
       create: vi.fn(),
@@ -198,6 +199,39 @@ describe("house rule server actions", () => {
       expect(result.message).not.toContain("5 ");
       expect(distillRule).not.toHaveBeenCalled();
       expect(prisma.agentRule.create).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The count outside the write is only an early exit. These two assert the
+     * real guard is inside the transaction — a mocked Prisma cannot prove the
+     * race is closed (that is `tests/rule-cap-concurrency.test.ts`, which runs
+     * against real Postgres), but it can prove the guard is wired and that the
+     * owner-facing sentence did not change shape.
+     */
+    it("takes the org's advisory lock before counting inside the write", async () => {
+      await createRuleAction("push the waitlist", "always");
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.$executeRaw).toHaveBeenCalled();
+      const [strings, key] = prisma.$executeRaw.mock.calls[0];
+      expect(strings.join("?")).toContain("pg_advisory_xact_lock");
+      // Bound parameter, never interpolated, and namespaced per org.
+      expect(key).toBe("agentrule:org_1");
+    });
+
+    it("refuses when the cap fills between the check and the write", async () => {
+      // Passes the early exit at 19, then a concurrent create commits the 20th
+      // before this transaction's own count runs.
+      prisma.agentRule.count
+        .mockResolvedValueOnce(19)
+        .mockResolvedValueOnce(20);
+
+      const result = await createRuleAction("push the waitlist", "always");
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain("20 active rules at a time");
+      expect(prisma.agentRule.create).not.toHaveBeenCalled();
+      expect(recordAudit).not.toHaveBeenCalled();
     });
 
     it("explains an empty rule in the owner's language, not zod's", async () => {

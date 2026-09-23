@@ -60,15 +60,12 @@ export async function createRuleAction(
     }
 
     const limit = await ruleLimit(ctx.org.id);
+    // Cheap early exit so an owner who is already full does not pay for a
+    // distiller call. It is NOT the guard — that lives in the write below.
     const active = await prisma.agentRule.count({
       where: { orgId: ctx.org.id, status: "active" },
     });
-    if (active >= limit) {
-      return {
-        ok: false,
-        message: `You can have ${limit} active rules at a time — the AI follows a short list far more reliably than a long one. Archive one to make room.`,
-      };
-    }
+    if (active >= limit) return { ok: false, message: atCapMessage(limit) };
 
     const { instruction } = await distillRule({
       orgId: ctx.org.id,
@@ -77,26 +74,55 @@ export async function createRuleAction(
       condition: draft.condition,
     });
 
-    // New rules go last. Archived rows count towards the highest order so that
-    // restoring one later cannot collide with a live rule's position.
-    const last = await prisma.agentRule.findFirst({
-      where: { orgId: ctx.org.id },
-      orderBy: { order: "desc" },
-      select: { order: true },
-    });
+    // The cap is re-counted inside the write, under a per-org advisory lock —
+    // the same shape `storeKnowledgeFacts` uses for the knowledge cap. Counting
+    // outside the write is check-then-act: two requests (one double-clicked
+    // button is enough) both read `active < limit` and both insert, and the org
+    // ends up over the cap. The lock serialises rule creation per org, so the
+    // count a transaction reads cannot go stale before its insert commits.
+    //
+    // $executeRaw, not $queryRaw: pg_advisory_xact_lock() returns void and
+    // Prisma cannot deserialize a void column. The lock key is a bound
+    // parameter — never interpolate owner text into SQL.
+    //
+    // Cost: concurrent creates for ONE org queue behind each other for the
+    // three fast statements below (no model call is inside — `distillRule` ran
+    // above). Different orgs take different keys and never wait. The
+    // alternative, a conditional `INSERT … SELECT … WHERE (count) < n`, would
+    // have to hand-write every column and generate the `@default(cuid())` id
+    // itself, and would silently skip any column added to the model later.
+    const lockKey = `agentrule:${ctx.org.id}`;
+    const rule = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+      const live = await tx.agentRule.count({
+        where: { orgId: ctx.org.id, status: "active" },
+      });
+      if (live >= limit) return null;
 
-    const rule = await prisma.agentRule.create({
-      data: {
-        orgId: ctx.org.id,
-        text: draft.text,
-        instruction,
-        scope: draft.scope,
-        condition: draft.condition ?? null,
-        status: "active",
-        source: "owner",
-        order: (last?.order ?? -1) + 1,
-      },
+      // New rules go last. Archived rows count towards the highest order so
+      // that restoring one later cannot collide with a live rule's position.
+      const last = await tx.agentRule.findFirst({
+        where: { orgId: ctx.org.id },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
+
+      return tx.agentRule.create({
+        data: {
+          orgId: ctx.org.id,
+          text: draft.text,
+          instruction,
+          scope: draft.scope,
+          condition: draft.condition ?? null,
+          status: "active",
+          source: "owner",
+          order: (last?.order ?? -1) + 1,
+        },
+      });
     });
+    // The loser of a race gets the same sentence as the owner who was already
+    // full — from their side nothing else happened.
+    if (!rule) return { ok: false, message: atCapMessage(limit) };
 
     recordAudit(ctx, "rule.created", rule.id);
     revalidatePath("/agent");
@@ -140,7 +166,12 @@ export async function updateRuleAction(
     });
 
     // `source` and `status` are deliberately absent: editing the wording of a
-    // migrated rule must not relabel where it came from, or revive an archived one.
+    // migrated rule must not relabel where it came from, or revive an archived
+    // one. That absence is also why this action needs no cap guard — it can
+    // never turn an archived row active, so it cannot push an org over the
+    // limit. `archiveRuleAction` only ever moves the count down. If a
+    // "restore" action is ever added, it needs the same guarded write as
+    // `createRuleAction`.
     await prisma.agentRule.update({
       where: { id: existing.id },
       data: {
@@ -218,6 +249,15 @@ async function ruleLimit(orgId: string): Promise<number> {
   return (await isRestrictedAcquisitionTrial(orgId))
     ? MAX_ACTIVE_RULES.trial
     : MAX_ACTIVE_RULES.full;
+}
+
+/**
+ * One sentence, used by both the early exit and the guard inside the write, so
+ * an owner who loses a race cannot be told something different from an owner
+ * who was simply full. Changing it changes what both say.
+ */
+function atCapMessage(limit: number): string {
+  return `You can have ${limit} active rules at a time — the AI follows a short list far more reliably than a long one. Archive one to make room.`;
 }
 
 /** The scope guard reads the condition too — "when they ask about any topic". */
