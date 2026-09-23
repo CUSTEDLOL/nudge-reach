@@ -1,5 +1,63 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Adversarial review of the cleanup pass (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED
+
+Six correctness findings against the pass below, each fixed and committed on its
+own (`1c8dc57`, `a2fa6d1`, `a9d0c83`, `6965972`, `2643237`, `30f807e`).
+
+- **Rules stopped standing in for facts.** The cleanup below moved the follow-up
+  drafter's `grounded` flag to `knowledge || rules.length`, which silenced the
+  anti-invention warning for the one org that needs it most: the org whose whole
+  legacy box was instruction-shaped has rules and **zero facts**, and is the
+  least grounded workspace there is. `grounded` is facts only again; the HOUSE
+  RULES block renders on rules alone. The test that pinned the old behaviour is
+  inverted.
+- **That block also left the bullet list.** It was appended after `- Tone: …`,
+  inside *"Message rules (Meta WhatsApp templates):"*, and its lead line ordered
+  a template designer to follow the rules "in every reply". It now sits between
+  the job description and the mechanics, and `renderRulesBlock` takes an
+  optional `appliesTo` — the two reply prompts keep the old wording byte for
+  byte.
+- **`migrateProfileToRules` was the one `AgentRule` writer with no lock.** Its
+  guard, its cap arithmetic and its dedupe set all came from one unprotected
+  read, and two first loads of `/agent` (two tabs, or two lambda instances)
+  duplicated every rule, collided `order` from 0, and could double the cap. It
+  now runs under the same per-org advisory lock `createRuleAction` takes, with
+  the `migrated_` guard re-read inside it; the cheap pre-check stays outside as
+  a fast path.
+- **And it is atomic.** The rule write and `storeKnowledgeFacts` were two
+  round-trips. Rules committing while facts threw set the guard for good — the
+  fact lines were never written and the founder panel said "Nothing to migrate —
+  already done". Both writes share the transaction now, and
+  `storeKnowledgeFacts`' **uncapped** path (every paid org) takes a caller's
+  transaction instead of quietly using the global client.
+- **Facts past the cap are no longer discarded in silence.** `selectNewFacts`
+  truncated and returned nothing but `created`: a trial two facts short of 50
+  migrating a six-line blob wrote 2 and dropped 4 while reporting "2 draft facts
+  awaiting review." `storeKnowledgeFacts` returns `skipped`, and the migration
+  writes the overflow as `archived` facts — the answer `4a69dae` already gave an
+  over-cap rule. The archiving is the migration's alone (bounded by
+  `MAX_LINES`); inside the store it would let a crawl write hundreds of rows.
+- **A contended rule write answers in a sentence.** `createRuleAction`'s
+  transaction ran on Prisma's 2 s / 5 s defaults with the lock wait inside them
+  — tighter than `tests/rule-cap-concurrency.test.ts` had raised its own client
+  to in order to pass. It sets `{ maxWait: 5_000, timeout: 10_000 }`, the test's
+  override is gone, and `P2028` becomes a plain sentence — never the at-cap one,
+  which would be a lie to an owner with 20 free slots.
+- **Two test holes closed.** The migration's Prisma mock had no `$executeRaw`
+  and was handed back as `tx`, so any capped fact write would have called
+  `undefined`; it is added, with the trial-with-facts case that would have hit
+  it. And `tests/agent-migrate-profile-postgres.test.ts` joins
+  `rule-cap-concurrency` and `concierge-grounding-postgres` as real-database
+  coverage — still `TEST_DATABASE_URL`-gated, still run by hand.
+- **2,300 tests pass in `npm test`** (+17 skipped, 264 files), 2,317 with a
+  throwaway `postgres:16-alpine` on `TEST_DATABASE_URL`. `npx tsc --noEmit`,
+  `npm run lint`, `npm test` and `npm run build` exit 0 after every commit, and
+  `/agent` still answers `307` signed out. The database proofs each fail against
+  the pre-fix code: 6 of 6 concurrent migrations write, a 19-rule org ends with
+  23 active, a failed fact write leaves 3 rules behind, and 4 of 6 fact lines
+  vanish.
+
 ## House rules cleanup pass (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED, PROD SCHEMA PUSH STILL PENDING
 
 The Deferred list at the end of `docs/plans/2026-09-22-house-rules.md`, worked
@@ -18,11 +76,11 @@ through: nine commits on `feat/house-rules`, each green on its own.
 - **The follow-up drafter had no rules at all**, which is why it was left until
   last: `- Never: ${doNots}` was its only route to the owner's instructions, so
   stripping it first would have made it *less* grounded. It now loads
-  `activeRulesForOrg` and renders the shared `renderRulesBlock`, the same block
-  and wording the reply prompt carries, above the facts. `grounded` moved from
-  `businessInfo || knowledge` to `knowledge || rules` — an org whose whole box
-  was instruction-shaped has no facts at all, and must not be told it knows
-  nothing about a business it has rules for.
+  `activeRulesForOrg` and renders the shared `renderRulesBlock` above the facts.
+  `grounded` moved from `businessInfo || knowledge` to `knowledge || rules` —
+  **since reverted**: see the review entry above, where rules standing in for
+  facts turned out to silence the anti-invention warning for the least grounded
+  org there is. The block's position and lead line were corrected there too.
 - **An over-cap legacy line is archived, not dropped** (`4a69dae`). Once the
   prompt stopped reading the columns, a line past the 20-rule cap existed
   nowhere — one production org had 64 legacy lines, 20 rules created and three
@@ -78,7 +136,8 @@ reading by the prompt's own wording. No amount of retyping it would have worked.
   owner's plain English, renders as a `HOUSE RULES — follow these in every
   reply, even when the knowledge below points elsewhere:` block **above** the
   knowledge digest, whose heading softened to *"your source of truth for
-  facts"*. Same prompt for WhatsApp, voice and suggested replies — the bug
+  facts"*. (The follow-up drafter passes "in every message you write" instead —
+  it designs templates, not replies.) Same prompt for WhatsApp, voice and suggested replies — the bug
   reproduced identically on all three, so the fix lands on all three. Plan:
   `docs/plans/2026-09-22-house-rules.md`; design: `…-house-rules-design.md`.
 - **One Training page.** `/agent` renders three sections in the order the prompt
