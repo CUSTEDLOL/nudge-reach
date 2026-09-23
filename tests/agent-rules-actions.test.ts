@@ -219,6 +219,56 @@ describe("house rule server actions", () => {
       expect(key).toBe("agentrule:org_1");
     });
 
+    /**
+     * The lock wait is spent inside the transaction, so it counts against the
+     * transaction's own budget. Prisma's defaults are 2 s / 5 s — tighter than
+     * the concurrency test had to set on its own client to pass — and a waiter
+     * that blows through them gets a `P2028` whose raw text is "Transaction API
+     * error: Transaction already closed…".
+     */
+    it("gives the transaction room for the lock wait, not Prisma's 5s default", async () => {
+      await createRuleAction("push the waitlist", "always");
+
+      const [, options] = prisma.$transaction.mock.calls[0];
+      expect(options).toEqual({ maxWait: 5_000, timeout: 10_000 });
+    });
+
+    it("answers a contended write with a sentence, not a Prisma code", async () => {
+      const timeout = Object.assign(
+        new Error(
+          "\nInvalid `prisma.agentRule.create()` invocation:\n\n\nTransaction API error: Transaction already closed: A query cannot be executed on an expired transaction."
+        ),
+        { code: "P2028" }
+      );
+      prisma.$transaction.mockRejectedValueOnce(timeout);
+
+      const result = await createRuleAction("push the waitlist", "always");
+
+      expect(result.ok).toBe(false);
+      expect(result.message).not.toContain("P2028");
+      expect(result.message).not.toContain("Transaction");
+      expect(result.message).not.toContain("prisma");
+      // A timeout is NOT "at cap": saying so would tell an owner with room to
+      // spare to go and archive a rule.
+      expect(result.message).not.toContain("active rules at a time");
+      expect(result.message).toBe(
+        "Your rules were being saved by someone else just then, so this one didn't go through. Try again in a moment."
+      );
+      expect(recordAudit).not.toHaveBeenCalled();
+    });
+
+    it("still surfaces a genuine failure's own message", async () => {
+      // Only P2028 is reworded. Everything else keeps its meaning, or nothing
+      // would ever be debuggable again.
+      prisma.$transaction.mockRejectedValueOnce(
+        Object.assign(new Error("Unique constraint failed"), { code: "P2002" })
+      );
+
+      const result = await createRuleAction("push the waitlist", "always");
+
+      expect(result).toEqual({ ok: false, message: "Unique constraint failed" });
+    });
+
     it("refuses when the cap fills between the check and the write", async () => {
       // Passes the early exit at 19, then a concurrent create commits the 20th
       // before this transaction's own count runs.

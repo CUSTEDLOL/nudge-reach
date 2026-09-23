@@ -37,12 +37,14 @@ const { db, ctx, recordAudit, revalidatePath, isRestrictedAcquisitionTrial, dist
     if (!url) return { db: undefined, ...shared };
     const { PrismaClient } = await import("@prisma/client");
     return {
-      db: new PrismaClient({
-        datasourceUrl: url,
-        // Every create is an interactive transaction that queues for the org's
-        // advisory lock; Prisma's defaults (2 s / 5 s) are tight on a small pool.
-        transactionOptions: { maxWait: 20_000, timeout: 30_000 },
-      }),
+      // No client-level `transactionOptions`. They used to be raised to
+      // 20 s / 30 s here so this file would pass, which meant the test ran
+      // looser than production did — the exact inversion a test is supposed to
+      // prevent. `createRuleAction` now passes its own per-call options, which
+      // take precedence over a client default anyway, so this client is
+      // deliberately left on Prisma's defaults: what the test exercises is what
+      // ships.
+      db: new PrismaClient({ datasourceUrl: url }),
       ...shared,
     };
   });
@@ -151,6 +153,56 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("the active-rule cap on real Pos
     await fireConcurrently(12);
 
     expect(await activeCount(orgId)).toBe(MAX_ACTIVE_RULES.trial);
+  }, 120_000);
+
+  /**
+   * The lock, held past the waiter's whole transaction budget.
+   *
+   * Worth knowing, and only visible against a real database: Prisma's `timeout`
+   * does not cancel a statement already blocked in Postgres. The waiter sits on
+   * `pg_advisory_xact_lock` for as long as the holder holds it, and discovers
+   * its transaction has expired on the NEXT statement — so `P2028` arrives once
+   * the lock is finally granted, not on the stroke of the timeout. Which is why
+   * the hold below runs on a timer rather than waiting for the action: waiting
+   * for each other is a deadlock, and the first draft of this test hung.
+   *
+   * What the owner must get out of it is a true, readable sentence — not the
+   * raw "Transaction API error: Transaction already closed", and emphatically
+   * not the at-cap sentence, since this workspace has all 20 slots free.
+   *
+   * The holder needs a budget of its own: on Prisma's 5 s default it would
+   * release the lock before the waiter's 10 s ran out and the create would
+   * simply succeed.
+   */
+  it("answers a write that waits out the lock with a sentence, not a Prisma code", async () => {
+    const orgId = await seedOrg("contended");
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`agentrule:${orgId}`}, 0))`;
+        locked();
+        // Comfortably past the 10 s the action allows itself.
+        await new Promise((resolve) => setTimeout(resolve, 13_000));
+      },
+      { maxWait: 20_000, timeout: 60_000 }
+    );
+    await lockTaken;
+
+    const result = await createRuleAction("always push people to the waitlist", "always");
+    await holder;
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe(
+      "Your rules were being saved by someone else just then, so this one didn't go through. Try again in a moment."
+    );
+    expect(result.message).not.toContain("P2028");
+    expect(result.message).not.toContain("active rules at a time");
+    // The expired transaction wrote nothing on its way out.
+    expect(await activeCount(orgId)).toBe(0);
   }, 120_000);
 
   it("gives every created rule its own order, so none collide", async () => {

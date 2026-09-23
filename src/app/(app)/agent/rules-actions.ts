@@ -29,11 +29,43 @@ export interface ActionResult {
   message: string;
 }
 
+/**
+ * Long enough for a realistic burst on one org to clear the advisory lock —
+ * the queue is three fast statements per waiter — and short enough to answer
+ * inside a serverless function's own budget. The same pair
+ * `migrateProfileToRules` uses; it queues on the same key.
+ */
+const TRANSACTION_OPTIONS = { maxWait: 5_000, timeout: 10_000 } as const;
+
 /** Invariant #7, in owner-facing words. */
 const SCOPE_WIDENING_MESSAGE =
   "Your AI only answers for your business, so it can't take a rule that opens it up to anything else. Try narrowing the rule to what you offer.";
 
+/**
+ * A transaction that ran out of time, almost always because it spent its budget
+ * queued for the per-org advisory lock below. Prisma raises `P2028` for it, and
+ * the raw message — "Transaction API error: Transaction already closed…" —
+ * would otherwise reach the owner through `fail`.
+ *
+ * Matched on the code alone, by shape rather than by importing Prisma's error
+ * class, so a mocked client can reproduce it. Nothing else is swallowed: a
+ * genuine failure keeps its own message, and a timeout deliberately does NOT
+ * say "at cap", because it is not — telling an owner their list is full when
+ * it is not is worse than telling them nothing.
+ */
+const BUSY_MESSAGE =
+  "Your rules were being saved by someone else just then, so this one didn't go through. Try again in a moment.";
+
+function isTransactionTimeout(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: unknown }).code === "P2028"
+  );
+}
+
 function fail(err: unknown): ActionResult {
+  if (isTransactionTimeout(err)) return { ok: false, message: BUSY_MESSAGE };
   return {
     ok: false,
     message: err instanceof Error ? err.message : "Something went wrong.",
@@ -93,6 +125,20 @@ export async function createRuleAction(
     // alternative, a conditional `INSERT … SELECT … WHERE (count) < n`, would
     // have to hand-write every column and generate the `@default(cuid())` id
     // itself, and would silently skip any column added to the model later.
+    //
+    // The wait for that lock is spent INSIDE the transaction, so it counts
+    // against the transaction's own budget. Prisma's defaults are 2 s to get a
+    // connection and 5 s for everything after, which a burst on one org eats
+    // through. These numbers are what stops that happening, and they stay
+    // inside a serverless function's own budget so a request that does blow
+    // through returns an answer rather than being killed mid-write.
+    //
+    // Prisma's `timeout` does not cancel a statement already blocked in
+    // Postgres: a waiter sits on the lock for as long as the holder holds it
+    // and finds its transaction expired on the NEXT statement, so the failure
+    // arrives as `P2028` once the lock is finally granted. `fail` turns that
+    // into `BUSY_MESSAGE` — never into the at-cap sentence, which would be a
+    // lie to an owner with slots to spare.
     const lockKey = `agentrule:${ctx.org.id}`;
     const rule = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
@@ -121,7 +167,7 @@ export async function createRuleAction(
           order: (last?.order ?? -1) + 1,
         },
       });
-    });
+    }, TRANSACTION_OPTIONS);
     // The loser of a race gets the same sentence as the owner who was already
     // full — from their side nothing else happened.
     if (!rule) return { ok: false, message: atCapMessage(limit) };
