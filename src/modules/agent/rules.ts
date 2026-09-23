@@ -261,11 +261,24 @@ const SCOPE_WIDENING: RegExp[] = [
  *
  * Each instruction is flattened to a single line: a newline inside one would
  * let a rule forge a heading of its own and inject a whole prompt section.
+ *
+ * `appliesTo` names the work the rules govern. It defaults to the reply
+ * prompts' wording, which is what the agent and the suggest-reply builder both
+ * want. `followup/draft` passes its own: that builder designs WhatsApp
+ * TEMPLATES, and ordering it to follow a rule "in every reply" describes work
+ * it does not do — a heading that misnames the task is a heading the model may
+ * decide does not apply. One optional argument with the old value as its
+ * default is the whole change; the alternative, a second sentence wrapped
+ * around the block for that one caller, would leave the wrong one standing and
+ * argue with it.
  */
-export function renderRulesBlock(rules: Array<{ instruction: string }>): string {
+export function renderRulesBlock(
+  rules: Array<{ instruction: string }>,
+  appliesTo = "in every reply"
+): string {
   if (!rules.length) return "";
   return [
-    "HOUSE RULES — follow these in every reply, even when the knowledge below points elsewhere:",
+    `HOUSE RULES — follow these ${appliesTo}, even when the knowledge below points elsewhere:`,
     ...rules.map((r) => `- ${r.instruction.replace(/\s+/g, " ").trim()}`),
   ].join("\n");
 }

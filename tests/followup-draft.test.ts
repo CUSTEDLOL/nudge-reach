@@ -283,14 +283,39 @@ describe("draft with a key (model path)", () => {
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
     const { system } = generate.mock.calls[0][0];
+    // "in every message you write", not "in every reply": this builder designs
+    // templates. The default wording stays right for the two reply prompts.
     expect(system).toContain(
-      "HOUSE RULES — follow these in every reply, even when the knowledge below points elsewhere:"
+      "HOUSE RULES — follow these in every message you write, even when the knowledge below points elsewhere:"
     );
+    expect(system).not.toContain("in every reply");
     expect(system).toContain("- Always offer the evening slot first");
     expect(system).toContain("- Never quote a transplant price over WhatsApp");
     expect(system.indexOf("HOUSE RULES")).toBeLessThan(
       system.indexOf("What the business has told us")
     );
+  });
+
+  /**
+   * The block used to be appended straight after `- Tone: …`, i.e. at the tail
+   * of the "Message rules (Meta WhatsApp templates):" bullets — a heading of
+   * its own sitting in a list about template syntax. It now stands between the
+   * job description and the mechanics, where `buildAgentSystemPrompt` puts it.
+   */
+  it("stands on its own, not at the tail of the template-mechanics bullets", async () => {
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system.indexOf("HOUSE RULES")).toBeLessThan(
+      system.indexOf("Situations (use exactly these kinds):")
+    );
+    expect(system.indexOf("HOUSE RULES")).toBeLessThan(
+      system.indexOf("Message rules (Meta WhatsApp templates):")
+    );
+    // A blank line on each side, so it reads as a section and not as a bullet.
+    expect(system).toMatch(/\n\nHOUSE RULES —/);
+    expect(system).toMatch(/- Always offer the evening slot first\n\n/);
+    expect(system).not.toMatch(/- Tone: Warm\.\n+HOUSE RULES/);
   });
 
   it("reads the rules org-scoped, at the limit the workspace derives", async () => {

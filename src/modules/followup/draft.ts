@@ -84,10 +84,18 @@ function systemPrompt(b: BusinessContext): string {
   // knows nothing — both lines belong in its prompt. The two are orthogonal:
   // the block below renders on rules, this warning on facts.
   const grounded = Boolean(b.knowledge);
-  const houseRules = renderRulesBlock(b.rules);
+  // "in every message you write", not the default "in every reply": this
+  // builder writes templates that go out on their own, and never a reply.
+  const houseRules = renderRulesBlock(b.rules, "in every message you write");
   return [
     `You design WhatsApp follow-ups for ${b.businessName}, a ${b.vertical} business. A follow-up is a message (or up to ${MAX_MESSAGES}) sent automatically after a situation, to bring a customer back.`,
     "",
+    // The owner's standing instructions sit here — high, on their own, between
+    // the job description and the mechanics — the same place `buildAgentSystemPrompt`
+    // puts them. They used to be appended after `- Tone: …`, which read as one
+    // more bullet about WhatsApp template syntax; the owner's rules govern what
+    // the messages SAY, not how a template is shaped.
+    houseRules ? `${houseRules}\n` : false,
     "Situations (use exactly these kinds):",
     '- went_quiet {afterDays 1-14, stage?}: a customer who messaged us has not replied for N days. Use for chasing leads. stage is one of NEW, CONTACTED, QUALIFIED, WON, LOST — omit unless the owner named one.',
     "- booked {}: the moment an appointment is booked. Messages here are timed from the booking, not from the appointment — never write 'tomorrow', 'today' or 'thanks for coming in'; confirmations and prep only.",
@@ -104,11 +112,10 @@ function systemPrompt(b: BusinessContext): string {
     `- Tone: ${b.tone}.`,
     // The retired `/agent/setup` do-nots box used to add `- Never: ${b.doNots}`
     // here. Do not reinstate it: `migrateProfileToRules` copies that box into
-    // `AgentRule` rows, which the HOUSE RULES block below now renders, so
-    // rendering the original as well sends the same instruction twice — and
-    // leaves the stale original speaking for a rule the owner has since edited
-    // or archived. The column stays on the profile row and on `BusinessContext`.
-    houseRules ? `\n${houseRules}` : false,
+    // `AgentRule` rows, which the HOUSE RULES block above renders, so rendering
+    // the original as well sends the same instruction twice — and leaves the
+    // stale original speaking for a rule the owner has since edited or
+    // archived. The column stays on the profile row and on `BusinessContext`.
     grounded
       ? false
       : "\nYou know nothing about this business except its name and type. Do not mention prices, offers, discounts, hours, staff, or named services — keep every message generic: invite a reply, offer to help.",

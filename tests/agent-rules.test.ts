@@ -384,6 +384,23 @@ describe("renderRulesBlock", () => {
     );
   });
 
+  /**
+   * The lead line names the work the rules govern. `followup/draft` designs
+   * templates, never replies, so it passes its own wording; the two reply
+   * builders take the default and are unchanged by the parameter existing.
+   */
+  it("names the work the rules govern, defaulting to the reply wording", () => {
+    const rules = [{ instruction: "Always offer the evening slot first" }];
+    expect(renderRulesBlock(rules, "in every message you write")).toBe(
+      [
+        "HOUSE RULES — follow these in every message you write, even when the knowledge below points elsewhere:",
+        "- Always offer the evening slot first",
+      ].join("\n")
+    );
+    expect(renderRulesBlock(rules)).toContain("follow these in every reply,");
+    expect(renderRulesBlock([], "in every message you write")).toBe("");
+  });
+
   it("flattens an instruction so it cannot forge a prompt section of its own", () => {
     const block = renderRulesBlock([
       {
