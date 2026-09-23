@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getPlan } from "@/modules/billing/plans";
 import { ensureAgentProfile } from "@/modules/agent/profile";
-import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
-import { activeRules } from "@/modules/agent/rules-store";
+import { activeRulesForOrg } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { voiceDriverFor } from "@/modules/voice";
 import { buildCallInit } from "@/modules/voice/initiation";
@@ -50,9 +49,11 @@ export async function tickReminderCalls(now: Date = new Date()) {
       take: 400,
     });
     const digest = buildKnowledgeDigest(entries);
-    // Gated on `limits.voiceAgent` above, which no acquisition trial carries —
-    // the full allowance is the only reachable cap here.
-    const rules = await activeRules(org.id, MAX_ACTIVE_RULES.full);
+    // The same allowance this workspace's chats get. This used to take
+    // `MAX_ACTIVE_RULES.full` outright because the `limits.voiceAgent` gate
+    // above excludes every acquisition trial — true of today's plan table, not
+    // of this code, so the limit is derived rather than assumed.
+    const rules = await activeRulesForOrg(org.id);
     const driver = voiceDriverFor(org);
 
     const from = new Date(now.getTime() + WINDOW_START_MIN * 60_000);

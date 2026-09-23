@@ -42,6 +42,10 @@ vi.mock("@/lib/db", () => ({
     },
     knowledgeEntry: { findMany: vi.fn(async () => []) },
     agentRule: { findMany: vi.fn(async () => [{ instruction: "Always confirm the branch address" }]) },
+    // The voice paths now derive the rule limit from the workspace
+    // (`ruleLimitFor`) instead of taking `MAX_ACTIVE_RULES.full` outright.
+    // No row means no acquisition trial: a full workspace, as before.
+    acquisitionTrial: { findUnique: vi.fn(async () => null) },
   },
 }));
 vi.mock("@/modules/agent/profile", () => ({

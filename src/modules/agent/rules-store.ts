@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
+import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
 
 /**
  * The one database read of AgentRule on the reply path.
@@ -22,4 +24,33 @@ export async function activeRules(
     take: limit,
     select: { instruction: true },
   });
+}
+
+/**
+ * How many active rules this workspace is allowed — the ONE place that maps a
+ * workspace to a `MAX_ACTIVE_RULES` entry. A restricted acquisition trial gets
+ * the short list; everyone else gets the full one.
+ *
+ * It exists because three different files had written `? trial : full` by hand
+ * and the voice path had simply written `.full`: correct only for as long as
+ * no acquisition trial carries the `voiceAgent` capability, which is a fact
+ * about today's plan table, not about this code. Derive the limit here and the
+ * coupling is enforced rather than commented.
+ */
+export async function ruleLimitFor(orgId: string): Promise<number> {
+  return (await isRestrictedAcquisitionTrial(orgId))
+    ? MAX_ACTIVE_RULES.trial
+    : MAX_ACTIVE_RULES.full;
+}
+
+/**
+ * `activeRules` for a caller that does not already know the workspace's trial
+ * state — one extra small query. The inbound reply path does know (it resolves
+ * `restrictedTrial` for a dozen other decisions), so it keeps calling
+ * `activeRules` with the limit it already has and pays for nothing twice.
+ */
+export async function activeRulesForOrg(
+  orgId: string
+): Promise<{ instruction: string }[]> {
+  return activeRules(orgId, await ruleLimitFor(orgId));
 }

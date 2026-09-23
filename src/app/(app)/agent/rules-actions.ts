@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { recordAudit } from "@/modules/orgs/audit";
-import { isRestrictedAcquisitionTrial } from "@/modules/trial/capabilities";
 import { distillRule } from "@/modules/agent/distill-rule";
+import { ruleLimitFor } from "@/modules/agent/rules-store";
 import {
   MAX_ACTIVE_RULES,
   MAX_INSTRUCTION_LENGTH,
@@ -59,7 +59,9 @@ export async function createRuleAction(
       return { ok: false, message: SCOPE_WIDENING_MESSAGE };
     }
 
-    const limit = await ruleLimit(ctx.org.id);
+    // Trial workspaces carry a shorter list. Derived in `rules-store` so the
+    // authoring cap, the reply path and the voice path cannot disagree.
+    const limit = await ruleLimitFor(ctx.org.id);
     // Cheap early exit so an owner who is already full does not pay for a
     // distiller call. It is NOT the guard — that lives in the write below.
     const active = await prisma.agentRule.count({
@@ -242,13 +244,6 @@ export async function reorderRulesAction(ids: string[]): Promise<ActionResult> {
   } catch (err) {
     return fail(err);
   }
-}
-
-/** Trial workspaces carry a shorter list — the same cheap test the reply path uses. */
-async function ruleLimit(orgId: string): Promise<number> {
-  return (await isRestrictedAcquisitionTrial(orgId))
-    ? MAX_ACTIVE_RULES.trial
-    : MAX_ACTIVE_RULES.full;
 }
 
 /**

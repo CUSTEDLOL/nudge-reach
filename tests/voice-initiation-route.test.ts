@@ -19,6 +19,10 @@ vi.mock("@/lib/db", () => ({
     contact: { findUnique: vi.fn(async () => ({ name: "Priya", phoneE164: "+919876543210" })) },
     knowledgeEntry: { findMany: vi.fn(async () => [{ category: "hours", fact: "Open 9–7", condition: null }]) },
     agentRule: { findMany: vi.fn(async () => [{ instruction: "Always offer the evening slot first" }]) },
+    // The voice paths now derive the rule limit from the workspace
+    // (`ruleLimitFor`) instead of taking `MAX_ACTIVE_RULES.full` outright.
+    // No row means no acquisition trial: a full workspace, as before.
+    acquisitionTrial: { findUnique: vi.fn(async () => null) },
   },
 }));
 vi.mock("@/modules/agent/profile", () => ({

@@ -10,8 +10,7 @@ import { fileCall } from "@/modules/voice/file-call";
 import { env } from "@/lib/env";
 import { voiceUsage } from "@/modules/voice/usage";
 import { ensureAgentProfile } from "@/modules/agent/profile";
-import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
-import { activeRules } from "@/modules/agent/rules-store";
+import { activeRulesForOrg } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { buildCallInit } from "@/modules/voice/initiation";
 import { createVoiceToolToken } from "@/modules/voice/tool-token";
@@ -146,10 +145,11 @@ export async function startBrowserCallAction(): Promise<BrowserCallResult> {
       orderBy: { createdAt: "asc" },
       take: 400,
     }),
-    // Voice is plan-gated above (`checkVoiceAgent`) and no acquisition trial
-    // carries the voiceAgent limit, so a caller here is always a full
-    // workspace — the full rule allowance is the only reachable cap.
-    activeRules(ctx.org.id, MAX_ACTIVE_RULES.full),
+    // The same allowance this workspace's chats get. Taking
+    // `MAX_ACTIVE_RULES.full` outright was correct only while no acquisition
+    // trial carries the `voiceAgent` limit — a fact about the plan table, not
+    // about this code. Derived now, so the two paths cannot drift apart.
+    activeRulesForOrg(ctx.org.id),
   ]);
   if (!profile?.enabled) {
     return { ok: false, message: "Turn on the AI Front Desk before starting a browser call." };

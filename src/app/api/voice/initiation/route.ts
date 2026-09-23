@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
 import { ensureAgentProfile } from "@/modules/agent/profile";
-import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
-import { activeRules } from "@/modules/agent/rules-store";
+import { activeRulesForOrg } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { buildCallInit } from "@/modules/voice/initiation";
 import { createVoiceToolToken } from "@/modules/voice/tool-token";
@@ -89,9 +88,12 @@ export async function POST(request: Request) {
       orderBy: { createdAt: "asc" },
       take: 400,
     }),
-    // A dialled number only exists for a plan that carries voice, which no
-    // acquisition trial does — the full allowance is the only reachable cap.
-    activeRules(number.orgId, MAX_ACTIVE_RULES.full),
+    // The same allowance the workspace's chats get. It used to take
+    // `MAX_ACTIVE_RULES.full` outright, on the grounds that no acquisition
+    // trial carries voice — true of today's plan table, not of this code, and
+    // the day a trial does carry voice its calls would have quietly followed
+    // 20 rules where its chats follow 5.
+    activeRulesForOrg(number.orgId),
   ]);
 
   const init = buildCallInit({
