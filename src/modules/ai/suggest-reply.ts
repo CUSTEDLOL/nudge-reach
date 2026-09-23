@@ -43,6 +43,19 @@ export interface SuggestGrounding {
 }
 
 /**
+ * The two retired `/agent/setup` boxes used to be rendered into this prompt —
+ * `businessInfo` as "ADDITIONAL BUSINESS INFORMATION:" and `doNots` as an
+ * "- Also avoid: …" line under RULES. Do not reinstate them.
+ * `migrateProfileToRules` copies both into house rules and knowledge facts, so
+ * rendering them here as well sends a migrated org the same content twice, and
+ * leaves the stale original speaking for a rule the owner has since edited or
+ * archived. `buildAgentSystemPrompt` dropped them at fe85add for the same
+ * reason; this builder drafts for the same agent off the same profile row.
+ * They stay on `SuggestGrounding` and in every Prisma select — this is "stop
+ * rendering", not "stop storing".
+ */
+
+/**
  * Pure system-prompt builder (unit-tested).
  *
  * `rules` are the org's house rules and are rendered ABOVE the knowledge, for
@@ -67,21 +80,17 @@ export function buildSuggestSystemPrompt(
     // "your source of truth for facts", not "your only source of truth": the
     // old wording told the model to ignore anything outside the knowledge,
     // which is exactly what the house rules above it are.
+    // With the legacy blob gone there is one section either way, so the three
+    // nested ternaries this replaced are down to one branch.
     ...(digest
       ? [
           "BUSINESS KNOWLEDGE — your source of truth for facts (never invent details not stated here):",
           digest,
-          "",
         ]
-      : []),
-    digest
-      ? grounding.businessInfo.trim()
-        ? "ADDITIONAL BUSINESS INFORMATION:"
-        : ""
-      : "BUSINESS INFORMATION — your source of truth for facts (never invent details not stated here):",
-    digest && !grounding.businessInfo.trim()
-      ? ""
-      : grounding.businessInfo.trim() || "(No details provided.)",
+      : [
+          "BUSINESS INFORMATION — your source of truth for facts (never invent details not stated here):",
+          "(No details provided.)",
+        ]),
     "",
     grounding.tone.trim() ? `HOUSE STYLE: ${grounding.tone.trim()}.` : "",
     `TONE FOR THIS DRAFT: ${TONE_INSTRUCTIONS[tone]}`,
@@ -89,7 +98,8 @@ export function buildSuggestSystemPrompt(
     "RULES:",
     "- Keep it natural for WhatsApp: short sentences, no markdown, no headings.",
     "- Never invent prices, stock, hours or policies. If unsure, say the team will confirm.",
-    grounding.doNots.trim() ? `- Also avoid: ${grounding.doNots.trim()}` : "",
+    // The retired `doNots` box used to add "- Also avoid: …" here. It is a
+    // house rule now, rendered above — see the note on `SuggestGrounding`.
     "- Output ONLY the reply text, nothing else.",
   ]
     .filter(Boolean)
