@@ -41,6 +41,7 @@ import {
   archiveRuleAction,
   createRuleAction,
   reorderRulesAction,
+  restoreRuleAction,
   updateRuleAction,
 } from "@/app/(app)/agent/rules-actions";
 
@@ -427,6 +428,116 @@ describe("house rule server actions", () => {
 
       await expect(archiveRuleAction("rule_1")).resolves.toMatchObject({ ok: false });
       expect(prisma.agentRule.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * Restoring is the ONE write besides `createRuleAction` that moves the active
+   * count up, so it carries that action's guard: the per-org advisory lock, the
+   * count taken inside the write, and the same at-cap sentence. A mocked Prisma
+   * cannot prove the race is closed — that is `tests/rule-cap-concurrency.test.ts`
+   * against real Postgres — but it can prove the guard is wired and that the
+   * row really flips.
+   */
+  describe("restoreRuleAction", () => {
+    it("flips an archived row back to active, scoped to the org", async () => {
+      await expect(restoreRuleAction("rule_1")).resolves.toMatchObject({ ok: true });
+
+      expect(prisma.agentRule.updateMany).toHaveBeenCalledWith({
+        where: { id: "rule_1", orgId: "org_1", status: "archived" },
+        data: { status: "active" },
+      });
+      expect(recordAudit).toHaveBeenCalledWith(ctx, "rule.restored", "rule_1");
+      expect(revalidatePath).toHaveBeenCalledWith("/agent");
+    });
+
+    it("takes the org's advisory lock before counting inside the write", async () => {
+      await restoreRuleAction("rule_1");
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      const [strings, key] = prisma.$executeRaw.mock.calls[0];
+      expect(strings.join("?")).toContain("pg_advisory_xact_lock");
+      expect(key).toBe("agentrule:org_1");
+      const [, options] = prisma.$transaction.mock.calls[0];
+      expect(options).toEqual({ maxWait: 5_000, timeout: 10_000 });
+    });
+
+    it("refuses at the cap with the sentence createRuleAction uses", async () => {
+      prisma.agentRule.count.mockResolvedValue(20);
+
+      const result = await restoreRuleAction("rule_1");
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toBe(
+        "You can have 20 active rules at a time — the AI follows a short list far more reliably than a long one. Archive one to make room."
+      );
+      expect(prisma.agentRule.updateMany).not.toHaveBeenCalled();
+      expect(recordAudit).not.toHaveBeenCalled();
+    });
+
+    it("refuses at the trial's shorter cap", async () => {
+      isRestrictedAcquisitionTrial.mockResolvedValue(true);
+      prisma.agentRule.count.mockResolvedValue(5);
+
+      const result = await restoreRuleAction("rule_1");
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain("5 active rules at a time");
+      expect(prisma.agentRule.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("counts inside the write, so a cap that fills first still refuses", async () => {
+      isRestrictedAcquisitionTrial.mockResolvedValue(true);
+      prisma.agentRule.count.mockResolvedValue(5);
+
+      await restoreRuleAction("rule_1");
+
+      // The count that decided is the one taken after the lock — there is no
+      // second, unguarded count outside the transaction to disagree with it.
+      expect(prisma.agentRule.count).toHaveBeenCalledTimes(1);
+      expect(prisma.agentRule.count).toHaveBeenCalledWith({
+        where: { orgId: "org_1", status: "active" },
+      });
+    });
+
+    it("refuses another org's rule id without auditing", async () => {
+      prisma.agentRule.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(restoreRuleAction("rule_other_org")).resolves.toMatchObject({
+        ok: false,
+      });
+      expect(recordAudit).not.toHaveBeenCalled();
+    });
+
+    it("refuses a non-ADMIN before touching the database", async () => {
+      requireRole.mockImplementation(() => {
+        throw new Error("Only Admin or above can do this. Ask your workspace owner for access.");
+      });
+
+      await expect(restoreRuleAction("rule_1")).resolves.toEqual({
+        ok: false,
+        message: "Only Admin or above can do this. Ask your workspace owner for access.",
+      });
+      expect(prisma.agentRule.updateMany).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("answers a contended restore with a sentence, not a Prisma code", async () => {
+      prisma.$transaction.mockRejectedValueOnce(
+        Object.assign(new Error("Transaction API error: Transaction already closed"), {
+          code: "P2028",
+        })
+      );
+
+      const result = await restoreRuleAction("rule_1");
+
+      expect(result.ok).toBe(false);
+      expect(result.message).not.toContain("P2028");
+      expect(result.message).not.toContain("active rules at a time");
+      expect(result.message).toBe(
+        "Your rules were being saved by someone else just then, so this one didn't go through. Try again in a moment."
+      );
+      expect(recordAudit).not.toHaveBeenCalled();
     });
   });
 

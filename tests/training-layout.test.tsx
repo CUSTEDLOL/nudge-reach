@@ -53,6 +53,21 @@ describe("Training page columns", () => {
     expect(page).not.toContain("max-w-3xl");
   });
 
+  /**
+   * The page is a server component with six Prisma reads, so its queries are
+   * pinned on the source. Archived rules had no reader at all: `4a69dae` and
+   * `2643237` began writing over-cap migration lines as `archived` rather than
+   * dropping them, and nothing surfaced them until the restore disclosure.
+   */
+  it("reads the archived rules the restore disclosure needs, bounded", () => {
+    expect(page).toContain('status: "archived"');
+    // One more than it shows, so "N+" is measured rather than guessed — and a
+    // `take`, so this can never become a second unbounded query.
+    expect(page).toContain("MAX_ARCHIVED_RULES_SHOWN + 1");
+    expect(page).toContain("archived={archivedRules}");
+    expect(page).toContain("archivedTruncated={archivedTruncated}");
+  });
+
   it("keeps auto-reply and Try it in chat together in the header, in that order", () => {
     const header = page.indexOf("<PageHeader");
     const switchAt = page.indexOf("<AutoReplySwitch />");

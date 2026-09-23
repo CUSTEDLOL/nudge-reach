@@ -7,6 +7,7 @@ vi.mock("@/app/(app)/agent/rules-actions", () => ({
   createRuleAction: vi.fn(),
   updateRuleAction: vi.fn(),
   archiveRuleAction: vi.fn(),
+  restoreRuleAction: vi.fn(),
 }));
 
 import { RulesSection } from "@/app/(app)/agent/rules-section";
@@ -148,6 +149,83 @@ describe("a rule that already says its own scope", () => {
     expect(html).toContain(
       `${BOLD}When someone asks about pricing,</span> never quote a figure`,
     );
+  });
+});
+
+/**
+ * Archiving is the only way a rule leaves the list, and `migrateProfileToRules`
+ * files every legacy line past the cap the same way (4a69dae) — so before this
+ * disclosure existed the owner's own words sat in a table no screen read: 19
+ * archived rules on one production org, unreachable.
+ */
+describe("archived rules", () => {
+  const archived = (n: number): RuleListItem[] =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `arch_${i}`,
+      scope: "never" as const,
+      text: `archived rule ${i}`,
+      condition: null,
+    }));
+
+  function renderWithArchive(
+    rules: RuleListItem[],
+    archivedRules: RuleListItem[],
+    over: { canEdit?: boolean; archivedTruncated?: boolean } = {},
+  ) {
+    return renderToStaticMarkup(
+      createElement(
+        ToastProvider,
+        null,
+        createElement(RulesSection, {
+          rules,
+          archived: archivedRules,
+          canEdit: true,
+          limit: MAX_ACTIVE_RULES.full,
+          ...over,
+        }),
+      ),
+    );
+  }
+
+  const live: RuleListItem[] = [
+    { id: "r1", scope: "always", text: "send the booking link first", condition: null },
+  ];
+
+  it("is absent entirely when nothing is archived", () => {
+    const html = renderWithArchive(live, []);
+
+    expect(html).not.toContain("<details");
+    expect(html).not.toContain("archived");
+    expect(html).not.toContain("Restore");
+  });
+
+  it("collapses the archive behind a count and lists a Restore per rule", () => {
+    const html = renderWithArchive(live, archived(3));
+
+    expect(html).toContain("<details");
+    // Collapsed by default: `<details>` carries no `open` attribute.
+    expect(html).not.toMatch(/<details[^>]*\bopen\b/);
+    expect(html).toContain("3");
+    expect(html).toContain("archived");
+    expect(html).toContain("archived rule 0");
+    expect(html).toContain("archived rule 2");
+    expect([...html.matchAll(/Restore</g)]).toHaveLength(3);
+    // The live list's own grammar, not a new pattern.
+    expect(html).toContain('class="divide-y divide-neutral-100"');
+  });
+
+  it("says the count is a floor when the page read more than it shows", () => {
+    const html = renderWithArchive(live, archived(2), { archivedTruncated: true });
+
+    expect(html).toContain("2+");
+    expect(html).toContain("Showing the first 2.");
+  });
+
+  it("shows a member who cannot edit the archive without a way to restore", () => {
+    const html = renderWithArchive(live, archived(2), { canEdit: false });
+
+    expect(html).toContain("archived rule 0");
+    expect(html).not.toContain("Restore");
   });
 });
 

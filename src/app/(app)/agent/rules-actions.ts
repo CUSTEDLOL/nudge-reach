@@ -217,9 +217,9 @@ export async function updateRuleAction(
     // migrated rule must not relabel where it came from, or revive an archived
     // one. That absence is also why this action needs no cap guard — it can
     // never turn an archived row active, so it cannot push an org over the
-    // limit. `archiveRuleAction` only ever moves the count down. If a
-    // "restore" action is ever added, it needs the same guarded write as
-    // `createRuleAction`.
+    // limit. `archiveRuleAction` only ever moves the count down. The one write
+    // that does move it up is `restoreRuleAction`, which takes the same guarded
+    // write as `createRuleAction`.
     await prisma.agentRule.update({
       where: { id: existing.id },
       data: {
@@ -287,6 +287,59 @@ export async function reorderRulesAction(ids: string[]): Promise<ActionResult> {
     recordAudit(ctx, "rule.updated", undefined, `Reordered ${unique.length} rules`);
     revalidatePath("/agent");
     return { ok: true, message: "Order saved." };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/**
+ * Archived → active: the way back from `archiveRuleAction`, and the only other
+ * write in this file that can move the active count UP.
+ *
+ * So it takes the same per-org advisory lock and re-counts inside the write
+ * that `createRuleAction` does, for the same reason: counting outside the write
+ * is check-then-act, and two restores (or a restore racing an Add) would both
+ * read `live < limit` and both commit, leaving the org over its cap. An owner
+ * who loses that race is told exactly what an owner who was already full is
+ * told — from their side nothing else happened.
+ *
+ * There is no early exit before the transaction: unlike `createRuleAction` a
+ * restore has no model call to save, so a second count outside the lock would
+ * buy nothing and could only disagree with the one that matters.
+ *
+ * `order` is left alone. A restored rule returns to the position it held,
+ * which cannot collide with a live rule because `createRuleAction` numbers new
+ * rules past every row the org has, archived ones included.
+ */
+export async function restoreRuleAction(id: string): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
+    const limit = await ruleLimitFor(ctx.org.id);
+
+    const lockKey = `agentrule:${ctx.org.id}`;
+    const outcome = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+      const live = await tx.agentRule.count({
+        where: { orgId: ctx.org.id, status: "active" },
+      });
+      if (live >= limit) return "at_cap" as const;
+
+      // `status: "archived"` in the filter makes this idempotent: a rule some
+      // other tab already restored updates nothing and consumes no slot.
+      const updated = await tx.agentRule.updateMany({
+        where: { id, orgId: ctx.org.id, status: "archived" },
+        data: { status: "active" },
+      });
+      return updated.count === 0 ? ("missing" as const) : ("restored" as const);
+    }, TRANSACTION_OPTIONS);
+
+    if (outcome === "at_cap") return { ok: false, message: atCapMessage(limit) };
+    if (outcome === "missing") return { ok: false, message: "That rule no longer exists." };
+
+    recordAudit(ctx, "rule.restored", id);
+    revalidatePath("/agent");
+    return { ok: true, message: "Rule restored — your AI follows it again from the next reply." };
   } catch (err) {
     return fail(err);
   }

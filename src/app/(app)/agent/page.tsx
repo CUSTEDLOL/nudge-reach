@@ -15,6 +15,7 @@ import { parseWaiting } from "@/modules/knowledge/questions";
 import { migrateProfileOnce } from "@/modules/agent/migrate-profile";
 import {
   MAX_ACTIVE_RULES,
+  MAX_ARCHIVED_RULES_SHOWN,
   toRuleScope,
   type RuleListItem,
 } from "@/modules/agent/rules";
@@ -54,7 +55,7 @@ export default async function AgentPage() {
   const onTrial = trial !== null && !trial.converted;
   const ruleLimit = onTrial ? MAX_ACTIVE_RULES.trial : MAX_ACTIVE_RULES.full;
 
-  const [questions, facts, drafts, profile, ruleRows, migratedRule] = await Promise.all([
+  const [questions, facts, drafts, profile, ruleRows, archivedRows, migratedRule] = await Promise.all([
     // The trial has no owner-question queue, so it does not pay for the read.
     onTrial
       ? []
@@ -89,6 +90,21 @@ export default async function AgentPage() {
       take: ruleLimit,
       select: { id: true, text: true, scope: true, condition: true },
     }),
+    // What the owner archived, plus every legacy line the migration wrote past
+    // the cap — `RulesSection` puts them behind a collapsed "N archived"
+    // disclosure with a Restore each. Without this read they exist only in the
+    // database: production already holds 19 on one org that nothing surfaced.
+    //
+    // Bounded, and deliberately not a count as well: archived rows are uncapped
+    // (a 60-line legacy blob can leave dozens), so one more row than the page
+    // shows is read, and its presence is what makes the disclosure say "50+"
+    // rather than claim a total it did not measure.
+    prisma.agentRule.findMany({
+      where: { orgId: ctx.org.id, status: "archived" },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      take: MAX_ARCHIVED_RULES_SHOWN + 1,
+      select: { id: true, text: true, scope: true, condition: true },
+    }),
     // Has `migrateProfileToRules` already carried this org's legacy blob over?
     // Its own durable guard is this exact row, so asking for it is asking the
     // same question the migration asks itself — and it is the only honest
@@ -115,14 +131,25 @@ export default async function AgentPage() {
     source: f.source,
   }));
 
-  const rules: RuleListItem[] = ruleRows.map((r) => ({
+  const toListItem = (r: {
+    id: string;
+    text: string;
+    scope: string;
+    condition: string | null;
+  }): RuleListItem => ({
     id: r.id,
     text: r.text,
     // A scope outside the vocabulary can only come from a hand-edited row.
     // Show the rule anyway: one the AI is following must never be invisible.
     scope: toRuleScope(r.scope) ?? "always",
     condition: r.condition,
-  }));
+  });
+  const rules: RuleListItem[] = ruleRows.map(toListItem);
+  // The extra row read above is the signal, not a row to render.
+  const archivedTruncated = archivedRows.length > MAX_ARCHIVED_RULES_SHOWN;
+  const archivedRules: RuleListItem[] = archivedRows
+    .slice(0, MAX_ARCHIVED_RULES_SHOWN)
+    .map(toListItem);
 
   // "Structure my existing info" re-distills `AgentProfile.businessInfo` into
   // facts, so it has to retire once that blob has been structured by ANY route.
@@ -231,7 +258,13 @@ export default async function AgentPage() {
           </aside>
 
           <div className="flex min-w-0 flex-col gap-8">
-            <RulesSection rules={rules} canEdit={canEdit} limit={ruleLimit} />
+            <RulesSection
+              rules={rules}
+              archived={archivedRules}
+              archivedTruncated={archivedTruncated}
+              canEdit={canEdit}
+              limit={ruleLimit}
+            />
 
             {/* The trial's tour anchors its Training step on the "Approved facts"
                 section inside TrialTraining — one anchor only, because the tour

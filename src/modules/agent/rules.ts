@@ -24,6 +24,16 @@ export const MAX_RULE_TEXT_LENGTH = 500;
 export const MAX_ACTIVE_RULES = { trial: 5, full: 20 } as const;
 /** Where the UI starts warning that more rules means less reliable obedience. */
 export const RULE_QUALITY_NUDGE_AT = 10;
+/**
+ * How many archived rules the Training page's "N archived" disclosure loads.
+ *
+ * Archived rows are uncapped — `migrateProfileToRules` writes every legacy line
+ * past the active cap as one, so an org can hold dozens — and the disclosure is
+ * a recovery affordance, not an archive browser. Bounded so one page load
+ * cannot pull an unbounded row set; the page reads one more than this to tell
+ * the owner honestly when the list is cut short.
+ */
+export const MAX_ARCHIVED_RULES_SHOWN = 50;
 
 export const ruleSchema = z
   .object({

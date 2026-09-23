@@ -43,6 +43,7 @@ export type AuditAction =
   | "rule.created"
   | "rule.updated"
   | "rule.archived"
+  | "rule.restored"
   | "voice.number_saved"
   | "custom_action.created"
   | "custom_action.updated"
@@ -116,6 +117,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "rule.created": "House rule added",
   "rule.updated": "House rule edited",
   "rule.archived": "House rule archived",
+  "rule.restored": "House rule restored from archive",
   "voice.number_saved": "Voice number saved",
   "custom_action.created": "Custom agent action created",
   "custom_action.updated": "Custom agent action updated",

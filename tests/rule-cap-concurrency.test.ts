@@ -59,7 +59,7 @@ vi.mock("@/modules/orgs/audit", () => ({ recordAudit }));
 vi.mock("@/modules/trial/capabilities", () => ({ isRestrictedAcquisitionTrial }));
 vi.mock("@/modules/agent/distill-rule", () => ({ distillRule }));
 
-import { createRuleAction } from "@/app/(app)/agent/rules-actions";
+import { createRuleAction, restoreRuleAction } from "@/app/(app)/agent/rules-actions";
 import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
 
 const LIMIT = MAX_ACTIVE_RULES.full; // 20
@@ -204,6 +204,103 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("the active-rule cap on real Pos
     // The expired transaction wrote nothing on its way out.
     expect(await activeCount(orgId)).toBe(0);
   }, 120_000);
+
+  /**
+   * Restoring is the other write that moves the active count UP, so the cap has
+   * to hold across it too — and across a restore racing an Add, which is the
+   * only pair in the product that contends for slots from two different
+   * buttons. `migrateProfileToRules` archives every legacy line past the cap,
+   * so an org with a full list and a stack of archived rules is the ordinary
+   * state here, not a contrived one.
+   */
+  describe("restoring an archived rule", () => {
+    async function seedArchivedRules(orgId: string, count: number, from: number) {
+      await prisma.agentRule.createMany({
+        data: Array.from({ length: count }, (_, i) => ({
+          orgId,
+          text: `never mention archived rule ${from + i}`,
+          instruction: `Never mention archived rule ${from + i}.`,
+          scope: "never",
+          status: "archived",
+          source: "migrated_donots",
+          order: from + i,
+        })),
+      });
+      return prisma.agentRule.findMany({
+        where: { orgId, status: "archived" },
+        select: { id: true },
+      });
+    }
+
+    it("really flips the row, and the AI's own read then carries it", async () => {
+      const orgId = await seedOrg("restore-flips");
+      const [archived] = await seedArchivedRules(orgId, 1, 0);
+
+      await expect(restoreRuleAction(archived.id)).resolves.toMatchObject({ ok: true });
+
+      const row = await prisma.agentRule.findUnique({ where: { id: archived.id } });
+      expect(row?.status).toBe("active");
+      expect(await activeCount(orgId)).toBe(1);
+    }, 120_000);
+
+    it("refuses every concurrent restore once the list is already full", async () => {
+      const orgId = await seedOrg("restore-full");
+      await seedActiveRules(orgId, LIMIT);
+      const archived = await seedArchivedRules(orgId, 6, LIMIT);
+
+      const results = await Promise.all(
+        archived.map((rule) => restoreRuleAction(rule.id))
+      );
+
+      expect(results.filter((r) => r.ok)).toHaveLength(0);
+      expect(await activeCount(orgId)).toBe(LIMIT);
+      for (const refused of results) {
+        expect(refused.message).toBe(
+          `You can have ${LIMIT} active rules at a time — the AI follows a short list far more reliably than a long one. Archive one to make room.`
+        );
+      }
+    }, 120_000);
+
+    it("lets exactly one of eight concurrent restores through the last free slot", async () => {
+      const orgId = await seedOrg("restore-last-slot");
+      await seedActiveRules(orgId, LIMIT - 1);
+      const archived = await seedArchivedRules(orgId, 8, LIMIT);
+
+      const results = await Promise.all(
+        archived.map((rule) => restoreRuleAction(rule.id))
+      );
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(await activeCount(orgId)).toBe(LIMIT);
+    }, 120_000);
+
+    it("holds the cap when a restore and an Add race for the same last slot", async () => {
+      const orgId = await seedOrg("restore-vs-create");
+      await seedActiveRules(orgId, LIMIT - 1);
+      const [archived] = await seedArchivedRules(orgId, 1, LIMIT);
+
+      const results = await Promise.all([
+        restoreRuleAction(archived.id),
+        createRuleAction("always push people to the waitlist", "always"),
+        restoreRuleAction(archived.id),
+        createRuleAction("always send the booking link first", "always"),
+      ]);
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(await activeCount(orgId)).toBe(LIMIT);
+    }, 120_000);
+
+    it("holds the trial's shorter cap on restore too", async () => {
+      isRestrictedAcquisitionTrial.mockResolvedValue(true);
+      const orgId = await seedOrg("restore-trial");
+      await seedActiveRules(orgId, MAX_ACTIVE_RULES.trial);
+      const archived = await seedArchivedRules(orgId, 4, MAX_ACTIVE_RULES.trial);
+
+      await Promise.all(archived.map((rule) => restoreRuleAction(rule.id)));
+
+      expect(await activeCount(orgId)).toBe(MAX_ACTIVE_RULES.trial);
+    }, 120_000);
+  });
 
   it("gives every created rule its own order, so none collide", async () => {
     const orgId = await seedOrg("ordering");

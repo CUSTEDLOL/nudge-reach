@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronRight, Pencil, Plus, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -19,6 +19,7 @@ import {
 import {
   archiveRuleAction,
   createRuleAction,
+  restoreRuleAction,
   updateRuleAction,
 } from "./rules-actions";
 import { SectionHeader } from "./section-header";
@@ -32,10 +33,16 @@ import { SectionHeader } from "./section-header";
  */
 export function RulesSection({
   rules,
+  archived = [],
+  archivedTruncated = false,
   canEdit,
   limit,
 }: {
   rules: RuleListItem[];
+  /** Archived rules, bounded by the page — see `MAX_ARCHIVED_RULES_SHOWN`. */
+  archived?: RuleListItem[];
+  /** The org holds more archived rules than `archived` carries. */
+  archivedTruncated?: boolean;
   canEdit: boolean;
   limit: number;
 }) {
@@ -77,6 +84,13 @@ export function RulesSection({
               ))}
             </ul>
           </Card>
+        )}
+        {archived.length > 0 && (
+          <ArchivedRules
+            rules={archived}
+            truncated={archivedTruncated}
+            canEdit={canEdit}
+          />
         )}
       </div>
       <p className="mt-2 text-xs text-neutral-500" role="status">
@@ -215,6 +229,102 @@ function AddRuleForm({
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * The way back from Archive, and nothing more.
+ *
+ * Archiving is the only way a rule leaves the list (nothing an owner wrote is
+ * ever destroyed), and the migration files every legacy line past the cap the
+ * same way — so without this the owner's own words sat in a table no screen
+ * read. One collapsed disclosure, absent when there is nothing in it, holding
+ * the same `Card` + `divide-y` rows the live list uses: this is a recovery
+ * affordance, not a second rules manager, so there is no reordering, no bulk
+ * action and no filter.
+ *
+ * `<details>` rather than React state: collapsed by default, keyboard- and
+ * screen-reader-operable with no handler, and the same element the audit table
+ * and the attention queue already use for this job.
+ */
+function ArchivedRules({
+  rules,
+  truncated,
+  canEdit,
+}: {
+  rules: RuleListItem[];
+  truncated: boolean;
+  canEdit: boolean;
+}) {
+  return (
+    <details className="group">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-1 py-1 text-sm text-neutral-500 outline-none hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-400/50 [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          className="h-3.5 w-3.5 transition-transform group-open:rotate-90"
+          aria-hidden
+        />
+        {rules.length}
+        {truncated ? "+" : ""} archived
+      </summary>
+      <div className="mt-2 flex flex-col gap-2">
+        <Card className="overflow-hidden">
+          <ul className="divide-y divide-neutral-100">
+            {rules.map((rule) => (
+              <ArchivedRuleRow key={rule.id} rule={rule} canEdit={canEdit} />
+            ))}
+          </ul>
+        </Card>
+        {truncated && (
+          <p className="text-xs text-neutral-500">
+            {`Showing the first ${rules.length}.`}
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function ArchivedRuleRow({
+  rule,
+  canEdit,
+}: {
+  rule: RuleListItem;
+  canEdit: boolean;
+}) {
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+
+  function restore() {
+    start(async () => {
+      const r = await restoreRuleAction(rule.id);
+      toast({ description: r.message, tone: r.ok ? "success" : "error" });
+    });
+  }
+
+  const lead = scopeLead(rule);
+  return (
+    <li className="flex items-start justify-between gap-3 px-4 py-3">
+      {/* Muted, because the AI is not following this one. */}
+      <p className="min-w-0 flex-1 break-words text-sm text-neutral-500">
+        {lead && (
+          <>
+            <span className="font-semibold text-neutral-700">{lead}</span>{" "}
+          </>
+        )}
+        {rule.text.trim()}
+      </p>
+      {canEdit && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="shrink-0"
+          loading={pending}
+          onClick={restore}
+        >
+          <Undo2 className="h-3.5 w-3.5" aria-hidden /> Restore
+        </Button>
+      )}
+    </li>
   );
 }
 
