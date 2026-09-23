@@ -1,5 +1,70 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## House rules cleanup pass (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED, PROD SCHEMA PUSH STILL PENDING
+
+The Deferred list at the end of `docs/plans/2026-09-22-house-rules.md`, worked
+through: nine commits on `feat/house-rules`, each green on its own.
+
+- **The retired Setup boxes reach no prompt any more.** `migrateProfileToRules`
+  copies `businessInfo` and `doNots` into rules and facts, and all three prompt
+  builders went on rendering the originals underneath — so a migrated org sent
+  the model the same content twice, and an edited or archived rule kept speaking
+  through the stale blob beneath it. Fixed in the agent prompt (`fe85add`), the
+  inbox suggested reply (`ce1629e`) and the follow-up drafter (`360047c`). The
+  largest org's reply prompt lost 4,138 characters. **Stop rendering, not stop
+  storing**: both columns stay on the row, in every Prisma select and on every
+  context type, with a comment at each deletion site saying why not to reinstate
+  them.
+- **The follow-up drafter had no rules at all**, which is why it was left until
+  last: `- Never: ${doNots}` was its only route to the owner's instructions, so
+  stripping it first would have made it *less* grounded. It now loads
+  `activeRulesForOrg` and renders the shared `renderRulesBlock`, the same block
+  and wording the reply prompt carries, above the facts. `grounded` moved from
+  `businessInfo || knowledge` to `knowledge || rules` — an org whose whole box
+  was instruction-shaped has no facts at all, and must not be told it knows
+  nothing about a business it has rules for.
+- **An over-cap legacy line is archived, not dropped** (`4a69dae`). Once the
+  prompt stopped reading the columns, a line past the 20-rule cap existed
+  nowhere — one production org had 64 legacy lines, 20 rules created and three
+  instructions lost. Over-cap lines are now written as `archived` rules: the
+  owner's exact words, recoverable by flipping `status`, consuming no slot.
+- **The rule cap holds under concurrency** (`eb996cd`). `createRuleAction` was
+  check-then-act, so a double-clicked Add button put an org over its cap. The
+  count now runs inside the write under a per-org advisory lock — the shape
+  `storeKnowledgeFacts` already uses. Proved against real Postgres in a
+  throwaway container, not a Prisma mock: three of the four cases fail against
+  the pre-fix code.
+- **Voice derives its rule limit** (`024b533`). All three voice call sites took
+  `MAX_ACTIVE_RULES.full` outright, correct only for as long as no trial plan
+  carries voice. The derivation moved into `rules-store` as `ruleLimitFor` /
+  `activeRulesForOrg`, and the authoring cap, the reply path, the voice paths
+  and now the follow-up drafter cannot disagree.
+- **A rule no longer reads as a doubled negative** (`5ae7f18`). The migration
+  stores the owner's sentence verbatim, so the bold scope lead-in rendered
+  "**Never** Do not invent features…" for **10 of the 26 rules in production**.
+  The lead-in is suppressed when the text already opens with its own scope word
+  (`never`, `do not`, `don't`, `avoid`, `under no circumstances`; `always`),
+  anchored and word-bounded. Display only — the stored scope and the editor's
+  picker are untouched.
+- **The trial's import box moved to the rail** (`9f2428b`, founder: it belongs
+  on the right). `/agent` is one page for both kinds of workspace, but only the
+  paid rail had anything under *Your business* — the trial's website / Google
+  listing / PDF box sat in the left column, below every fact. It now renders
+  where `ImportPanel` does. Only that component moved; the draft review stays in
+  the body, and `data-tour="training-source"` stays exactly where it was.
+- **`setup-actions.ts` is `profile-actions.ts`** (`11bf7d0`), named for the
+  Training page's profile writers it actually holds rather than the retired
+  page. `git mv`, five importers, no behaviour change.
+- **2,246 tests pass** (+7 skipped, 263 files; 2,234 before this pass);
+  `npx tsc --noEmit`, `npm run lint` and `npm run build` exit 0 after every
+  commit, and `/agent` still answers `307 → /login` signed out. The follow-up
+  change was additionally verified read-only against **production** data rather
+  than mocks: for all 7 orgs the rules block renders, every active rule's
+  instruction appears, no `About the business:` heading or legacy `- Never:`
+  line survives, and no org's `grounded` flag moved.
+- **Still browser-unverified, and the `AgentRule` schema push to production is
+  still pending** — unchanged from the entry below, which has the detail.
+
 ## House rules — telling the AI how to behave (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED, PROD SCHEMA PUSH PENDING
 
 **The bug that started it.** The founder typed an instruction — push everyone to
