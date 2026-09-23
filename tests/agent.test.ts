@@ -38,11 +38,18 @@ describe("buildAgentSystemPrompt (scoped, compliant)", () => {
     doNots: "Don't quote delivery times",
   };
 
-  it("includes the business name, vertical scope, and the owner's info", () => {
+  it("includes the business name and vertical scope, and takes facts from the digest", () => {
     const p = buildAgentSystemPrompt(profile);
     expect(p).toContain("Spice Garden");
     expect(p).toContain("restaurant");
-    expect(p).toContain("Paneer Tikka ₹280");
+    // The retired Setup box is no longer a source of facts — the knowledge
+    // digest is. `migrateProfileToRules` moved its contents there.
+    expect(p).not.toContain("Paneer Tikka ₹280");
+    expect(
+      buildAgentSystemPrompt(profile, {
+        knowledgeDigest: "MENU\n- Paneer Tikka ₹280",
+      })
+    ).toContain("Paneer Tikka ₹280");
   });
 
   it("enforces the on-topic guardrail (Meta 2026 policy compliance)", () => {
@@ -57,10 +64,10 @@ describe("buildAgentSystemPrompt (scoped, compliant)", () => {
     expect(p).toContain(HANDOFF_SENTINEL);
   });
 
-  it("folds in the owner's custom do-nots", () => {
-    expect(buildAgentSystemPrompt(profile)).toContain(
-      "Don't quote delivery times"
-    );
+  it("no longer folds in the retired do-nots box (it is a house rule now)", () => {
+    const p = buildAgentSystemPrompt(profile);
+    expect(p).not.toContain("Don't quote delivery times");
+    expect(p).not.toContain("Also avoid");
   });
 
   it("introduces itself from the org's own vertical when no curated template exists (no restaurant fallback)", () => {
@@ -119,22 +126,21 @@ describe("buildAgentSystemPrompt (knowledge digest + time awareness)", () => {
     expect(bare).not.toContain("TODAY:");
   });
 
-  it("puts the knowledge digest above the legacy blob and demotes the blob header", () => {
+  it("renders the knowledge digest and nothing from the legacy blob", () => {
     const p = buildAgentSystemPrompt(profile, { knowledgeDigest: digest });
-    expect(p.indexOf("BUSINESS KNOWLEDGE")).toBeGreaterThan(-1);
-    expect(p.indexOf("BUSINESS KNOWLEDGE")).toBeLessThan(
-      p.indexOf("ADDITIONAL BUSINESS INFORMATION")
-    );
+    expect(p).toContain("BUSINESS KNOWLEDGE");
     expect(p).toContain("Chicken dishes available");
-    expect(p).toContain("Legacy blob info here.");
+    expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
+    expect(p).not.toContain("Legacy blob info here.");
   });
 
-  it("without a digest the original blob section is unchanged", () => {
+  it("without a digest the information section is empty, not the blob", () => {
     const p = buildAgentSystemPrompt(profile);
     expect(p).toContain(
-      "BUSINESS INFORMATION — your source of truth for facts (never invent anything not stated here):"
+      "BUSINESS INFORMATION — your source of truth for facts (never invent anything not stated here):\n(No details provided yet.)"
     );
     expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
+    expect(p).not.toContain("Legacy blob info here.");
   });
 
   it("tool guidance teaches ask_owner", () => {

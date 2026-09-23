@@ -42,8 +42,11 @@ const NEW_INFO_HEADING =
 
 /**
  * Captured from the builder at 85e0e49, BEFORE house rules existed. An org with
- * no rules must still get exactly this prompt — the only permitted difference
- * is the softened heading. Regenerate only with a deliberate prompt change.
+ * no rules must still get exactly this prompt apart from two deliberate
+ * changes: the softened heading, and the removal of the two retired Setup
+ * boxes (`ADDITIONAL BUSINESS INFORMATION:` + its blob, and `- Also avoid: …`),
+ * which the migration now carries as rules and facts. Each test below states
+ * the transformation it applies. Regenerate only with a deliberate change.
  */
 const WHATSAPP_OPTIONS: AgentPromptOptions = {
   knowledgeDigest: digest,
@@ -111,11 +114,13 @@ describe("house rules outrank the facts", () => {
     expect(lines[headingAt - rules.length - 1]).toBe(RULES_HEADING);
   });
 
-  it("puts the rules above the legacy blob when there is no digest", () => {
+  it("puts the rules above the business information when there is no digest", () => {
     const p = buildAgentSystemPrompt(profile, { rules });
     expect(p.indexOf(RULES_HEADING)).toBeGreaterThan(-1);
     expect(p.indexOf(RULES_HEADING)).toBeLessThan(p.indexOf(NEW_INFO_HEADING));
-    expect(p).toContain("Legacy blob info here.");
+    // The blob no longer fills that section; with no digest it is empty.
+    expect(p).not.toContain("Legacy blob info here.");
+    expect(p).toContain("(No details provided yet.)");
   });
 
   it("carries the owner's own instruction verbatim", () => {
@@ -177,12 +182,53 @@ describe("the heading that was defeating the rules", () => {
     expect(p).not.toContain(OLD_INFO_HEADING);
   });
 
-  it("keeps the legacy blob exactly where it was, under the digest", () => {
+  it("leaves the digest itself untouched", () => {
     const p = buildAgentSystemPrompt(profile, { ...WHATSAPP_OPTIONS, rules });
-    expect(p.indexOf(NEW_KNOWLEDGE_HEADING)).toBeLessThan(
-      p.indexOf("ADDITIONAL BUSINESS INFORMATION:")
+    expect(p).toContain(`${NEW_KNOWLEDGE_HEADING}\n${digest}`);
+  });
+});
+
+/**
+ * The retired `/agent/setup` boxes. `migrateProfileToRules` copies both into
+ * house rules and knowledge facts, so rendering them here as well sent every
+ * migrated org the same text twice — and left the stale original underneath an
+ * edited rule. These four assertions are the opposite of what this file used to
+ * assert ("keeps the legacy blob exactly where it was" / "keeps the owner's
+ * doNots line"); those two tests encoded the duplication.
+ */
+describe("the retired Setup boxes never reach the model", () => {
+  const everyShape: Array<[string, AgentPromptOptions]> = [
+    ["digest + rules", { ...WHATSAPP_OPTIONS, rules }],
+    ["digest, no rules", WHATSAPP_OPTIONS],
+    ["no digest + rules", { rules }],
+    ["no digest, no rules", {}],
+    ["voice", VOICE_OPTIONS],
+    ["voice + digest + tools", { ...VOICE_OPTIONS, knowledgeDigest: digest, withTools: true, rules }],
+    ["whatsapp + tools", { ...WHATSAPP_OPTIONS, withTools: true, rules }],
+  ];
+
+  for (const [label, options] of everyShape) {
+    it(`drops businessInfo and doNots (${label})`, () => {
+      const p = buildAgentSystemPrompt(profile, options);
+      expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
+      expect(p).not.toContain(profile.businessInfo);
+      expect(p).not.toContain("Also avoid");
+      expect(p).not.toContain(profile.doNots);
+    });
+  }
+
+  it("still renders the rules and the digest that replaced them", () => {
+    const p = buildAgentSystemPrompt(profile, { ...WHATSAPP_OPTIONS, rules });
+    expect(p).toContain(renderRulesBlock(rules));
+    expect(p).toContain(digest);
+    expect(p).toContain("- Consult ₹500");
+  });
+
+  it("keeps the RULES block intact where the doNots line used to sit", () => {
+    const p = buildAgentSystemPrompt(profile, { ...WHATSAPP_OPTIONS, rules });
+    expect(p).toContain(
+      '- Never promise a confirmed booking or order yourself — say the team will confirm.\n- If the customer is upset, wants something you cannot handle, or explicitly asks for a person, reply with exactly "[[HANDOFF]]"'
     );
-    expect(p).toContain("Legacy blob info here.");
   });
 });
 
@@ -213,9 +259,9 @@ describe("invariant #7 — rules are not an escape hatch", () => {
     expect(p).toContain("- Never invent menu items, prices, availability");
   });
 
-  it("keeps the owner's doNots line alongside the rules", () => {
+  it("drops the owner's doNots line — the migration carries it as a rule", () => {
     const p = buildAgentSystemPrompt(profile, withRules);
-    expect(p).toContain("- Also avoid: medical advice");
+    expect(p).not.toContain("- Also avoid: medical advice");
   });
 });
 
@@ -229,21 +275,22 @@ describe("an org with no rules is untouched", () => {
     ).not.toContain("HOUSE RULES");
   });
 
-  it("gets the pre-house-rules prompt apart from the softened heading (whatsapp)", () => {
+  it("gets the pre-house-rules prompt apart from the heading and the retired boxes (whatsapp)", () => {
     expect(GOLDEN_WHATSAPP_BEFORE).toContain(OLD_KNOWLEDGE_HEADING);
-    const expected = GOLDEN_WHATSAPP_BEFORE.replace(
-      OLD_KNOWLEDGE_HEADING,
-      NEW_KNOWLEDGE_HEADING
-    );
+    const expected = GOLDEN_WHATSAPP_BEFORE
+      .replace(OLD_KNOWLEDGE_HEADING, NEW_KNOWLEDGE_HEADING)
+      .replace("\nADDITIONAL BUSINESS INFORMATION:\nLegacy blob info here.", "")
+      .replace("\n- Also avoid: medical advice", "");
     expect(buildAgentSystemPrompt(profile, WHATSAPP_OPTIONS)).toBe(expected);
   });
 
-  it("gets the pre-house-rules prompt apart from the softened heading (voice)", () => {
+  it("gets the pre-house-rules prompt apart from the heading and the retired boxes (voice)", () => {
     expect(GOLDEN_VOICE_BEFORE).toContain(OLD_INFO_HEADING);
-    const expected = GOLDEN_VOICE_BEFORE.replace(
-      OLD_INFO_HEADING,
-      NEW_INFO_HEADING
-    );
+    const expected = GOLDEN_VOICE_BEFORE
+      .replace(OLD_INFO_HEADING, NEW_INFO_HEADING)
+      // With no digest and no blob, the section says so rather than vanishing.
+      .replace("\nLegacy blob info here.", "\n(No details provided yet.)")
+      .replace("\n- Also avoid: medical advice", "");
     expect(buildAgentSystemPrompt(profile, VOICE_OPTIONS)).toBe(expected);
   });
 

@@ -10,6 +10,12 @@ import { renderRulesBlock } from "@/modules/agent/rules";
 export interface AgentProfileInput {
   vertical: string;
   businessName: string;
+  /**
+   * The two retired `/agent/setup` boxes. Still on the profile row and still
+   * read elsewhere (the Training page's "structure my existing info"), but
+   * deliberately NOT rendered into this prompt — see the note in
+   * `buildAgentSystemPrompt`.
+   */
   businessInfo: string;
   tone: string;
   doNots: string;
@@ -183,7 +189,6 @@ export function buildAgentSystemPrompt(
   const identity = agentIdentity(profile.vertical);
   const voice = options.channel === "voice";
   const digest = options.knowledgeDigest?.trim() ?? "";
-  const blob = profile.businessInfo.trim();
   const hasTime = Boolean(options.now && options.timezone);
 
   const handoffRule = options.withTools
@@ -198,15 +203,21 @@ export function buildAgentSystemPrompt(
   // "your source of truth for facts", not "your only source of truth": the old
   // wording told the model to ignore anything outside the knowledge, which is
   // exactly what the house rules above it are.
+  //
+  // The two retired `/agent/setup` boxes used to be rendered here — the
+  // `businessInfo` blob as "ADDITIONAL BUSINESS INFORMATION:" and `doNots` as
+  // an "- Also avoid: …" line under RULES. Do not reinstate them.
+  // `migrateProfileToRules` copies both into house rules and knowledge facts,
+  // so rendering them again sends every migrated org the same content twice
+  // and leaves the stale original sitting underneath an edited rule.
   const knowledgeSections = digest
     ? [
         "BUSINESS KNOWLEDGE — your source of truth for facts (never invent anything not stated here):",
         digest,
-        ...(blob ? ["", "ADDITIONAL BUSINESS INFORMATION:", blob] : []),
       ]
     : [
         "BUSINESS INFORMATION — your source of truth for facts (never invent anything not stated here):",
-        blob || "(No details provided yet.)",
+        "(No details provided yet.)",
       ];
 
   return [
@@ -238,7 +249,6 @@ export function buildAgentSystemPrompt(
         ]
       : []),
     "- Never promise a confirmed booking or order yourself — say the team will confirm.",
-    profile.doNots.trim() ? `- Also avoid: ${profile.doNots.trim()}` : "",
     handoffRule,
     ...(options.withTools ? ["", voice ? voiceToolGuidance(options.canTransfer ?? false) : TOOL_GUIDANCE] : []),
     ...(options.withTools && options.customTools?.length

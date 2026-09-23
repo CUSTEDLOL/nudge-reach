@@ -26,9 +26,18 @@ import {
  *   instruction-shaped lines become rules, the rest become knowledge facts in
  *   the existing `draft` (awaiting-review) state.
  *
- * **Neither legacy column is cleared.** `businessInfo` and `doNots` stay in the
- * database, unread by the prompt, for one release — so a rollback loses
- * nothing and a bad classification can be redone by hand from the original.
+ * **Neither legacy column is cleared, and both are now dead to the agent.**
+ * `buildAgentSystemPrompt` no longer renders `businessInfo` or `doNots` — the
+ * reply prompt carries only the rules and facts this migration writes, so a
+ * migrated org's text reaches the model exactly once. (Two other builders,
+ * `ai/suggest-reply` and `followup/draft`, still read the columns for their own
+ * prompts; they are not the agent's reply path.)
+ *
+ * They stay in the database anyway, indefinitely, because they are the owner's
+ * untouched original. The classifier below is a regex and will sometimes file
+ * an instruction as a fact or the reverse; this project has no migration
+ * rollback, so re-reading the original and redoing that line by hand is the
+ * only repair there is. Do not clear these columns, and do not render them.
  *
  * The distiller is deliberately NOT used. These lines are already one sentence
  * long, and a model call per line for every org at migration time would be a

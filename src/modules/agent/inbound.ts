@@ -182,9 +182,11 @@ export async function handleInboundMessage(
     return { conversationId: conversation.id, skipped: "disabled" };
 
   // Structured knowledge + org-local time make the prompt condition-aware
-  // ("weekends only" resolves against TODAY). The digest is the primary
-  // source of truth; the legacy businessInfo blob rides along until migrated.
-  // The house rules ride above both — how the owner wants the agent to behave.
+  // ("weekends only" resolves against TODAY). The digest is the source of
+  // truth for facts — the legacy businessInfo blob no longer reaches the
+  // prompt at all, `migrateProfileToRules` having moved it into these rules
+  // and facts. The house rules ride above the digest — how the owner wants
+  // the agent to behave.
   const [recent, org, knowledgeEntries, rules] = await Promise.all([
     // NEWEST messages, then restored to chronological order — a long thread
     // must keep the customer's latest turns, not its opening ones. This also
