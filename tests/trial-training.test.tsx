@@ -37,7 +37,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/app/(app)/agent/training-actions", () => actions);
 vi.mock("@/app/(app)/agent/rules-actions", () => ruleActions);
-vi.mock("@/app/(app)/agent/setup-actions", () => profileActions);
+vi.mock("@/app/(app)/agent/profile-actions", () => profileActions);
 
 import {
   TrialTraining,

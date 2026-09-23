@@ -38,7 +38,7 @@ vi.mock("@/modules/orgs/auth", () => {
 import {
   saveBusinessBasicsAction,
   setAutoReplyAction,
-} from "@/app/(app)/agent/setup-actions";
+} from "@/app/(app)/agent/profile-actions";
 
 const ctx = (role: "OWNER" | "ADMIN" | "AGENT") => ({
   role,

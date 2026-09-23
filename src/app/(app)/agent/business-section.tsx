@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { VERTICALS, isVertical } from "@/modules/dashboard/verticals";
-import { saveBusinessBasicsAction } from "./setup-actions";
+import { saveBusinessBasicsAction } from "./profile-actions";
 
 /**
  * Who the AI says it is: name, what the business does, and the voice it uses.

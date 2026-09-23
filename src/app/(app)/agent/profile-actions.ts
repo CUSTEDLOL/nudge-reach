@@ -1,5 +1,16 @@
 "use server";
 
+/**
+ * The `AgentProfile` writers the Training page uses: the "Your business"
+ * section's partial save, and the AI's on/off switch.
+ *
+ * Named `setup-actions.ts` until the rename, after the `/agent/setup` page
+ * these actions were written for. That page is retired — its two free-text
+ * boxes are `AgentRule` rows and knowledge facts now — and both actions moved
+ * to Training with the rest of the AI's configuration, so the old name pointed
+ * at a page no owner can reach.
+ */
+
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";

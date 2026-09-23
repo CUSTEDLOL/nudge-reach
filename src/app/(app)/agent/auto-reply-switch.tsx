@@ -4,7 +4,7 @@ import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
-import { setAutoReplyAction } from "./setup-actions";
+import { setAutoReplyAction } from "./profile-actions";
 
 /**
  * Stop the AI answering, from the page that configures it — a label and a

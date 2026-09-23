@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { PowerOff } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { setAutoReplyAction } from "@/app/(app)/agent/setup-actions";
+import { setAutoReplyAction } from "@/app/(app)/agent/profile-actions";
 
 /**
  * One line, one button. Owners hit "Try it in chat" and got silence because
