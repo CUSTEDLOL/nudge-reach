@@ -356,7 +356,14 @@ model AgentProfile {
   enabled      Boolean  @default(false)
   vertical     String   @default("restaurant")
   businessName String
-  // Owner-provided knowledge: hours, address, menu highlights, booking policy.
+  // LEGACY, and not the agent's knowledge. Both columns were the owner's
+  // knowledge and boundaries, and every prompt builder read them. None does
+  // now (fe85add, ce1629e, 360047c): the agent is grounded in KnowledgeEntry
+  // facts and AgentRule rows, which migrateProfileToRules copied these into.
+  // They are kept as the untouched original — the concierge form reads doNots
+  // back to populate itself, and "Structure my existing info" re-distils
+  // businessInfo — so a non-empty column is NOT evidence the agent knows
+  // anything. Drop them once nothing needs the original.
   businessInfo String   @default("")
   tone         String   @default("Warm, friendly, and concise")
   doNots       String   @default("")

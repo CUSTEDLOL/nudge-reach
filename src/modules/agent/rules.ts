@@ -136,10 +136,15 @@ export function opensWithItsScope(rule: { scope: RuleScope; text: string }): boo
 }
 
 /**
- * The plain-English line the rule list shows the owner — and, through
- * `distillRule`'s fallback, the instruction the PROMPT carries whenever the
- * distiller does not run: the whole keyless simulation path (invariant #4),
- * every provider failure, every guardrail rejection.
+ * The instruction the PROMPT carries whenever the distiller does not run: the
+ * whole keyless simulation path (invariant #4), every provider failure, every
+ * guardrail rejection. `distillRule`'s fallback is its ONE caller.
+ *
+ * It was also the line the rule list showed the owner. It is not any more —
+ * the Training page renders the owner's own text with the scope as a bold
+ * lead-in beside it, and asks `opensWithItsScope` directly whether to draw
+ * that lead-in. Read this as a prompt concern; changing its wording changes
+ * what the model is told, not what the page says.
  *
  * The scope prefix is there because the bare text loses it — "quote prices"
  * under a heading that says "follow these in every reply" orders the opposite —

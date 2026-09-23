@@ -167,7 +167,7 @@ Mirror `src/modules/knowledge/distill.ts` exactly in shape (read it first).
 
 **Files:** Create `src/app/(app)/agent/rules-actions.ts`; Test `tests/agent-rules-actions.test.ts`
 
-Follow the conventions in `src/app/(app)/agent/setup-actions.ts` (read it): `requireOrgContext()` **outside** the try (so Next's redirect isn't swallowed), `requireRole(ctx, "ADMIN")` inside, `recordAudit`, `revalidatePath("/agent")`.
+Follow the conventions in `src/app/(app)/agent/profile-actions.ts` (read it — it was `setup-actions.ts` when this was written; `11bf7d0` renamed it): `requireOrgContext()` **outside** the try (so Next's redirect isn't swallowed), `requireRole(ctx, "ADMIN")` inside, `recordAudit`, `revalidatePath("/agent")`.
 
 - `createRuleAction(text, scope, condition?)` — validates, enforces the active cap (trial 5 / full 20 — derive trial-ness from `getTrialWorkspace`), distils, saves `status: "active"`, `source: "owner"`. Returns `{ ok, message }`.
 - `updateRuleAction(id, text, scope, condition?)` — org-scoped `findFirst`; re-distils.
@@ -295,21 +295,27 @@ fixing now, and is written down so the next person does not rediscover it.
    "always" or "never" reads as an instruction) and a deliberate bias towards
    "instruction". Nobody has run it over a corpus of real `businessInfo` blobs;
    the only honest claim is the direction of the bias, not a number.
-7. **The legacy columns still reach the prompt.** `migrateProfileToRules`
-   deliberately does not clear `businessInfo` or `doNots`, and `prompt.ts` still
-   renders both (as `ADDITIONAL BUSINESS INFORMATION` and `- Also avoid: …`). So
-   a migrated org's text is in the prompt twice, and — now that Setup is retired
-   — there is no UI left to edit or clear it. Deliberate for one release: an org
-   whose migration failed (an un-pushed `AgentRule` table, say) still has its
-   business information in the prompt. The follow-up is to stop reading both
-   columns once every org is migrated, and only then drop them.
+7. ~~**The legacy columns still reach the prompt.**~~ **DONE** — `fe85add`
+   (the reply prompt), `ce1629e` (`suggest-reply`) and `360047c` (follow-up
+   drafts). No prompt builder renders `businessInfo` or `doNots` any more; each
+   carries a "do not reinstate them" comment where the block used to be, and
+   `migrateProfileToRules` copies both into house rules and knowledge facts.
+   The columns themselves are still written — deliberately, as the operator's
+   untouched original (the concierge form reads `doNots` back to populate
+   itself, and "Structure my existing info" re-distils `businessInfo`) — so the
+   remaining follow-up is only to drop the columns once nothing needs the
+   original. **Nothing in this item is outstanding for the prompt.** The
+   original claim below is kept because it is what the release was reviewed
+   against, not because it is still true:
+   > `prompt.ts` still renders both (as `ADDITIONAL BUSINESS INFORMATION` and
+   > `- Also avoid: …`), so a migrated org's text is in the prompt twice.
 
 **From Task 9 (retiring Setup)**
 
-8. **`setup-actions.ts` outlived the page it was named for.** It now holds the
-   Training page's profile writer and the auto-reply switch. Renaming it touches
-   five files for no behaviour change, so it was left; the header comment says
-   what it is.
+8. ~~**`setup-actions.ts` outlived the page it was named for.**~~ **DONE** —
+   `11bf7d0` renamed it `src/app/(app)/agent/profile-actions.ts`. It holds the
+   Training page's profile writer and the auto-reply switch, and the filename
+   now says so.
 9. **The new auto-reply switch is admin-only and non-trial.** An AGENT sees
    nothing saying the AI is on (the status quo — the old switch was on a page
    they could not use either), and the trial does not get one, since its AI is

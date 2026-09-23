@@ -18,9 +18,18 @@ import type { KnowledgeCategory } from "@/modules/knowledge/digest";
 
 /**
  * Concierge onboarding (5.3): the done-for-you moat. An operator sets a client
- * up in one pass — knowledge base → agent persona, a per-vertical template pack,
- * and a go-live gate. Everything composes existing pieces (AgentProfile, the
- * library template pipeline, the follow-up pack).
+ * up in one pass — knowledge base → agent grounding, a per-vertical template
+ * pack, and a go-live gate. Everything composes existing pieces (the library
+ * template pipeline, the follow-up pack).
+ *
+ * What "sets the agent up" means changed in `ecb9440`. It used to be: write
+ * the KB into `AgentProfile.businessInfo` and the boundaries into `doNots`,
+ * and the prompt builder read those columns. No builder reads them now
+ * (`fe85add`, `ce1629e`, `360047c`), so writing them alone would have left the
+ * client's agent knowing nothing. `installClientGrounding` is the real path —
+ * `KnowledgeEntry` facts and `never` `AgentRule` rows. The profile columns are
+ * still written, as the operator's untouched original for the form to read
+ * back; they are not what grounds the agent.
  */
 
 export interface KnowledgeBaseInput {

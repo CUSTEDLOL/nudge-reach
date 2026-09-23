@@ -234,9 +234,9 @@ server guard bounces. Both properties are now asserted in
   `origin/ws3-vertical-packs` (+2, 2026-09-04). Confirm with the founder, then
   delete.
 - **`docs/internal-pricing-economics`** is +5 unmerged, docs-only. Merge or drop.
-- **`setup-actions.ts` outlived the page it was named for** (Setup was retired
-  when House Rules landed). It now holds the auto-reply switch — rename/move it
-  so the filename stops lying. Listed in the House Rules deferred section.
+- ~~**`setup-actions.ts` outlived the page it was named for**~~ — **DONE**
+  (`11bf7d0`): it is `src/app/(app)/agent/profile-actions.ts` now, holding the
+  Training page's profile writer and the auto-reply switch.
 
 ---
 

@@ -1,5 +1,71 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Final cleanup of `feat/house-rules` (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED
+
+One real product gap, a run of UI defects, and documentation that had started
+stating the opposite of the code. Five commits: `9b1eb94`, `8d66277`,
+`29ce623`, `586bb86`, and this one.
+
+- **Archived rules were unreachable, and the migration kept making more.**
+  `4a69dae` and `2643237` stopped dropping over-cap migration lines and began
+  archiving them — an improvement only if something surfaces them, and nothing
+  did. One production org holds **19 archived rules** nobody could see or bring
+  back. `restoreRuleAction` is the way back: the same per-org advisory lock and
+  in-transaction re-count `createRuleAction` takes, because restoring is the
+  one other write that moves the active count UP, refusing at the cap with the
+  identical sentence. The page reads the archived rows **bounded**
+  (`MAX_ARCHIVED_RULES_SHOWN + 1`, so "N+" is measured rather than guessed) and
+  the section puts them behind a collapsed `<details>` — "N archived" — absent
+  entirely at zero. A recovery affordance, not a rules manager.
+- **Text carrying a URL is no longer clipped.** Both lists sit in a `Card` with
+  `overflow-hidden`, so a rule like "…join the waitlist at
+  https://getgutfeeling.in/" — one unbreakable word, and the exact shape the
+  migration and `introducesNewSpecifics` are built around — lost its tail with
+  no scrollbar to recover it. The two-column redesign made that track narrower.
+- **Headings nest properly inside "What it knows".** "Drafts to review" was an
+  h2 inside an h2's section; `EmptyState` rendered every title as an h2, so "No
+  knowledge yet" announced as a peer of "House rules". It takes an optional
+  level now, **defaulting to today's h2** — 19 of its 21 call sites stand it
+  under their own h1, and changing the default would have reshaped pages
+  outside this branch. `trial-approved-heading` stopped being a dead id and
+  became what its neighbours are: a `<section>` named by its own heading.
+- **`reorderRulesAction` is gone.** A role-gated server action in a
+  `"use server"` module that nothing in `src/` imported — no drag affordance
+  was ever built — is an attack surface with no benefit. `order` is insertion
+  order, and `rules-store` says so instead of promising a drag handle.
+- **One action stopped having three names.** "Test in Inbox" on the trial
+  header, "Try your Front Desk" in the command palette, "Try it in chat"
+  everywhere else. Sentence case, one name.
+- **Two prefix regexes that had to agree, and did not.** The migration's
+  `LEADING_NEGATION` stepped over "please/kindly/also/then/and" and accepted an
+  apostrophe-less "dont"; the page's `OPENS_WITH_ITS_SCOPE` did neither. So a
+  migrated "Please never quote a price" was filed as a `never` and then
+  rendered "Never: Please never quote a price". One definition in `rules.ts`
+  now, with a test across both modules holding them together.
+- **Plus** `aria-pressed` and focus rings on the three hand-drawn buttons in
+  `library.tsx`, a fact-limit live region that is mounted before it has
+  something to say (one that appears is never announced), and a loading
+  skeleton that is the two-column shape the page resolves into rather than the
+  pre-House-Rules single column.
+- **Documentation that would have misled the next reader.** Deferred item 7 of
+  the House Rules plan still said "`prompt.ts` still renders both" legacy
+  columns — false since `fe85add`, and the most dangerous line in the file.
+  Item 8 and the remaining-work Tidy-up still listed the `setup-actions`
+  rename as outstanding (`11bf7d0` did it). Marked **done with their SHAs**
+  rather than deleted — they are dated records. Also corrected: the concierge
+  module's contract (`ecb9440` moved grounding off `AgentProfile`),
+  `describeRule`'s docstring (the rule list stopped calling it; it is the
+  distiller's fallback and nothing else), and the `businessInfo` schema
+  comment, which described a legacy, unread column as the agent's knowledge.
+  `AgentRule.source`'s comment needed no change — `ecb9440` made `concierge`
+  real, and all four listed values are written.
+- **2,323 tests pass in `npm test`** (+22 skipped, 264 files), 2,342 with a
+  throwaway `postgres:16-alpine`. `npx tsc --noEmit`, `npm run lint`,
+  `npm test` and `npm run build` exit 0 after every commit, and `/agent` still
+  answers `307` signed out. The restore cap is proved on real Postgres, and
+  proved to be a real proof: with the advisory lock removed, **6 of 8**
+  concurrent restores commit through a single free slot.
+
 ## Adversarial review of the cleanup pass (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED
 
 Six correctness findings against the pass below, each fixed and committed on its
