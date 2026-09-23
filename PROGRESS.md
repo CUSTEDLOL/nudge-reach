@@ -40,6 +40,7 @@ reading by the prompt's own wording. No amount of retyping it would have worked.
   row reading as a sentence (**Never** quote a price over chat); the owner
   question queue is a brand-tinted band rendered only when non-empty; the page
   is `max-w-3xl` for trial and paid alike. Seven explanatory sentences became two.
+- **Two columns (2026-09-23, founder: "too much white space… I don't see the PDF upload button").** The page fills the shell; from `lg` rules and facts take the left and a 340px rail on the right holds *Your business* (three stacked lines) and the import box — the rail is first in the DOM so a phone shows the PDF upload above the facts, not below 92 of them; Auto-reply is a label and switch in the header beside *Try it in chat*; the Training / Voice / Actions strip is `lg:hidden` (the sidebar lists them there, the phone bottom nav does not); facts are divided rows per category with the add form behind *+ Add fact*.
 
 **Founder decisions recorded along the way (2026-09-22)**
 
