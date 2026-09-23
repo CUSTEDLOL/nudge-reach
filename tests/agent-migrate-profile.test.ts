@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+/**
+ * `$executeRaw` is not decoration: both advisory locks on this path go through
+ * it — the migration's own, and the one inside `storeKnowledgeFacts`' capped
+ * path. It was missing, and the mock was handed back as `tx`, so any case that
+ * reached the capped fact write would have called `undefined` as a function.
+ * Nothing did, because no test combined a restricted trial with fact-shaped
+ * lines; "the trial cap" below now does.
+ */
 const { prisma, isRestrictedAcquisitionTrial } = vi.hoisted(() => ({
   prisma: {
     $transaction: vi.fn(),
+    $executeRaw: vi.fn(),
     agentProfile: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     agentRule: { findMany: vi.fn(), findFirst: vi.fn(), createMany: vi.fn() },
-    knowledgeEntry: { findMany: vi.fn(), createMany: vi.fn() },
+    knowledgeEntry: { count: vi.fn(), findMany: vi.fn(), createMany: vi.fn() },
   },
   isRestrictedAcquisitionTrial: vi.fn(),
 }));
@@ -42,21 +51,79 @@ function profile(fields: { businessInfo?: string; doNots?: string }) {
   });
 }
 
+/** Every mock the two suites below share, so neither drifts from the other. */
+function resetPrismaMocks() {
+  vi.clearAllMocks();
+  isRestrictedAcquisitionTrial.mockResolvedValue(false);
+  prisma.$executeRaw.mockResolvedValue(1);
+  prisma.agentRule.findFirst.mockResolvedValue(null);
+  prisma.agentRule.findMany.mockResolvedValue([]);
+  prisma.agentRule.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
+    count: data.length,
+  }));
+  prisma.knowledgeEntry.count.mockResolvedValue(0);
+  prisma.knowledgeEntry.findMany.mockResolvedValue([]);
+  prisma.knowledgeEntry.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
+    count: data.length,
+  }));
+  prisma.$transaction.mockImplementation(async (work: (c: unknown) => unknown) => work(prisma));
+}
+
 describe("legacy profile migration", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    isRestrictedAcquisitionTrial.mockResolvedValue(false);
-    prisma.agentRule.findFirst.mockResolvedValue(null);
-    prisma.agentRule.findMany.mockResolvedValue([]);
-    prisma.agentRule.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
-      count: data.length,
-    }));
-    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
-    prisma.knowledgeEntry.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
-      count: data.length,
-    }));
-    prisma.$transaction.mockImplementation(async (work: (c: unknown) => unknown) => work(prisma));
+    resetPrismaMocks();
     profile({});
+  });
+
+  /**
+   * The write is serialised per org on the SAME advisory-lock key
+   * `createRuleAction` takes, and the `migrated_` guard is re-read INSIDE it.
+   * Without that, two first loads of /agent for one org both read an empty
+   * table, both plan the same rows and both write them — every rule
+   * duplicated, `order` colliding from 0. The real proof is in
+   * `tests/agent-migrate-profile-postgres.test.ts`; this pins the shape.
+   */
+  describe("the per-org lock", () => {
+    it("takes the rule lock and re-reads the guard inside the transaction", async () => {
+      profile({ doNots: "Never discuss competitors." });
+
+      await migrateProfileToRules("org_1");
+
+      const [sqlParts, key] = prisma.$executeRaw.mock.calls[0];
+      expect((sqlParts as TemplateStringsArray).join("?")).toContain(
+        "pg_advisory_xact_lock"
+      );
+      expect(key).toBe("agentrule:org_1");
+      // Once outside as the fast path, once inside the lock as the guard.
+      expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(2);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it("writes nothing when the guard trips inside the lock", async () => {
+      // The fast path saw an un-migrated org; by the time the lock was granted
+      // the other run had committed. The loser must write nothing at all.
+      prisma.agentRule.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: "rule_1" });
+      profile({ doNots: "Never discuss competitors.", businessInfo: "We are open Mon-Sat." });
+
+      await expect(migrateProfileToRules("org_1")).resolves.toEqual({
+        rules: 0,
+        archived: 0,
+        facts: 0,
+      });
+      expect(prisma.agentRule.createMany).not.toHaveBeenCalled();
+      expect(prisma.knowledgeEntry.createMany).not.toHaveBeenCalled();
+    });
+
+    it("gives the transaction room for the lock wait, not Prisma's 5s default", async () => {
+      profile({ doNots: "Never discuss competitors." });
+
+      await migrateProfileToRules("org_1");
+
+      const [, options] = prisma.$transaction.mock.calls[0];
+      expect(options).toEqual({ maxWait: 5_000, timeout: 10_000 });
+    });
   });
 
   describe("doNots", () => {
@@ -396,18 +463,7 @@ describe("legacy profile migration", () => {
  */
 describe("migrateProfileOnce", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    isRestrictedAcquisitionTrial.mockResolvedValue(false);
-    prisma.agentRule.findFirst.mockResolvedValue(null);
-    prisma.agentRule.findMany.mockResolvedValue([]);
-    prisma.agentRule.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
-      count: data.length,
-    }));
-    prisma.knowledgeEntry.findMany.mockResolvedValue([]);
-    prisma.knowledgeEntry.createMany.mockImplementation(async ({ data }: { data: Row[] }) => ({
-      count: data.length,
-    }));
-    prisma.$transaction.mockImplementation(async (work: (c: unknown) => unknown) => work(prisma));
+    resetPrismaMocks();
     profile({ doNots: "Never discuss competitors." });
   });
 
@@ -434,8 +490,11 @@ describe("migrateProfileOnce", () => {
     release();
     await Promise.all([first, second]);
 
-    // One migration, and BOTH callers saw it finish before returning.
-    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(1);
+    // One migration, and BOTH callers saw it finish before returning. Two
+    // guard reads, not two migrations: the fast path outside the lock and the
+    // authoritative re-read inside it.
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(2);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(prisma.agentRule.createMany).toHaveBeenCalledTimes(1);
   });
 
@@ -443,7 +502,9 @@ describe("migrateProfileOnce", () => {
     await migrateProfileOnce("org_memo");
     await migrateProfileOnce("org_memo");
 
-    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(1);
+    // One run's worth of reads — the fast path and the in-lock guard — not two.
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(2);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
   it("swallows a failure and retries on the next load", async () => {
@@ -454,8 +515,9 @@ describe("migrateProfileOnce", () => {
     await expect(migrateProfileOnce("org_failing")).resolves.toBeUndefined();
     expect(error).toHaveBeenCalled();
 
+    // The failed fast-path read, then the retry's own two (fast path + guard).
     await migrateProfileOnce("org_failing");
-    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(2);
+    expect(prisma.agentRule.findFirst).toHaveBeenCalledTimes(3);
     error.mockRestore();
   });
 });

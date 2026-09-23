@@ -76,40 +76,120 @@ const MAX_FACT_LENGTH = 300;
 /** A pathological blob must not turn into hundreds of writes. */
 const MAX_LINES = 60;
 
+/**
+ * The advisory-lock wait below counts against the transaction's own budget, so
+ * Prisma's defaults (2 s to get a connection, 5 s for the whole transaction)
+ * are too tight for a queue of writers on one org. The same pair
+ * `createRuleAction` uses — it queues on the same key.
+ */
+const TRANSACTION_OPTIONS = { maxWait: 5_000, timeout: 10_000 } as const;
+
 export async function migrateProfileToRules(orgId: string): Promise<ProfileMigrationResult> {
   // "Has this org been migrated?" is a yes/no, and this runs on every cold
   // /agent load. It used to be answered by reading every rule the org ever had,
   // archived included, with no `take` — the whole row set fetched to look at
   // one boolean, for the ~100% of loads whose answer is yes. One indexed row
   // is enough; the full set is loaded below, only on the path that writes.
+  //
+  // This is a FAST PATH, not the guard: it answers the common case without
+  // opening a transaction or taking a lock. The guard is the identical read
+  // inside the lock below, which is the only one a concurrent run can trust.
   const migrated = await prisma.agentRule.findFirst({
     where: { orgId, source: { startsWith: "migrated_" } },
     select: { id: true },
   });
   if (migrated) return NOTHING;
 
-  // The un-migrated path, once per org in its lifetime. The rules answer the
-  // other two questions — how many active rules does it already have, and where
-  // does the `order` counter start — and neither read needs the other.
-  const [existing, profile] = await Promise.all([
-    prisma.agentRule.findMany({
-      where: { orgId },
-      select: { text: true, status: true, order: true },
-    }),
-    prisma.agentProfile.findUnique({
-      where: { orgId },
-      select: { businessInfo: true, doNots: true },
-    }),
-  ]);
+  // The owner's untouched legacy boxes and the org's plan. Read outside the
+  // lock deliberately: neither can change under us in a way that matters (this
+  // never clears the columns), and both would otherwise sit in the critical
+  // section that every other writer for this org is queued behind.
+  const profile = await prisma.agentProfile.findUnique({
+    where: { orgId },
+    select: { businessInfo: true, doNots: true },
+  });
   if (!profile) return NOTHING;
 
   const onTrial = await isRestrictedAcquisitionTrial(orgId);
   const limit = onTrial ? MAX_ACTIVE_RULES.trial : MAX_ACTIVE_RULES.full;
+
+  /**
+   * Everything that decides what to write, and the write itself, under one
+   * per-org advisory lock — the same key and the same shape `createRuleAction`
+   * uses, so a migration and an owner's Add button cannot interleave either.
+   *
+   * This used to be a bare `createMany` after an unprotected read. The
+   * `migrated_` guard, the cap arithmetic and the dedupe set were all built
+   * from that one read, and nothing serialised it: two first loads of /agent
+   * for one org — two tabs, or two lambda instances, since `attempted` below is
+   * per-instance — both saw `existing = []`, both planned the identical rows,
+   * and both wrote them. Every rule duplicated, `order` colliding from 0, and
+   * up to twice the cap live. There is no unique constraint to catch it and
+   * `createMany` is not `skipDuplicates`.
+   *
+   * $executeRaw, not $queryRaw: pg_advisory_xact_lock() returns void and Prisma
+   * cannot deserialize a void column. The key is a bound parameter.
+   */
+  const plan = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`agentrule:${orgId}`}, 0))`;
+
+    // The real guard. The loser of a race reads the winner's committed rows
+    // here and writes nothing at all.
+    const already = await tx.agentRule.findFirst({
+      where: { orgId, source: { startsWith: "migrated_" } },
+      select: { id: true },
+    });
+    if (already) return null;
+
+    // How many active rules the org already has, and where `order` continues.
+    const existing = await tx.agentRule.findMany({
+      where: { orgId },
+      select: { text: true, status: true, order: true },
+    });
+    const planned = planMigration(orgId, profile, existing, limit);
+    if (planned.rules.length) await tx.agentRule.createMany({ data: planned.rules });
+    return planned;
+  }, TRANSACTION_OPTIONS);
+  if (!plan) return NOTHING;
+
+  const stored = plan.facts.length
+    ? await storeKnowledgeFacts(orgId, plan.facts, {
+        source: "manual",
+        status: "draft",
+        // The trial's 50-fact ceiling is the same one its imports honour.
+        ...(onTrial ? { activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts } : {}),
+      })
+    : { created: 0 };
+
+  const live = plan.rules.filter((rule) => rule.status === "active").length;
+  return { rules: live, archived: plan.rules.length - live, facts: stored.created };
+}
+
+interface MigrationPlan {
+  rules: RuleRow[];
+  facts: DistilledFact[];
+}
+
+/**
+ * Pure: the owner's two legacy boxes, plus the rules the org already has, plus
+ * its active-rule limit → exactly the rows to write. No database access, so the
+ * caller can run it inside the lock it holds and keep the critical section to
+ * two reads and a write.
+ */
+function planMigration(
+  orgId: string,
+  profile: { businessInfo: string; doNots: string },
+  existing: { text: string; status: string; order: number }[],
+  limit: number
+): MigrationPlan {
   const active = existing.filter((rule) => rule.status === "active").length;
   let slots = Math.max(0, limit - active);
   let order = existing.reduce((max, rule) => Math.max(max, rule.order), -1) + 1;
-  // Per-line dedupe on top of the `migrated_` guard, so a half-finished run
-  // (or two tabs racing the lazy trigger) re-runs without duplicating rules.
+  // Per-line dedupe under the `migrated_` guard. It is a belt to the guard's
+  // braces — a line the org already carries under another `source` is not
+  // written twice — and NOT the thing that makes a concurrent run safe: two
+  // runs that both read an empty table both see an empty `seen` set. That is
+  // the advisory lock's job, above.
   const seen = new Set(existing.map((rule) => dedupeKey(rule.text)));
 
   const rules: RuleRow[] = [];
@@ -179,18 +259,7 @@ export async function migrateProfileToRules(orgId: string): Promise<ProfileMigra
     }
   }
 
-  if (rules.length) await prisma.agentRule.createMany({ data: rules });
-  const stored = facts.length
-    ? await storeKnowledgeFacts(orgId, facts, {
-        source: "manual",
-        status: "draft",
-        // The trial's 50-fact ceiling is the same one its imports honour.
-        ...(onTrial ? { activeDraftCap: TRIAL_KNOWLEDGE_LIMITS.facts } : {}),
-      })
-    : { created: 0 };
-
-  const live = rules.filter((rule) => rule.status === "active").length;
-  return { rules: live, archived: rules.length - live, facts: stored.created };
+  return { rules, facts };
 }
 
 /**
