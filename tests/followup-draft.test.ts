@@ -315,16 +315,29 @@ describe("draft with a key (model path)", () => {
     );
   });
 
-  it("an org with rules but no facts is not told it knows nothing", async () => {
-    // `grounded` used to be `businessInfo || knowledge`. With the box unread,
-    // an org whose every migrated line became a rule has no facts at all — it
-    // still knows something, and must not be handed the generic-message line.
+  it("an org with rules but no facts gets BOTH the rules and the warning", async () => {
+    // This test used to assert the opposite, and encoded a regression: for a
+    // while `grounded` read `knowledge || rules.length`, so an org whose whole
+    // legacy box was instruction-shaped — every line a rule, not one fact —
+    // was told nothing about how little it knows. That is the least grounded
+    // org there is. Rules are behaviour; they ground no claim about a price or
+    // an opening hour, so the two blocks are independent.
     prisma.agentProfile.findUnique.mockResolvedValue({ ...PROFILE, businessInfo: "" });
     prisma.knowledgeEntry.findMany.mockResolvedValue([]);
     generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
     await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
     const { system } = generate.mock.calls[0][0];
     expect(system).toContain("- Always offer the evening slot first");
+    expect(system).toContain("know nothing");
+  });
+
+  it("an org with facts but no rules is grounded, and gets no rules block", async () => {
+    prisma.agentRule.findMany.mockResolvedValue([]);
+    generate.mockResolvedValueOnce(JSON.stringify({ followUp: VALID_SINGLE }));
+    await draftFollowUp({ orgId: "o1", request: "chase quiet leads" });
+    const { system } = generate.mock.calls[0][0];
+    expect(system).toContain("Consults are ₹500");
+    expect(system).not.toContain("HOUSE RULES");
     expect(system).not.toContain("know nothing");
   });
 

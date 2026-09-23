@@ -72,12 +72,18 @@ async function loadBusinessContext(orgId: string): Promise<BusinessContext> {
 }
 
 function systemPrompt(b: BusinessContext): string {
-  // What the owner has told us, by either route the migration writes to. This
-  // used to read `b.businessInfo || b.knowledge`: with the legacy box no longer
-  // rendered, an org whose whole box was instruction-shaped — every line filed
-  // as a rule, none as a fact — would otherwise be told it knows nothing about
-  // a business it has rules for.
-  const grounded = Boolean(b.knowledge || b.rules.length);
+  // FACTS only — never the rules. "Grounded" here means one thing: does the
+  // model have anything true to say about this business? A rule is behaviour
+  // ("always offer the evening slot first"), and no amount of behaviour tells
+  // it a price, an opening hour or the name of a service.
+  //
+  // This briefly read `b.knowledge || b.rules.length`, which silenced the
+  // anti-invention warning for exactly the org that needs it most: the one
+  // whose entire legacy box was instruction-shaped, so the migration filed
+  // every line as a rule and left it with zero facts. It has house rules and
+  // knows nothing — both lines belong in its prompt. The two are orthogonal:
+  // the block below renders on rules, this warning on facts.
+  const grounded = Boolean(b.knowledge);
   const houseRules = renderRulesBlock(b.rules);
   return [
     `You design WhatsApp follow-ups for ${b.businessName}, a ${b.vertical} business. A follow-up is a message (or up to ${MAX_MESSAGES}) sent automatically after a situation, to bring a customer back.`,
