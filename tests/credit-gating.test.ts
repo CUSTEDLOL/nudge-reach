@@ -27,6 +27,7 @@ const { prisma, envState, chat, runAgent, generate, sendMessage, ensureAgentProf
       conversation: { upsert: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
       conversationMessage: { create: vi.fn(), findMany: vi.fn() },
       knowledgeEntry: { findMany: vi.fn() },
+      agentRule: { findMany: vi.fn() },
       agentProfile: { findUnique: vi.fn() },
       note: { create: vi.fn() },
     },
@@ -123,13 +124,14 @@ beforeEach(() => {
   prisma.creditGrant.create.mockResolvedValue({});
   prisma.knowledgeEntry.findMany.mockResolvedValue([]);
   prisma.agentProfile.findUnique.mockResolvedValue(null);
+  prisma.agentRule.findMany.mockResolvedValue([]);
   prisma.note.create.mockResolvedValue({});
 });
 
 describe("agent reply", () => {
   it("generateAgentActionReply returns the handoff line with pausedForCredits on exhaustion (no throw)", async () => {
     runAgent.mockRejectedValue(exhausted());
-    const r = await generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx);
+    const r = await generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx, { rules: [] });
     expect(r).toEqual({
       text: expect.stringContaining("One of our team will get back to you"),
       handoff: true,
@@ -143,7 +145,7 @@ describe("agent reply", () => {
   // message is stored first and Meta's redelivery is then skipped as a duplicate.
   it("any other error hands off too, so the customer still hears back", async () => {
     runAgent.mockRejectedValue(new Error("provider down"));
-    const r = await generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx);
+    const r = await generateAgentActionReply(profile, [{ role: "user", text: "hi" }], toolCtx, { rules: [] });
     expect(r).toEqual({
       text: expect.stringContaining("One of our team will get back to you"),
       handoff: true,

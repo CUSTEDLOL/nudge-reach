@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { getPlan } from "@/modules/billing/plans";
 import { ensureAgentProfile } from "@/modules/agent/profile";
+import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
+import { activeRules } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { voiceDriverFor } from "@/modules/voice";
 import { buildCallInit } from "@/modules/voice/initiation";
@@ -48,6 +50,9 @@ export async function tickReminderCalls(now: Date = new Date()) {
       take: 400,
     });
     const digest = buildKnowledgeDigest(entries);
+    // Gated on `limits.voiceAgent` above, which no acquisition trial carries —
+    // the full allowance is the only reachable cap here.
+    const rules = await activeRules(org.id, MAX_ACTIVE_RULES.full);
     const driver = voiceDriverFor(org);
 
     const from = new Date(now.getTime() + WINDOW_START_MIN * 60_000);
@@ -77,6 +82,7 @@ export async function tickReminderCalls(now: Date = new Date()) {
           doNots: profile.doNots,
         },
         knowledgeDigest: digest,
+        rules,
         contact: { name: booking.contact.name, phoneE164: booking.contact.phoneE164 },
         source: "phone",
         toolToken: createVoiceToolToken(

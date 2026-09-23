@@ -134,7 +134,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         // Everything about the AI employee lives here — what it knows, how it
         // behaves, its phone line and its abilities. Voice and Actions used to
         // sit in Settings, which meant setting up the AI meant visiting two
-        // unrelated sections (founder feedback, 2026-09-16).
+        // unrelated sections (founder feedback, 2026-09-16). Setup is gone
+        // (2026-09-23): it offered the same settings as Training behind a
+        // second save button, which was worse than one page.
         children: [
           {
             key: "training",
@@ -142,7 +144,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
             href: "/agent",
             activePrefixes: ["/agent", "/knowledge"],
           },
-          { key: "setup", label: "Setup", href: "/agent/setup" },
           { key: "voice", label: "Voice", href: "/agent/voice" },
           { key: "actions", label: "Actions", href: "/agent/actions" },
         ],

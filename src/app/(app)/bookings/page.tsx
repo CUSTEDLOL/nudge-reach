@@ -3,9 +3,10 @@ import Link from "next/link";
 import { CalendarCheck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatInTimezone } from "@/lib/timezone";
-import { requireOrgContext } from "@/modules/orgs/auth";
+import { hasRole, requireOrgContext } from "@/modules/orgs/auth";
 import { isSimulated } from "@/modules/orgs/mode";
 import { getCalendarAccount } from "@/modules/calendar";
+import { readOpeningHours } from "@/modules/calendar/hours-store";
 import { syncBookingsWithCalendar } from "@/modules/calendar/sync";
 import {
   BOOKING_VIEWS,
@@ -19,6 +20,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { BookingsList, type BookingRow } from "./bookings-list";
+import { OpeningHoursCard } from "./hours-card";
 
 export const metadata: Metadata = { title: "Bookings" };
 
@@ -159,6 +161,11 @@ export default async function BookingsPage({
       ) : (
         <BookingsList rows={list} />
       )}
+
+      <OpeningHoursCard
+        initial={readOpeningHours(ctx.org.settings)}
+        canEdit={hasRole(ctx.role, "ADMIN")}
+      />
     </section>
   );
 }

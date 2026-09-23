@@ -3,109 +3,97 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
-import { parseOpeningHours } from "@/modules/calendar/hours";
-import { settingsWithOpeningHours } from "@/modules/calendar/hours-store";
 
 export interface ActionResult {
   ok: boolean;
   message: string;
 }
 
-export async function saveAgentProfileAction(
-  formData: FormData
-): Promise<ActionResult> {
-  // The AgentProfile controls what the AI auto-replies to customers (persona,
-  // business info, on/off). It is an org-wide setting, so gate it to ADMIN+ —
-  // the nav hides it from AGENTs, but the server must enforce that too (H1).
+/**
+ * The Training page's "Your business" section: name, what the business does,
+ * and the tone — nothing else.
+ *
+ * Deliberately a PARTIAL write. The retired Setup page's action rebuilt the
+ * whole profile from one form, so any caller posting a subset blanked the rest;
+ * this one touches three columns and leaves `businessInfo`, `doNots` and the
+ * on/off switch exactly as they were.
+ */
+export async function saveBusinessBasicsAction(input: {
+  businessName: string;
+  vertical: string;
+  tone: string;
+}): Promise<ActionResult> {
+  // The AgentProfile decides what the AI says to customers, org-wide, so it is
+  // ADMIN+ — the nav hiding it from AGENTs is not enforcement (H1).
   const ctx = await requireOrgContext();
   try {
     requireRole(ctx, "ADMIN");
 
-    const businessName = String(formData.get("businessName") ?? "").trim();
-    const businessInfo = String(formData.get("businessInfo") ?? "").trim();
-    const tone =
-      String(formData.get("tone") ?? "").trim() || "Warm, friendly, and concise";
-    const doNots = String(formData.get("doNots") ?? "").trim();
-    const enabled = formData.get("enabled") === "on";
-    const vertical = String(formData.get("vertical") ?? "restaurant");
-
+    const businessName = input.businessName.trim();
     if (!businessName) {
       return { ok: false, message: "Please enter your business name." };
     }
+    const tone = input.tone.trim() || "Warm, friendly, and concise";
+    // Stored exactly as the picker sends it: `agentIdentity` looks the column
+    // up in VERTICAL_TEMPLATES by this token, so "clinic" must stay "clinic"
+    // or the beachhead loses its curated scope line for the generic one.
+    const vertical = input.vertical.trim() || "other";
 
-    // Opening hours: "" clears them; anything else must be a valid schedule.
-    const rawHours = String(formData.get("openingHours") ?? "").trim();
-    let openingHours: ReturnType<typeof parseOpeningHours> = null;
-    if (rawHours) {
-      let json: unknown;
-      try {
-        json = JSON.parse(rawHours);
-      } catch {
-        return { ok: false, message: "Opening hours look wrong — check each day closes after it opens." };
-      }
-      openingHours = parseOpeningHours(json);
-      if (!openingHours) {
-        return { ok: false, message: "Opening hours look wrong — check each day closes after it opens." };
-      }
-    }
-
-    await prisma.org.update({
-      where: { id: ctx.org.id },
-      data: { settings: settingsWithOpeningHours(ctx.org.settings, openingHours) },
+    await prisma.agentProfile.upsert({
+      where: { orgId: ctx.org.id },
+      // `enabled` is left to its default (off) on create: turning the AI on is
+      // its own deliberate act, not a side effect of naming the business.
+      create: { orgId: ctx.org.id, businessName, vertical, tone },
+      update: { businessName, vertical, tone },
     });
 
+    revalidatePath("/agent");
+    return { ok: true, message: "Saved." };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Couldn't save your business.",
+    };
+  }
+}
+
+/**
+ * The AI's on/off switch, both ways.
+ *
+ * ON is the one-click button behind the "Your AI is switched off" notice. OFF
+ * used to live only on the Setup form, and retiring that page would have left
+ * an owner no way to stop the AI answering — so the switch moved to Training
+ * with the rest of the AI's configuration.
+ */
+export async function setAutoReplyAction(
+  enabled: boolean
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  try {
+    requireRole(ctx, "ADMIN");
     await prisma.agentProfile.upsert({
       where: { orgId: ctx.org.id },
       create: {
         orgId: ctx.org.id,
-        vertical,
-        businessName,
-        businessInfo,
-        tone,
-        doNots,
         enabled,
+        vertical: ctx.org.vertical ?? "other",
+        businessName: ctx.org.name,
       },
-      update: { vertical, businessName, businessInfo, tone, doNots, enabled },
+      update: { enabled },
     });
-
-    revalidatePath("/agent");
-    revalidatePath("/agent/setup");
+    revalidatePath("/", "layout");
     return {
       ok: true,
       message: enabled
-        ? "Saved. Your WhatsApp assistant is ON and will reply to customers."
-        : "Saved. Your assistant is OFF — turn it on when you're ready.",
+        ? "Your AI is on. Try it in chat."
+        : "Your AI is off. It won't reply to anyone until you switch it back on.",
     };
   } catch (err) {
     return {
       ok: false,
       message:
-        err instanceof Error ? err.message : "Couldn't save the assistant.",
-    };
-  }
-}
-
-/** The one-click on-switch behind the "Your AI is switched off" notice. */
-export async function enableAgentAction(): Promise<ActionResult> {
-  const ctx = await requireOrgContext();
-  try {
-    requireRole(ctx, "ADMIN");
-    await prisma.agentProfile.upsert({
-      where: { orgId: ctx.org.id },
-      create: {
-        orgId: ctx.org.id,
-        enabled: true,
-        vertical: ctx.org.vertical ?? "other",
-        businessName: ctx.org.name,
-      },
-      update: { enabled: true },
-    });
-    revalidatePath("/", "layout");
-    return { ok: true, message: "Your AI is on. Try it in chat." };
-  } catch (err) {
-    return {
-      ok: false,
-      message: err instanceof Error ? err.message : "Couldn't switch the AI on.",
+        err instanceof Error ? err.message : "Couldn't switch the AI over.",
     };
   }
 }

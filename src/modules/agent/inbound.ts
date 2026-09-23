@@ -11,6 +11,8 @@ import {
   generateAgentActionReply,
   generateAgentReply,
 } from "@/modules/agent/reply";
+import { MAX_ACTIVE_RULES } from "@/modules/agent/rules";
+import { activeRules } from "@/modules/agent/rules-store";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
 import { cancelWaitingRuns, runInboundAutomations } from "@/modules/automation/engine";
 import { toPreview } from "@/modules/inbox/format";
@@ -182,7 +184,8 @@ export async function handleInboundMessage(
   // Structured knowledge + org-local time make the prompt condition-aware
   // ("weekends only" resolves against TODAY). The digest is the primary
   // source of truth; the legacy businessInfo blob rides along until migrated.
-  const [recent, org, knowledgeEntries] = await Promise.all([
+  // The house rules ride above both — how the owner wants the agent to behave.
+  const [recent, org, knowledgeEntries, rules] = await Promise.all([
     // NEWEST messages, then restored to chronological order — a long thread
     // must keep the customer's latest turns, not its opening ones. This also
     // guarantees the just-persisted inbound is always in the window.
@@ -202,6 +205,13 @@ export async function handleInboundMessage(
           orderBy: { createdAt: "asc" },
           take: 400,
         }),
+    // `restrictedTrial` is the same unconverted-trial test the rest of this
+    // function runs on, already resolved — so the trial's smaller cap costs
+    // nothing extra here.
+    activeRules(
+      orgId,
+      restrictedTrial ? MAX_ACTIVE_RULES.trial : MAX_ACTIVE_RULES.full
+    ),
   ]);
 
   // buildHistory drops leading assistant turns; whatever happens, the agent
@@ -223,6 +233,7 @@ export async function handleInboundMessage(
         { orgId, conversationId: conversation.id },
         {
           knowledgeDigest: buildKnowledgeDigest(knowledgeEntries),
+          rules,
           now: new Date(),
           timezone: org?.timezone ?? "Asia/Kolkata",
         },
@@ -245,6 +256,7 @@ export async function handleInboundMessage(
         },
         {
           knowledgeDigest: buildKnowledgeDigest(knowledgeEntries),
+          rules,
           now: new Date(),
           timezone: org?.timezone ?? "Asia/Kolkata",
         },

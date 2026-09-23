@@ -101,7 +101,11 @@ describe("buildSuggestSystemPrompt (knowledge digest)", () => {
 
   it("without a digest the original section is unchanged", () => {
     const p = buildSuggestSystemPrompt(grounding, "professional");
-    expect(p).toContain("BUSINESS INFORMATION (your only source of truth");
+    // Softened with the agent's own prompt (Task 3): "only source of truth"
+    // told the model to ignore the house rules that now sit above it.
+    expect(p).toContain(
+      "BUSINESS INFORMATION — your source of truth for facts (never invent details not stated here):"
+    );
     expect(p).not.toContain("ADDITIONAL BUSINESS INFORMATION");
   });
 });

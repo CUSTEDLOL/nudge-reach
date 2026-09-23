@@ -96,6 +96,7 @@ model Org {
   calendarAccount         CalendarAccount?
   followUpConfig          FollowUpConfig?
   knowledgeEntries        KnowledgeEntry[]
+  agentRules              AgentRule[]
   ownerQuestions          OwnerQuestion[]
   voiceNumbers            VoiceNumber[]
   voiceCalls              VoiceCall[]
@@ -880,6 +881,31 @@ model KnowledgeEntry {
   updatedAt DateTime @updatedAt
 
   @@index([orgId, status, category])
+}
+
+// How the AI should BEHAVE, as opposed to what is true (KnowledgeEntry).
+// Rules outrank facts in the prompt — see docs/plans/2026-09-22-house-rules-design.md.
+model AgentRule {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /**
+   * The owner's own sentence — this is what the UI shows.
+   */
+  text        String
+  /**
+   * The distilled line the prompt carries. Never surfaced to the owner.
+   */
+  instruction String
+  scope       String // always | never | when
+  condition   String? // for scope "when": "someone asks about pricing"
+  status      String   @default("active") // active | archived
+  source      String // owner | migrated_donots | migrated_businessinfo | concierge
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orgId, status, order])
 }
 
 // One LLM call, attributed to org (+ conversation when there is one).

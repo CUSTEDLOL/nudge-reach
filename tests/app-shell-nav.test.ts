@@ -131,17 +131,28 @@ describe("adaptive app navigation", () => {
 
     expect(frontDesk.children?.map((child) => [child.label, child.href])).toEqual([
       ["Training", "/agent"],
-      ["Setup", "/agent/setup"],
       ["Voice", "/agent/voice"],
       ["Actions", "/agent/actions"],
     ]);
+  });
+
+  it("no longer offers Setup — Training is the only place the AI is configured", () => {
+    const frontDesk = navGroupsForRole("OWNER")
+      .flatMap((group) => group.items)
+      .find((item) => item.key === "front-desk")!;
+
+    expect(frontDesk.children?.some((child) => child.href === "/agent/setup")).toBe(
+      false
+    );
   });
 
   it.each([
     ["/agent", "training"],
     ["/agent/questionnaire", "training"],
     ["/knowledge", "training"],
-    ["/agent/setup", "setup"],
+    // The retired page redirects to /agent; on the way there the strip must
+    // still light up Training rather than nothing at all.
+    ["/agent/setup", "training"],
     // The longest match has to win, or Training's /agent would swallow these.
     ["/agent/voice", "voice"],
     ["/agent/actions", "actions"],

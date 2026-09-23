@@ -201,12 +201,23 @@ describe("active trial workspace copy", () => {
       "../src/components/features/trial/test-conversation.tsx",
       "../src/components/features/trial/trial-training.tsx",
       "../src/components/features/trial/upgrade-dialog.tsx",
+      // The Training page is now one page for trial and paid alike, so the
+      // two shared sections it renders above the trial's knowledge carry
+      // trial copy too and are held to the same ban.
+      "../src/app/(app)/agent/business-section.tsx",
+      "../src/app/(app)/agent/rules-section.tsx",
     ]
       .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
       .join("\n");
 
     expect(source).toContain("customer");
     expect(source).toContain("business");
+    // The one thing this ban is NOT about, founder decision 2026-09-22: the
+    // business-type picker offers a health option, because the beachhead is
+    // clinics and that option is what reaches the curated VERTICAL_TEMPLATES
+    // entry. It stays exempt by construction — the picker renders the shared
+    // taxonomy (`modules/dashboard/verticals.ts`) instead of spelling any
+    // industry here, so prose in these files is still fully covered.
     expect(source.toLowerCase()).not.toMatch(
       /\b(?:clinics?|patients?|practice)\b/,
     );

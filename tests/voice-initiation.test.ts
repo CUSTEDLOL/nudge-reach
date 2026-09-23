@@ -6,6 +6,7 @@ const base = {
   number: { phoneE164: "+918000000001", language: "en", voiceId: null, transferTo: "+919800000000" },
   profile: { vertical: "clinic", businessName: "BrightSmile Dental", businessInfo: "", tone: "Warm", doNots: "" },
   knowledgeDigest: "- Hours: Mon–Sat 9am–7pm\n- Consultation ₹500",
+  rules: [{ instruction: "Always offer the Saturday clinic first" }],
   contact: { name: "+919876543210", phoneE164: "+919876543210" },
   source: "phone" as const,
   toolToken: "v1.123.signature",
@@ -22,6 +23,10 @@ describe("buildCallInit", () => {
     expect(init.conversation_config_override.agent.first_message).toContain("shared with the business team");
     expect(init.conversation_config_override.agent.prompt.prompt).toContain("Consultation ₹500");
     expect(init.conversation_config_override.agent.prompt.prompt).toContain("PHONE MANNERS");
+    // A phone caller hears the same house rules a WhatsApp customer reads.
+    expect(init.conversation_config_override.agent.prompt.prompt).toContain(
+      "Always offer the Saturday clinic first"
+    );
     expect(init.dynamic_variables.org_id).toBe("org1");
     expect(init.dynamic_variables.contact_phone).toBe("+919876543210");
     expect(init.dynamic_variables.transfer_to).toBe("+919800000000");

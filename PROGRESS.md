@@ -1,5 +1,134 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## House rules — telling the AI how to behave (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED, PROD SCHEMA PUSH PENDING
+
+**The bug that started it.** The founder typed an instruction — push everyone to
+the waitlist — into the Setup box labelled *"What should the assistant know?"*,
+and the AI ignored it. Correctly, as written: the prompt called the fact library
+*"your only source of truth"* and appended that box below it under *"ADDITIONAL
+BUSINESS INFORMATION"*. The owner's instruction was demoted to background
+reading by the prompt's own wording. No amount of retyping it would have worked.
+
+- **Rules now outrank facts.** A new `AgentRule` per instruction, written in the
+  owner's plain English, renders as a `HOUSE RULES — follow these in every
+  reply, even when the knowledge below points elsewhere:` block **above** the
+  knowledge digest, whose heading softened to *"your source of truth for
+  facts"*. Same prompt for WhatsApp, voice and suggested replies — the bug
+  reproduced identically on all three, so the fix lands on all three. Plan:
+  `docs/plans/2026-09-22-house-rules.md`; design: `…-house-rules-design.md`.
+- **One Training page.** `/agent` renders three sections in the order the prompt
+  reads them — *Your business* → *House rules* → *What it knows* — and the free
+  trial renders the **same** page, not a fork of it. Setup is retired:
+  `/agent/setup` (and the older `/settings/agent`) redirect to `/agent`, and the
+  tab is gone. Two pages offering the same settings behind different save
+  buttons was worse than one.
+- **Opening hours moved to Bookings**, where someone configuring availability
+  looks. They are booking configuration, not AI persona — `modules/calendar` is
+  their only consumer. Storage is byte-identical (the same `openingHours` key in
+  `Org.settings`, the same two helpers), and a test round-trips a saved schedule
+  back through `readOpeningHours` into `isOpenFor`, so the move provably cannot
+  change what the AI will book.
+- **Migration, not a fresh start.** `doNots` becomes one `never` rule per
+  sentence; `businessInfo` is split line by line — instruction-shaped lines
+  become rules, the rest become knowledge facts in the existing `draft`
+  (awaiting-review) state. It runs once per org on the first load of Training
+  and from the founder panel for concierge onboarding. **Neither legacy column
+  is cleared**, so a rollback loses nothing.
+- **Training page rebuilt for hierarchy (2026-09-23).** Section headers sit
+  outside their boxes at `text-base` (the only place that size appears); rules
+  are one divided box with the add form collapsed behind *+ Add rule* and each
+  row reading as a sentence (**Never** quote a price over chat); the owner
+  question queue is a brand-tinted band rendered only when non-empty; the page
+  is `max-w-3xl` for trial and paid alike. Seven explanatory sentences became two.
+- **Two columns (2026-09-23, founder: "too much white space… I don't see the PDF upload button").** The page fills the shell; from `lg` rules and facts take the left and a 340px rail on the right holds *Your business* (three stacked lines) and the import box — the rail is first in the DOM so a phone shows the PDF upload above the facts, not below 92 of them; Auto-reply is a label and switch in the header beside *Try it in chat*; the Training / Voice / Actions strip is `lg:hidden` (the sidebar lists them there, the phone bottom nav does not); facts are divided rows per category with the add form behind *+ Add fact*.
+
+**Founder decisions recorded along the way (2026-09-22)**
+
+- **Rules override facts.** That is the whole feature; the heading change is not
+  cosmetic, it is the fix.
+- **Distillation is silent.** The owner's sentence is what the UI always shows;
+  the one-line version the prompt carries is never shown for approval. It is
+  made safe **structurally** rather than by an approval gate: a deterministic
+  guardrail compares links, emails and numbers in the rewrite against the
+  original and falls back to the owner's own words on any mismatch.
+- **Cap 20 active rules (5 in the trial) for answer quality, not cost.** Rules
+  ride in the *cached* part of the system prompt — about **0.02 credits per
+  reply**, negligible. Past roughly ten competing instructions a model starts
+  silently dropping some, which is the real ceiling.
+- **Rule distillation is an absorbed purpose** — `rule_distill` joins `ingest`,
+  `distill` and `concierge_draft`: the platform pays, never the client (~0.1
+  credits, once per rule). Writing a rule is setup work, like teaching a fact,
+  and a zero-credit org can still do it.
+
+**What review caught that would otherwise have shipped**
+
+- The guardrail had **three fail-open paths**, each returning "no new
+  specifics" for something invented. URLs were case-folded, so a distiller that
+  invented `bit.ly/3xKpQ` passed as safe against an original mentioning
+  `bit.ly/3xkpq`; a non-ASCII homoglyph domain was invisible to the comparison;
+  and model output longer than the scan window bypassed the scan entirely. All
+  three now fail closed — paths compare case-sensitively, any link-shaped run
+  carrying a non-ASCII character is rejected outright, and an over-long
+  distillation is rejected rather than partly scanned.
+- **A distilled rule could widen the agent's own scope** (invariant 7). The
+  owner's words were checked by `widensScope`, but the rewrite — the line that
+  actually lands in the prompt, *above* the scope guardrail — was not. A narrow
+  rule rewritten as "answer any question the customer asks" would have outranked
+  the invariant unchallenged. The rewrite is checked too now.
+- The trial tour's Training step was **silently broken**: `tour.ts` anchors it to
+  `[data-tour="training-source"]`, which nothing in `src/` rendered, so the step
+  fell back to an amber "this area is still loading" notice. This branch put the
+  anchor on the *What it knows* section; `main` independently put it on the
+  *Approved facts* section, and the merge below keeps **main's** placement — the
+  step's copy ("These approved business facts are all your AI can use") names
+  that section exactly. One anchor only, asserted by test; `tour.ts` untouched.
+- Retiring Setup would have quietly deleted two things, both re-homed instead:
+  the AI's **OFF switch** lived only on that form (`enableAgentAction` became
+  `setAutoReplyAction(enabled)`, with a switch on Training), and the form's
+  five-option vertical list was the only place `software` could be picked, so
+  that curated template would have become unreachable — it is in the canonical
+  `VERTICALS` now. That same five-option list was the silent-relabel hazard (a
+  jewellery org saved as `restaurant`); deleting the form deleted the hazard.
+
+**The migration classifier is a regex, and it is wrong sometimes.** It is biased
+towards reading a line as an *instruction* on purpose: a wrong rule is visible on
+the Training page and archived in one click, while an instruction filed as a fact
+is the exact bug this feature exists to fix. Its known error class is a
+declarative sentence carrying "always" or "never" ("We never work on Sundays")
+reading as a rule. The rate on real customer text is **unmeasured** — the legacy
+columns are kept precisely so a bad classification can be redone from the
+original.
+
+- **2,156 tests pass** (+3 skipped, 259 files; 2,145 before the last two tasks);
+  `npx tsc --noEmit`, `npm run lint` and `npm run build` all exit 0. Six of the
+  seven invariant tests are untouched by this branch and green; the seventh,
+  `tests/agent.test.ts`, changed in three accounted-for ways — the softened
+  knowledge heading, the vertical-picker assertion moved from the deleted Setup
+  form to the shared taxonomy, and a new clinic-beachhead block. The 24h-window
+  suite inside it is byte-identical. No assertion anywhere was relaxed; every
+  other test edit is additive (a `rules` argument, an `agentRule` prisma mock, or
+  a new assertion that a channel carries the rules).
+- **Deploy step — production needs `npm run db:push` then `npm run db:rls` for
+  `AgentRule`, and it must land BEFORE or WITH the deploy, not after.**
+  `activeRules` runs on the WhatsApp webhook (`modules/agent/inbound.ts`), the
+  voice initiation webhook and the reminder cron with **no try/catch** — code
+  shipped ahead of the table means every inbound reply throws. Production is a
+  different Supabase project from local; the table exists only in local dev.
+- **Not verified: nobody has exercised the signed-in UI in a browser.** Every
+  claim above comes from unit tests, `tsc` and the build. Signed out, `/agent`
+  and `/agent/setup` both return `307 → /login` (the proxy answers first, so
+  curl cannot see the Setup redirect itself — a direct test asserts it instead).
+  The founder should walk the dev server on :3020 — write a rule and watch the
+  next reply obey it, confirm the migrated rules from the old box look right,
+  switch the AI off and on, and save opening hours on `/bookings` and check a
+  booking outside them is still refused — before this is called done.
+- What was knowingly left undone is one consolidated **Deferred** list at the end
+  of `docs/plans/2026-09-22-house-rules.md` (the cap's TOCTOU race,
+  `widensScope` being phrasing-bypassable by design, word-priced inventions the
+  guardrail cannot see, a dropped specific never being caught, voice reading the
+  full cap unconditionally, the classifier's error rate, and the legacy
+  `businessInfo` blob still reaching the prompt with no UI left to edit it).
+
 ## /free-trial joins the marketing site (2026-09-22) ✅ CODE — BROWSER-VERIFIED
 
 - The acquisition page had its own one-off header and footer, so paid traffic

@@ -21,6 +21,7 @@ function opener(input: CallInitInput): string {
 export function buildCallInit(input: CallInitInput): CallInit {
   const prompt = buildAgentSystemPrompt(input.profile, {
     knowledgeDigest: input.knowledgeDigest,
+    rules: input.rules,
     now: input.now,
     timezone: input.org.timezone,
     withTools: true,

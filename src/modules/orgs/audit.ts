@@ -40,6 +40,9 @@ export type AuditAction =
   | "knowledge.gbp_imported"
   | "knowledge.drafts_approved"
   | "knowledge.drafts_discarded"
+  | "rule.created"
+  | "rule.updated"
+  | "rule.archived"
   | "voice.number_saved"
   | "custom_action.created"
   | "custom_action.updated"
@@ -71,6 +74,7 @@ export type AuditAction =
   | "admin.followups_toggled"
   | "admin.followups_drafted"
   | "admin.client_setup"
+  | "admin.profile_migrated"
   | "admin.operation_requested"
   | "admin.operation_completed"
   | "admin.operation_failed";
@@ -109,6 +113,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "knowledge.gbp_imported": "Google Business Profile imported into knowledge drafts",
   "knowledge.drafts_approved": "Imported knowledge drafts approved",
   "knowledge.drafts_discarded": "Imported knowledge drafts discarded",
+  "rule.created": "House rule added",
+  "rule.updated": "House rule edited",
+  "rule.archived": "House rule archived",
   "voice.number_saved": "Voice number saved",
   "custom_action.created": "Custom agent action created",
   "custom_action.updated": "Custom agent action updated",
@@ -139,6 +146,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "admin.followups_toggled": "Nudge support switched follow-ups on/off",
   "admin.followups_drafted": "Nudge support drafted follow-ups",
   "admin.client_setup": "Nudge support ran concierge setup",
+  "admin.profile_migrated": "Nudge support migrated the legacy setup text into rules and facts",
   "admin.operation_requested": "Nudge support requested an operational recovery",
   "admin.operation_completed": "Nudge support completed an operational recovery",
   "admin.operation_failed": "Nudge support recovery failed",

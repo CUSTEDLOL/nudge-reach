@@ -153,7 +153,9 @@ describe("buildChecklist", () => {
     const item = buildChecklist(empty).items.find((i) => i.key === "agent_on")!;
     expect(item.done).toBe(false);
     expect(item.description).toMatch(/silent/);
-    expect(item.href).toBe("/agent/setup");
+    // Training, since Setup was retired — a checklist that lands on a
+    // redirect is a checklist nobody trusts.
+    expect(item.href).toBe("/agent");
   });
 
   it("contacts step needs MORE than 5 contacts", () => {

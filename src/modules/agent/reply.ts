@@ -15,6 +15,18 @@ import {
 import { loadCustomTools } from "@/modules/agent/tools/custom";
 import { CreditsExhaustedError } from "@/modules/billing/credits";
 
+/**
+ * What a caller must tell the agent about the prompt.
+ *
+ * `rules` is REQUIRED on purpose. The owner's house rules have to reach every
+ * channel, and a caller that forgot them would fail silently — the agent would
+ * simply stop obeying its owner, with nothing in the logs to show for it. The
+ * compiler is the check; the caller loads them because it is the code that
+ * knows whether this workspace is a trial (a smaller cap) or a full one.
+ */
+export type AgentReplyPromptOptions = Omit<AgentPromptOptions, "withTools"> &
+  Required<Pick<AgentPromptOptions, "rules">>;
+
 export interface AgentReply {
   text: string;
   handoff: boolean;
@@ -62,7 +74,7 @@ export async function generateAgentReply(
   profile: AgentProfileInput,
   history: ChatTurn[],
   ctx: Pick<ToolContext, "orgId" | "conversationId">,
-  promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
+  promptOptions: AgentReplyPromptOptions
 ): Promise<AgentReply> {
   const system = buildAgentSystemPrompt(profile, promptOptions);
   let raw: string;
@@ -108,7 +120,7 @@ export async function generateAgentActionReply(
   profile: AgentProfileInput,
   history: ChatTurn[],
   ctx: ToolContext,
-  promptOptions: Omit<AgentPromptOptions, "withTools"> = {}
+  promptOptions: AgentReplyPromptOptions
 ): Promise<AgentActionReply> {
   // The org's own connected actions (E2) ride alongside the built-ins.
   const customTools = await loadCustomTools(ctx.orgId);

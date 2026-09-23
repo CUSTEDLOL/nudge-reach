@@ -10,10 +10,10 @@ import {
 } from "@/components/features/app-shell/nav";
 
 /**
- * The AI employee's own tab strip. Owners told us setting the AI up meant
- * hopping between two unrelated sections, so every page that configures it —
- * what it knows, how it behaves, its phone line, what it can do — now shows
- * all four from wherever you are.
+ * The AI employee's tab strip for narrow screens. From `lg` up the sidebar
+ * already lists Training / Voice / Actions under AI Front Desk, so the strip
+ * is hidden there; below `lg` the phone bottom nav reaches Front Desk but not
+ * its children, and this strip is the only way between them.
  *
  * The tabs are read from the sidebar's nav definition rather than restated
  * here, so the rail and this strip can never disagree.
@@ -29,8 +29,8 @@ export function FrontDeskTabs() {
   return (
     <nav
       aria-label="AI Front Desk sections"
-      // Scrolls rather than wrapping, so four tabs stay on one line on a phone.
-      className="no-scrollbar -mx-4 mb-6 flex gap-4 overflow-x-auto border-b border-neutral-200 px-4 sm:mx-0 sm:gap-5 sm:px-0"
+      // Scrolls rather than wrapping, so the tabs stay on one line on a phone.
+      className="no-scrollbar -mx-4 mb-6 flex gap-4 overflow-x-auto border-b border-neutral-200 px-4 sm:mx-0 sm:gap-5 sm:px-0 lg:hidden"
     >
       {(FRONT_DESK.children ?? []).map((child) => {
         const active = child.key === activeKey;

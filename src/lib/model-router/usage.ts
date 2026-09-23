@@ -16,6 +16,8 @@ export type UsagePurpose =
   | "suggest"
   | "distill"
   | "ingest"
+  /** Compressing an owner's house rule into one instruction — setup work, absorbed. */
+  | "rule_distill"
   | "campaign_copy"
   | "followup_draft"
   /** Founder-side concierge setup work — absorbed, never charged to the client. */

@@ -9,10 +9,12 @@ import {
   FileText,
   ListChecks,
   Pencil,
+  Plus,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -70,7 +72,7 @@ function FactRow({
 
   if (editing) {
     return (
-      <li className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:flex-row sm:items-center">
+      <li className="flex flex-col gap-2 bg-neutral-50 px-4 py-2.5 sm:flex-row sm:items-center">
         <Select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
@@ -127,8 +129,12 @@ function FactRow({
   }
 
   return (
+    // No border of its own: the list's dividers do the separating.
     <li
-      className={`flex items-start justify-between gap-3 rounded-xl border p-3 ${selected ? "border-brand-300 bg-brand-50/40" : "border-neutral-100 bg-white"}`}
+      className={cn(
+        "flex items-start justify-between gap-3 px-4 py-2.5",
+        selected && "bg-brand-50"
+      )}
     >
       {canEdit && (
         <input
@@ -178,23 +184,20 @@ function FactRow({
 }
 
 function AddFactForm({
-  factCount,
-  factLimit,
+  atLimit,
   factPlaceholder = "e.g. Bridal mehendi package is ₹5,000",
+  onDone,
 }: {
-  factCount?: number;
-  factLimit?: number;
+  atLimit: boolean;
   factPlaceholder?: string;
+  /** Called once the fact is saved, and on Cancel; the form unmounts. */
+  onDone: () => void;
 }) {
+  const { toast } = useToast();
   const [category, setCategory] = useState("menu_services");
   const [fact, setFact] = useState("");
   const [condition, setCondition] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const atLimit =
-    factCount !== undefined
-    && factLimit !== undefined
-    && factCount >= factLimit;
 
   return (
     <Card className="p-4">
@@ -231,28 +234,24 @@ function AddFactForm({
             disabled={atLimit}
           />
         </Field>
-        <Button
-          disabled={atLimit || pending || fact.trim().length < 3}
-          onClick={() =>
-            startTransition(async () => {
-              const r = await addFactAction({ category, fact, condition });
-              setMessage(r.message);
-              if (r.ok) {
-                setFact("");
-                setCondition("");
-              }
-            })
-          }
-        >
-          {pending ? "Adding…" : "Add fact"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            disabled={atLimit || pending || fact.trim().length < 3}
+            onClick={() =>
+              startTransition(async () => {
+                const r = await addFactAction({ category, fact, condition });
+                toast({ description: r.message, tone: r.ok ? "success" : "error" });
+                if (r.ok) onDone();
+              })
+            }
+          >
+            {pending ? "Adding…" : "Add fact"}
+          </Button>
+          <Button variant="ghost" disabled={pending} onClick={onDone}>
+            Cancel
+          </Button>
+        </div>
       </div>
-      {atLimit && (
-        <p className="mt-2 text-sm text-neutral-600" role="status">
-          Fact limit reached ({factCount}/{factLimit}). Archive an approved fact or discard a draft before adding another.
-        </p>
-      )}
-      {message && <p className="mt-2 text-sm text-neutral-500">{message}</p>}
     </Card>
   );
 }
@@ -293,6 +292,14 @@ export function Library({
   const [view, setView] = useState<"manage" | "sheet">("manage");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, startBulk] = useTransition();
+  // The add form opens itself on the first visit (no facts yet) and stays out
+  // of the way ever after — the same first-visit logic as House rules.
+  // Closed means absent from the DOM, not merely hidden.
+  const [adding, setAdding] = useState(canEdit && facts.length === 0);
+  const atLimit =
+    factCount !== undefined
+    && factLimit !== undefined
+    && factCount >= factLimit;
 
   const grouped = CATEGORY_OPTIONS.map((o) => ({
     ...o,
@@ -415,14 +422,33 @@ export function Library({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1">
-        <button type="button" className={viewBtn("manage")} onClick={() => setView("manage")}>
-          <ListChecks className="h-4 w-4" /> Manage
-        </button>
-        <button type="button" className={viewBtn("sheet")} onClick={() => setView("sheet")}>
-          <FileText className="h-4 w-4" /> Fact sheet
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1">
+          <button type="button" className={viewBtn("manage")} onClick={() => setView("manage")}>
+            <ListChecks className="h-4 w-4" /> Manage
+          </button>
+          <button type="button" className={viewBtn("sheet")} onClick={() => setView("sheet")}>
+            <FileText className="h-4 w-4" /> Fact sheet
+          </button>
+        </div>
+        {canEdit && (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={atLimit || adding}
+            title={atLimit ? "Fact limit reached" : undefined}
+            onClick={() => setAdding(true)}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden /> Add fact
+          </Button>
+        )}
       </div>
+
+      {atLimit && (
+        <p className="text-sm text-neutral-600" role="status">
+          Fact limit reached ({factCount}/{factLimit}). Archive an approved fact or discard a draft before adding another.
+        </p>
+      )}
 
       {canEdit && selected.size > 0 && (
         <div className="sticky top-2 z-10 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 shadow-sm">
@@ -440,11 +466,11 @@ export function Library({
         </div>
       )}
 
-      {canEdit && (
+      {canEdit && adding && (
         <AddFactForm
-          factCount={factCount}
-          factLimit={factLimit}
+          atLimit={atLimit}
           factPlaceholder={factPlaceholder}
+          onDone={() => setAdding(false)}
         />
       )}
 
@@ -501,17 +527,19 @@ export function Library({
                   {LABEL_BY_VALUE[g.value]} · {g.facts.length}
                 </h3>
               </div>
-              <ul className="flex flex-col gap-2">
-                {g.facts.map((f) => (
-                  <FactRow
-                    key={f.id}
-                    f={f}
-                    canEdit={canEdit}
-                    selected={selected.has(f.id)}
-                    onToggle={() => toggle(f.id)}
-                  />
-                ))}
-              </ul>
+              <Card className="overflow-hidden">
+                <ul className="divide-y divide-neutral-100">
+                  {g.facts.map((f) => (
+                    <FactRow
+                      key={f.id}
+                      f={f}
+                      canEdit={canEdit}
+                      selected={selected.has(f.id)}
+                      onToggle={() => toggle(f.id)}
+                    />
+                  ))}
+                </ul>
+              </Card>
             </section>
           );
         })

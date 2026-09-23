@@ -3,6 +3,8 @@ import { env } from "@/lib/env";
 import { chat } from "@/lib/model-router";
 import { recordSyntheticUsage } from "@/lib/model-router/usage";
 import { buildHistory } from "@/modules/agent/reply";
+import { MAX_ACTIVE_RULES, renderRulesBlock } from "@/modules/agent/rules";
+import { activeRules } from "@/modules/agent/rules-store";
 import { CREDITS_EXHAUSTED_MESSAGE, CreditsExhaustedError } from "@/modules/billing/credits";
 import { normalizeWhatsAppMarkdown } from "@/modules/inbox/format";
 import { buildKnowledgeDigest } from "@/modules/knowledge/digest";
@@ -40,19 +42,34 @@ export interface SuggestGrounding {
   doNots: string;
 }
 
-/** Pure system-prompt builder (unit-tested). */
+/**
+ * Pure system-prompt builder (unit-tested).
+ *
+ * `rules` are the org's house rules and are rendered ABOVE the knowledge, for
+ * the same reason as on the agent's own prompt: "always push the waitlist"
+ * must outrank whatever the facts happen to say. Defaulted to none only so a
+ * prompt can still be built for a workspace that has written none — the one
+ * production caller, `suggestReply`, always loads them.
+ */
 export function buildSuggestSystemPrompt(
   grounding: SuggestGrounding,
   tone: SuggestTone,
-  knowledgeDigest = ""
+  knowledgeDigest = "",
+  rules: Array<{ instruction: string }> = []
 ): string {
   const digest = knowledgeDigest.trim();
   return [
     `You are drafting a WhatsApp reply that a human agent at "${grounding.businessName}" will review, edit and send. Draft the single best reply to the customer's latest message.`,
     "",
+    // Empty for an org with no rules, and dropped by the `.filter(Boolean)`.
+    renderRulesBlock(rules),
+    "",
+    // "your source of truth for facts", not "your only source of truth": the
+    // old wording told the model to ignore anything outside the knowledge,
+    // which is exactly what the house rules above it are.
     ...(digest
       ? [
-          "BUSINESS KNOWLEDGE (your only source of truth — never invent details not stated here):",
+          "BUSINESS KNOWLEDGE — your source of truth for facts (never invent details not stated here):",
           digest,
           "",
         ]
@@ -61,7 +78,7 @@ export function buildSuggestSystemPrompt(
       ? grounding.businessInfo.trim()
         ? "ADDITIONAL BUSINESS INFORMATION:"
         : ""
-      : "BUSINESS INFORMATION (your only source of truth — never invent details not stated here):",
+      : "BUSINESS INFORMATION — your source of truth for facts (never invent details not stated here):",
     digest && !grounding.businessInfo.trim()
       ? ""
       : grounding.businessInfo.trim() || "(No details provided.)",
@@ -157,19 +174,25 @@ export async function suggestReply(
     };
   }
 
-  const knowledgeEntries = await prisma.knowledgeEntry.findMany({
-    where: { orgId, status: "active" },
-    select: { category: true, fact: true, condition: true },
-    orderBy: { createdAt: "asc" },
-    take: 400,
-  });
+  const [knowledgeEntries, rules] = await Promise.all([
+    prisma.knowledgeEntry.findMany({
+      where: { orgId, status: "active" },
+      select: { category: true, fact: true, condition: true },
+      orderBy: { createdAt: "asc" },
+      take: 400,
+    }),
+    // `suggestReplyAction` refuses a restricted acquisition trial outright,
+    // so the full allowance is the only reachable cap here.
+    activeRules(orgId, MAX_ACTIVE_RULES.full),
+  ]);
 
   try {
     const draft = await chat({
       system: buildSuggestSystemPrompt(
         grounding,
         tone,
-        buildKnowledgeDigest(knowledgeEntries)
+        buildKnowledgeDigest(knowledgeEntries),
+        rules
       ),
       messages: history,
       maxTokens: 300,

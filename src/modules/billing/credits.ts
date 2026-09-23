@@ -319,9 +319,18 @@ export class CreditsExhaustedError extends Error {
  */
 export type MeteringClass = "metered" | "unmetered" | "shadow" | "absorbed";
 
-/** Plan decision 8: concierge setup work is never charged to the customer. */
+/**
+ * Plan decision 8: setup work is never charged to the customer — the founder's
+ * concierge drafting, and the owner's own teaching (a fact ingested, a house
+ * rule distilled), which must work on a zero balance or a trial.
+ */
 export function isAbsorbedPurpose(purpose: string): boolean {
-  return purpose === "ingest" || purpose === "distill" || purpose === "concierge_draft";
+  return (
+    purpose === "ingest" ||
+    purpose === "distill" ||
+    purpose === "rule_distill" ||
+    purpose === "concierge_draft"
+  );
 }
 
 /**

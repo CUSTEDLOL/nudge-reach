@@ -41,6 +41,7 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => { state.created.push(data); return { id: "vc" }; }),
     },
     knowledgeEntry: { findMany: vi.fn(async () => []) },
+    agentRule: { findMany: vi.fn(async () => [{ instruction: "Always confirm the branch address" }]) },
   },
 }));
 vi.mock("@/modules/agent/profile", () => ({

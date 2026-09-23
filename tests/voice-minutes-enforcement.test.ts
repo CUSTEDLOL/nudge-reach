@@ -26,6 +26,7 @@ vi.mock("@/lib/db", () => ({
     voiceCall: { findMany: vi.fn(async () => state.callSecs.map((s) => ({ durationSecs: s }))) },
     contact: { findUnique: vi.fn(async () => null) },
     knowledgeEntry: { findMany: vi.fn(async () => []) },
+    agentRule: { findMany: vi.fn(async () => []) },
   },
 }));
 vi.mock("@/modules/agent/profile", () => ({
