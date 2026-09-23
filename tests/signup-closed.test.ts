@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -28,7 +29,10 @@ vi.mock("@/modules/trial/claim", async (importOriginal) => ({
 
 import { NoWorkspaceError, resolveOrgContext } from "@/modules/orgs/org";
 import { PENDING_OWNER_PREFIX } from "@/modules/orgs/pending-owner";
-import { parseTrialClaimMetadata } from "@/modules/trial/claim";
+import {
+  parseTrialClaimMetadata,
+  TrialClaimRaceError,
+} from "@/modules/trial/claim";
 
 const USER = "user-1";
 const EMAIL = "owner@aster.in";
@@ -244,5 +248,62 @@ describe("closed signup", () => {
     expect(prisma.invite.findFirst).not.toHaveBeenCalled();
     expect(claimAcquisitionTrial).not.toHaveBeenCalled();
     expect(prisma.org.create).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The trial signup form calls router.push then router.refresh, so two
+ * /dashboard renders arrive together. Both find the trial unclaimed and both
+ * create the workspace; one loses on the Org.ownerUserId unique index. That
+ * loser used to escape as an unhandled P2002 and the visitor's very first
+ * page load read "A server error occurred" — while the workspace had in fact
+ * been created by the winner 300ms earlier.
+ */
+describe("concurrent first load", () => {
+  const TRIAL_CONTEXT = {
+    appMetadata: TRIAL_APP_METADATA,
+    trialClaim: CLAIM,
+  };
+
+  it.each([
+    ["the org insert lost the unique index", new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed on the fields: (`ownerUserId`)",
+      { code: "P2002", clientVersion: "test" },
+    )],
+    ["another request claimed the trial first", new TrialClaimRaceError()],
+  ])("recovers the winner's workspace when %s", async (_case, raced) => {
+    claimAcquisitionTrial.mockRejectedValueOnce(raced);
+    // the retry sees what the winner committed
+    prisma.membership.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "m1",
+        role: "OWNER",
+        email: EMAIL,
+        displayName: "Asha",
+        org: { id: "org-winner" },
+      });
+
+    const res = await resolveOrgContext(USER, EMAIL, TRIAL_CONTEXT);
+
+    expect(res.org.id).toBe("org-winner");
+    expect(claimAcquisitionTrial).toHaveBeenCalledTimes(1);
+    expect(prisma.org.create).not.toHaveBeenCalled();
+  });
+
+  it("still surfaces a genuine failure instead of retrying it away", async () => {
+    claimAcquisitionTrial.mockRejectedValue(new Error("database is on fire"));
+
+    await expect(resolveOrgContext(USER, EMAIL, TRIAL_CONTEXT))
+      .rejects.toThrow("database is on fire");
+    expect(claimAcquisitionTrial).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up rather than recursing forever if the race never settles", async () => {
+    claimAcquisitionTrial.mockRejectedValue(new TrialClaimRaceError());
+
+    await expect(resolveOrgContext(USER, EMAIL, TRIAL_CONTEXT))
+      .rejects.toBeInstanceOf(TrialClaimRaceError);
+    expect(claimAcquisitionTrial.mock.calls.length).toBeLessThanOrEqual(4);
   });
 });

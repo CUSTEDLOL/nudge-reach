@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma, tx } = vi.hoisted(() => {
@@ -19,7 +20,9 @@ vi.mock("@/lib/db", () => ({ prisma }));
 import { hashClaimToken } from "@/modules/trial/signup";
 import {
   claimAcquisitionTrial,
+  isTrialClaimRace,
   parseTrialClaimMetadata,
+  TrialClaimRaceError,
 } from "@/modules/trial/claim";
 
 const NOW = new Date("2026-09-20T00:00:00Z");
@@ -172,6 +175,32 @@ describe("claimAcquisitionTrial", () => {
       email: "owner@aster.in",
       claim: CLAIM,
       now: NOW,
-    })).rejects.toThrow("Trial was already claimed.");
+    })).rejects.toBeInstanceOf(TrialClaimRaceError);
+  });
+
+  /**
+   * The signup form pushes and refreshes, so two /dashboard renders land
+   * together; both see the trial unclaimed and both create the workspace.
+   * One loses on Org.ownerUserId. That must read as "someone else already
+   * did this" so org resolution retries, not as a server error — it showed
+   * the visitor "a server error occurred" on their very first page load.
+   */
+  it("classifies both sides of the first-load race as retryable", () => {
+    expect(isTrialClaimRace(new TrialClaimRaceError())).toBe(true);
+    expect(isTrialClaimRace(
+      new Prisma.PrismaClientKnownRequestError("dup", {
+        code: "P2002",
+        clientVersion: "test",
+      }),
+    )).toBe(true);
+
+    // anything else must still surface
+    expect(isTrialClaimRace(new Error("boom"))).toBe(false);
+    expect(isTrialClaimRace(
+      new Prisma.PrismaClientKnownRequestError("missing", {
+        code: "P2025",
+        clientVersion: "test",
+      }),
+    )).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import { isPendingOwner } from "@/modules/orgs/pending-owner";
 import { isSignupOpen } from "@/modules/orgs/signup";
 import {
   claimAcquisitionTrial,
+  isTrialClaimRace,
   type TrialClaim,
 } from "@/modules/trial/claim";
 import { hasInstantTrialProvenance } from "@/modules/trial/provenance";
@@ -58,10 +59,17 @@ export function callerOrgFilter(userId: string): Prisma.OrgWhereInput {
   };
 }
 
+/**
+ * Bounded so a pathological loop can never recurse forever. Two is enough:
+ * the retry reads state the winner has already committed.
+ */
+const MAX_RESOLVE_ATTEMPTS = 3;
+
 export async function resolveOrgContext(
   userId: string,
   email?: string,
-  options: { appMetadata?: unknown; trialClaim?: TrialClaim | null } = {}
+  options: { appMetadata?: unknown; trialClaim?: TrialClaim | null } = {},
+  attempt = 0
 ): Promise<ResolvedOrg> {
   // 1) Existing membership → its org.
   const membership = await prisma.membership.findFirst({
@@ -88,12 +96,23 @@ export async function resolveOrgContext(
   //    are never authority for this identity.
   if (hasInstantTrialProvenance(options.appMetadata)) {
     if (email && options.trialClaim) {
-      const claimed = await claimAcquisitionTrial({
-        userId,
-        email,
-        claim: options.trialClaim,
-      });
-      if (claimed) return claimed;
+      // The signup form navigates and refreshes, so two /dashboard renders
+      // can land together. Both see the trial unclaimed and both create the
+      // workspace; one wins on Org.ownerUserId. The loser must not 500 —
+      // the winner's org is committed by then, so resolving again finds it.
+      try {
+        const claimed = await claimAcquisitionTrial({
+          userId,
+          email,
+          claim: options.trialClaim,
+        });
+        if (claimed) return claimed;
+      } catch (err) {
+        if (isTrialClaimRace(err) && attempt < MAX_RESOLVE_ATTEMPTS) {
+          return resolveOrgContext(userId, email, options, attempt + 1);
+        }
+        throw err;
+      }
     }
     throw new NoWorkspaceError();
   }
@@ -147,12 +166,19 @@ export async function resolveOrgContext(
   // 5) A valid acquisition-trial claim can create one simulated workspace
   //    without opening global signup. Existing access and invites win first.
   if (email && options.trialClaim) {
-    const claimed = await claimAcquisitionTrial({
-      userId,
-      email,
-      claim: options.trialClaim,
-    });
-    if (claimed) return claimed;
+    try {
+      const claimed = await claimAcquisitionTrial({
+        userId,
+        email,
+        claim: options.trialClaim,
+      });
+      if (claimed) return claimed;
+    } catch (err) {
+      if (isTrialClaimRace(err) && attempt < MAX_RESOLVE_ATTEMPTS) {
+        return resolveOrgContext(userId, email, options, attempt + 1);
+      }
+      throw err;
+    }
   }
 
   // 6) First visit with no org anywhere → create org + OWNER membership.
@@ -188,9 +214,10 @@ export async function resolveOrgContext(
     // Unique violation: another concurrent request created it first.
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
+      err.code === "P2002" &&
+      attempt < MAX_RESOLVE_ATTEMPTS
     ) {
-      return resolveOrgContext(userId, email, options);
+      return resolveOrgContext(userId, email, options, attempt + 1);
     }
     throw err;
   }
