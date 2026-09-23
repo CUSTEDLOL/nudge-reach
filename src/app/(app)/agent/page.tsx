@@ -23,6 +23,7 @@ import {
   TrialTraining,
   TrialTrainingHeader,
 } from "@/components/features/trial/trial-training";
+import { TrialKnowledgeSources } from "@/components/features/trial/trial-knowledge-sources";
 import { getTrialWorkspace } from "@/modules/trial/workspace";
 
 export const metadata: Metadata = { title: "AI Front Desk" };
@@ -179,8 +180,20 @@ export default async function AgentPage() {
               vertical={profile?.vertical ?? ctx.org.vertical ?? "other"}
               tone={profile?.tone ?? ""}
             />
-            {/* The trial's own sources live inside TrialTraining. */}
-            {!onTrial && (
+            {/* Where facts come from, for both kinds of workspace: the paid
+                importer, or the trial's own sources at the trial's allowances.
+                The trial's used to render down in the left column inside
+                TrialTraining, which left the rail nearly empty and pushed the
+                upload box below every fact. Its draft review stays there. */}
+            {trial && onTrial ? (
+              <TrialKnowledgeSources
+                canEdit={canEdit}
+                webImportsUsed={trial.webImportsUsed}
+                webImportLimit={trial.webImportLimit}
+                fileImportsUsed={trial.fileImportsUsed}
+                fileImportLimit={trial.fileImportLimit}
+              />
+            ) : (
               <ImportPanel
                 canEdit={canEdit}
                 drafts={drafts.map((d) => ({

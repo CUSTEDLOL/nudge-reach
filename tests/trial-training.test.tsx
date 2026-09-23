@@ -45,7 +45,10 @@ import {
 } from "@/components/features/trial/trial-training";
 import { BusinessSection } from "@/app/(app)/agent/business-section";
 import { RulesSection } from "@/app/(app)/agent/rules-section";
-import { uploadTrialPdfFiles } from "@/components/features/trial/trial-knowledge-sources";
+import {
+  TrialKnowledgeSources,
+  uploadTrialPdfFiles,
+} from "@/components/features/trial/trial-knowledge-sources";
 import { Library } from "@/app/(app)/agent/library";
 import { MAX_ACTIVE_RULES, type RuleListItem } from "@/modules/agent/rules";
 import { VERTICALS } from "@/modules/dashboard/verticals";
@@ -116,6 +119,12 @@ const draft = {
  * business, house rules, what it knows — so the trial's page is asserted the
  * way it is composed: the trial's own header and knowledge body around the two
  * shared sections.
+ *
+ * In `/agent`'s DOM order, which is the rail FIRST (it is `lg:order-last`, so
+ * a phone gets the import box above the facts rather than below all of them):
+ * header, then the rail's business section and knowledge sources, then the
+ * body's rules and knowledge. `TrialKnowledgeSources` renders from the page's
+ * rail — it used to render inside `TrialTraining`, down in the body.
  */
 function renderTraining(
   current: TrialWorkspace,
@@ -130,6 +139,13 @@ function renderTraining(
       null,
       createElement(TrialTrainingHeader, { workspace: current }),
       createElement(BusinessSection, { ...business, canEdit: true }),
+      createElement(TrialKnowledgeSources, {
+        canEdit: true,
+        webImportsUsed: current.webImportsUsed,
+        webImportLimit: current.webImportLimit,
+        fileImportsUsed: current.fileImportsUsed,
+        fileImportLimit: current.fileImportLimit,
+      }),
       createElement(RulesSection, {
         rules,
         canEdit: true,
@@ -296,6 +312,12 @@ describe("continuous trial training page", () => {
       source.match(/data-tour="training-source"/g)?.length ?? 0;
     expect(anchors(training)).toBe(1);
     expect(anchors(agentPage)).toBe(0);
+    // The trial's import box is the page's, in the rail beside the paid
+    // `ImportPanel` — not `TrialTraining`'s, down in the body column. Its
+    // draft review stays in the body, where it has the width to be read.
+    expect(agentPage).toContain("<TrialKnowledgeSources");
+    expect(training).not.toContain("<TrialKnowledgeSources");
+    expect(training).toContain("<TrialDraftReview");
     // The fork that gave the trial a different page is gone.
     expect(agentPage).not.toContain("if (trial && !trial.converted)");
     expect(sources).toContain("router.refresh()");
@@ -558,10 +580,18 @@ describe("sequential PDF uploads", () => {
       expect(sectionHeader).toContain("text-base font-semibold text-neutral-900");
     });
 
-    it("leads with the library once taught, and with the sources before that", () => {
+    /**
+     * Was "leads with the library once taught, and with the sources before
+     * that", which read the sources out of the body because that is where
+     * they rendered. They are in the rail now, which is first in the DOM
+     * whatever the body does, so the flip inside the body is asserted on the
+     * pair that is still there — library and draft review — and the rail's
+     * position is asserted on its own.
+     */
+    it("leads with the library once taught, and with the review queue before that", () => {
       const untaught = renderTraining(workspace);
       expect(untaught).toContain("Approved facts");
-      expect(untaught.indexOf("Website or Google listing"))
+      expect(untaught.indexOf("Drafts to review"))
         .toBeLessThan(untaught.indexOf("Approved facts"));
 
       const taught = renderTraining({
@@ -572,7 +602,25 @@ describe("sequential PDF uploads", () => {
       });
       expect(taught).toContain("Your AI knows 2 facts");
       expect(taught.indexOf("Your AI knows"))
-        .toBeLessThan(taught.indexOf("Website or Google listing"));
+        .toBeLessThan(taught.indexOf("Drafts to review"));
+    });
+
+    it("renders the import box from the rail, above the body either way", () => {
+      for (const current of [
+        workspace,
+        { ...workspace, approvedFactCount: 2, factCount: 2, knowledgeCount: 2 },
+      ]) {
+        const html = renderTraining(current);
+        expect(html).toContain("Website or Google listing");
+        // The rail is first in the DOM (`lg:order-last` moves it right on
+        // desktop), so on a phone the upload box comes before the facts.
+        expect(html.indexOf("Website or Google listing")).toBeLessThan(
+          html.indexOf("House rules"),
+        );
+        expect(html.indexOf("Website or Google listing")).toBeLessThan(
+          html.indexOf("Drafts to review"),
+        );
+      }
     });
 
     it("keeps the trial allowances visible in the new layout", () => {

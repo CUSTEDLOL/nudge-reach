@@ -7,7 +7,6 @@ import {
   TrialDraftReview,
   type TrialDraftFact,
 } from "./trial-draft-review";
-import { TrialKnowledgeSources } from "./trial-knowledge-sources";
 
 /**
  * The trial's own title for the shared Training page. Chrome, not substance:
@@ -38,7 +37,14 @@ export function TrialTrainingHeader({
 
 /**
  * The trial's "What it knows": the same fact library the paid app shows, with
- * the trial's import allowances and its 50-fact ceiling around it.
+ * the trial's 50-fact ceiling around it, and the queue of imported facts
+ * waiting to be reviewed.
+ *
+ * Where those facts come from — `TrialKnowledgeSources`, the website / Google
+ * listing / PDF box — used to render here too. It now renders from the page's
+ * rail, where the paid page puts `ImportPanel`, so both kinds of workspace put
+ * the import box in the same place. The draft review stays: it is a review
+ * queue and wants the width of the body column.
  *
  * The page supplies the "What it knows" heading above this, so the heading
  * here is one level down from it — the same level as the paid path's own
@@ -58,18 +64,7 @@ export function TrialTraining({
   // Mirrors the paid page: once it has been taught, lead with what it knows.
   const taught = workspace.approvedFactCount > 0;
 
-  const sources = (
-    <div className="flex flex-col gap-8">
-      <TrialKnowledgeSources
-        canEdit={canEdit}
-        webImportsUsed={workspace.webImportsUsed}
-        webImportLimit={workspace.webImportLimit}
-        fileImportsUsed={workspace.fileImportsUsed}
-        fileImportLimit={workspace.fileImportLimit}
-      />
-      <TrialDraftReview drafts={drafts} canEdit={canEdit} />
-    </div>
-  );
+  const review = <TrialDraftReview drafts={drafts} canEdit={canEdit} />;
 
   const library = (
     /* the guided tour's "train" step spotlights this — see modules/trial/tour */
@@ -104,11 +99,11 @@ export function TrialTraining({
       {taught ? (
         <>
           {library}
-          {sources}
+          {review}
         </>
       ) : (
         <>
-          {sources}
+          {review}
           {library}
         </>
       )}

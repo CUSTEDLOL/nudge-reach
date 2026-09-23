@@ -40,6 +40,11 @@ describe("Training page columns", () => {
     expect(page.indexOf("<BusinessSection")).toBeGreaterThan(aside);
     expect(page.indexOf("<ImportPanel")).toBeGreaterThan(aside);
     expect(page.indexOf("<ImportPanel")).toBeLessThan(railEnd);
+    // Both kinds of workspace, one place: the trial's website/Google/PDF box
+    // is the rail's too, where the paid page puts ImportPanel. It used to sit
+    // in the left column inside TrialTraining, under the facts.
+    expect(page.indexOf("<TrialKnowledgeSources")).toBeGreaterThan(aside);
+    expect(page.indexOf("<TrialKnowledgeSources")).toBeLessThan(railEnd);
     expect(page.indexOf("<RulesSection")).toBeGreaterThan(railEnd);
     // `<TrialTraining ` and not `<TrialTrainingHeader`, which is in the header.
     expect(page.search(/<TrialTraining\s/)).toBeGreaterThan(railEnd);
