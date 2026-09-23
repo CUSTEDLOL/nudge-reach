@@ -34,6 +34,12 @@ reading by the prompt's own wording. No amount of retyping it would have worked.
   (awaiting-review) state. It runs once per org on the first load of Training
   and from the founder panel for concierge onboarding. **Neither legacy column
   is cleared**, so a rollback loses nothing.
+- **Training page rebuilt for hierarchy (2026-09-23).** Section headers sit
+  outside their boxes at `text-base` (the only place that size appears); rules
+  are one divided box with the add form collapsed behind *+ Add rule* and each
+  row reading as a sentence (**Never** quote a price over chat); the owner
+  question queue is a brand-tinted band rendered only when non-empty; the page
+  is `max-w-3xl` for trial and paid alike. Seven explanatory sentences became two.
 
 **Founder decisions recorded along the way (2026-09-22)**
 
