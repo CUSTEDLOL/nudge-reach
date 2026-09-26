@@ -55,6 +55,9 @@ export function AppShell({
   const previousPathname = useRef(pathname);
   // Reserve space for the bottom bar wherever it is shown (< lg, non-thread).
   const hasBottomNav = mode === "trial" || !isThreadRoute(pathname);
+  // The inbox is a chat app, not a page: it fills the viewport edge to edge
+  // below the topbar, like WhatsApp itself (founder, 2026-09-26).
+  const fullBleed = mode === "standard" && isInboxAppRoute(pathname);
 
   useEffect(() => {
     if (previousPathname.current === pathname) return;
@@ -107,7 +110,12 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-dvh overflow-x-clip bg-[#f7f8f7]">
+    <div
+      className={cn(
+        "overflow-x-clip bg-[#f7f8f7]",
+        fullBleed ? "h-dvh" : "min-h-dvh"
+      )}
+    >
       <SkipLink />
       <Sidebar
         role={role}
@@ -118,7 +126,8 @@ export function AppShell({
       />
       <div
         className={cn(
-          "flex min-h-dvh min-w-0 flex-col transition-[padding] duration-200 motion-reduce:transition-none",
+          "flex min-w-0 flex-col transition-[padding] duration-200 motion-reduce:transition-none",
+          fullBleed ? "h-dvh" : "min-h-dvh",
           sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[232px]"
         )}
       >
@@ -136,9 +145,13 @@ export function AppShell({
           id="main-content"
           tabIndex={-1}
           className={cn(
-            "mx-auto w-full min-w-0 max-w-[1400px] flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8",
+            fullBleed
+              ? "flex min-h-0 w-full min-w-0 flex-1 flex-col outline-none"
+              : "mx-auto w-full min-w-0 max-w-[1400px] flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8",
             hasBottomNav &&
-              "pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6"
+              (fullBleed
+                ? "pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0"
+                : "pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6")
           )}
         >
           {children}
@@ -161,6 +174,14 @@ export function shouldShowTrialTour(
   trial: TrialWorkspace | null | undefined,
 ) {
   return mode === "trial" && Boolean(trial?.setupComplete);
+}
+
+/** /inbox and /inbox/[id] — not the "Try your AI" page under /inbox/try. */
+export function isInboxAppRoute(pathname: string): boolean {
+  return (
+    pathname === "/inbox" ||
+    (isThreadRoute(pathname) && !/^\/inbox\/try(\/|$)/.test(pathname))
+  );
 }
 
 function SkipLink() {

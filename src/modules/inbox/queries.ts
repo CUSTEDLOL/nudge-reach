@@ -118,3 +118,30 @@ export async function getThreadSnapshot(
     })),
   };
 }
+
+/** What needs a person right now — the sidebar's live counts. */
+export interface AttentionCounts {
+  /** Conversations with unread customer messages. */
+  unread: number;
+  /** Conversations the AI handed off to a human. */
+  needsHuman: number;
+  /** Booking requests waiting for the business to confirm. */
+  pendingBookings: number;
+}
+
+export async function getAttentionCounts(
+  orgId: string,
+  userId: string
+): Promise<AttentionCounts> {
+  const access = numberAccessClause(await allowedNumberIds(orgId, userId));
+  const [unread, needsHuman, pendingBookings] = await Promise.all([
+    prisma.conversation.count({
+      where: { AND: [buildConversationWhere(orgId, "unread", "", userId), access] },
+    }),
+    prisma.conversation.count({
+      where: { AND: [buildConversationWhere(orgId, "handoff", "", userId), access] },
+    }),
+    prisma.bookingRequest.count({ where: { orgId, status: "pending" } }),
+  ]);
+  return { unread, needsHuman, pendingBookings };
+}

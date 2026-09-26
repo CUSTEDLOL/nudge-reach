@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Lock, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/features/app-shell/brand-mark";
@@ -16,6 +16,8 @@ import {
   type AppRole,
 } from "@/components/features/app-shell/nav";
 import { UpgradeDialog } from "@/components/features/trial/upgrade-dialog";
+import { useInboxPoll } from "@/app/(app)/inbox/use-inbox-poll";
+import type { AttentionCounts } from "@/modules/inbox/queries";
 
 export type SidebarUser = { name: string; email: string };
 
@@ -44,6 +46,13 @@ export function Sidebar({
   ];
   // Which locked feature the visitor just asked about, if any.
   const [lockedFeature, setLockedFeature] = useState<string | null>(null);
+  const counts = useAttentionCounts(mode === "standard");
+  const badgeFor = (key: string) =>
+    key === "inbox"
+      ? counts?.unread
+      : key === "bookings"
+        ? counts?.pendingBookings
+        : undefined;
 
   const iconButton =
     "grid h-9 w-9 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-brand-500";
@@ -143,16 +152,22 @@ export function Sidebar({
                       );
                     }
 
+                    const badge = badgeFor(item.key);
+                    const badgeText = badge && badge > 99 ? "99+" : badge;
                     return (
                       <li key={item.key}>
                         <Link
                           href={item.href}
                           data-tour={item.tourTarget}
                           aria-current={active ? "page" : undefined}
-                          aria-label={collapsed ? item.label : undefined}
+                          aria-label={
+                            collapsed || badge
+                              ? `${item.label}${badge ? `, ${badge} waiting` : ""}`
+                              : undefined
+                          }
                           title={collapsed ? item.label : undefined}
                           className={cn(
-                            "flex h-9 items-center rounded-md text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1",
+                            "relative flex h-9 items-center rounded-md text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1",
                             collapsed ? "justify-center px-2" : "gap-2.5 px-2.5",
                             active
                               ? "bg-brand-700 text-white"
@@ -167,7 +182,39 @@ export function Sidebar({
                             aria-hidden
                           />
                           {!collapsed && <span className="truncate">{item.label}</span>}
+                          {badge ? (
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
+                                collapsed
+                                  ? "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1 text-[10px]"
+                                  : "ml-auto",
+                                active
+                                  ? "bg-white text-brand-800"
+                                  : "bg-[#25d366] text-white"
+                              )}
+                            >
+                              {badgeText}
+                            </span>
+                          ) : null}
                         </Link>
+
+                        {/* Chats the AI handed off are the one thing that
+                            cannot wait, so they get a row of their own — but
+                            only while there are some. */}
+                        {!collapsed && item.key === "inbox" && counts?.needsHuman ? (
+                          <Link
+                            href="/inbox?filter=handoff"
+                            className="mt-0.5 ml-[1.45rem] flex h-8 items-center gap-2 rounded-md border-l border-neutral-200 pl-2.5 pr-2.5 text-[13px] font-medium text-amber-800 outline-none hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+                          >
+                            <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            <span className="truncate">Needs human</span>
+                            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold tabular-nums text-amber-900">
+                              {counts.needsHuman}
+                            </span>
+                          </Link>
+                        ) : null}
 
                         {/* Second level, always open. Hiding it until you were
                             already inside the section is what made setting the
@@ -230,4 +277,35 @@ export function Sidebar({
       />
     </aside>
   );
+}
+
+/**
+ * Live counts for the rail, polled like the inbox (paused while the tab is
+ * hidden or the person is idle). Standard workspaces only — a trial has no
+ * real conversations to count.
+ */
+function useAttentionCounts(enabled: boolean): AttentionCounts | null {
+  const [counts, setCounts] = useState<AttentionCounts | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!enabled) return;
+    const next = await fetchAttentionCounts();
+    if (next) setCounts(next);
+  }, [enabled]);
+
+  // First read right away; the poll then refreshes every 15s.
+  useEffect(() => {
+    if (!enabled) return;
+    fetchAttentionCounts()
+      .then((next) => next && setCounts(next))
+      .catch(() => {});
+  }, [enabled]);
+  useInboxPoll(refresh, 15_000);
+
+  return enabled ? counts : null;
+}
+
+async function fetchAttentionCounts(): Promise<AttentionCounts | null> {
+  const res = await fetch("/api/inbox/counts", { cache: "no-store" });
+  return res.ok ? ((await res.json()) as AttentionCounts) : null;
 }

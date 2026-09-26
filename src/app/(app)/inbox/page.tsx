@@ -5,7 +5,6 @@ import { requireOrgContext } from "@/modules/orgs/auth";
 import { parseInboxFilter } from "@/modules/inbox/filters";
 import { listConversationSummaries } from "@/modules/inbox/queries";
 import { creditsExhausted } from "@/modules/billing/credits";
-import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { CreditBanner } from "@/components/features/credit-banner";
 import { ListPane } from "./list-pane";
@@ -34,37 +33,32 @@ export default async function InboxPage({
 
   return (
     <>
-      <PageHeader
-        title="Inbox"
-        description="Every WhatsApp conversation in one shared team inbox."
-      />
       {aiPaused && <CreditBanner />}
-      {/* Mobile subtracts extra chrome for the fixed bottom nav. */}
-      <div className="grid h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] min-h-[24rem] grid-cols-1 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft lg:h-[calc(100dvh-12.5rem)] lg:min-h-[26rem] lg:grid-cols-[minmax(300px,22rem)_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-white lg:grid-cols-[clamp(300px,32%,420px)_minmax(0,1fr)]">
         <ListPane
           initial={conversations}
           filter={filter}
           q={q}
-          className="border-neutral-100 lg:border-r"
+          className="border-[#e9edef] lg:border-r"
         />
-        <div className="hidden flex-col items-center justify-center gap-3 bg-neutral-50/60 px-6 text-center lg:flex">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+        <div className="hidden flex-col items-center justify-center gap-4 border-b-[6px] border-[#25d366] bg-[#f0f2f5] px-6 text-center lg:flex">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-[#00a884] shadow-sm">
             {conversations.length === 0 ? (
-              <Bot className="h-5 w-5" aria-hidden />
+              <Bot className="h-9 w-9" aria-hidden />
             ) : (
-              <MessageSquare className="h-5 w-5" aria-hidden />
+              <MessageSquare className="h-9 w-9" aria-hidden />
             )}
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-neutral-900">
+            <h2 className="text-[28px] font-light text-[#41525d]">
               {conversations.length === 0
                 ? "See your AI answer"
-                : "Select a conversation"}
+                : "Nudge Inbox"}
             </h2>
-            <p className="mx-auto mt-1 max-w-xs text-sm text-neutral-500">
+            <p className="mx-auto mt-2 max-w-md text-sm text-[#667781]">
               {conversations.length === 0
                 ? "Message your business as a customer would — the reply lands right here."
-                : "Pick a thread on the left to read it, reply, and manage the contact."}
+                : "Every WhatsApp conversation in one shared team inbox. Pick a chat on the left to read it, reply, and manage the contact."}
             </p>
           </div>
           {conversations.length === 0 && (

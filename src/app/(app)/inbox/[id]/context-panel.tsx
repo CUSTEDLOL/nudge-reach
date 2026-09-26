@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, Plus, StickyNote , Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +22,7 @@ import {
   setLeadStageAction,
   type ActionResult,
 } from "../actions";
+import { WaAvatar } from "../wa-avatar";
 
 export interface ContextPanelProps {
   conversationId: string;
@@ -103,18 +103,18 @@ export function ContextPanel({
     <div className={cn("flex flex-col gap-5", !unpadded && "p-4")}>
       {/* Contact card */}
       <div>
-        <div className="flex items-center gap-3">
-          <Avatar name={contact.name} size="lg" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-neutral-900">
-              {contact.name}
-            </p>
-            <p className="truncate font-mono text-xs text-neutral-400">
+        <div className="flex flex-col items-center text-center">
+          <WaAvatar size="lg" />
+          <p className="mt-3 max-w-full truncate text-[22px] leading-7 text-[#111b21]">
+            {contact.name}
+          </p>
+          {contact.name !== contact.phoneE164 && (
+            <p className="mt-0.5 max-w-full truncate text-[15px] text-[#667781]">
               {contact.phoneE164}
             </p>
-          </div>
+          )}
         </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
           {contact.optedOut ? (
             <Badge tone="danger">Opted out</Badge>
           ) : contact.optedIn ? (

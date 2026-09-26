@@ -10,10 +10,9 @@ import {
   listConversationSummaries,
 } from "@/modules/inbox/queries";
 import { getApprovedTemplates } from "@/modules/whatsapp/library";
-import { PageHeader } from "@/components/ui/page-header";
 import { ListPane } from "../list-pane";
 import { ThreadPane } from "./thread";
-import { ContextPanel, type ContextPanelProps } from "./context-panel";
+import type { ContextPanelProps } from "./context-panel";
 import { getTrialWorkspace } from "@/modules/trial/workspace";
 import { getTrialReadOnlyConversation } from "@/modules/trial/test-inbox-query";
 import { trialTestIdentity } from "@/modules/trial/test-inbox";
@@ -131,43 +130,33 @@ export default async function InboxThreadPage({
   };
 
   return (
-    <>
-      <PageHeader
-        title="Inbox"
-        description="Every WhatsApp conversation in one shared team inbox."
-        className="hidden lg:flex"
+    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-white lg:grid-cols-[clamp(300px,32%,420px)_minmax(0,1fr)]">
+      <ListPane
+        initial={summaries}
+        filter={filter}
+        q={q}
+        activeId={conversation.id}
+        className="hidden border-[#e9edef] lg:flex lg:border-r"
       />
-      <div className="grid h-[calc(100dvh-6.5rem)] min-h-[26rem] grid-cols-1 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-soft lg:h-[calc(100dvh-12.5rem)] lg:grid-cols-[minmax(280px,20rem)_1fr] xl:grid-cols-[minmax(280px,20rem)_minmax(0,1fr)_minmax(250px,18.5rem)]">
-        <ListPane
-          initial={summaries}
-          filter={filter}
-          q={q}
-          activeId={conversation.id}
-          className="hidden border-neutral-100 lg:flex lg:border-r"
-        />
-        <ThreadPane
-          key={conversation.id}
-          conversationId={conversation.id}
-          initial={snapshot}
-          contactName={contact.name}
-          contactPhone={contact.phoneE164}
-          conversationStatus={conversation.status}
-          channel={conversation.channel}
-          numberLabel={
-            orgNumbers.length > 1
-              ? (orgNumbers.find((n) => n.id === conversation.whatsappAccountId)
-                  ?.displayName ?? null)
-              : null
-          }
-          templates={templates}
-          simulation={isSimulated(org)}
-          backHref={backHref}
-          panel={panelProps}
-        />
-        <div className="hidden min-h-0 overflow-y-auto border-l border-neutral-100 xl:block">
-          <ContextPanel {...panelProps} />
-        </div>
-      </div>
-    </>
+      <ThreadPane
+        key={conversation.id}
+        conversationId={conversation.id}
+        initial={snapshot}
+        contactName={contact.name}
+        contactPhone={contact.phoneE164}
+        conversationStatus={conversation.status}
+        channel={conversation.channel}
+        numberLabel={
+          orgNumbers.length > 1
+            ? (orgNumbers.find((n) => n.id === conversation.whatsappAccountId)
+                ?.displayName ?? null)
+            : null
+        }
+        templates={templates}
+        simulation={isSimulated(org)}
+        backHref={backHref}
+        panel={panelProps}
+      />
+    </div>
   );
 }

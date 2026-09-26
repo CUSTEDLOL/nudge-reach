@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
-import { Lock, Send, Sparkles } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { Loader2, Lock, Send, SendHorizontal, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Menu, MenuItem, MenuLabel } from "@/components/ui/dropdown";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { WhatsappPreview } from "@/components/features/whatsapp-preview";
 import type { LibraryTemplate } from "@/modules/whatsapp/library";
@@ -40,7 +39,7 @@ export function Composer({
 }) {
   const { toast } = useToast();
   const [text, setText] = useState("");
-  const [tone, setTone] = useState<SuggestTone>("friendly");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [sending, setSending] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
 
@@ -55,6 +54,7 @@ export function Composer({
       const result = await sendTextAction(fd);
       if (result.ok) {
         setText("");
+        requestAnimationFrame(() => fitHeight(inputRef.current));
         await onSent();
       } else {
         toast({ tone: "error", description: result.message });
@@ -64,7 +64,7 @@ export function Composer({
     }
   }
 
-  async function handleSuggest() {
+  async function handleSuggest(tone: SuggestTone) {
     if (suggesting) return;
     setSuggesting(true);
     try {
@@ -74,6 +74,10 @@ export function Composer({
       const result = await suggestReplyAction(fd);
       if (result.ok && result.draft) {
         setText(result.draft);
+        requestAnimationFrame(() => {
+          fitHeight(inputRef.current);
+          inputRef.current?.focus();
+        });
         if (result.sample) {
           toast({ tone: "info", description: result.message });
         }
@@ -105,66 +109,72 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-neutral-100 p-3">
-      <Textarea
+    <div className="flex shrink-0 items-end gap-2 bg-[#f0f2f5] px-3 py-[9px] sm:px-4">
+      {/* Where WhatsApp has its attach button: draft a reply with AI, in a
+          chosen tone. The draft lands in the box — never auto-sent. */}
+      <Menu
+        align="start"
+        triggerLabel="Draft a reply with AI"
+        triggerClassName="shrink-0 text-[#54656f]"
+        className="bottom-full mb-2"
+        trigger={
+          <span className="grid h-10 w-10 place-items-center rounded-full hover:bg-black/5">
+            {suggesting ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-5 w-5" aria-hidden />
+            )}
+          </span>
+        }
+      >
+        <MenuLabel>Draft a reply with AI</MenuLabel>
+        {SUGGEST_TONES.map((t) => (
+          <MenuItem
+            key={t.value}
+            disabled={suggesting}
+            onSelect={() => void handleSuggest(t.value)}
+          >
+            {t.label}
+          </MenuItem>
+        ))}
+      </Menu>
+      <textarea
+        ref={inputRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          fitHeight(e.target);
+        }}
         onKeyDown={onKeyDown}
-        placeholder={`Reply to ${contactFirstName}… (Enter to send, Shift+Enter for a new line)`}
-        aria-label="Reply"
-        rows={2}
-        className="min-h-14 resize-none"
+        placeholder="Type a message"
+        aria-label={`Reply to ${contactFirstName}`}
+        title="Enter to send, Shift+Enter for a new line"
+        rows={1}
         disabled={sending}
+        className="max-h-[140px] min-h-[42px] flex-1 resize-none rounded-lg bg-white px-3 py-[10px] text-[15px] leading-[22px] text-[#111b21] outline-none placeholder:text-[#667781] focus-visible:ring-2 focus-visible:ring-[#00a884]/40 disabled:opacity-70"
       />
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleSuggest}
-          loading={suggesting}
-          title="Draft a reply with AI — you edit and send it"
-        >
-          {!suggesting && (
-            <Sparkles className="h-3.5 w-3.5 text-brand-600" aria-hidden />
-          )}
-          Suggest reply
-        </Button>
-        <div
-          role="radiogroup"
-          aria-label="Draft tone"
-          className="flex flex-wrap items-center gap-1"
-        >
-          {SUGGEST_TONES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="radio"
-              aria-checked={tone === t.value}
-              onClick={() => setTone(t.value)}
-              className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-400/50",
-                tone === t.value
-                  ? "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200"
-                  : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <Button
-          className="ml-auto"
-          size="sm"
-          onClick={handleSendText}
-          loading={sending}
-          disabled={!text.trim()}
-        >
-          {!sending && <Send className="h-3.5 w-3.5" aria-hidden />}
-          Send
-        </Button>
-      </div>
+      <button
+        type="button"
+        onClick={handleSendText}
+        disabled={!text.trim() || sending}
+        aria-label="Send"
+        className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-[#00a884] text-white outline-none transition-colors hover:bg-[#008f72] focus-visible:ring-2 focus-visible:ring-[#00a884] focus-visible:ring-offset-2 disabled:bg-[#54656f]/30"
+      >
+        {sending ? (
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        ) : (
+          <SendHorizontal className="h-5 w-5" aria-hidden />
+        )}
+      </button>
     </div>
   );
+}
+
+/** Grow the reply box with its text, up to its max height. */
+function fitHeight(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
 }
 
 function TemplateSender({
@@ -208,7 +218,7 @@ function TemplateSender({
   }
 
   return (
-    <div className="border-t border-neutral-100 bg-amber-50/50 p-3">
+    <div className="shrink-0 bg-[#f0f2f5] px-4 py-3">
       <p className="flex items-center gap-1.5 text-xs font-medium text-amber-800">
         <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
         The 24-hour service window has closed — WhatsApp only allows an

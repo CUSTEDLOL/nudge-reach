@@ -1,5 +1,21 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Inbox looks like WhatsApp; sidebar shows what needs you (2026-09-26) ✅
+
+Founder: the chat was too small and should mirror WhatsApp's light-mode UI;
+the sidebar should be functional, not vanity. /inbox and /inbox/[id] now fill
+the viewport below the topbar (no page header, padding or max-width;
+`isInboxAppRoute` in the shell). List: "Chats", pill search, chip filters,
+72px rows, default grey avatar, green unread counts, amber "Needs human".
+Thread: #f0f2f5 header, #efeae2 background, WhatsApp bubbles with tails and
+inline time/tick, day pills; composer is a growing "Type a message" box, a
+round send button and an ✨ AI-draft menu (tone picker) in the attach slot.
+Contact info docks on xl+ (toggled from the header, closed by default,
+remembered per browser) and stays a drawer below. Sidebar: live counts from
+`/api/inbox/counts` (`getAttentionCounts`, number-access scoped) — unread on
+Inbox, pending bookings on Bookings, and a "Needs human" row only while
+chats are waiting; polled every 15s, paused when hidden or idle.
+
 ## Neutral product copy — no clinic/restaurant assumptions (2026-09-26) ✅
 
 Founder decision: the logged-in product assumes no industry. Shared copy and
