@@ -12,6 +12,17 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 
+/**
+ * The callback Google sends the owner back to. Defaults to the app's own
+ * route, so a missing GOOGLE_OAUTH_REDIRECT_URI no longer breaks sign-in with
+ * an empty redirect_uri. Whatever this returns must be listed under the OAuth
+ * client's Authorized redirect URIs in Google Cloud.
+ */
+export function googleRedirectUri(): string {
+  const origin = (env.NEXT_PUBLIC_APP_URL ?? "https://nudgeagent.app").replace(/\/$/, "");
+  return env.GOOGLE_OAUTH_REDIRECT_URI?.trim() || `${origin}/api/integrations/google/callback`;
+}
+
 export function isGoogleCalendarConfigured(): boolean {
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 }
@@ -29,7 +40,7 @@ export function googleAuthUrl(state: string): string {
   requireConfig();
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID!,
-    redirect_uri: env.GOOGLE_OAUTH_REDIRECT_URI ?? "",
+    redirect_uri: googleRedirectUri(),
     response_type: "code",
     access_type: "offline", // we need a refresh token
     prompt: "consent",
@@ -52,7 +63,7 @@ export async function exchangeCodeForTokens(
       code,
       client_id: env.GOOGLE_CLIENT_ID!,
       client_secret: env.GOOGLE_CLIENT_SECRET!,
-      redirect_uri: env.GOOGLE_OAUTH_REDIRECT_URI ?? "",
+      redirect_uri: googleRedirectUri(),
       grant_type: "authorization_code",
     }),
   });

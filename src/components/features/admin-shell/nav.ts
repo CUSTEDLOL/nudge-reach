@@ -3,6 +3,7 @@ import {
   Building2,
   HeartPulse,
   LayoutDashboard,
+  PlugZap,
   ScrollText,
   UserPlus,
   Banknote,
@@ -37,6 +38,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "System",
     items: [
+      { href: "/admin/integrations", label: "Integrations", icon: PlugZap },
       { href: "/admin/ops", label: "Ops health", icon: HeartPulse },
       { href: "/admin/audit", label: "Audit log", icon: ScrollText },
     ],
