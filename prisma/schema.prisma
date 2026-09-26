@@ -355,7 +355,7 @@ model AgentProfile {
   orgId        String   @unique
   org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   enabled      Boolean  @default(false)
-  vertical     String   @default("restaurant")
+  vertical     String   @default("other")
   businessName String
   // LEGACY, and not the agent's knowledge. Both columns were the owner's
   // knowledge and boundaries, and every prompt builder read them. None does

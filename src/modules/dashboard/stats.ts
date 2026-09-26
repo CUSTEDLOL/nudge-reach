@@ -492,7 +492,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       title: "Connect your calendar",
       description: input.calendarConnected
         ? "The AI books straight into it."
-        : "So the AI can book real appointments around your availability.",
+        : "So the AI can take real bookings around your availability.",
       href: "/integrations",
       done: input.calendarConnected,
     });

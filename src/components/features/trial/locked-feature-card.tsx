@@ -46,7 +46,7 @@ export const TRIAL_LOCKED_FEATURES: readonly LockedTrialFeature[] = [
   {
     key: "calendar",
     title: "Calendar booking",
-    description: "Check real availability and book confirmed appointments into your clinic calendar.",
+    description: "Check real availability and add confirmed bookings to your calendar.",
     preview: "Availability checks · confirmations · reminders",
     paidHref: "/bookings",
     icon: CalendarCheck,
@@ -78,7 +78,7 @@ export const TRIAL_LOCKED_FEATURES: readonly LockedTrialFeature[] = [
   {
     key: "crm",
     title: "CRM sync",
-    description: "Write lead and conversation outcomes back to the systems your clinic already uses.",
+    description: "Write lead and conversation outcomes back to the systems your business already uses.",
     preview: "Lead records · status updates · activity history",
     paidHref: "/integrations",
     icon: HeartHandshake,
@@ -86,7 +86,7 @@ export const TRIAL_LOCKED_FEATURES: readonly LockedTrialFeature[] = [
   {
     key: "voice",
     title: "Voice Front Desk",
-    description: "Handle clinic calls with the same grounded knowledge and safe human handoff.",
+    description: "Handle phone calls with the same grounded knowledge and safe human handoff.",
     preview: "Inbound calls · transcripts · handoff",
     paidHref: "/agent/voice",
     icon: Mic2,

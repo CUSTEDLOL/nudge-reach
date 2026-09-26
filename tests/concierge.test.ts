@@ -4,7 +4,7 @@ vi.mock("@/lib/db", () => ({ prisma: {} }));
 
 import {
   buildBusinessInfo,
-  verticalPackFor,
+  STARTER_PACK,
 } from "@/modules/concierge";
 import { campaignContentSchema } from "@/modules/campaign/schema";
 import { buildAgentSystemPrompt } from "@/modules/agent/prompt";
@@ -28,23 +28,23 @@ describe("buildBusinessInfo", () => {
   });
 });
 
-describe("vertical template packs (clinic/salon)", () => {
-  for (const vertical of ["clinic", "salon"]) {
-    it(`${vertical} pack is valid, single-{{1}}, opt-out-compliant marketing`, () => {
-      const pack = verticalPackFor(vertical);
-      expect(pack.length).toBeGreaterThan(0);
-      for (const t of pack) {
-        expect(campaignContentSchema.safeParse(t.content).success).toBe(true);
-        expect(t.name).toMatch(/^[a-z0-9_]+$/);
-        expect((t.content.body.match(/\{\{1\}\}/g) ?? []).length).toBe(1);
-        expect(t.category).toBe("MARKETING");
-        expect(t.content.footer.toLowerCase()).toContain("stop");
-      }
-    });
-  }
+describe("concierge starter pack", () => {
+  it("is valid, single-{{1}}, opt-out-compliant marketing", () => {
+    expect(STARTER_PACK.length).toBeGreaterThan(0);
+    for (const t of STARTER_PACK) {
+      expect(campaignContentSchema.safeParse(t.content).success).toBe(true);
+      expect(t.name).toMatch(/^[a-z0-9_]+$/);
+      expect((t.content.body.match(/\{\{1\}\}/g) ?? []).length).toBe(1);
+      expect(t.category).toBe("MARKETING");
+      expect(t.content.footer.toLowerCase()).toContain("stop");
+    }
+  });
 
-  it("unknown vertical yields an empty pack", () => {
-    expect(verticalPackFor("restaurant")).toEqual([]);
+  it("assumes no industry — no clinic, salon, menu or appointment wording", () => {
+    const text = JSON.stringify(STARTER_PACK).toLowerCase();
+    for (const word of ["clinic", "salon", "stylist", "check-up", "menu", "appointment", "patient"]) {
+      expect(text).not.toContain(word);
+    }
   });
 });
 

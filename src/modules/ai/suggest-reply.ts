@@ -28,7 +28,7 @@ const TONE_INSTRUCTIONS: Record<SuggestTone, string> = {
   professional:
     "Write in a courteous, professional tone. Clear and respectful, no slang, at most one emoji.",
   friendly:
-    "Write in a warm, friendly tone, like a neighbourhood shopkeeper who knows the customer. One emoji is fine.",
+    "Write in a warm, friendly tone, like someone at the business who knows the customer. One emoji is fine.",
   short:
     "Be as brief as possible — one or two short sentences, no filler, no emoji.",
   persuasive:
@@ -116,7 +116,7 @@ export function cannedDraft(
     professional: `Hello ${contactFirstName}, thank you for reaching out to ${businessName}. We've noted your message and will confirm the details shortly. Is there anything else we can help with? (sample)`,
     friendly: `Hi ${contactFirstName}! 😊 Thanks for messaging ${businessName} — happy to help with this. Give us a moment and we'll sort it out for you. (sample)`,
     short: `Hi ${contactFirstName}, on it — we'll confirm shortly. (sample)`,
-    persuasive: `Hi ${contactFirstName}, great choice! Our regulars love this one and pieces move fast — shall we set one aside for you at ${businessName}? (sample)`,
+    persuasive: `Hi ${contactFirstName}, great choice! It's one of our most popular options — shall we get you started at ${businessName}? (sample)`,
   };
   return drafts[tone];
 }

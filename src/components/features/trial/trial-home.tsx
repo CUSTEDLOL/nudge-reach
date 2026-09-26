@@ -29,7 +29,7 @@ export function TrialHome({
             Welcome to {businessName}{"'s AI Front Desk"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-            Follow the short checklist, test a real patient question, then preview what Nudge can run when you go live.
+            Follow the short checklist, test a real customer question, then preview what Nudge can run when you go live.
           </p>
         </div>
         <div className="flex flex-col items-start gap-1 sm:items-end">
@@ -70,7 +70,7 @@ export function TrialHome({
             <Card className="p-4">
               <BookOpenCheck className="h-5 w-5 text-brand-700" aria-hidden />
               <p className="mt-5 text-2xl font-semibold tabular-nums text-neutral-950">{workspace.knowledgeCount}</p>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">Approved clinic facts</p>
+              <p className="mt-1 text-xs leading-5 text-neutral-500">Approved business facts</p>
             </Card>
             <Card className="p-4">
               <MessageCircleMore className="h-5 w-5 text-brand-700" aria-hidden />
@@ -84,8 +84,8 @@ export function TrialHome({
       <section id="trial-conversion" data-tour="trial-conversion" className="scroll-mt-28 rounded-2xl border border-neutral-200 bg-neutral-950 p-6 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-8">
         <div>
           <p className="text-sm font-semibold text-brand-300">Ready for the real front desk?</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Connect WhatsApp and your clinic systems with us.</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">We will map the setup, integrations, and paid tier that fit your clinic.</p>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Connect WhatsApp and your business systems with us.</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">We will map the setup, integrations, and paid tier that fit your business.</p>
         </div>
         <div className="mt-5 flex shrink-0 flex-col gap-3 sm:mt-0 sm:items-start">
           <BookDemoButton surface="trial_workspace" variant="primary" size="md">Book a free demo</BookDemoButton>

@@ -17,14 +17,14 @@ export function buildTrialChecklist(
     {
       key: "teach",
       label: "Teach your AI",
-      description: "Approve the clinic facts it is allowed to use.",
+      description: "Approve the business facts it is allowed to use.",
       href: "/agent",
       done: workspace.knowledgeReady,
     },
     {
       key: "test",
       label: "Test a real question",
-      description: "Message it exactly like a patient would.",
+      description: "Message it exactly like a customer would.",
       href: "/inbox/try",
       done: Boolean(workspace.firstReplyAt),
     },

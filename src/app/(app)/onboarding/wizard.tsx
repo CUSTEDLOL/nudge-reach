@@ -324,7 +324,7 @@ export function OnboardingWizard(props: WizardProps) {
                       name="businessName"
                       value={businessName}
                       onChange={(event) => setBusinessName(event.target.value)}
-                      placeholder="Aster Skin Clinic"
+                      placeholder="Your business name"
                       required
                       minLength={2}
                       className="mt-1.5 h-11 text-base"

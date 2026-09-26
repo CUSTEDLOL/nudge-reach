@@ -11,7 +11,7 @@ import { formatInTimezone } from "@/lib/timezone";
 export const captureBookingTool = defineTool({
   name: "capture_booking_request",
   description:
-    "Record and, where possible, BOOK an appointment / reservation. ONLY call this AFTER confirming the details with the customer — the name it's under and exactly when (date and time; party size if relevant). If a calendar is connected the slot is checked and booked immediately; otherwise staff are notified to confirm. If the slot comes back taken, offer the alternatives returned and ask the customer to pick one.",
+    "Record and, where possible, BOOK a booking or appointment. ONLY call this AFTER confirming the details with the customer — the name it's under and exactly when (date and time; number of people only if the booking needs it). If a calendar is connected the slot is checked and booked immediately; otherwise staff are notified to confirm. If the slot comes back taken, offer the alternatives returned and ask the customer to pick one.",
   inputSchema: {
     type: "object",
     properties: {
@@ -37,7 +37,7 @@ export const captureBookingTool = defineTool({
   }),
   write: true,
   async handler(ctx, input) {
-    const partyLabel = input.party_size ? `, party of ${input.party_size}` : "";
+    const partyLabel = input.party_size ? `, ${input.party_size} people` : "";
     const summary = `Booking: ${input.name}${partyLabel}`;
     const channel = ctx.channel === "voice" ? "phone" : "WhatsApp";
     const description = [`Booked via ${channel} for ${ctx.contactPhone}.`, input.notes]

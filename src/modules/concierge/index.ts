@@ -18,7 +18,7 @@ import type { KnowledgeCategory } from "@/modules/knowledge/digest";
 
 /**
  * Concierge onboarding (5.3): the done-for-you moat. An operator sets a client
- * up in one pass — knowledge base → agent grounding, a per-vertical template
+ * up in one pass — knowledge base → agent grounding, a starter template
  * pack, and a go-live gate. Everything composes existing pieces (the library
  * template pipeline, the follow-up pack).
  *
@@ -239,11 +239,11 @@ function marketing(
     category: "MARKETING",
     content: {
       productName: name,
-      campaignAngle: "Concierge vertical pack.",
+      campaignAngle: "Concierge starter pack.",
       header,
       body,
       footer: OPT_OUT,
-      buttons: [{ type: "QUICK_REPLY", text: "Book now" }],
+      buttons: [{ type: "QUICK_REPLY", text: "I'm interested" }],
       sampleName: "Priya",
       imageTreatment: "",
       notes: "Installed by concierge onboarding.",
@@ -251,45 +251,27 @@ function marketing(
   };
 }
 
-/** One vertical, done deeply (clinics/salons first per the strategy). */
-export const VERTICAL_PACKS: Record<string, VerticalTemplate[]> = {
-  clinic: [
-    marketing(
-      "clinic_booking_invite",
-      "Book your visit",
-      "Hi {{1}}, need to see us? Just reply here and we'll book you the next available appointment — quick and easy."
-    ),
-    marketing(
-      "clinic_checkup_reminder",
-      "Time for a check-up?",
-      "Hi {{1}}, it's been a while since your last visit. Reply here to book a check-up — your health matters to us."
-    ),
-  ],
-  salon: [
-    marketing(
-      "salon_booking_invite",
-      "Ready for your next look?",
-      "Hi {{1}}, ready for your next appointment? Reply here and we'll book your slot with your favourite stylist."
-    ),
-    marketing(
-      "salon_treat_yourself",
-      "Treat yourself",
-      "Hi {{1}}, treat yourself this week — reply here to book and ask about our current offers."
-    ),
-  ],
-};
+/**
+ * The concierge's starter marketing templates — worded for any business, so
+ * no client is ever sent another industry's copy.
+ */
+export const STARTER_PACK: VerticalTemplate[] = [
+  marketing(
+    "check_in_invite",
+    "Can we help?",
+    "Hi {{1}}, just checking in — if there's anything you need from us, reply here and we'll take care of it quickly."
+  ),
+  marketing(
+    "come_back_invite",
+    "It's been a while",
+    "Hi {{1}}, it's been a while! Reply here to see what's new with us — we'd love to help you again."
+  ),
+];
 
-export function verticalPackFor(vertical: string): VerticalTemplate[] {
-  return VERTICAL_PACKS[vertical] ?? [];
-}
-
-/** Create the vertical's marketing templates (approved in simulation so the
+/** Create the starter marketing templates (approved in simulation so the
  *  demo works; pending in live). Idempotent by (orgId, name). */
-export async function installVerticalPack(
-  orgId: string,
-  vertical: string
-): Promise<number> {
-  const pack = verticalPackFor(vertical);
+export async function installStarterPack(orgId: string): Promise<number> {
+  const pack = STARTER_PACK;
   const approve = (await orgSendMode(orgId)) !== "live";
   for (const t of pack) {
     // Meta takes the components array; name/language/category travel beside it.

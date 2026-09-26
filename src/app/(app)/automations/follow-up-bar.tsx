@@ -14,22 +14,9 @@ import {
 } from "./followup-actions";
 import { SpecEditor } from "./spec-editor";
 
-const EXAMPLES: Record<string, string[]> = {
-  clinic: [
-    "Chase anyone who asked about pricing but didn't book, after 2 days, then once more a week later",
-    "The day after a consultation, ask how it went and invite questions",
-    "Welcome every new lead and tell them our consultation hours",
-  ],
-  salon: [
-    "Nudge clients who went quiet after asking for a slot, after 2 days",
-    "Ask for a review the day after an appointment",
-    "Remind everyone who booked that we're open on Sundays",
-  ],
-};
-
-const DEFAULT_EXAMPLES = [
+const EXAMPLES = [
   "Chase anyone who went quiet after showing interest, after 2 days, then once more 5 days later",
-  "Thank people the day after their appointment and ask how it went",
+  "Thank people the day after their booking and ask how it went",
   "Welcome every new lead with what we do and how to book",
 ];
 
@@ -47,13 +34,11 @@ function BarFrame({ children }: { children: React.ReactNode }) {
 }
 
 export function FollowUpBar({
-  vertical,
   canManage,
   hasFrontDesk,
   planName,
   hasSpecFollowUps,
 }: {
-  vertical: string;
   canManage: boolean;
   /** Drafting is flagship-only. Without it the bar still renders — locked —
    *  because it is the only thing above the empty state. */
@@ -75,7 +60,7 @@ export function FollowUpBar({
   const [drafting, startDraft] = useTransition();
   const [starting, startStarter] = useTransition();
   const pending = drafting || starting;
-  const examples = EXAMPLES[vertical] ?? DEFAULT_EXAMPLES;
+  const examples = EXAMPLES;
 
   function draftIt() {
     startDraft(async () => {

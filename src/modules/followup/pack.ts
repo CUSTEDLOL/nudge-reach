@@ -47,15 +47,15 @@ export const PACK_TEMPLATES: PackTemplate[] = [
   tpl(
     "appt_reminder_24h",
     "UTILITY",
-    "Appointment reminder",
-    "Hi {{1}}, a friendly reminder about your appointment with us tomorrow. Looking forward to seeing you! Need to change it? Just reply here.",
+    "Booking reminder",
+    "Hi {{1}}, a friendly reminder about your booking with us tomorrow. Looking forward to seeing you! Need to change it? Just reply here.",
     "See you soon"
   ),
   tpl(
     "appt_reminder_2h",
     "UTILITY",
     "Coming up soon",
-    "Hi {{1}}, your appointment is coming up in a couple of hours. See you shortly! Running late or need to reschedule? Reply here.",
+    "Hi {{1}}, your booking is coming up in a couple of hours. See you shortly! Running late or need to reschedule? Reply here.",
     "See you soon"
   ),
   tpl(
@@ -141,7 +141,7 @@ export interface FollowUpKind {
 export const FOLLOW_UP_KINDS: FollowUpKind[] = [
   {
     flag: "bookingReminders",
-    label: "Appointment reminders",
+    label: "Booking reminders",
     timing: "Before every confirmed booking",
     description:
       "Two nudges before every confirmed booking, so fewer people forget they're coming.",
@@ -163,7 +163,7 @@ export const FOLLOW_UP_KINDS: FollowUpKind[] = [
   {
     flag: "postServiceReview",
     label: "Review ask",
-    timing: "After the appointment",
+    timing: "After the booking",
     description: "Asks how it went while the visit is still fresh.",
     templateNames: ["review_ask"],
     timingFields: [{ field: "reviewDelayHours", label: "Ask this long after" }],

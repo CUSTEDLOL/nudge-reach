@@ -31,7 +31,7 @@ const VIEW_LABEL: Record<BookingView, string> = {
 };
 
 /**
- * Every appointment the AI took, in one place, on the business's clock.
+ * Every booking the AI took, in one place, on the business's clock.
  * Before this page a booking existed only as a count on Home and a line in
  * a chat — the founder's first practice booking looked like it had vanished.
  */
@@ -98,7 +98,7 @@ export default async function BookingsPage({
     <section>
       <PageHeader
         title="Bookings"
-        description={`Every appointment your AI has taken, shown in ${tz.replace("_", " ")} time.`}
+        description={`Every booking your AI has taken, shown in ${tz.replace("_", " ")} time.`}
         actions={
           practice ? (
             <Badge tone="info">Practice bookings</Badge>
@@ -148,7 +148,7 @@ export default async function BookingsPage({
               ? "When a customer books through your AI, it lands here with the time, the name and a link to the chat."
               : view === "pending"
                 ? "Requests the AI couldn't book straight into a calendar wait here for you to confirm."
-                : "Finished, missed and cancelled appointments will show here."
+                : "Finished, missed and cancelled bookings will show here."
           }
           action={
             view === "upcoming" ? (

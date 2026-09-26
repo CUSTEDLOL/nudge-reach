@@ -1,12 +1,13 @@
 import { requireFounder } from "@/modules/admin/auth";
 import { CONCIERGE_VERTICALS, frontDeskOverview } from "@/modules/admin/concierge";
+import { VERTICALS } from "@/modules/dashboard/verticals";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionForm } from "@/components/features/admin-shell/action-form";
 import { draftFollowUpsAction, migrateProfileAction, setAgentEnabledAction, setFollowUpsEnabledAction, setupClientAction } from "../actions";
 
-const VERTICAL_LABEL: Record<string, string> = { clinic: "Clinic / Health", salon: "Salon / Beauty" };
+const VERTICAL_LABEL: Record<string, string> = Object.fromEntries(VERTICALS.map((v) => [v.value, v.label]));
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500";
 
@@ -263,7 +264,7 @@ export default async function AdminOrgAgentPage({ params }: { params: Promise<{ 
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-neutral-600">Vertical</span>
-                <select name="vertical" defaultValue={p?.vertical ?? org?.vertical ?? CONCIERGE_VERTICALS[0]} className={`mt-1 ${inputCls}`}>
+                <select name="vertical" defaultValue={p?.vertical ?? org?.vertical ?? "other"} className={`mt-1 ${inputCls}`}>
                   {CONCIERGE_VERTICALS.map((v) => (
                     <option key={v} value={v}>
                       {VERTICAL_LABEL[v] ?? v}

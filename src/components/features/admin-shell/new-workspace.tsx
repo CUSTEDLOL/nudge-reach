@@ -133,7 +133,7 @@ export function NewWorkspace({
               name="name"
               required
               minLength={2}
-              placeholder="Aster Skin Clinic"
+              placeholder="Business name"
               className={`${field} mt-1.5`}
             />
           </label>
@@ -143,7 +143,7 @@ export function NewWorkspace({
               name="ownerEmail"
               type="email"
               required
-              placeholder="owner@asterskin.in"
+              placeholder="owner@business.com"
               className={`${field} mt-1.5`}
             />
           </label>

@@ -17,7 +17,7 @@ export const ROLE_OPTIONS = [
   {
     value: "front-desk",
     label: "Front desk",
-    description: "I handle conversations, appointments, and handoffs.",
+    description: "I handle conversations, bookings, and handoffs.",
   },
   {
     value: "support",
@@ -35,7 +35,7 @@ export const OUTCOME_OPTIONS = [
   {
     value: "bookings",
     label: "Book more customers",
-    description: "Turn more WhatsApp enquiries into confirmed appointments.",
+    description: "Turn more WhatsApp enquiries into confirmed bookings.",
   },
   {
     value: "faster-responses",
@@ -50,7 +50,7 @@ export const OUTCOME_OPTIONS = [
   {
     value: "fewer-no-shows",
     label: "Reduce no-shows",
-    description: "Confirm appointments and recover missed bookings.",
+    description: "Confirm bookings and recover missed ones.",
   },
   {
     value: "payments",

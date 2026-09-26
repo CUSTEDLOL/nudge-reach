@@ -76,7 +76,7 @@ export default async function AdminOrgIntegrationsPage({ params }: { params: Pro
                   name="displayName"
                   required
                   maxLength={100}
-                  placeholder="Clinic WhatsApp"
+                  placeholder="Main WhatsApp"
                   className="mt-1.5 h-10 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-neutral-500"
                 />
               </label>

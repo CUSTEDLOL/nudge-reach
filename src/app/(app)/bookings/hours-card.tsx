@@ -39,7 +39,7 @@ export function OpeningHoursCard({
             When you&apos;re open
           </h2>
           <p className="mt-0.5 text-sm text-neutral-500">
-            Your AI only offers and takes appointments inside these hours.
+            Your AI only offers and takes bookings inside these hours.
           </p>
         </div>
 

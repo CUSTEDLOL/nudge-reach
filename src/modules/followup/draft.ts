@@ -98,7 +98,7 @@ function systemPrompt(b: BusinessContext): string {
     houseRules ? `${houseRules}\n` : false,
     "Situations (use exactly these kinds):",
     '- went_quiet {afterDays 1-14, stage?}: a customer who messaged us has not replied for N days. Use for chasing leads. stage is one of NEW, CONTACTED, QUALIFIED, WON, LOST — omit unless the owner named one.',
-    "- booked {}: the moment an appointment is booked. Messages here are timed from the booking, not from the appointment — never write 'tomorrow', 'today' or 'thanks for coming in'; confirmations and prep only.",
+    "- booked {}: the moment a booking is made. Messages here are timed from when it was booked, not from the booked date — never write 'tomorrow', 'today' or 'thanks for coming in'; confirmations and prep only.",
     "- campaign_reply {}: the customer replied to a marketing campaign.",
     "- keyword {keywords[]}: a message contains one of these words.",
     "- new_lead {}: the customer's first ever message.",

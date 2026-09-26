@@ -1,5 +1,18 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Neutral product copy — no clinic/restaurant assumptions (2026-09-26) ✅
+
+Founder decision: the logged-in product assumes no industry. Shared copy and
+AI prompt text say bookings / products & services instead of appointments,
+menus, dishes, party size, patients or clinics; placeholders are generic.
+The concierge's clinic/salon template packs are replaced by one neutral
+`STARTER_PACK` (`check_in_invite`, `come_back_invite`) and every concierge
+surface uses the shared vertical list; follow-up examples are one neutral set;
+trial screens are clinic-free; `AgentProfile.vertical` defaults to "other"
+(pushed). Kept on purpose: the per-vertical AI scope in `agent/prompt.ts` and
+questionnaire nouns, which apply only when a business picks that type, the
+simulation demo seed, and the public /industries/clinics marketing page.
+
 ## Human takeover: Pause AI per conversation (2026-09-26) ✅
 
 The founder typed "Hello, this is Vishesh" in the inbox and the AI answered the

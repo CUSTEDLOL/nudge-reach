@@ -31,7 +31,7 @@ export default async function FollowUpsPage() {
   const canManage = hasRole(role, "ADMIN");
   const hasFrontDesk = planHasAiFrontDesk(org.plan);
 
-  const [config, packTemplates, automations, profile] = await Promise.all([
+  const [config, packTemplates, automations] = await Promise.all([
     getFollowUpConfig(org.id),
     getPackTemplateIds(org.id),
     prisma.automation.findMany({
@@ -40,10 +40,6 @@ export default async function FollowUpsPage() {
       // enabled-first would drop a brand-new follow-up below the fold.
       orderBy: { createdAt: "asc" },
       include: { steps: { orderBy: { order: "asc" } } },
-    }),
-    prisma.agentProfile.findUnique({
-      where: { orgId: org.id },
-      select: { vertical: true },
     }),
   ]);
 
@@ -126,7 +122,6 @@ export default async function FollowUpsPage() {
       />
 
       <FollowUpBar
-        vertical={profile?.vertical || org.vertical || "default"}
         canManage={canManage}
         hasFrontDesk={hasFrontDesk}
         planName={AI_FRONT_DESK_PLAN.name}

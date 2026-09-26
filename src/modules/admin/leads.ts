@@ -332,7 +332,7 @@ export async function leadsList(filter: LeadsFilter = {}): Promise<LeadsPage> {
         email: r.attendeeEmail,
         phoneE164: r.attendeePhoneE164,
         scheduledFor,
-        vertical: "clinic",
+        vertical: null,
         source: r.utmSource ?? r.source,
         status: (isLeadStatus(r.status) ? r.status : "new") as LeadStatus,
         notes: r.notes,

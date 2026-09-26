@@ -4,8 +4,7 @@ import {
   buildBusinessInfo,
   getConciergeStatus,
   installClientGrounding,
-  installVerticalPack,
-  VERTICAL_PACKS,
+  installStarterPack,
   type KnowledgeBaseInput,
 } from "@/modules/concierge";
 import {
@@ -18,6 +17,7 @@ import { draftFollowUp } from "@/modules/followup/draft";
 import { migrateProfileToRules } from "@/modules/agent/migrate-profile";
 import { parseFollowUpSpec, specErrorMessage } from "@/modules/followup/spec";
 import { founderAudit, withReason, type FounderResult } from "@/modules/admin/audit";
+import { VERTICALS } from "@/modules/dashboard/verticals";
 
 /**
  * The done-for-you moat, run from the founder side. Same steps as the
@@ -25,7 +25,7 @@ import { founderAudit, withReason, type FounderResult } from "@/modules/admin/au
  * template pack → follow-up pack), same flagship gate, plus the two switches
  * a founder flips during onboarding calls: agent on/off, follow-ups on/off.
  */
-export const CONCIERGE_VERTICALS = Object.keys(VERTICAL_PACKS);
+export const CONCIERGE_VERTICALS: string[] = VERTICALS.map((v) => v.value);
 
 export async function frontDeskOverview(orgId: string) {
   const [profile, knowledge, pendingQuestions, followUp, templates, customActions, status] = await Promise.all([
@@ -102,7 +102,7 @@ export async function founderSetupClient(
   });
   await prisma.org.update({ where: { id: orgId }, data: { vertical } });
   const grounding = await installClientGrounding(orgId, input, doNots);
-  const packCount = await installVerticalPack(orgId, vertical);
+  const packCount = await installStarterPack(orgId);
   await installRevenueRecoveryPack(orgId);
   await founderAudit(orgId, founderEmail, "admin.client_setup", businessName, `${vertical} · ${packCount} templates · follow-ups on · ${grounding.facts} facts · ${grounding.rules} rules`);
   // The counts are what this run CREATED: a re-run that changed nothing says

@@ -135,7 +135,7 @@ export const APPS: AppDefinition[] = [
   {
     id: "google-calendar",
     name: "Google Calendar",
-    tagline: "The AI books real appointments around your availability.",
+    tagline: "The AI takes real bookings around your availability.",
     category: "calendar",
     kind: "native",
     icon: "calendar",
@@ -357,7 +357,7 @@ function decorate(app: AppDefinition, s: CatalogState): AppTile {
       });
 
     case "google-calendar":
-      if (!s.hasFrontDesk) return gated(app, "Books appointments on Growth and above.");
+      if (!s.hasFrontDesk) return gated(app, "Takes bookings on Growth and above.");
       return tile(app, {
         status: s.calendarConnected ? "connected" : "ready",
         statusLabel: s.calendarConnected

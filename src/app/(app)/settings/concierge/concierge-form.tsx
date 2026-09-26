@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import { VERTICALS } from "@/modules/dashboard/verticals";
 import { saveConciergeSetupAction } from "./actions";
 
 export interface ConciergeDefaults {
@@ -48,18 +49,24 @@ export function ConciergeForm({ defaults }: { defaults: ConciergeDefaults }) {
             id="businessName"
             name="businessName"
             defaultValue={defaults.businessName}
-            placeholder="Glow Skin Clinic"
+            placeholder="Your business name"
           />
         </Field>
-        <Field label="Vertical" htmlFor="vertical">
+        <Field label="Business type" htmlFor="vertical">
           <Select
             id="vertical"
             name="vertical"
             value={vertical}
             onChange={(e) => setVertical(e.target.value)}
           >
-            <option value="clinic">Clinic / Health</option>
-            <option value="salon">Salon / Beauty</option>
+            {!VERTICALS.some((v) => v.value === vertical) && (
+              <option value={vertical}>{vertical}</option>
+            )}
+            {VERTICALS.map((v) => (
+              <option key={v.value} value={v.value}>
+                {v.label}
+              </option>
+            ))}
           </Select>
         </Field>
       </div>
@@ -91,7 +98,7 @@ export function ConciergeForm({ defaults }: { defaults: ConciergeDefaults }) {
           name="services"
           rows={4}
           defaultValue={defaults.services}
-          placeholder={"Haircut & styling\nHair colour\nFacial\nManicure / pedicure"}
+          placeholder={"What you sell or do, one per line"}
         />
       </Field>
 
@@ -101,7 +108,7 @@ export function ConciergeForm({ defaults }: { defaults: ConciergeDefaults }) {
           name="prices"
           rows={4}
           defaultValue={defaults.prices}
-          placeholder={"Haircut ₹400\nHair colour from ₹1,500\nFacial from ₹900"}
+          placeholder={"Basic plan ₹999/month\nSetup from ₹4,999"}
         />
       </Field>
 
@@ -116,7 +123,7 @@ export function ConciergeForm({ defaults }: { defaults: ConciergeDefaults }) {
             name="policies"
             rows={3}
             defaultValue={defaults.policies}
-            placeholder="Appointments preferred. 24h notice to reschedule."
+            placeholder="24h notice to cancel or reschedule."
           />
         </Field>
         <Field label="FAQs" htmlFor="faqs" hint="Common questions + answers">
@@ -125,7 +132,7 @@ export function ConciergeForm({ defaults }: { defaults: ConciergeDefaults }) {
             name="faqs"
             rows={3}
             defaultValue={defaults.faqs}
-            placeholder={"Q: Do you take walk-ins?\nA: Yes, subject to availability."}
+            placeholder={"Q: Do you deliver?\nA: Yes, across the city."}
           />
         </Field>
       </div>
@@ -144,7 +151,7 @@ export function ConciergeForm({ defaults }: { defaults: ConciergeDefaults }) {
             id="doNots"
             name="doNots"
             defaultValue={defaults.doNots}
-            placeholder="Never quote medical advice or discounts over 20%"
+            placeholder="Never promise discounts over 20%"
           />
         </Field>
       </div>

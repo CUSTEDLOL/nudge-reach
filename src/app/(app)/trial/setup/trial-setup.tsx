@@ -53,9 +53,9 @@ export function trialSetupStage(
 }
 
 const sourceCards = [
-  { key: "website", label: "Website", hint: "Paste your clinic website", icon: Globe2 },
+  { key: "website", label: "Website", hint: "Paste your website", icon: Globe2 },
   { key: "gbp", label: "Google Business Profile", hint: "Find your listing by name and city", icon: Building2 },
-  { key: "file", label: "File", hint: "Upload a PDF, menu, or rate-card image", icon: FileUp },
+  { key: "file", label: "File", hint: "Upload a PDF, price list, or rate-card image", icon: FileUp },
   { key: "interview", label: "Answer 5 questions", hint: "Type the essentials in one short form", icon: HelpCircle },
 ] as const;
 
@@ -117,7 +117,7 @@ function SourceStep({
       <header className="text-center">
         <p className="text-sm font-semibold text-brand-700">Step 1 of 3</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl">
-          Teach Nudge about your clinic
+          Teach Nudge about your business
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-neutral-500">
           Choose one starting source. You can edit every approved fact later.
@@ -219,7 +219,7 @@ function SourceForm({
   if (source === "interview") {
     return (
       <form onSubmit={submit}>
-        <h2 className="text-sm font-semibold text-neutral-900">Five clinic essentials</h2>
+        <h2 className="text-sm font-semibold text-neutral-900">Five business essentials</h2>
         <div className="mt-4 space-y-4">
           {questions.map((question) => (
             <label key={question.id} className="block text-sm font-medium text-neutral-800">
@@ -245,7 +245,7 @@ function SourceForm({
   return (
     <form onSubmit={submit}>
       <label className="text-sm font-semibold text-neutral-900" htmlFor={`trial-${source}`}>
-        {website ? "Clinic website" : "Clinic name and city"}
+        {website ? "Business website" : "Business name and city"}
       </label>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <Input
@@ -253,7 +253,7 @@ function SourceForm({
           type={website ? "url" : "text"}
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder={website ? "https://yourclinic.com" : "Aster Clinic, Bengaluru"}
+          placeholder={website ? "https://yourbusiness.com" : "Your business, Bengaluru"}
           required
           className="flex-1"
         />
@@ -299,7 +299,7 @@ function ReviewStep({ drafts }: { drafts: TrialDraftFact[] }) {
           </Card>
         )) : (
           <Card className="p-5 text-sm text-neutral-600">
-            <p>No draft facts remain. Add one clinic fact to continue.</p>
+            <p>No draft facts remain. Add one business fact to continue.</p>
             <Link
               href="/agent"
               className={`${buttonVariants({ size: "sm" })} mt-4`}

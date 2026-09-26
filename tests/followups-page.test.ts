@@ -101,7 +101,7 @@ describe("follow-ups page", () => {
   it("says a booked follow-up is timed from the booking, not the appointment", () => {
     expect(card).toContain('model.spec?.situation.kind === "booked"');
     expect(card).toContain("Timed from when they book");
-    expect(card).toContain("use Appointment reminders above");
+    expect(card).toContain("use Booking reminders above");
   });
 
   it("links the templates Meta has not approved, so a rejection isn't a dead end", () => {

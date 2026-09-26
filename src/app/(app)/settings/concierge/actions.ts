@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isVertical } from "@/modules/dashboard/verticals";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { checkAiFrontDesk } from "@/modules/billing/limits";
 import { recordAudit } from "@/modules/orgs/audit";
@@ -8,7 +9,7 @@ import { prisma } from "@/lib/db";
 import {
   buildBusinessInfo,
   installClientGrounding,
-  installVerticalPack,
+  installStarterPack,
   type KnowledgeBaseInput,
 } from "@/modules/concierge";
 import { installRevenueRecoveryPack } from "@/modules/followup/install";
@@ -46,7 +47,8 @@ export async function saveConciergeSetupAction(
     if (!gate.allowed) return { ok: false, message: gate.message };
 
     const businessName = String(formData.get("businessName") ?? "").trim();
-    const vertical = String(formData.get("vertical") ?? "clinic");
+    const rawVertical = String(formData.get("vertical") ?? "");
+    const vertical = isVertical(rawVertical) ? rawVertical : "other";
     const tone =
       String(formData.get("tone") ?? "").trim() || "Warm, friendly, and concise";
     const doNots = String(formData.get("doNots") ?? "").trim();
@@ -87,7 +89,7 @@ export async function saveConciergeSetupAction(
     await prisma.org.update({ where: { id: ctx.org.id }, data: { vertical } });
 
     const grounding = await installClientGrounding(ctx.org.id, knowledge, doNots);
-    const packCount = await installVerticalPack(ctx.org.id, vertical);
+    const packCount = await installStarterPack(ctx.org.id);
     await installRevenueRecoveryPack(ctx.org.id);
 
     recordAudit(

@@ -38,10 +38,7 @@ export default async function ConciergePage() {
 
   const defaults = {
     businessName: profile?.businessName ?? ctx.org.name,
-    vertical:
-      profile?.vertical === "salon" || profile?.vertical === "clinic"
-        ? profile.vertical
-        : "clinic",
+    vertical: profile?.vertical ?? ctx.org.vertical ?? "other",
     tone: profile?.tone ?? "Warm, friendly, and concise",
     doNots: profile?.doNots ?? "",
     hours: "",

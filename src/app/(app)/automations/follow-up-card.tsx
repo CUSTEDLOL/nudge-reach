@@ -140,8 +140,8 @@ export function FollowUpCard({
               visit" would send "How did it go?" before they had been. */}
           {model.spec?.situation.kind === "booked" && (
             <p className="mt-1 text-xs text-neutral-500">
-              Timed from when they book, not from the appointment date. For
-              reminders before an appointment, use Appointment reminders above.
+              Timed from when they book, not from the booked date. For
+              reminders before a booking, use Booking reminders above.
             </p>
           )}
 

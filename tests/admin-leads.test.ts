@@ -338,7 +338,7 @@ describe("leadsList / newLeadsCount", () => {
       name: "Dr Mehta",
       secondary: "mehta@clinic.in",
       phoneE164: null,
-      vertical: "clinic",
+      vertical: null,
       source: "google",
       status: "qualified",
     });
