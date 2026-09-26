@@ -59,7 +59,7 @@ function NavLinks({
   setOpenMenu: (label: string | null, trigger: HTMLElement | null) => void;
 }) {
   const itemCls = cn(
-    "block rounded-lg px-3.5 py-2.5 text-[16px] font-bold transition-all duration-200 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
+    "block rounded-lg px-2.5 py-2.5 text-[15px] font-bold xl:px-3.5 xl:text-[16px] transition-all duration-200 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current",
     overHero
       ? "text-white/85 hover:bg-white/10 hover:text-white"
       : "text-ink/65 hover:bg-ink/[0.06] hover:text-ink"
@@ -158,14 +158,16 @@ function NavMenuPanel({
 }
 
 /** The solid CTA — flat ink pill with a brand-glow lift on hover. Opens
- * the free-demo booking (Cal.com), the one conversion the site pushes. */
+ * the free-demo booking (Cal.com), the one conversion the site pushes.
+ * Kept short: a longer label widens the right grid column, which squeezes
+ * the logo column until the centred links collide with the logo. */
 function NavCta() {
   return (
     <BookDemoButton
       surface="navbar"
       className="group/cta hidden min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] lg:inline-flex"
     >
-      <span>Book a Free Demo</span>
+      <span>Free Demo</span>
       <ArrowRight
         className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
         aria-hidden
