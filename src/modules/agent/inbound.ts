@@ -24,7 +24,7 @@ export interface InboundResult {
   reply?: string;
   handoff?: boolean;
   conversationId?: string;
-  skipped?: "no_profile" | "disabled" | "no_knowledge";
+  skipped?: "no_profile" | "disabled" | "no_knowledge" | "paused";
   /** Set when an automation (not the AI agent) produced the reply. */
   automated?: true;
   /** Tools the agent invoked this turn (capture_lead, capture_booking_request, …). */
@@ -174,6 +174,11 @@ export async function handleInboundMessage(
         automated: true,
       };
     }
+  }
+
+  // A teammate took this thread over — the AI must not talk over them.
+  if (conversation.aiPaused) {
+    return { conversationId: conversation.id, skipped: "paused" };
   }
 
   const profile = await ensureAgentProfile(orgId);

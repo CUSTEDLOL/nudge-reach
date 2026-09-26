@@ -350,7 +350,7 @@ export async function importFileAction(formData: FormData): Promise<ActionResult
     if (!(FILE_MEDIA_TYPES as readonly string[]).includes(file.type)) {
       return {
         ok: false,
-        message: "Upload a PDF or a JPG/PNG/WebP photo of your menu or rate card.",
+        message: "Upload a PDF or a JPG/PNG/WebP photo of your price list or rate card.",
       };
     }
     const restricted = await isRestrictedAcquisitionTrial(ctx.org.id);

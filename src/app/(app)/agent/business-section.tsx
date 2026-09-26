@@ -101,7 +101,7 @@ export function BusinessSection({
               id="business-name"
               value={name}
               disabled={pending}
-              placeholder="Spice Garden"
+              placeholder="Your business name"
               onChange={(e) => setName(e.target.value)}
             />
           </Field>

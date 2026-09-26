@@ -1,5 +1,20 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Human takeover: Pause AI per conversation (2026-09-26) ✅
+
+The founder typed "Hello, this is Vishesh" in the inbox and the AI answered the
+customer's next message with "Hi Vishesh!" — teammate sends are stored as
+ordinary outbound rows, so the AI read them as its own words, and nothing
+stopped it replying on a thread a human was working. New
+`Conversation.aiPaused` (pushed to the shared DB, RLS re-run): a teammate's
+inbox send (text or template) pauses the AI on that thread, the thread header
+has an "AI on · Pause / AI paused · Resume" switch, and `handleInboundMessage`
+records the message but skips the reply when paused. Agent handoff does NOT
+pause it (founder decision). Also: Settings → General now uses the shared
+vertical list (it lacked Software/B2B) and syncs `AgentProfile.vertical`, so a
+changed business type reaches the AI; shared prompt/UI copy says products &
+services instead of menu/dishes. Tests: `tests/inbox-ai-pause.test.ts`.
+
 ## Per-client Meta app connections (2026-09-26) — code verified; Nudge migration pending
 
 Workspace owners/admins can save their own Meta App ID and secret under Settings → WhatsApp. Secrets and unique verification tokens use existing AES-256-GCM encryption. Live saves verify the app credentials with Meta before reserving its ID. Existing per-number tokens are preserved. Each workspace has one callback shared by its numbers; verification activates it permanently, excluding the legacy shared-secret callback even after credential rotation. Inbound, delivery-status, dedupe and template lookups are scoped to the verified workspace and registered WABA/number. UI separates credentials saved, Meta verification, and actual inbound receipt. Global webhook secrets are now optional legacy settings.

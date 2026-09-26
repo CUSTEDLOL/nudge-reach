@@ -388,6 +388,9 @@ model Conversation {
   whatsappAccountId  String?
   lastInboundAt      DateTime?
   status             String                @default("open") // open | pending | resolved | handoff (legacy: closed)
+  // Human takeover: when true the AI agent stays silent on this thread.
+  // Set by a teammate's inbox send or the Pause AI switch; cleared by Resume.
+  aiPaused           Boolean               @default(false)
   // Membership.userId of the assigned agent (null = unassigned).
   assignedToUserId   String?
   // Unread inbound messages; zeroed when the thread is opened in the inbox.

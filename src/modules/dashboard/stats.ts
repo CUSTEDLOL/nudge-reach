@@ -231,7 +231,7 @@ export function buildOperationsSummary(
   return [
     {
       key: "bookings",
-      label: "Appointments today",
+      label: "Bookings today",
       value: nonNegativeInteger(input.bookingsToday),
       detailCount: nonNegativeInteger(input.pendingBookings),
       detailLabel: "requests to confirm",

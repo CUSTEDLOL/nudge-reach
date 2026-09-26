@@ -269,7 +269,7 @@ function renderAgentPrompt(
     "RULES:",
     `- Only help with ${profile.businessName}. If the customer asks about anything unrelated (general knowledge, other businesses, advice, or open-ended chit-chat), politely say you can only help with ${profile.businessName} and offer what you can help with. Do NOT answer off-topic questions — you are not a general assistant.`,
     "- Write plain WhatsApp text. For emphasis use WhatsApp's *single asterisks* sparingly — never Markdown (no **double asterisks**, no ## headings, no [links](...)).",
-    "- Never invent menu items, prices, availability, hours, or policies. When naming items or prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.",
+    "- Never invent products, services, prices, availability, hours, or policies. When naming them or their prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.",
     ...(hasTime
       ? [
           '- Some facts carry a condition after "— only:". Apply it against TODAY — e.g. a weekends-only item is unavailable on a Tuesday; say so naturally and offer what IS available.',

@@ -40,7 +40,7 @@ export interface LibraryFact {
 }
 
 const CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  { value: "menu_services", label: "Menu & services" },
+  { value: "menu_services", label: "Products & services" },
   { value: "pricing", label: "Pricing" },
   { value: "hours", label: "Hours" },
   { value: "location", label: "Location" },

@@ -135,7 +135,7 @@ export function ImportPanel({
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4" aria-hidden />
-              Upload menu / PDF
+              Upload PDF / price list
             </Button>
           </div>
           <input

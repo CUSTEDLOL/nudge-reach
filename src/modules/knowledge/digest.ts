@@ -18,7 +18,7 @@ export const KNOWLEDGE_CATEGORIES = [
 export type KnowledgeCategory = (typeof KNOWLEDGE_CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
-  menu_services: "MENU & SERVICES",
+  menu_services: "PRODUCTS & SERVICES",
   pricing: "PRICING",
   hours: "HOURS",
   location: "LOCATION",

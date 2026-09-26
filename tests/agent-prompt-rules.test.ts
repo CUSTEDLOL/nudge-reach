@@ -65,7 +65,7 @@ TONE: warm and direct. Keep replies short and natural for WhatsApp — a sentenc
 RULES:
 - Only help with Gut Feeling. If the customer asks about anything unrelated (general knowledge, other businesses, advice, or open-ended chit-chat), politely say you can only help with Gut Feeling and offer what you can help with. Do NOT answer off-topic questions — you are not a general assistant.
 - Write plain WhatsApp text. For emphasis use WhatsApp's *single asterisks* sparingly — never Markdown (no **double asterisks**, no ## headings, no [links](...)).
-- Never invent menu items, prices, availability, hours, or policies. When naming items or prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.
+- Never invent products, services, prices, availability, hours, or policies. When naming them or their prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.
 - Some facts carry a condition after "— only:". Apply it against TODAY — e.g. a weekends-only item is unavailable on a Tuesday; say so naturally and offer what IS available.
 - Never promise a confirmed booking or order yourself — say the team will confirm.
 - Also avoid: medical advice
@@ -90,7 +90,7 @@ PHONE MANNERS (you are speaking, not typing):
 RULES:
 - Only help with Gut Feeling. If the customer asks about anything unrelated (general knowledge, other businesses, advice, or open-ended chit-chat), politely say you can only help with Gut Feeling and offer what you can help with. Do NOT answer off-topic questions — you are not a general assistant.
 - Write plain WhatsApp text. For emphasis use WhatsApp's *single asterisks* sparingly — never Markdown (no **double asterisks**, no ## headings, no [links](...)).
-- Never invent menu items, prices, availability, hours, or policies. When naming items or prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.
+- Never invent products, services, prices, availability, hours, or policies. When naming them or their prices, use ONLY those stated above, exactly as stated. If you don't know, say you'll check with the team.
 - Never promise a confirmed booking or order yourself — say the team will confirm.
 - Also avoid: medical advice
 - If the customer is upset, wants something you cannot handle, or explicitly asks for a person, reply with exactly "[[HANDOFF]]" and nothing else, so a human takes over.`;
@@ -246,17 +246,17 @@ describe("invariant #7 — rules are not an escape hatch", () => {
   it("keeps the never-invent instruction", () => {
     const p = buildAgentSystemPrompt(profile, withRules);
     expect(p).toContain(
-      "- Never invent menu items, prices, availability, hours, or policies."
+      "- Never invent products, services, prices, availability, hours, or policies."
     );
     expect(p).toContain(
-      "When naming items or prices, use ONLY those stated above, exactly as stated."
+      "When naming them or their prices, use ONLY those stated above, exactly as stated."
     );
   });
 
   it("keeps both guardrails on a voice call with rules", () => {
     const p = buildAgentSystemPrompt(profile, { ...VOICE_OPTIONS, rules });
     expect(p).toContain(`- Only help with ${profile.businessName}.`);
-    expect(p).toContain("- Never invent menu items, prices, availability");
+    expect(p).toContain("- Never invent products, services, prices, availability");
   });
 
   it("drops the owner's doNots line — the migration carries it as a rule", () => {

@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireOrgContext, requireRole } from "@/modules/orgs/auth";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
+import { isVertical } from "@/modules/dashboard/verticals";
 
 export interface ActionResult {
   ok: boolean;
@@ -24,6 +25,10 @@ export async function saveGeneralSettingsAction(
 
     if (!name) {
       return { ok: false, message: "Please enter a workspace name." };
+    }
+    // A legacy value the workspace already has may be re-saved unchanged.
+    if (vertical && !isVertical(vertical) && vertical !== ctx.org.vertical) {
+      return { ok: false, message: "Pick a business type from the list." };
     }
     const avgOrderValueInr = Number(avgRaw);
     if (
@@ -69,6 +74,16 @@ export async function saveGeneralSettingsAction(
         } as Prisma.InputJsonValue,
       },
     });
+
+    // The AI introduces itself from its profile's vertical, so the business
+    // type chosen here has to reach it — otherwise the agent keeps talking
+    // like whatever type the workspace started as.
+    if (vertical) {
+      await prisma.agentProfile.updateMany({
+        where: { orgId: ctx.org.id },
+        data: { vertical },
+      });
+    }
 
     revalidatePath("/settings/general");
     revalidatePath("/dashboard");

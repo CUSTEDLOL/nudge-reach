@@ -34,6 +34,8 @@ export interface ThreadMessage {
 
 export interface ThreadSnapshot {
   status: string;
+  /** Human takeover: the AI stays silent on this thread. */
+  aiPaused: boolean;
   lastInboundAt: string | null;
   messages: ThreadMessage[];
 }
@@ -86,6 +88,7 @@ export async function getThreadSnapshot(
     where: { AND: [{ id: conversationId, orgId }, numberAccessClause(allowed)] },
     select: {
       status: true,
+      aiPaused: true,
       lastInboundAt: true,
       messages: {
         orderBy: { createdAt: "asc" },
@@ -104,6 +107,7 @@ export async function getThreadSnapshot(
 
   return {
     status: conversation.status,
+    aiPaused: conversation.aiPaused,
     lastInboundAt: conversation.lastInboundAt?.toISOString() ?? null,
     messages: conversation.messages.map((m) => ({
       id: m.id,

@@ -21,8 +21,8 @@ describe("buildKnowledgeDigest", () => {
       e("hours", "Open 10am-8pm"),
       e("menu_services", "Serves biryani"),
     ]);
-    expect(d.indexOf("MENU & SERVICES")).toBeGreaterThanOrEqual(0);
-    expect(d.indexOf("MENU & SERVICES")).toBeLessThan(d.indexOf("HOURS"));
+    expect(d.indexOf("PRODUCTS & SERVICES")).toBeGreaterThanOrEqual(0);
+    expect(d.indexOf("PRODUCTS & SERVICES")).toBeLessThan(d.indexOf("HOURS"));
     expect(d).toContain("- Serves biryani");
     expect(d).toContain("- Open 10am-8pm");
   });

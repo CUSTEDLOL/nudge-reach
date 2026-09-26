@@ -7,18 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { COUNTRY_PRESETS } from "@/modules/billing/money";
+import { VERTICALS } from "@/modules/dashboard/verticals";
 import { saveGeneralSettingsAction, type ActionResult } from "./actions";
-
-const VERTICALS: { value: string; label: string }[] = [
-  { value: "boutique", label: "Boutique / Fashion" },
-  { value: "retail", label: "Shop / Retail" },
-  { value: "restaurant", label: "Restaurant / Café" },
-  { value: "grocery", label: "Grocery / Kirana" },
-  { value: "electronics", label: "Electronics" },
-  { value: "clinic", label: "Clinic / Salon" },
-  { value: "real_estate", label: "Real estate" },
-  { value: "other", label: "Other" },
-];
 
 export interface GeneralFormValues {
   name: string;

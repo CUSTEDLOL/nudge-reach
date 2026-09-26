@@ -27,6 +27,7 @@ import { useInboxPoll, useNow } from "../use-inbox-poll";
 import { Composer } from "./composer";
 import { ContextPanel, type ContextPanelProps } from "./context-panel";
 import { SimTester } from "./sim-tester";
+import { AiPauseToggle } from "./ai-pause-toggle";
 
 /**
  * Middle pane: thread header + message bubbles (day separators, ticks) +
@@ -151,6 +152,13 @@ export function ThreadPane({
               <span className="hidden sm:inline">Window closed</span>
               <span className="sm:hidden">Closed</span>
             </Badge>
+          )}
+          {channel === "whatsapp" && (
+            <AiPauseToggle
+              conversationId={conversationId}
+              paused={snapshot.aiPaused}
+              onChanged={refresh}
+            />
           )}
           <button
             type="button"

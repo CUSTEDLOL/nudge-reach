@@ -32,7 +32,7 @@ export function findKnownFact(
 export const askOwnerTool = defineTool({
   name: "ask_owner",
   description:
-    "Use when the customer asks a factual question about the business that the business knowledge does not answer (a dish, a price, a policy, availability). The question is sent to the business owner; tell the customer you're checking with the team and will get back to them. If the knowledge base already covers it, this returns the KNOWN fact — answer with it instead.",
+    "Use when the customer asks a factual question about the business that the business knowledge does not answer (a product or service, a price, a policy, availability). The question is sent to the business owner; tell the customer you're checking with the team and will get back to them. If the knowledge base already covers it, this returns the KNOWN fact — answer with it instead.",
   inputSchema: {
     type: "object",
     properties: {

@@ -94,7 +94,7 @@ describe("Today dashboard UI", () => {
         items: [
           {
             key: "bookings",
-            label: "Appointments today",
+            label: "Bookings today",
             value: 3,
             detailCount: 2,
             detailLabel: "requests to confirm",
@@ -111,7 +111,7 @@ describe("Today dashboard UI", () => {
       })
     );
     expect(html).toContain("Today&#x27;s operations");
-    expect(html).toContain("Appointments today");
+    expect(html).toContain("Bookings today");
     expect(html).toContain("2 requests to confirm");
     expect(html).toMatch(/1,525/);
   });

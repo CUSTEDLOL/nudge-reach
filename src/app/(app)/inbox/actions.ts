@@ -37,7 +37,7 @@ export interface ActionResult {
   /** Set by the simulation tester so the caller can open the thread. */
   conversationId?: string;
   /** The tester's message landed but no AI reply was sent, and why. */
-  skipped?: "no_profile" | "disabled" | "trial_limit" | "no_knowledge";
+  skipped?: "no_profile" | "disabled" | "trial_limit" | "no_knowledge" | "paused";
   /** Present only for a restricted acquisition trial. */
   trial?: TrialReplySummary;
 }
@@ -123,6 +123,8 @@ export async function sendTextAction(
           lastMessageAt: now,
           lastMessagePreview: toPreview(text),
           unreadCount: 0,
+          // A teammate replying takes the thread over from the AI.
+          aiPaused: true,
           // Replying to a resolved thread reopens it.
           ...(conversation.status === "resolved" ||
           conversation.status === "closed"
@@ -224,6 +226,7 @@ export async function sendTemplateAction(
           lastMessageAt: now,
           lastMessagePreview: toPreview(body),
           unreadCount: 0,
+          aiPaused: true,
         },
       }),
       prisma.contact.update({
@@ -305,6 +308,37 @@ export async function setConversationStatusAction(
     return { ok: true, message: `Marked ${status}.` };
   } catch {
     return { ok: false, message: "Couldn't update the status — try again." };
+  }
+}
+
+/**
+ * Human takeover switch for one thread. Paused = the AI stays silent on new
+ * customer messages until a teammate resumes it. Not role-gated, like the
+ * rest of the inbox: whoever is working the chat can take it over.
+ */
+export async function setAiPausedAction(
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const { org } = await requireOrgContext();
+    const conversationId = String(formData.get("conversationId") ?? "");
+    const paused = formData.get("paused") === "true";
+
+    const updated = await prisma.conversation.updateMany({
+      where: { id: conversationId, orgId: org.id },
+      data: { aiPaused: paused },
+    });
+    if (updated.count === 0) return { ok: false, message: "Conversation not found." };
+
+    revalidateInbox(conversationId);
+    return {
+      ok: true,
+      message: paused
+        ? "AI paused — you're handling this chat."
+        : "AI resumed — it will reply to the next message.",
+    };
+  } catch {
+    return { ok: false, message: "Couldn't change the AI setting — try again." };
   }
 }
 
@@ -586,7 +620,9 @@ export async function simulateInboundAction(
       return {
         ok: true,
         message:
-          result.skipped === "disabled"
+          result.skipped === "paused"
+            ? "Message received — AI is paused on this chat, so it didn't reply."
+            : result.skipped === "disabled"
             ? "Message received — your AI is switched off (AI Front Desk → Setup), so it didn't reply."
             : "Message received. No AI agent is configured, so no auto-reply was sent.",
         conversationId,

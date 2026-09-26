@@ -103,7 +103,7 @@ describe("buildAgentSystemPrompt (knowledge digest + time awareness)", () => {
     doNots: "",
   };
   const digest =
-    "MENU & SERVICES:\n- Chicken dishes available — only: weekends only";
+    "PRODUCTS & SERVICES:\n- Chicken dishes available — only: weekends only";
   const now = new Date("2026-07-14T09:42:00Z"); // Tuesday 3:12 PM in Kolkata
 
   it("formatNowLine renders org-local weekday and time", () => {

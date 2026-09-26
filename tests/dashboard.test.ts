@@ -340,7 +340,7 @@ describe("buildOperationsSummary", () => {
     ).toEqual([
       {
         key: "bookings",
-        label: "Appointments today",
+        label: "Bookings today",
         value: 3,
         detailCount: 2,
         detailLabel: "requests to confirm",
