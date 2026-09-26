@@ -18,10 +18,8 @@ const { createRazorpayPaymentLink } = vi.hoisted(() => ({ createRazorpayPaymentL
 
 vi.mock("@/lib/db", () => ({ prisma }));
 vi.mock("@/lib/env", () => ({ env: { SEND_MODE: "live" } }));
-vi.mock("@/modules/billing/razorpay", () => ({
-  createRazorpayPaymentLink,
-  isRazorpayConfigured: () => false,
-}));
+vi.mock("@/modules/billing/razorpay", () => ({ createRazorpayPaymentLink }));
+vi.mock("@/modules/payments/connection", () => ({ getPaymentCredentials: vi.fn(async () => null) }));
 
 import { createPaymentLink } from "@/modules/payments";
 
@@ -33,6 +31,7 @@ describe("createPaymentLink — live workspace, no provider configured", () => {
     const out = await createPaymentLink("org1", { contactId: "c1", amountMinor: 50_000, purpose: "Deposit" });
     expect(out.status).toBe("not_allowed");
     expect(out.status === "not_allowed" && out.reason).toMatch(/aren't switched on/);
+    expect(createRazorpayPaymentLink).not.toHaveBeenCalled();
     expect(prisma.paymentRequest.create).not.toHaveBeenCalled();
   });
 

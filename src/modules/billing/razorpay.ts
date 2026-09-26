@@ -19,9 +19,11 @@ export function razorpayKeyId(): string | null {
   return env.RAZORPAY_KEY_ID ?? null;
 }
 
-function authHeader(): string {
+function authHeader(creds?: { keyId: string; keySecret: string }): string {
   const token = Buffer.from(
-    `${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`
+    creds
+      ? `${creds.keyId}:${creds.keySecret}`
+      : `${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`
   ).toString("base64");
   return `Basic ${token}`;
 }
@@ -108,14 +110,16 @@ export async function createRazorpayPaymentLink(input: {
   description: string;
   referenceId: string;
   notes: Record<string, string>;
+  /** The workspace's own account. Omitted only by legacy callers. */
+  credentials?: { keyId: string; keySecret: string };
 }): Promise<RazorpayPaymentLink> {
-  if (!isRazorpayConfigured()) {
+  if (!input.credentials && !isRazorpayConfigured()) {
     throw new Error("Razorpay is not configured (missing RAZORPAY_KEY_ID/SECRET).");
   }
   const res = await fetch("https://api.razorpay.com/v1/payment_links", {
     method: "POST",
     headers: {
-      Authorization: authHeader(),
+      Authorization: authHeader(input.credentials),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

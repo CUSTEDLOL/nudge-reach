@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { requireFounder } from "@/modules/admin/auth";
 import {
+  checkPaymentAccount,
   checkPlatformIntegrations,
   checkWhatsappNumber,
   type HealthState,
@@ -32,7 +33,7 @@ export default async function AdminIntegrationsPage() {
   await requireFounder();
   const processEnv = process.env as Record<string, string | undefined>;
 
-  const [heartbeat, accounts] = await Promise.all([
+  const [heartbeat, accounts, paymentAccounts] = await Promise.all([
     prisma.systemHeartbeat.findUnique({ where: { key: "process-queue" }, select: { lastSeenAt: true } }),
     prisma.whatsappAccount.findMany({
       orderBy: { createdAt: "asc" },
@@ -50,6 +51,9 @@ export default async function AdminIntegrationsPage() {
         },
       },
     }),
+    prisma.paymentConnection.findMany({
+      select: { keyId: true, keySecretEncrypted: true, lastEventAt: true, org: { select: { name: true } } },
+    }),
   ]);
 
   const orgIds = [...new Set(accounts.map((a) => a.org.id))];
@@ -63,8 +67,19 @@ export default async function AdminIntegrationsPage() {
   const count = (orgId: string, status: string) =>
     templateCounts.find((t) => t.orgId === orgId && t.metaStatus === status)?._count._all ?? 0;
 
-  const [platform, numbers] = await Promise.all([
+  const [platform, numbers, payments] = await Promise.all([
     checkPlatformIntegrations(processEnv, fetch, { heartbeatAt: heartbeat?.lastSeenAt ?? null }),
+    Promise.all(
+      paymentAccounts.map((c) => {
+        let keySecret = "";
+        try {
+          keySecret = decryptSecret(c.keySecretEncrypted);
+        } catch {
+          keySecret = "";
+        }
+        return checkPaymentAccount({ orgName: c.org.name, keyId: c.keyId, keySecret, lastEventAt: c.lastEventAt }, fetch);
+      })
+    ),
     Promise.all(
       accounts.map((a) => {
         let accessToken = "";
@@ -94,7 +109,10 @@ export default async function AdminIntegrationsPage() {
   const whatsapp: IntegrationHealth[] = numbers.length
     ? numbers
     : [{ key: "whatsapp", name: "WhatsApp numbers", state: "off", summary: "No workspace has connected a number yet.", fix: "Connect one in the client's Settings → WhatsApp, with a permanent System User token." }];
-  const all = [...platform, ...whatsapp];
+  const customerPayments: IntegrationHealth[] = payments.length
+    ? payments
+    : [{ key: "payments", name: "Customer payments (each workspace's own Razorpay)", state: "off", summary: "No workspace has connected its Razorpay yet. Their AI tells customers the team will share payment details.", fix: "The owner connects it in Apps → Razorpay." }];
+  const all = [...platform, ...whatsapp, ...customerPayments];
   const tally = (s: HealthState) => all.filter((r) => r.state === s).length;
 
   return (
@@ -120,6 +138,7 @@ export default async function AdminIntegrationsPage() {
 
       {[
         { title: "WhatsApp", rows: whatsapp },
+        { title: "Customer payments", rows: customerPayments },
         { title: "Platform", rows: platform },
       ].map((group) => (
         <section key={group.title} className="mb-6" aria-label={group.title}>

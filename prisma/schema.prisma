@@ -79,6 +79,7 @@ model Org {
   campaigns               Campaign[]
   whatsappAccounts        WhatsappAccount[]
   whatsappConnection      WhatsappConnection?
+  paymentConnection       PaymentConnection?
   agentProfile            AgentProfile?
   conversations           Conversation[]
   memberships             Membership[]
@@ -441,6 +442,27 @@ model WhatsappConnection {
   lastInboundAt        DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+}
+
+// The workspace's OWN payment account (Razorpay today). Customer deposits the
+// AI collects go straight to the business, never through Nudge's account —
+// Nudge holding merchants' money would make it a payment aggregator. Mirrors
+// WhatsappConnection: secrets encrypted, an opaque per-workspace webhook key.
+model PaymentConnection {
+  id                     String    @id @default(cuid())
+  orgId                  String    @unique
+  org                    Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider               String    @default("razorpay")
+  keyId                  String
+  keySecretEncrypted     String
+  webhookSecretEncrypted String
+  webhookKey             String    @unique
+  // Razorpay accepted the key pair when it was saved.
+  verifiedAt             DateTime?
+  // Last signed webhook Razorpay delivered: proves the webhook is wired.
+  lastEventAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }
 
 model WhatsappAccount {

@@ -23,6 +23,8 @@ export type AuditAction =
   | "billing.credits_purchased"
   | "calendar.connected"
   | "calendar.disconnected"
+  | "payments.connected"
+  | "payments.disconnected"
   | "followup.enabled"
   | "followup.disabled"
   | "followup.timing"
@@ -97,6 +99,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "billing.credits_purchased": "AI credits purchased",
   "calendar.connected": "Calendar connected",
   "calendar.disconnected": "Calendar disconnected",
+  "payments.connected": "Payment account connected",
+  "payments.disconnected": "Payment account disconnected",
   "followup.enabled": "Follow-up enabled",
   "followup.disabled": "Follow-up paused",
   "followup.timing": "Follow-up timing changed",

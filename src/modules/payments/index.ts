@@ -5,17 +5,16 @@ import { cancelWaitingRuns } from "@/modules/automation/engine";
 import { env } from "@/lib/env";
 import { sendModeFor, type SendMode } from "@/modules/orgs/mode";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
-import {
-  createRazorpayPaymentLink,
-  isRazorpayConfigured,
-} from "@/modules/billing/razorpay";
+import { createRazorpayPaymentLink } from "@/modules/billing/razorpay";
+import { getPaymentCredentials, type PaymentCredentials } from "@/modules/payments/connection";
 
 /**
  * Customer-facing payment links (deposits, advances, bills) sent in chat by
- * the agent or staff. Real Razorpay Payment Links when SEND_MODE=live and keys
- * exist; otherwise a simulation link so the entire collect-a-deposit story
- * demos with zero keys (invariant #4). Mirrors the calendar module's driver
- * pattern. Flagship-gated like booking: payments are an agent "real action".
+ * the agent or staff. A LIVE workspace uses its OWN connected Razorpay
+ * account, so the money lands with the business; with none connected it gets
+ * no link at all. A test workspace gets a simulation link so the whole
+ * collect-a-deposit story demos with zero keys (invariant #4).
+ * Flagship-gated like booking: payments are an agent "real action".
  */
 
 const MIN_AMOUNT_MINOR = 100; // ₹1.00
@@ -32,10 +31,6 @@ export type CreateLinkOutcome =
   | { status: "created"; id: string; shortUrl: string; amountLabel: string }
   | { status: "not_allowed"; reason: string }
   | { status: "invalid"; reason: string };
-
-function shouldUseRazorpay(mode: SendMode): boolean {
-  return mode === "live" && isRazorpayConfigured();
-}
 
 export function formatAmountMinor(amountMinor: number, currency: string): string {
   const major = amountMinor / 100;
@@ -86,21 +81,30 @@ export async function createPaymentLink(
     };
   }
 
-  const currency = org.currency === "USD" ? "USD" : "INR";
-  const mode = sendModeFor(org);
-  // A LIVE workspace without a payment provider gets NO link at all. The
-  // fallback below is the hosted practice page that "settles" on click and is
-  // marked paid by the cron — fine for a test workspace, but to a real customer
-  // it is a fake checkout, and the owner would see a deposit that never came.
-  // The booking tool turns this refusal into "the team will share payment
-  // details shortly".
-  if (mode === "live" && !isRazorpayConfigured()) {
-    return {
-      status: "not_allowed",
-      reason: "Online payments aren't switched on for this business yet.",
-    };
+  const mode: SendMode = sendModeFor(org);
+  let credentials: PaymentCredentials | null = null;
+  if (mode === "live") {
+    // A LIVE workspace pays into its own account or not at all. Never the
+    // hosted practice page (a fake checkout that marks itself paid) and never
+    // Nudge's own billing account (the business's money would land with us).
+    // The booking tool turns a refusal into "the team will share payment
+    // details shortly".
+    if (org.currency !== "INR") {
+      return {
+        status: "not_allowed",
+        reason: `Online payments in ${org.currency} aren't available yet; Razorpay collects INR only.`,
+      };
+    }
+    credentials = await getPaymentCredentials(orgId);
+    if (!credentials) {
+      return {
+        status: "not_allowed",
+        reason: "Online payments aren't switched on for this business yet (no Razorpay account connected).",
+      };
+    }
   }
-  const useRazorpay = shouldUseRazorpay(mode);
+  const currency = mode === "live" ? "INR" : org.currency === "USD" ? "USD" : "INR";
+  const useRazorpay = credentials !== null;
   const request = await prisma.paymentRequest.create({
     data: {
       orgId,
@@ -125,6 +129,7 @@ export async function createPaymentLink(
         description: input.purpose,
         referenceId: request.id,
         notes: { orgId, paymentRequestId: request.id, kind: "customer_payment" },
+        credentials: credentials ?? undefined,
       });
       shortUrl = link.short_url;
       providerLinkId = link.id;
@@ -157,9 +162,15 @@ export async function createPaymentLink(
 }
 
 /** Webhook entry: mark a link paid (idempotent). Returns true if a row flipped. */
-export async function markPaymentPaid(paymentRequestId: string): Promise<boolean> {
+/**
+ * `orgId`, when given, scopes the update: a workspace's own webhook can only
+ * settle that workspace's requests. A merchant controls their Razorpay
+ * account's link notes, so without the scope one tenant could mark another's
+ * deposit paid by quoting its id.
+ */
+export async function markPaymentPaid(paymentRequestId: string, orgId?: string): Promise<boolean> {
   const updated = await prisma.paymentRequest.updateMany({
-    where: { id: paymentRequestId, status: "created" },
+    where: { id: paymentRequestId, status: "created", ...(orgId ? { orgId } : {}) },
     data: { status: "paid", paidAt: new Date() },
   });
   if (updated.count === 0) return false;

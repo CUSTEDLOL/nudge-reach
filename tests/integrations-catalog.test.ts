@@ -88,12 +88,21 @@ describe("app catalog", () => {
     expect(tile.detail).toMatch(/mocked/i);
   });
 
-  it("never offers a live workspace practice payment links", () => {
+  it("asks a live workspace to connect its own Razorpay, and never offers practice links", () => {
     const live = byId(state({ simulation: false, paymentsLive: false }), "razorpay");
-    expect(live.statusLabel).toBe("Not switched on yet");
-    expect(live.detail).toMatch(/No links are sent/);
+    expect(live.statusLabel).toBe("Not connected");
+    expect(live.action?.label).toBe("Connect");
+    expect(live.detail).toMatch(/your own Razorpay/);
+    const connected = byId(state({ simulation: false, paymentsLive: true }), "razorpay");
+    expect(connected.status).toBe("connected");
     const test = byId(state({ simulation: true, paymentsLive: false }), "razorpay");
     expect(test.statusLabel).toBe("Test links");
+  });
+
+  it("does not offer Stripe customer links, which are not built", () => {
+    const stripe = byId(state({ simulation: false }), "stripe");
+    expect(stripe.status).toBe("planned");
+    expect(stripe.action).toBeNull();
   });
 
   it("marks a simulated calendar honestly", () => {

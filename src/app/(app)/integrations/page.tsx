@@ -7,10 +7,12 @@ import { requireOrgContext } from "@/modules/orgs/auth";
 import { getWhatsappAccount } from "@/modules/whatsapp/accounts";
 import { getCalendarAccount } from "@/modules/calendar";
 import { getWidgetConfig } from "@/modules/widget";
-import { isRazorpayConfigured } from "@/modules/billing/razorpay";
 import { planHasAiFrontDesk } from "@/modules/billing/limits";
 import { getPlan } from "@/modules/billing/plans";
 import { listConnections } from "@/modules/crm/connections";
+import { isLiveKey, maskKeyId } from "@/modules/payments/connection";
+import { appOrigin } from "@/modules/email";
+import { decryptSecret } from "@/lib/crypto";
 import { realProvider } from "@/modules/crm/providers";
 import { buildAppCatalog } from "@/modules/integrations/catalog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -52,6 +54,7 @@ export default async function IntegrationsPage() {
     apiKeys,
     endpoints,
     crmConnections,
+    paymentConnection,
     crmJobs,
     headerList,
   ] = await Promise.all([
@@ -69,6 +72,7 @@ export default async function IntegrationsPage() {
       orderBy: { createdAt: "desc" },
     }),
     listConnections(ctx.org.id),
+    prisma.paymentConnection.findUnique({ where: { orgId: ctx.org.id } }),
     prisma.crmSyncJob.findMany({
       where: { orgId: ctx.org.id },
       orderBy: { updatedAt: "desc" },
@@ -109,7 +113,7 @@ export default async function IntegrationsPage() {
     widgetEnabled: widget?.enabled ?? false,
     hasFrontDesk,
     hasPublicApi,
-    paymentsLive: isRazorpayConfigured() && !simulation,
+    paymentsLive: Boolean(paymentConnection) && !simulation,
   });
 
   const serializedKeys: SerializedApiKey[] = apiKeys.map((key) => ({
@@ -185,13 +189,33 @@ export default async function IntegrationsPage() {
           ),
           payments: (
             <PaymentsPanel
-              live={isRazorpayConfigured() && !simulation}
               testWorkspace={simulation}
               currency={ctx.org.currency}
+              canManage={canManage}
+              connection={
+                paymentConnection
+                  ? {
+                      keyIdMasked: maskKeyId(paymentConnection.keyId),
+                      live: isLiveKey(paymentConnection.keyId),
+                      webhookUrl: `${appOrigin()}/api/webhooks/razorpay/${paymentConnection.webhookKey}`,
+                      webhookSecret: canManage ? safeDecrypt(paymentConnection.webhookSecretEncrypted) : "",
+                      lastEventAt: paymentConnection.lastEventAt?.toISOString() ?? null,
+                    }
+                  : null
+              }
             />
           ),
         }}
       />
     </>
   );
+}
+
+/** The secret is shown only so the owner can paste it into Razorpay. */
+function safeDecrypt(value: string): string {
+  try {
+    return decryptSecret(value);
+  } catch {
+    return "";
+  }
 }

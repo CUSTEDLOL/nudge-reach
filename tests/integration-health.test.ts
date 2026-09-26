@@ -180,3 +180,21 @@ describe("checkWhatsappNumber", () => {
     expect(r.summary).toContain("Session has expired");
   });
 });
+
+import { checkPaymentAccount } from "@/modules/admin/integration-health";
+
+describe("checkPaymentAccount", () => {
+  const base = { orgName: "Aster", keyId: "rzp_live_Abcd1234", keySecret: "s", lastEventAt: new Date("2026-09-25T10:00:00Z") };
+  const answer = (status: number) => fakeFetch(() => ({ status, body: {} }));
+
+  it("is working with live keys and a webhook that has delivered", async () => {
+    expect((await checkPaymentAccount(base, answer(200))).state).toBe("ok");
+  });
+  it("warns when Razorpay has never called the webhook", async () => {
+    expect((await checkPaymentAccount({ ...base, lastEventAt: null }, answer(200))).state).toBe("warn");
+  });
+  it("warns on test keys and fails on revoked ones", async () => {
+    expect((await checkPaymentAccount({ ...base, keyId: "rzp_test_Abcd1234" }, answer(200))).state).toBe("warn");
+    expect((await checkPaymentAccount(base, answer(401))).state).toBe("fail");
+  });
+});

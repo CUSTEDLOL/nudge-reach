@@ -250,7 +250,8 @@ export const APPS: AppDefinition[] = [
     name: "Stripe",
     tagline: "Card payment links for customers outside India.",
     category: "payments",
-    kind: "native",
+    // Customer links run on the workspace's own Razorpay only; Stripe is Nudge's billing.
+    kind: "planned",
     icon: "card",
     accent: "bg-violet-50 text-violet-600",
     keywords: ["card", "payment link", "international"],
@@ -389,17 +390,19 @@ function decorate(app: AppDefinition, s: CatalogState): AppTile {
     }
 
     case "razorpay":
-    case "stripe":
       if (!s.hasFrontDesk) return gated(app, "Payment links are on Growth and above.");
       return tile(app, {
         status: s.paymentsLive ? "connected" : "ready",
-        statusLabel: s.paymentsLive ? "Active" : s.simulation ? "Test links" : "Not switched on yet",
+        statusLabel: s.paymentsLive ? "Connected" : s.simulation ? "Test links" : "Not connected",
         detail: s.paymentsLive
-          ? "The AI can collect deposits in chat."
+          ? "Customers pay straight into your Razorpay account."
           : s.simulation
-            ? "Links are simulated until we switch on live payments."
-            : "No links are sent until we enable live payments; the AI says your team will share payment details.",
-        action: { label: "How it works", panel: "payments" },
+            ? "Practice links in this test workspace; nothing real is charged."
+            : "Connect your own Razorpay and the AI can take deposits in chat.",
+        action: {
+          label: s.paymentsLive ? "Manage" : s.simulation ? "How it works" : "Connect",
+          panel: "payments",
+        },
       });
 
     case "webhooks":

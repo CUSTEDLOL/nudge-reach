@@ -342,3 +342,26 @@ export async function checkWhatsappNumber(
     fix: fixes.length ? fixes.join("; ") : undefined,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Customer payments: each workspace's own Razorpay account.
+
+export interface PaymentAccountInput {
+  orgName: string;
+  keyId: string;
+  keySecret: string;
+  lastEventAt: Date | null;
+}
+
+export async function checkPaymentAccount(p: PaymentAccountInput, fetchFn: FetchFn): Promise<IntegrationHealth> {
+  const base = { key: `payments:${p.orgName}:${p.keyId.slice(0, 12)}`, name: `Customer payments · ${p.orgName} (Razorpay)` };
+  const r = await call(fetchFn, "https://api.razorpay.com/v1/payments?count=1", {
+    headers: { Authorization: `Basic ${Buffer.from(`${p.keyId}:${p.keySecret}`).toString("base64")}` },
+  });
+  if ("error" in r) return { ...base, state: "fail", summary: `Razorpay unreachable: ${r.error}` };
+  if (r.status === 401) return { ...base, state: "fail", summary: "Razorpay now rejects this workspace's keys (regenerated or revoked).", fix: "The owner replaces the keys in Apps → Razorpay." };
+  if (r.status !== 200) return { ...base, state: "fail", summary: `Razorpay answered HTTP ${r.status}.` };
+  if (!p.keyId.startsWith("rzp_live_")) return { ...base, state: "warn", summary: "Test keys: links work, no real money moves.", fix: "Replace with rzp_live_ keys once Razorpay activates the account." };
+  if (!p.lastEventAt) return { ...base, state: "warn", summary: "Keys work, but Razorpay has never called the webhook: paid links would not be marked paid.", fix: "Add the webhook shown in Apps → Razorpay, with event payment_link.paid." };
+  return { ...base, state: "ok", summary: `Live keys; last webhook ${p.lastEventAt.toISOString().slice(0, 16).replace("T", " ")} UTC.` };
+}
