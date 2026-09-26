@@ -76,6 +76,14 @@ vi.mock("@/modules/agent/prompt", async (importOriginal) => {
       promptCalls.push({ options: options as Record<string, unknown> });
       return actual.buildAgentSystemPrompt(profile, options);
     },
+    // WhatsApp replies take the cache-split variant; voice keeps the above.
+    buildAgentPromptParts: (
+      profile: Parameters<typeof actual.buildAgentPromptParts>[0],
+      options: Parameters<typeof actual.buildAgentPromptParts>[1] = {}
+    ) => {
+      promptCalls.push({ options: options as Record<string, unknown> });
+      return actual.buildAgentPromptParts(profile, options);
+    },
   };
 });
 

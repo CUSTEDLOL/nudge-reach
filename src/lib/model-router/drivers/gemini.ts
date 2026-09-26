@@ -9,6 +9,7 @@ import type {
   LlmDriver,
   ToolInvocation,
 } from "@/lib/model-router/types";
+import { fullSystem } from "@/lib/model-router/types";
 
 /** Google Gemini driver (E3 BYO-LLM) — generateContent with function calling. */
 
@@ -90,7 +91,7 @@ export const geminiDriver: LlmDriver = {
     const response = await client(rt.apiKey).models.generateContent({
       model: rt.model,
       contents: toContents(args.messages),
-      config: { systemInstruction: args.system, maxOutputTokens: args.maxTokens },
+      config: { systemInstruction: fullSystem(args), maxOutputTokens: args.maxTokens },
     });
     return {
       text: (response.text ?? "").trim(),
@@ -117,7 +118,7 @@ export const geminiDriver: LlmDriver = {
         model: rt.model,
         contents: convo,
         config: {
-          systemInstruction: args.system,
+          systemInstruction: fullSystem(args),
           maxOutputTokens: args.maxTokens,
           tools: toolConfig(args),
         },
@@ -164,7 +165,7 @@ export const geminiDriver: LlmDriver = {
           parts: [{ text: "Wrap up now in one short message to the customer, without any tools." }],
         },
       ],
-      config: { systemInstruction: args.system, maxOutputTokens: args.maxTokens },
+      config: { systemInstruction: fullSystem(args), maxOutputTokens: args.maxTokens },
     });
     tally(closing.usageMetadata);
     return {

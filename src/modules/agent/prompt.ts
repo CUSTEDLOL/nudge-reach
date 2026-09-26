@@ -186,6 +186,33 @@ export function buildAgentSystemPrompt(
   profile: AgentProfileInput,
   options: AgentPromptOptions = {}
 ): string {
+  return renderAgentPrompt(profile, options, true);
+}
+
+/**
+ * The same prompt split for Anthropic prompt caching: `system` is stable for
+ * the org and gets cached; `systemTail` carries the TODAY line, which changes
+ * every minute and would otherwise invalidate the cache on every new minute.
+ * Voice keeps `buildAgentSystemPrompt` — ElevenLabs takes one string.
+ */
+export function buildAgentPromptParts(
+  profile: AgentProfileInput,
+  options: AgentPromptOptions = {}
+): { system: string; systemTail?: string } {
+  if (!options.now || !options.timezone) {
+    return { system: renderAgentPrompt(profile, options, true) };
+  }
+  return {
+    system: renderAgentPrompt(profile, options, false),
+    systemTail: `TODAY: ${formatNowLine(options.now, options.timezone)}.`,
+  };
+}
+
+function renderAgentPrompt(
+  profile: AgentProfileInput,
+  options: AgentPromptOptions,
+  inlineToday: boolean
+): string {
   const identity = agentIdentity(profile.vertical);
   const voice = options.channel === "voice";
   const digest = options.knowledgeDigest?.trim() ?? "";
@@ -224,7 +251,7 @@ export function buildAgentSystemPrompt(
     voice
       ? `You are the phone assistant for "${profile.businessName}", a ${identity.noun}. You are speaking with a customer on a live phone call.`
       : `You are the WhatsApp assistant for "${profile.businessName}", a ${identity.noun}. You reply to customers on WhatsApp.`,
-    ...(hasTime
+    ...(hasTime && inlineToday
       ? [`TODAY: ${formatNowLine(options.now!, options.timezone!)}.`]
       : []),
     "",

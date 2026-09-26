@@ -1,7 +1,7 @@
 import { chat, runAgent, type ChatTurn } from "@/lib/model-router";
 import { normalizeWhatsAppMarkdown } from "@/modules/inbox/format";
 import {
-  buildAgentSystemPrompt,
+  buildAgentPromptParts,
   HANDOFF_SENTINEL,
   type AgentProfileInput,
   type AgentPromptOptions,
@@ -76,11 +76,12 @@ export async function generateAgentReply(
   ctx: Pick<ToolContext, "orgId" | "conversationId">,
   promptOptions: AgentReplyPromptOptions
 ): Promise<AgentReply> {
-  const system = buildAgentSystemPrompt(profile, promptOptions);
+  const { system, systemTail } = buildAgentPromptParts(profile, promptOptions);
   let raw: string;
   try {
     raw = await chat({
       system,
+      systemTail,
       messages: history,
       maxTokens: 400,
       attribution: {
@@ -124,7 +125,7 @@ export async function generateAgentActionReply(
 ): Promise<AgentActionReply> {
   // The org's own connected actions (E2) ride alongside the built-ins.
   const customTools = await loadCustomTools(ctx.orgId);
-  const system = buildAgentSystemPrompt(profile, {
+  const { system, systemTail } = buildAgentPromptParts(profile, {
     ...promptOptions,
     withTools: true,
     customTools: customTools.map((t) => ({
@@ -138,6 +139,7 @@ export async function generateAgentActionReply(
   try {
     ({ text, toolCalls } = await runAgent({
       system,
+      systemTail,
       messages: history,
       tools: [...toolDefs(), ...customTools.map((t) => t.def)],
       runTool: (call) => runTool(ctx, call, customTools),

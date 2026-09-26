@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { isWithinServiceWindow } from "@/modules/agent/window";
 import {
   agentIdentity,
+  buildAgentPromptParts,
   buildAgentSystemPrompt,
   formatNowLine,
   GENERIC_SCOPE,
@@ -124,6 +125,22 @@ describe("buildAgentSystemPrompt (knowledge digest + time awareness)", () => {
     expect(p).toContain("— only:");
     const bare = buildAgentSystemPrompt(profile);
     expect(bare).not.toContain("TODAY:");
+  });
+
+  it("keeps the per-minute TODAY line out of the cacheable system prompt", () => {
+    const at = (iso: string) =>
+      buildAgentPromptParts(profile, { now: new Date(iso), timezone: "Asia/Kolkata" });
+    const a = at("2026-09-22T10:00:00Z");
+    const b = at("2026-09-22T10:01:00Z");
+    // Byte-identical across minutes, or every new minute re-writes the cache.
+    expect(a.system).toBe(b.system);
+    expect(a.system).not.toContain("TODAY:");
+    expect(a.system).toContain("— only:");
+    expect(a.systemTail).toBe("TODAY: Tuesday, 22 September 2026 at 3:30 PM.");
+    expect(b.systemTail).toBe("TODAY: Tuesday, 22 September 2026 at 3:31 PM.");
+    expect(buildAgentPromptParts(profile)).toEqual({
+      system: buildAgentSystemPrompt(profile),
+    });
   });
 
   it("renders the knowledge digest and nothing from the legacy blob", () => {

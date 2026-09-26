@@ -71,6 +71,26 @@ describe("prompt caching — system prefix", () => {
     ]);
   });
 
+  it("chat() sends systemTail after the breakpoint, uncached", async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: "text", text: "hi" }],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 10, output_tokens: 5 },
+    });
+
+    await chat({
+      system: "STABLE PROMPT",
+      systemTail: "TODAY: Tuesday, 3:30 PM.",
+      messages: [{ role: "user", text: "hi" }],
+      attribution: { orgId: "org1", purpose: "agent_reply" },
+    });
+
+    expect(systemOf(0)).toEqual([
+      { type: "text", text: "STABLE PROMPT", cache_control: EPHEMERAL },
+      { type: "text", text: "TODAY: Tuesday, 3:30 PM." },
+    ]);
+  });
+
   it("generate() marks the system prompt as a cache breakpoint", async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: "text", text: "copy" }],
@@ -127,6 +147,36 @@ describe("prompt caching — the agent loop", () => {
     expect(systemOf(0)).toEqual([
       { type: "text", text: "SCOPED FRONT DESK PROMPT", cache_control: EPHEMERAL },
     ]);
+  });
+
+  it("carries systemTail on every step, after the cached prefix", async () => {
+    mockCreate
+      .mockResolvedValueOnce({
+        content: [{ type: "tool_use", id: "t1", name: "capture_lead", input: {} }],
+        stop_reason: "tool_use",
+        usage: { input_tokens: 100, output_tokens: 20 },
+      })
+      .mockResolvedValueOnce({
+        content: [{ type: "text", text: "done" }],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 30, output_tokens: 10 },
+      });
+
+    await runAgent({
+      system: "SCOPED FRONT DESK PROMPT",
+      systemTail: "TODAY: Tuesday, 3:30 PM.",
+      messages: [{ role: "user", text: "book me in" }],
+      tools,
+      runTool: async () => ({ result: "ok" }),
+      attribution: { orgId: "org1", purpose: "agent_reply" },
+    });
+
+    for (const step of [0, 1]) {
+      expect(systemOf(step)).toEqual([
+        { type: "text", text: "SCOPED FRONT DESK PROMPT", cache_control: EPHEMERAL },
+        { type: "text", text: "TODAY: Tuesday, 3:30 PM." },
+      ]);
+    }
   });
 
   it("keeps tool order stable across steps (the tool block is part of the cached prefix)", async () => {

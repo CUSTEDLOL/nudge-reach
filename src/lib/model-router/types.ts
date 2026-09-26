@@ -62,14 +62,22 @@ export interface DriverGenerateArgs {
   maxTokens: number;
 }
 
+/**
+ * `systemTail` is system text that changes call to call (the agent's TODAY
+ * line). Anthropic sends it as a second, uncached block after the cached
+ * `system`, so a per-minute clock cannot bust the prompt cache. Drivers
+ * without an explicit breakpoint append it via `fullSystem`.
+ */
 export interface DriverChatArgs {
   system: string;
+  systemTail?: string;
   messages: ChatTurn[];
   maxTokens: number;
 }
 
 export interface DriverAgentArgs {
   system: string;
+  systemTail?: string;
   messages: ChatTurn[];
   tools: AgentToolDef[];
   runTool: (call: ToolInvocation) => Promise<{ result: string; isError?: boolean }>;
@@ -96,4 +104,9 @@ export interface LlmDriver {
     args: DriverChatArgs
   ): Promise<{ text: string; usage: DriverUsage }>;
   runAgent(rt: DriverRuntime, args: DriverAgentArgs): Promise<DriverAgentOutcome>;
+}
+
+/** `system` + `systemTail` as one string, for drivers with implicit caching. */
+export function fullSystem(args: { system: string; systemTail?: string }): string {
+  return args.systemTail ? `${args.system}\n\n${args.systemTail}` : args.system;
 }

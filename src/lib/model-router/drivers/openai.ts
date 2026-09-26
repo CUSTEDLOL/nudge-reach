@@ -9,6 +9,7 @@ import type {
   LlmDriver,
   ToolInvocation,
 } from "@/lib/model-router/types";
+import { fullSystem } from "@/lib/model-router/types";
 
 /** OpenAI driver (E3 BYO-LLM) — chat-completions with function calling. */
 
@@ -97,7 +98,7 @@ export const openaiDriver: LlmDriver = {
       model: rt.model,
       max_completion_tokens: args.maxTokens,
       messages: [
-        { role: "system", content: args.system },
+        { role: "system", content: fullSystem(args) },
         ...args.messages.map((m) => ({ role: m.role, content: m.text })),
       ],
     });
@@ -109,7 +110,7 @@ export const openaiDriver: LlmDriver = {
 
   async runAgent(rt: DriverRuntime, args: DriverAgentArgs): Promise<DriverAgentOutcome> {
     const convo: Message[] = [
-      { role: "system", content: args.system },
+      { role: "system", content: fullSystem(args) },
       ...args.messages.map((m) => ({ role: m.role, content: m.text })),
     ];
     const toolCalls: ToolInvocation[] = [];

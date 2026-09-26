@@ -140,6 +140,8 @@ export async function generate({
 
 export interface ChatInput {
   system: string;
+  /** Per-call system text, kept out of the cached prefix (see DriverChatArgs). */
+  systemTail?: string;
   messages: ChatTurn[];
   maxTokens?: number;
   /** Org/conversation the call is billed to. Required: the ledger refuses unattributed spend. */
@@ -152,18 +154,21 @@ export interface ChatInput {
  */
 export async function chat({
   system,
+  systemTail,
   messages,
   maxTokens = 400, // WhatsApp replies are short; keep cost + latency low
   attribution,
 }: ChatInput): Promise<string> {
   const { text } = await billed(attribution, {}, (driver, rt) =>
-    driver.chat(rt, { system, messages, maxTokens })
+    driver.chat(rt, { system, systemTail, messages, maxTokens })
   );
   return sanitizeText(text);
 }
 
 export interface RunAgentInput {
   system: string;
+  /** Per-call system text, kept out of the cached prefix (see DriverChatArgs). */
+  systemTail?: string;
   messages: ChatTurn[];
   tools: AgentToolDef[];
   /** Executes one tool call and returns a short result string for the model. */
@@ -199,6 +204,7 @@ export interface RunAgentResult {
  */
 export async function runAgent({
   system,
+  systemTail,
   messages,
   tools,
   runTool,
@@ -207,7 +213,7 @@ export async function runAgent({
   attribution,
 }: RunAgentInput): Promise<RunAgentResult> {
   const { text, toolCalls, cappedOut, spoken } = await billed(attribution, {}, (driver, rt) =>
-    driver.runAgent(rt, { system, messages, tools, runTool, maxTokens, maxSteps })
+    driver.runAgent(rt, { system, systemTail, messages, tools, runTool, maxTokens, maxSteps })
   );
   return { text: sanitizeText(text), toolCalls, cappedOut, spoken: (spoken ?? []).map(sanitizeText) };
 }

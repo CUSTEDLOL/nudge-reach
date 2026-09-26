@@ -52,8 +52,14 @@ function textOf(content: Anthropic.ContentBlock[]): string {
  * Under the model's minimum cacheable prefix nothing is cached and nothing
  * extra is charged, so this is safe for orgs with a thin knowledge base.
  */
-function cachedSystem(system: string): Anthropic.TextBlockParam[] {
-  return [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+function cachedSystem(system: string, tail?: string): Anthropic.TextBlockParam[] {
+  const blocks: Anthropic.TextBlockParam[] = [
+    { type: "text", text: system, cache_control: { type: "ephemeral" } },
+  ];
+  // After the breakpoint, so it is billed as ordinary input and never
+  // changes the cached prefix.
+  if (tail) blocks.push({ type: "text", text: tail });
+  return blocks;
 }
 
 // input_tokens EXCLUDES cached tokens; the cache fields are priced separately.
@@ -104,7 +110,7 @@ export const anthropicDriver: LlmDriver = {
     const response = await client(rt.apiKey).messages.create({
       model: rt.model,
       max_tokens: args.maxTokens,
-      system: cachedSystem(args.system),
+      system: cachedSystem(args.system, args.systemTail),
       messages: args.messages.map((m) => ({ role: m.role, content: m.text })),
     });
     return { text: textOf(response.content).trim(), usage: usageOf(response.usage) };
@@ -138,7 +144,7 @@ export const anthropicDriver: LlmDriver = {
       const response = await client(rt.apiKey).messages.create({
         model: rt.model,
         max_tokens: args.maxTokens,
-        system: cachedSystem(args.system),
+        system: cachedSystem(args.system, args.systemTail),
         tools,
         messages: convo,
       });
@@ -184,7 +190,7 @@ export const anthropicDriver: LlmDriver = {
     const closing = await client(rt.apiKey).messages.create({
       model: rt.model,
       max_tokens: args.maxTokens,
-      system: cachedSystem(args.system),
+      system: cachedSystem(args.system, args.systemTail),
       messages: [
         ...convo,
         {
