@@ -114,6 +114,13 @@ describe("checkPlatformIntegrations", () => {
     expect(rows.email.summary).toContain("pending");
   });
 
+  it("reads Resend's HTTP 400 'API key is invalid' as a rejected key, not a missing domain", async () => {
+    const rows = await byKey(FULL, (url, init) =>
+      url.includes("resend.com") ? { status: 400, body: { statusCode: 400, message: "API key is invalid", name: "validation_error" } } : everythingFine(url, init));
+    expect(rows.email.state).toBe("fail");
+    expect(rows.email.summary).toContain("API key is invalid");
+  });
+
   it("warns on Razorpay test keys and fails without a webhook secret", async () => {
     const test = await byKey({ ...FULL, RAZORPAY_KEY_ID: "rzp_test_x" }, everythingFine);
     expect(test["razorpay-billing"].state).toBe("warn");

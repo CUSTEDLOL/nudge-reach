@@ -194,12 +194,13 @@ async function checkEmail(env: HealthEnv, f: FetchFn): Promise<IntegrationHealth
   const domain = (from.match(/@([^>\s]+)/)?.[1] ?? "").toLowerCase();
   const r = await call(f, "https://api.resend.com/domains", { headers: { Authorization: `Bearer ${key}` } });
   if ("error" in r) return { ...base, state: "fail", summary: `Resend unreachable: ${r.error}` };
-  if (r.status === 401 || r.status === 403) {
-    // A "sending only" key cannot list domains but can still send.
+  if (r.status !== 200) {
+    // A "sending only" key cannot list domains but can still send. Resend
+    // answers a bad key with HTTP 400 "API key is invalid", not 401.
     const restricted = String(field(r.body, "name") ?? "").includes("restricted");
     return restricted
       ? { ...base, state: "warn", summary: `Sending-only key: can't confirm that ${domain} is verified.`, fix: "Check the domain shows Verified in Resend." }
-      : { ...base, state: "fail", summary: "Resend rejected the API key." };
+      : { ...base, state: "fail", summary: `Resend rejected the API key (${String(field(r.body, "message") ?? `HTTP ${r.status}`)}).`, fix: "Create a new key in Resend → API Keys and set RESEND_API_KEY." };
   }
   const list = field(r.body, "data");
   const match = Array.isArray(list) ? list.find((d) => String(field(d, "name")).toLowerCase() === domain) : undefined;
