@@ -118,7 +118,7 @@ export function parseCalBooking(rawBody: string): ParsedCalBooking | null {
   const discriminator = z
     .object({ payload: z.object({ type: eventTypeSchema }) })
     .parse(json);
-  const expectedEventType = env.CAL_EVENT_TYPE_SLUG ?? "30min";
+  const expectedEventType = env.CAL_EVENT_TYPE_SLUG ?? "request-your-free-demo";
   if (discriminator.payload.type !== expectedEventType) return null;
 
   const booking = bookingSchema.parse(json);

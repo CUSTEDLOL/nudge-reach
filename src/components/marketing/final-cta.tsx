@@ -61,7 +61,7 @@ export function FinalCTA() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
             </ButtonLink>
             <LaunchDemoButton variant="secondary" size="lg">
-              Book a Demo
+              Book a Free Demo
             </LaunchDemoButton>
           </div>
           <ul className="mt-8 flex flex-wrap items-center justify-center gap-2.5">

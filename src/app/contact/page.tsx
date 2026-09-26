@@ -34,7 +34,7 @@ export default function ContactPage() {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <BookDemoButton surface="contact" variant="primary" size="lg">
-              Book a Demo
+              Book a Free Demo
             </BookDemoButton>
 
             <a
@@ -47,14 +47,6 @@ export default function ContactPage() {
               Reach out on WhatsApp
             </a>
           </div>
-
-          <p className="mt-6 text-sm text-ink/50">
-            Prefer to try it first?{" "}
-            <a href="/free-trial" className="font-semibold text-ink underline underline-offset-4">
-              Start a free trial
-            </a>{" "}
-            — no call needed.
-          </p>
 
           {/*
             Booking a call and starting a trial both require the visitor to act

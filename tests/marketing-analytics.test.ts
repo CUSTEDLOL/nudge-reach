@@ -413,8 +413,8 @@ describe("demo booking funnel", () => {
     expect(html).toContain(
       'data-cal-config="{&quot;layout&quot;:&quot;month_view&quot;,&quot;useSlotsViewOnSmallScreen&quot;:&quot;true&quot;}"'
     );
-    expect(html).toContain('data-cal-link="hqnudge/30min"');
-    expect(html).toContain('href="https://cal.com/hqnudge/30min"');
+    expect(html).toContain('data-cal-link="hqnudge/request-your-free-demo"');
+    expect(html).toContain('href="https://cal.com/hqnudge/request-your-free-demo"');
   });
 
   it("tracks a CTA click with its stable surface and pathname", () => {
@@ -484,7 +484,7 @@ describe("demo booking funnel", () => {
     };
     type CalNamespace = ((...args: unknown[]) => void) & { q: unknown[][] };
     const cal = (window as unknown as Window & { Cal: CalApi }).Cal;
-    const eventCalls = cal.ns["30min"].q.filter((call) => call[0] === "on");
+    const eventCalls = cal.ns["request-your-free-demo"].q.filter((call) => call[0] === "on");
 
     expect(script.src).toBe("https://app.cal.com/embed/embed.js");
     expect(cal.config.forwardQueryParams).toBe(false);
@@ -598,7 +598,7 @@ describe("demo booking funnel", () => {
     }).Cal;
     expect(
       cal.q.filter(
-        (call) => call[0] === "initNamespace" && call[1] === "30min"
+        (call) => call[0] === "initNamespace" && call[1] === "request-your-free-demo"
       )
     ).toHaveLength(1);
   });

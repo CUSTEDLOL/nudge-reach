@@ -10,13 +10,13 @@ import { WhatsAppGlyph } from "@/components/marketing/holo-card";
  * The closer: the pixel world panorama (Marina Bay Sands → Taj Mahal →
  * Eiffel → Burj Khalifa — the markets Nudge serves) filling the section,
  * fading into the site's cream at the bottom where the ask sits in dark
- * ink, Duna-style. One simple line, one dark Book-a-Demo button.
+ * ink, Duna-style. One simple line, one dark Book-a-Free-Demo button.
  */
 
 export function FinalCtaV2() {
   return (
     <section
-      aria-label="Book a demo"
+      aria-label="Book a free demo"
       className="relative isolate flex min-h-[96svh] flex-col justify-end overflow-hidden bg-[#8ecdf0]"
     >
       {/* the scenery — upper band biased so the landmark skyline stays in view */}
@@ -69,7 +69,7 @@ export function FinalCtaV2() {
           className="mt-9"
         >
           <BookDemoButton className="group/link inline-flex items-center gap-2 rounded-full bg-ink px-8 py-4 text-[16.5px] font-semibold text-white shadow-[0_18px_44px_-14px_rgba(10,15,13,0.55)] transition-all hover:-translate-y-0.5 hover:bg-neutral-800">
-            Book a Demo
+            Book a Free Demo
             <ArrowRight
               className="h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-0.5"
               aria-hidden

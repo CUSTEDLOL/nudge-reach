@@ -221,7 +221,7 @@ export function Pricing() {
                   }
                 >
                   <PhoneCall className="h-4 w-4" aria-hidden />
-                  Book a Demo
+                  Book a Free Demo
                 </LaunchDemoButton>
 
                 <ul className="mt-6 grid gap-2.5 border-t-2 border-ink/15 pt-5">

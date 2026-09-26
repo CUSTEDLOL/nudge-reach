@@ -28,10 +28,8 @@ const LINK_GROUPS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Start",
     links: [
-      // The trial is the primary CTA now, so it leads — and it points at the
-      // trial page rather than /login, which is where it used to dead-end.
-      { label: "Free trial", href: "/free-trial" },
-      { label: "Book a demo", demo: true },
+      // The free demo is the one conversion the site pushes, so it leads.
+      { label: "Book a free demo", demo: true },
       { label: "Contact", href: "/contact" },
     ],
   },

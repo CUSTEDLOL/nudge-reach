@@ -5,11 +5,11 @@ import { BookDemoButton } from "./book-demo";
 import type { ButtonSize, ButtonVariant } from "./button";
 
 /**
- * "Book a Demo" — opens the Cal.com modal when the embed loads and otherwise
+ * "Book a Free Demo" — opens the Cal.com modal when the embed loads and otherwise
  * follows the direct booking link. The wrapper keeps call-site props stable.
  */
 export function LaunchDemoButton({
-  children = "Book a Demo",
+  children = "Book a Free Demo",
   variant,
   size,
   className,

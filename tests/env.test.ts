@@ -11,7 +11,7 @@ describe("envSchema", () => {
   it("accepts a minimal simulation-mode config", () => {
     const parsed = envSchema.parse(baseEnv);
     expect(parsed.SEND_MODE).toBe("simulation");
-    expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("30min");
+    expect(parsed.CAL_EVENT_TYPE_SLUG).toBe("request-your-free-demo");
     expect(parsed.CAL_WEBHOOK_SECRET).toBeUndefined();
     expect(parsed.NEXT_PUBLIC_MARKETING_ATTRIBUTION_ENABLED).toBe("false");
     expect(parsed.FOUNDER_TIME_ZONE).toBe("Asia/Kolkata");

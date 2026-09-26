@@ -286,8 +286,8 @@ describe("published resource loading", () => {
     );
 
     expect(html).not.toContain('href="/demo"');
-    expect(html).toContain('href="https://cal.com/hqnudge/30min"');
-    expect(html).toContain('data-cal-link="hqnudge/30min"');
+    expect(html).toContain('href="https://cal.com/hqnudge/request-your-free-demo"');
+    expect(html).toContain('data-cal-link="hqnudge/request-your-free-demo"');
     expect(plainText(html)).toContain("See the Nudge AI Front Desk");
   });
 

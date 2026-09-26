@@ -87,7 +87,6 @@ describe("free trial acquisition page", () => {
   it("wears the site's navbar and footer", () => {
     expect(html).not.toBe("");
     expect(fullHtml).toContain('id="site-footer"');
-    expect(fullHtml).toContain('href="/free-trial"');
     expect(count(fullHtml, /<h1\b/g)).toBe(1);
   });
 

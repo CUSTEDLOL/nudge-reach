@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { BookDemoButton } from "./book-demo";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { isSamePageHash, panelPosition, scrollToHash } from "./scroll-to-hash";
@@ -156,20 +157,20 @@ function NavMenuPanel({
   );
 }
 
-/** The solid CTA — flat ink pill with a brand-glow lift on hover. Goes
- * straight to the free trial; booking a demo now lives on /contact. */
+/** The solid CTA — flat ink pill with a brand-glow lift on hover. Opens
+ * the free-demo booking (Cal.com), the one conversion the site pushes. */
 function NavCta() {
   return (
-    <a
-      href="/free-trial"
+    <BookDemoButton
+      surface="navbar"
       className="group/cta hidden min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(6,193,103,0.55)] active:translate-y-0 active:scale-[0.98] lg:inline-flex"
     >
-      <span>Free Trial</span>
+      <span>Book a Free Demo</span>
       <ArrowRight
         className="h-4 w-4 -mr-0.5 transition-transform duration-300 group-hover/cta:translate-x-1"
         aria-hidden
       />
-    </a>
+    </BookDemoButton>
   );
 }
 
@@ -449,13 +450,12 @@ export function Navbar() {
                 >
                   Sign in
                 </a>
-                <a
-                  href="/free-trial"
-                  onClick={() => setOpen(false)}
+                <BookDemoButton
+                  surface="navbar"
                   className="flex min-h-11 w-full items-center justify-center rounded-xl bg-ink px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-ink/90"
                 >
-                  Free Trial
-                </a>
+                  Book a Free Demo
+                </BookDemoButton>
               </div>
             </motion.div>
           </motion.div>

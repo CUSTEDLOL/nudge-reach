@@ -52,7 +52,7 @@ describe("SEO page color contrast", () => {
     );
     const eyebrow = html.match(/<p[^>]*>AA eyebrow<\/p>/)?.[0] ?? "";
     const cta = html.match(
-      /<section class="mt-16[^>]*>[\s\S]*?Book a Demo[\s\S]*?<\/section>/,
+      /<section class="mt-16[^>]*>[\s\S]*?Book a Free Demo[\s\S]*?<\/section>/,
     )?.[0] ?? "";
 
     expect(contrastRatio(BRAND_700, WHITE)).toBeCloseTo(5.0792, 4);

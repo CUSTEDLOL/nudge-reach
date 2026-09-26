@@ -108,7 +108,7 @@ export const envSchema = z
     // Cal.com demo-booking webhook. Optional so simulation/local builds remain
     // keyless; the public webhook route fails closed while the secret is unset.
     CAL_WEBHOOK_SECRET: z.string().optional(),
-    CAL_EVENT_TYPE_SLUG: z.string().min(1).default("30min"),
+    CAL_EVENT_TYPE_SLUG: z.string().min(1).default("request-your-free-demo"),
 
     // Optional GA4 Measurement Protocol credentials for server-side lead
     // quality events. Never prefix these with NEXT_PUBLIC_: the API secret

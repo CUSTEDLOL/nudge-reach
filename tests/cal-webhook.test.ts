@@ -17,7 +17,7 @@ const bookingPayload = {
   createdAt: "2026-09-15T08:00:00.000Z",
   payload: {
     uid: "booking-uid-123",
-    type: "30min",
+    type: "request-your-free-demo",
     startTime: "2026-09-20T09:30:00.000Z",
     attendees: [
       {
@@ -117,7 +117,7 @@ describe("parseCalBooking", () => {
       attendeeName: "Dr Priya Rao",
       attendeeEmail: "priya@example.com",
       attendeePhoneE164: "+919876543210",
-      eventType: "30min",
+      eventType: "request-your-free-demo",
       startTime: new Date("2026-09-20T09:30:00.000Z"),
       attribution: {
         landingPath: `/industries/clinics/${longValue}`.slice(0, 200),
@@ -206,7 +206,7 @@ describe("parseCalBooking", () => {
           triggerEvent: "BOOKING_CREATED",
           payload: {
             uid: "booking-uid-123",
-            type: "30min",
+            type: "request-your-free-demo",
             startTime: "not-a-date",
             attendees: [],
           },

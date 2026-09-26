@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
  * The marketing navbar. Decluttered on 2026-09-22: six top-level links, with
  * the two industry/content destinations tucked under a Resources menu, and
  * the primary CTA switched from the Cal.com demo modal to the free trial.
+ * On 2026-09-26 every Free Trial CTA became "Book a Free Demo" (Cal.com):
+ * the site now pushes one conversion, the free demo.
  *
  * `/industries` deliberately has no link anywhere — the directory exists but
  * has no page.tsx, so linking it would 404. Only `/industries/clinics` is real.
@@ -51,12 +53,11 @@ describe("marketing navbar", () => {
     expect(navbar).not.toMatch(/href: "\/industries"/);
   });
 
-  it("leads with Free Trial instead of the demo modal", () => {
-    expect(navbar).toContain("Free Trial");
-    expect(navbar).toContain("/free-trial");
-    expect(navbar).not.toContain("Book a Demo");
-    // The Cal modal button is no longer the navbar's job.
-    expect(navbar).not.toContain("LaunchDemoButton");
+  it("leads with the free demo, not the free trial", () => {
+    expect(navbar).toContain("Book a Free Demo");
+    expect(navbar).toContain("BookDemoButton");
+    expect(navbar).not.toContain("Free Trial");
+    expect(navbar).not.toContain("/free-trial");
   });
 
   it("keeps Sign in pointing at the login page", () => {
@@ -65,13 +66,13 @@ describe("marketing navbar", () => {
 });
 
 describe("home hero", () => {
-  it("offers Free Trial and Contact Us, both as plain links", () => {
-    expect(hero).toContain("Free Trial");
-    expect(hero).toContain('href="/free-trial"');
-    expect(hero).toContain("Contact Us");
+  it("offers Book a Free Demo first, then Contact Us", () => {
+    expect(hero).toContain("Book a Free Demo");
+    expect(hero).toContain('surface="hero"');
+    expect(hero.indexOf("Book a Free Demo")).toBeLessThan(hero.indexOf("Contact Us"));
     expect(hero).toContain('href="/contact"');
-    // The demo modal and the lead-capture modal are both gone from the hero.
-    expect(hero).not.toContain("Book a Demo");
+    expect(hero).not.toContain("Free Trial");
+    expect(hero).not.toContain("/free-trial");
     expect(hero).not.toContain("GetAccessButton");
   });
 });
@@ -99,9 +100,10 @@ describe("contact page", () => {
 });
 
 describe("footer", () => {
-  it("sends the trial link to the trial page, not the login screen", () => {
+  it("leads Start with the free demo, not the trial or the login screen", () => {
     const start = footer.slice(footer.indexOf('title: "Start"'), footer.indexOf('title: "Legal"'));
-    expect(start).toContain('href: "/free-trial"');
+    expect(start).toContain('label: "Book a free demo", demo: true');
+    expect(start).not.toContain('href: "/free-trial"');
     expect(start).not.toContain('href: "/login"');
   });
 

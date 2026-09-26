@@ -135,7 +135,7 @@ misconfig surfaces at first request). `.env.example` documents every var.
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Optional | USD orgs / global markets. Without them Stripe checkout is disabled; the webhook (`/api/webhooks/stripe`) needs the secret to accept `checkout.session.completed` |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Optional | Without them invites still work via auto-join on signup; with them invitees get a real email |
 | `CAL_WEBHOOK_SECRET` | Optional; required for Cal ingestion | Server-only HMAC secret shared with the `BOOKING_CREATED` webhook. Unset/empty makes `/api/webhooks/cal` fail closed. Configure only after schema/RLS/policy verification. |
-| `CAL_EVENT_TYPE_SLUG` | Optional | Defaults to `30min`; must exactly match the Cal demo event type slug. |
+| `CAL_EVENT_TYPE_SLUG` | Optional | Defaults to `request-your-free-demo`; must exactly match the Cal demo event type slug. |
 | `GA4_MEASUREMENT_ID` / `GA4_API_SECRET` | Optional; approval-gated | Server-only GA4 Measurement Protocol configuration for booked-lead status events. Leave both unset until the consent/privacy/configuration review and debug validation in `SEO_OPERATIONS.md` are complete. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google Calendar OAuth for the AI Front Desk. **Left empty, "Connect calendar" works in simulation against a mocked calendar** — set them only for real OAuth. Not in the live-mode guard: even a live WhatsApp deploy boots without a calendar |
 | `GOOGLE_OAUTH_REDIRECT_URI` | Optional (with the two above) | Must exactly match a redirect URI on the OAuth client, e.g. `https://<url>/api/integrations/google/callback` |

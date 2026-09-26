@@ -12,14 +12,14 @@ import {
 import { buttonCn, type ButtonSize, type ButtonVariant } from "./button";
 
 /**
- * Cal.com element-click embed. A loaded embed intercepts the hqnudge/30min
+ * Cal.com element-click embed. A loaded embed intercepts the free-demo
  * link and opens its modal; the real href remains usable when scripts fail.
  * The official loader snippet is ported below and runs once per browser
  * lifecycle, lazily, when the first trigger mounts.
  */
-const CAL_LINK = "hqnudge/30min";
+const CAL_LINK = "hqnudge/request-your-free-demo";
 const CAL_FALLBACK_URL = `https://cal.com/${CAL_LINK}`;
-const CAL_NAMESPACE = "30min";
+const CAL_NAMESPACE = "request-your-free-demo";
 const CAL_STATIC_CONFIG = {
   layout: "month_view",
   useSlotsViewOnSmallScreen: "true",
@@ -233,7 +233,7 @@ export function buildCalTriggerConfig(
  * takes whatever `className` the call site composes (nav or inline links).
  */
 export function BookDemoButton({
-  children = "Book a Demo",
+  children = "Book a Free Demo",
   variant,
   size = "md",
   className,

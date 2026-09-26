@@ -47,7 +47,7 @@ export function LandingShell({
               surface={surface}
               className="mt-6 inline-flex rounded-xl bg-brand-700 px-5 py-3 font-bold text-white hover:bg-brand-800"
             >
-              Book a Demo
+              Book a Free Demo
             </LaunchDemoButton>
           </section>
         </div>

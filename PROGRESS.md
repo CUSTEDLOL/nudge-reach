@@ -1,5 +1,17 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Free Trial CTAs → Book a Free Demo (2026-09-26) ✅
+
+Every marketing Free Trial CTA (navbar desktop + mobile, home hero, footer,
+contact page) now reads **Book a Free Demo** and opens the Cal.com event
+`hqnudge/request-your-free-demo`; every other demo CTA was relabelled to match.
+`/free-trial` still renders for direct/ad traffic but nothing on the site links
+to it. The Cal webhook's expected slug default moved from `30min` to
+`request-your-free-demo` — **set or remove `CAL_EVENT_TYPE_SLUG` on Vercel** and
+point the Cal booking webhook at the new event, or demo bookings stop landing
+as leads. In-app trial buttons and the WhatsApp setup-call link still use
+`hqnudge/30min` (untouched).
+
 ## Final cleanup of `feat/house-rules` (2026-09-23) ✅ CODE — BROWSER-UNVERIFIED
 
 One real product gap, a run of UI defects, and documentation that had started

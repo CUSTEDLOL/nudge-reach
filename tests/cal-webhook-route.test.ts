@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   env: {
     CAL_WEBHOOK_SECRET: "cal-webhook-secret" as string | undefined,
-    CAL_EVENT_TYPE_SLUG: "30min",
+    CAL_EVENT_TYPE_SLUG: "request-your-free-demo",
   },
 }));
 type DemoBookingUpsertInput = {
@@ -29,7 +29,7 @@ const validPayload = {
   createdAt: "2026-09-15T08:00:00.000Z",
   payload: {
     uid: "booking-uid-123",
-    type: "30min",
+    type: "request-your-free-demo",
     startTime: "2026-09-20T09:30:00.000Z",
     attendees: [
       {
@@ -161,7 +161,7 @@ function bodyAtByteLimit() {
 
 beforeEach(() => {
   state.env.CAL_WEBHOOK_SECRET = "cal-webhook-secret";
-  state.env.CAL_EVENT_TYPE_SLUG = "30min";
+  state.env.CAL_EVENT_TYPE_SLUG = "request-your-free-demo";
   upsert.mockClear();
 });
 

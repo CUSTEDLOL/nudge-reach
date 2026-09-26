@@ -178,7 +178,7 @@ export function HoloCard() {
                 className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/80 bg-[#ffd94a] text-[13px] font-black uppercase tracking-[0.08em] text-ink shadow-[0_4px_0_rgba(10,15,13,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#ffe37a] hover:shadow-[0_6px_0_rgba(10,15,13,0.8)] active:translate-y-0 active:shadow-[0_2px_0_rgba(10,15,13,0.8)]"
               >
                 <CalendarCheck className="h-4 w-4" aria-hidden />
-                Book a Demo
+                Book a Free Demo
               </LaunchDemoButton>
             </footer>
 
