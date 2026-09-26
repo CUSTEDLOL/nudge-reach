@@ -78,6 +78,7 @@ model Org {
   products                Product[]
   campaigns               Campaign[]
   whatsappAccounts        WhatsappAccount[]
+  whatsappConnection      WhatsappConnection?
   agentProfile            AgentProfile?
   conversations           Conversation[]
   memberships             Membership[]
@@ -422,6 +423,23 @@ model ConversationMessage {
 // multiNumber plan flag). Exactly one isDefault per org, enforced in
 // accounts.ts. phoneNumberId is globally unique — it is the inbound webhook's
 // routing key.
+// One client-owned Meta app per workspace; all its numbers share this callback.
+model WhatsappConnection {
+  id                   String    @id @default(cuid())
+  orgId                String    @unique
+  org                  Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  appId                String    @unique
+  appSecretEncrypted   String
+  verifyTokenEncrypted String
+  webhookKey           String    @unique
+  verifiedAt           DateTime?
+  // Sticky: rotating credentials must never restore legacy global-secret access.
+  activeAt             DateTime?
+  lastInboundAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
 model WhatsappAccount {
   id                   String   @id @default(cuid())
   orgId                String

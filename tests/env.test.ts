@@ -79,13 +79,13 @@ describe("envSchema", () => {
     expect(parsed.RUNTIME_MODEL).toContain("sonnet");
   });
 
-  it("rejects live mode without the deployment-level webhook secrets", () => {
+  it("rejects live mode without the encryption key", () => {
     const result = envSchema.safeParse({ ...baseEnv, SEND_MODE: "live" });
     expect(result.success).toBe(false);
     if (!result.success) {
       const paths = result.error.issues.map((i) => i.path.join("."));
-      expect(paths).toContain("WHATSAPP_WEBHOOK_VERIFY_TOKEN");
-      expect(paths).toContain("META_APP_SECRET");
+      expect(paths).not.toContain("WHATSAPP_WEBHOOK_VERIFY_TOKEN");
+      expect(paths).not.toContain("META_APP_SECRET");
       expect(paths).toContain("TOKEN_ENCRYPTION_KEY");
     }
   });
@@ -101,12 +101,10 @@ describe("envSchema", () => {
     }
   });
 
-  it("accepts live mode with only the webhook secrets — no env sender number", () => {
+  it("accepts live mode with encrypted per-workspace apps and no global WhatsApp secrets", () => {
     const result = envSchema.safeParse({
       ...baseEnv,
       SEND_MODE: "live",
-      WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verify",
-      META_APP_SECRET: "secret",
       TOKEN_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef",
     });
     expect(result.success).toBe(true);

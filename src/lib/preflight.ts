@@ -94,9 +94,9 @@ export async function runPreflight(
 
   // --- secrets ------------------------------------------------------------
   checks.push(liveVar(env, live, "TOKEN_ENCRYPTION_KEY", "Token encryption key"));
-  checks.push(liveVar(env, live, "META_APP_SECRET", "Meta app secret"));
+  checks.push({ name: "Meta app secret", status: present(env, "META_APP_SECRET") ? "PASS" : "WARN", detail: "Legacy callback only; client apps are configured in workspace WhatsApp settings." });
   checks.push(
-    liveVar(env, live, "WHATSAPP_WEBHOOK_VERIFY_TOKEN", "Webhook verify token")
+    { name: "Webhook verify token", status: present(env, "WHATSAPP_WEBHOOK_VERIFY_TOKEN") ? "PASS" : "WARN", detail: "Legacy callback only; each client connection has its own verify token." }
   );
   checks.push(
     present(env, "CRON_SECRET")

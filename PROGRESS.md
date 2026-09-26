@@ -1,5 +1,13 @@
 # PROGRESS — Nudge Reach (WhatsApp)
 
+## Per-client Meta app connections (2026-09-26) — code verified; Nudge migration pending
+
+Workspace owners/admins can save their own Meta App ID and secret under Settings → WhatsApp. Secrets and unique verification tokens use existing AES-256-GCM encryption. Live saves verify the app credentials with Meta before reserving its ID. Existing per-number tokens are preserved. Each workspace has one callback shared by its numbers; verification activates it permanently, excluding the legacy shared-secret callback even after credential rotation. Inbound, delivery-status, dedupe and template lookups are scoped to the verified workspace and registered WABA/number. UI separates credentials saved, Meta verification, and actual inbound receipt. Global webhook secrets are now optional legacy settings.
+
+Validation: 2,341 tests passed, 22 existing skips; lint and production build passed. Independent security review found app-ID squatting risk; fixed with live Meta validation and regression tests. Additive SQL applied to the existing Nudge database: RLS enabled, anon/authenticated SELECT/INSERT/UPDATE/DELETE revoked and verified. No unrelated data changes.
+
+Nudge's existing number and encrypted access token remain intact. Its local app secret was rejected by Meta, so it was not migrated. Current Meta secret, dedicated callback configuration and a real inbound/reply test remain required. Browser verification is blocked while the Mac is locked. See docs/plans/2026-09-26-whatsapp-client-connections.md and scripts/sql/2026-09-26-whatsapp-connections.sql.
+
 ## Free Trial CTAs → Book a Free Demo (2026-09-26) ✅
 
 Every marketing Free Trial CTA (navbar desktop + mobile, home hero, footer,

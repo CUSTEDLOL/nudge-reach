@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SectionHeader } from "../section-header";
+import { MetaAppSetup } from "./meta-app-setup";
 import { ConnectForm } from "./connect-form";
 import { GoLiveChecklist } from "./go-live-checklist";
 
@@ -153,8 +154,9 @@ export default async function WhatsappSettingsPage() {
       </Card>
 
       <GoLiveChecklist orgId={org.id} />
+      {canManage && <MetaAppSetup orgId={org.id} hasNumber={accounts.length > 0} />}
 
-      <details className="rounded-2xl border border-neutral-200 bg-white">
+      {canManage && <details className="rounded-2xl border border-neutral-200 bg-white">
         <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-neutral-700">
           Advanced: connect manually
           <span className="ml-2 font-normal text-neutral-400">
@@ -171,7 +173,7 @@ export default async function WhatsappSettingsPage() {
           </p>
           <ConnectForm />
         </div>
-      </details>
+      </details>}
     </section>
   );
 }

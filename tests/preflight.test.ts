@@ -49,7 +49,7 @@ describe("runPreflight", () => {
     );
     expect(statusOf(rows, "WhatsApp access token")).toBe("FAIL");
     expect(statusOf(rows, "Token encryption key")).toBe("FAIL");
-    expect(statusOf(rows, "Meta app secret")).toBe("FAIL");
+    expect(statusOf(rows, "Meta app secret")).toBe("WARN");
   });
 
   it("live mode with valid credentials passes Meta checks", async () => {

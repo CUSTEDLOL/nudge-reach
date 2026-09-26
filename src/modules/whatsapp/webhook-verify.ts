@@ -16,7 +16,7 @@ export function verifyWebhookSignature(
     .update(rawBody, "utf8")
     .digest("hex");
   const provided = signatureHeader.slice("sha256=".length);
-  if (provided.length !== expected.length) return false;
+  if (!/^[a-f0-9]{64}$/i.test(provided)) return false;
   return crypto.timingSafeEqual(
     Buffer.from(provided, "hex"),
     Buffer.from(expected, "hex")
