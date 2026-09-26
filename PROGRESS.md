@@ -16,6 +16,16 @@ remembered per browser) and stays a drawer below. Sidebar: live counts from
 Inbox, pending bookings on Bookings, and a "Needs human" row only while
 chats are waiting; polled every 15s, paused when hidden or idle.
 
+## Campaign resubmission after editing (2026-09-26)
+
+Meta rejected the edited live campaign with subcode 2388024: the same English
+template name already existed. Each approval submission now receives a unique
+revision suffix, and submission errors prefer Meta's actionable user message.
+Regression tests cover edited URLs, persisted revision names, error propagation,
+simulation, and tenant lookup. Verification: 2,351 tests passed (22 existing
+skips), lint and build passed; independent review found no issues.
+
+
 ## Neutral product copy — no clinic/restaurant assumptions (2026-09-26) ✅
 
 Founder decision: the logged-in product assumes no industry. Shared copy and

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { env } from "@/lib/env";
 import { orgSendMode } from "@/modules/orgs/mode";
@@ -25,9 +26,11 @@ export async function submitTemplateForApproval(campaignId: string, orgId: strin
   if (!campaign) throw new Error("Campaign not found.");
 
   const content = campaignContentSchema.parse(campaign.content);
+  // Each submission is a separate review revision; Meta rejects reusing a
+  // template name/language when the earlier revision is still present.
   const name = slugifyTemplateName(
     content.productName,
-    campaign.id.slice(-6).toLowerCase()
+    `${campaign.id.slice(-6).toLowerCase()}_${randomUUID().replaceAll("-", "")}`
   );
 
   let headerImageHandle: string | undefined;
@@ -60,10 +63,10 @@ export async function submitTemplateForApproval(campaignId: string, orgId: strin
     );
     const body = (await res.json().catch(() => null)) as {
       id?: string;
-      error?: { message?: string };
+      error?: { message?: string; error_user_msg?: string };
     } | null;
     if (!res.ok) {
-      throw new Error(body?.error?.message ?? `Meta rejected the submission (HTTP ${res.status}).`);
+      throw new Error(body?.error?.error_user_msg ?? body?.error?.message ?? `Meta rejected the submission (HTTP ${res.status}).`);
     }
     metaTemplateId = body?.id;
   } else {
